@@ -171,7 +171,7 @@ td input, td select { padding: 5px 6px; background: var(--input-bg); color: var(
   @page { size: A4; margin: 32mm 14mm 32mm 14mm; }
   * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
   .topbar, .tabs, .container, .toast, .modal-bg, #authGate, .actions-row,
-  .card, .section-title, .section-sub, #postPrintModal { display: none !important; }
+  .card, .section-title, .section-sub, #postPrintModal, #progressBar { display: none !important; }
   body { background: #fff !important; margin: 0; padding: 0; font-family: Helvetica, Arial, sans-serif; font-size: 9.5pt; color: #111; }
   .print-doc { display: block !important; padding: 0 !important; }
 
@@ -790,12 +790,13 @@ td input, td select { padding: 5px 6px; background: var(--input-bg); color: var(
           <th onclick="sortTable('hob_listBody',1,this)" style="cursor:pointer;">Date ↕</th>
           <th onclick="sortTable('hob_listBody',2,this)" style="cursor:pointer;">HO Number ↕</th>
           <th onclick="sortTable('hob_listBody',3,this)" style="cursor:pointer;">Cert. Number ↕</th>
-          <th class="num" onclick="sortTable('hob_listBody',4,this,true)" style="cursor:pointer;">Invoice Value ↕</th>
-          <th class="num" onclick="sortTable('hob_listBody',5,this,true)" style="cursor:pointer;">Net Payable ↕</th>
-          <th onclick="sortTable('hob_listBody',6,this)" style="cursor:pointer;">Status ↕</th>
+          <th onclick="sortTable('hob_listBody',4,this)" style="cursor:pointer;">Vendor ↕</th>
+          <th class="num" onclick="sortTable('hob_listBody',5,this,true)" style="cursor:pointer;">Invoice Value ↕</th>
+          <th class="num" onclick="sortTable('hob_listBody',6,this,true)" style="cursor:pointer;">Net Payable ↕</th>
+          <th onclick="sortTable('hob_listBody',7,this)" style="cursor:pointer;">Status ↕</th>
           <th class="center">Actions</th>
         </tr></thead>
-        <tbody id="hob_listBody"><tr><td colspan="8" class="center muted">Loading…</td></tr></tbody>
+        <tbody id="hob_listBody"><tr><td colspan="9" class="center muted">Loading…</td></tr></tbody>
       </table>
     </div>
   </div>
@@ -877,9 +878,9 @@ td input, td select { padding: 5px 6px; background: var(--input-bg); color: var(
             <th style="width:36px;"><input type="checkbox" id="prr_selectAll" onchange="toggleAllBills(this)"></th>
             <th>Bill Number</th><th>HO Number</th><th>Vendor</th>
             <th class="num">Invoice Value</th><th class="num">Net Payable</th>
-            <th class="num">Already Requested</th><th class="num">Available</th>
+            <th class="num">Outstanding (O/S)</th>
           </tr></thead>
-          <tbody id="prr_billsBody"><tr><td colspan="8" class="center muted">Loading bills…</td></tr></tbody>
+          <tbody id="prr_billsBody"><tr><td colspan="7" class="center muted">Loading bills…</td></tr></tbody>
         </table>
       </div>
       <div style="margin-top:10px;color:var(--muted);font-size:12px;">Total Selected: <strong id="prr_selectedTotal" style="color:var(--accent);">₹ 0.00</strong></div>
@@ -1040,33 +1041,80 @@ td input, td select { padding: 5px 6px; background: var(--input-bg); color: var(
           <input type="date" id="payconf_date">
         </div>
       </div>
-      <div class="grid-4" style="margin-top:12px;">
-        <div class="field">
-          <label class="req">Amount Paid (₹)</label>
-          <input type="number" id="payconf_amount" step="0.01" placeholder="0.00" oninput="updatePayConfBalance()">
-          <small id="payconf_reqHint" style="color:var(--warn);">Requested: —</small>
+
+      <!-- PRR: per-invoice amount entry table -->
+      <div id="payconf_prrTable" style="display:none;margin-top:16px;">
+        <h4 style="color:var(--accent);margin-bottom:8px;">Invoice Payment Breakdown</h4>
+        <div class="table-wrap">
+          <table>
+            <thead><tr>
+              <th>Bill #</th><th>Vendor</th>
+              <th class="num">Requested</th>
+              <th class="num">Already Paid</th>
+              <th class="num">O/S Amount</th>
+              <th class="num" style="width:130px;">Amount to Pay</th>
+              <th class="center">Status</th>
+            </tr></thead>
+            <tbody id="payconf_prrItemsBody"></tbody>
+          </table>
         </div>
-        <div class="field">
-          <label>Payment Mode</label>
-          <select id="payconf_mode">
-            <option value="NEFT">NEFT</option>
-            <option value="RTGS">RTGS</option>
-            <option value="IMPS">IMPS</option>
-            <option value="Cheque">Cheque</option>
-            <option value="Cash">Cash</option>
-            <option value="UPI">UPI</option>
-          </select>
-        </div>
-        <div class="field">
-          <label>UTR / Cheque No.</label>
-          <input id="payconf_utr" placeholder="Transaction reference">
-        </div>
-        <div class="field" id="payconf_directVendorField" style="display:none;">
-          <label class="req">Vendor (Direct)</label>
-          <input id="payconf_directVendor" placeholder="Vendor name for direct payment">
+        <div style="margin-top:10px;text-align:right;">
+          <span style="font-size:13px;color:var(--muted);">Total Payment: </span>
+          <strong id="payconf_prrTotal" style="color:var(--accent);font-size:15px;">₹ 0.00</strong>
         </div>
       </div>
-      <div class="grid-2" style="margin-top:12px;">
+
+      <!-- ARR/HRR/Direct: single amount -->
+      <div id="payconf_singleAmount" style="margin-top:12px;">
+        <div class="grid-4">
+          <div class="field">
+            <label class="req">Amount Paid (₹)</label>
+            <input type="number" id="payconf_amount" step="0.01" placeholder="0.00" oninput="onPayConfAmountInput()">
+            <small id="payconf_reqHint" style="color:var(--muted);">O/S: —</small>
+            <small id="payconf_warnHint" style="color:var(--warn);display:none;">⚠ Amount exceeds O/S</small>
+          </div>
+          <div class="field">
+            <label>Payment Mode</label>
+            <select id="payconf_mode">
+              <option value="NEFT">NEFT</option><option value="RTGS">RTGS</option>
+              <option value="IMPS">IMPS</option><option value="Cheque">Cheque</option>
+              <option value="Cash">Cash</option><option value="UPI">UPI</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>UTR / Cheque No.</label>
+            <input id="payconf_utr" placeholder="Transaction reference">
+          </div>
+          <div class="field" id="payconf_directVendorField" style="display:none;">
+            <label class="req">Vendor (Direct)</label>
+            <input id="payconf_directVendor" placeholder="Vendor name">
+          </div>
+        </div>
+      </div>
+
+      <!-- PRR: mode/UTR row -->
+      <div id="payconf_prrMeta" style="display:none;margin-top:12px;">
+        <div class="grid-3">
+          <div class="field">
+            <label>Payment Mode</label>
+            <select id="payconf_mode_prr">
+              <option value="NEFT">NEFT</option><option value="RTGS">RTGS</option>
+              <option value="IMPS">IMPS</option><option value="Cheque">Cheque</option>
+              <option value="Cash">Cash</option><option value="UPI">UPI</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>UTR / Cheque No.</label>
+            <input id="payconf_utr_prr" placeholder="Transaction reference">
+          </div>
+          <div class="field">
+            <label>Entered By</label>
+            <input id="payconf_enteredBy_prr" readonly>
+          </div>
+        </div>
+      </div>
+
+      <div class="grid-2" style="margin-top:12px;" id="payconf_remarksRow">
         <div class="field">
           <label>Remarks</label>
           <input id="payconf_remarks" placeholder="Payment notes…">
@@ -1446,11 +1494,11 @@ document.getElementById('modalBg').addEventListener('click', e => { if (e.target
 // ============================================================
 let _pbTimer = null, _pbActive = 0, _pbForceTimer = null;
 function pbShow(label, msg) {
-  if (window._pbShowDisabled) return; // suppress during parallel init
+  if (window._pbShowDisabled) return;
   _pbActive++;
   const el = document.getElementById('progressBar');
   document.getElementById('pb-labelText').textContent = label || 'Loading\u2026';
-  document.getElementById('pb-msg').textContent = msg || '';
+  document.getElementById('pb-msg').textContent = ''; // never show internal labels
   document.getElementById('pb-fill').style.width = '15%';
   el.classList.add('show');
   clearTimeout(_pbTimer);
@@ -1516,13 +1564,37 @@ async function nextDocNumber(docType) {
   return data;
 }
 
+// HOC number: HOC/HO-007/001  (sequential per HO, counts non-rejected certs)
+async function nextHOCNumber(hoNumber) {
+  const hoSerial = hoNumber.split('/').pop(); // e.g. '007' from 'HO/2025-26/007'
+  const { data, error } = await sb.from('ho_certifications')
+    .select('hoc_number', { count: 'exact' })
+    .eq('ho_number', hoNumber)
+    .neq('status', 'Rejected');
+  if (error) throw new Error('HOC sequence error: ' + error.message);
+  const seq = String((data ? data.length : 0) + 1).padStart(3, '0');
+  return `HOC/HO-${hoSerial}/${seq}`;
+}
+
+// HOB number: HOB/HO-007/001  (sequential per HO, counts non-rejected bills)
+async function nextHOBNumber(hoNumber) {
+  const hoSerial = hoNumber.split('/').pop();
+  const { data, error } = await sb.from('ho_bills')
+    .select('bill_number', { count: 'exact' })
+    .eq('ho_number', hoNumber)
+    .neq('status', 'Rejected');
+  if (error) throw new Error('HOB sequence error: ' + error.message);
+  const seq = String((data ? data.length : 0) + 1).padStart(3, '0');
+  return `HOB/HO-${hoSerial}/${seq}`;
+}
+
 // Generic query wrapper with progress + cache
 async function dbSelect(cacheKey, queryFn) {
   if (cacheKey) {
     const hit = _cacheGet(cacheKey);
     if (hit) return { ok: true, ...hit };
   }
-  pbShow('Loading\u2026', '');
+  pbShow('Loading\u2026');
   try {
     const result = await queryFn();
     if (result.error) throw new Error(result.error.message);
@@ -1611,7 +1683,7 @@ async function apiGetOpenHOs() {
 }
 
 async function apiGetHODetails(hoNumber) {
-  pbShow('Loading\u2026', 'HO details');
+  pbShow('Loading\u2026');
   const [h, items] = await Promise.all([
     sb.from('ho_orders').select('*').eq('ho_number', hoNumber).single(),
     sb.from('ho_order_items').select('*').eq('ho_number', hoNumber).order('sno')
@@ -1674,7 +1746,7 @@ async function apiGetHOCList() {
 }
 
 async function apiGetHOCDetails(hocNumber) {
-  pbShow('Loading\u2026', 'Certification');
+  pbShow('Loading\u2026');
   const [h, items] = await Promise.all([
     sb.from('ho_certifications').select('*').eq('hoc_number', hocNumber).single(),
     sb.from('ho_certification_items').select('*').eq('hoc_number', hocNumber).order('sno')
@@ -1702,6 +1774,7 @@ async function apiGetHOCumulativeQty(hoNumber) {
 }
 
 async function apiGetUnbilledHOCs() {
+  // Only show certs that are Unbilled — not Pending Billing (bill submitted, awaiting approval)
   const r = await dbSelect('unbilledHOCs', () =>
     sb.from('ho_certifications').select('*').eq('status','Unbilled').order('hoc_number')
   );
@@ -1713,8 +1786,8 @@ async function apiSaveHOC(data) {
   pbShow('Saving certification\u2026');
   try {
     if (!data.isRevision) {
-      // Generate number at save time only
-      data.hocNumber = await nextDocNumber('HOC');
+      // Generate HOC number: HOC/HO-007/001 (cert seq for this HO)
+      data.hocNumber = await nextHOCNumber(data.hoNumber);
       const numEl = document.getElementById('hoc_number');
       if (numEl) numEl.value = data.hocNumber;
     }
@@ -1774,7 +1847,7 @@ async function apiGetHOBList() {
 }
 
 async function apiGetHOBDetails(billNumber) {
-  pbShow('Loading\u2026', 'Bill');
+  pbShow('Loading\u2026');
   const [h, items, extra] = await Promise.all([
     sb.from('ho_bills').select('*').eq('bill_number', billNumber).single(),
     sb.from('ho_bill_items').select('*').eq('bill_number', billNumber).order('sno'),
@@ -1802,15 +1875,42 @@ async function apiGetUnpaidBills() {
     sb.from('ho_bills').select('*').in('status',['Unpaid','Partial']).order('bill_number')
   );
   if (!r.ok) return r;
-  // Compute already-requested per bill
-  const { data: prrItems } = await sb.from('ho_prr_items').select('bill_number, requested_amount');
-  const reqMap = {};
-  (prrItems||[]).forEach(it => { reqMap[it.bill_number] = (reqMap[it.bill_number]||0) + num(it.requested_amount); });
-  return { ok: true, bills: (r.data||[]).map(r => ({
-    'Bill Number': r.bill_number, 'HO Number': r.ho_number, 'Vendor Name': r.vendor_name,
-    'Invoice Value': r.invoice_value, 'Net Payable': r.net_payable,
-    'Already Requested': reqMap[r.bill_number]||0, 'Status': r.status
-  }))};
+
+  // Get all PRR items with paid amounts
+  const { data: prrItems } = await sb.from('ho_prr_items')
+    .select('bill_number, paid_amount, prr_number');
+
+  // Get active (outstanding) PRR numbers
+  const { data: activePRRs } = await sb.from('ho_prr')
+    .select('prr_number').in('status',['Unpaid','Partial']);
+  const activePRRSet = new Set((activePRRs||[]).map(p => p.prr_number));
+
+  // Bills currently locked in an active PRR
+  const lockedBills = new Set(
+    (prrItems||[]).filter(it => activePRRSet.has(it.prr_number)).map(it => it.bill_number)
+  );
+
+  // Total confirmed paid per bill
+  const paidMap = {};
+  (prrItems||[]).forEach(it => {
+    paidMap[it.bill_number] = (paidMap[it.bill_number]||0) + num(it.paid_amount);
+  });
+
+  const bills = (r.data||[])
+    .filter(b => !lockedBills.has(b.bill_number))
+    .map(b => {
+      const confirmed = paidMap[b.bill_number] || 0;
+      const outstanding = Math.max(0, num(b.net_payable) - confirmed);
+      return {
+        'Bill Number': b.bill_number, 'HO Number': b.ho_number,
+        'Vendor Name': b.vendor_name, 'Invoice Value': b.invoice_value,
+        'Net Payable': b.net_payable, 'Confirmed Paid': confirmed,
+        'Outstanding': outstanding, 'Status': b.status
+      };
+    })
+    .filter(b => b['Outstanding'] > 0.005);
+
+  return { ok: true, bills };
 }
 
 async function apiSaveHOB(data) {
@@ -1818,7 +1918,8 @@ async function apiSaveHOB(data) {
   pbShow('Saving bill\u2026');
   try {
     if (!data.isRevision) {
-      data.billNumber = await nextDocNumber('HOB');
+      // Generate HOB number: HOB/HO-007/001 (bill seq for this HO)
+      data.billNumber = await nextHOBNumber(data.hoNumber);
       const numEl = document.getElementById('hob_number');
       if (numEl) numEl.value = data.billNumber;
     }
@@ -1862,6 +1963,12 @@ async function apiSaveHOB(data) {
       })));
     }
     _cacheBust('hobList','unpaidBills','hocList');
+    // Immediately lock the certification so it can't be billed again until this bill is resolved
+    if (!data.isRevision) {
+      await sb.from('ho_certifications')
+        .update({ status: 'Pending Billing' })
+        .eq('hoc_number', data.hocNumber);
+    }
     return { ok: true, billNumber: data.billNumber };
   } catch(e) {
     return { ok: false, error: e.message };
@@ -1872,7 +1979,19 @@ async function apiSaveHOB(data) {
 
 async function apiUpdateHOBStatus(billNumber, status, rejectionReason) {
   const updates = { status, rejection_reason: rejectionReason || null };
-  return dbUpdate('ho_bills', { bill_number: billNumber }, updates, ['hobList','unpaidBills']);
+  const r = await dbUpdate('ho_bills', { bill_number: billNumber }, updates, ['hobList','unpaidBills']);
+  if (r.ok && status === 'Rejected') {
+    // Revert the certification back to Unbilled so it can be rebilled
+    const { data: bill } = await sb.from('ho_bills')
+      .select('hoc_number').eq('bill_number', billNumber).single();
+    if (bill) {
+      await sb.from('ho_certifications')
+        .update({ status: 'Unbilled' })
+        .eq('hoc_number', bill.hoc_number);
+      _cacheBust('hocList','unbilledHOCs');
+    }
+  }
+  return r;
 }
 
 async function apiMarkHOCBilled(billNumber) {
@@ -2012,7 +2131,7 @@ async function apiSaveHRR(data) {
 
 // ── ALL REQUESTS ──────────────────────────────────────────────
 async function apiGetAllRequests(typeFilter, statusFilter) {
-  pbShow('Loading\u2026', 'requests');
+  pbShow('Loading\u2026');
   try {
     const [prrR, arrR, hrrR, payR] = await Promise.all([
       sb.from('ho_prr').select('prr_number, prr_date, requested_by, status'),
@@ -2088,28 +2207,79 @@ async function apiGetRequestDetail(number, type) {
 // ── PAYMENTS ──────────────────────────────────────────────────
 async function apiSavePaymentConfirmation(payload) {
   pbShow('Saving payment\u2026');
-  // Generate payment ID
-  const { data: last } = await sb.from('ho_payments').select('payment_id').order('created_at', { ascending: false }).limit(1);
-  let nextNum = 1;
-  if (last && last.length) {
-    const m = String(last[0].payment_id).match(/PAY(\d+)/);
-    if (m) nextNum = parseInt(m[1]) + 1;
+  try {
+    const { data: last } = await sb.from('ho_payments')
+      .select('payment_id').order('created_at', { ascending: false }).limit(1);
+    let nextNum = 1;
+    if (last && last.length) {
+      const m = String(last[0].payment_id).match(/PAY(\d+)/);
+      if (m) nextNum = parseInt(m[1]) + 1;
+    }
+    const payId = 'PAY' + String(nextNum).padStart(4,'0');
+    const vendor = payload.directVendor ||
+      await _vendorFromRef(payload.type, payload.reference);
+
+    const { error: pe } = await sb.from('ho_payments').insert({
+      payment_id: payId, payment_date: payload.date, payment_type: payload.type,
+      reference: payload.reference||'DIRECT', vendor,
+      amount_paid: payload.amount, mode: payload.mode||'NEFT', utr: payload.utr||null,
+      remarks: payload.remarks||null, entered_by: state.userName, entered_by_id: state.userId
+    });
+    if (pe) return { ok: false, error: pe.message };
+
+    if (payload.type === 'PRR' && payload.perInvoice?.length) {
+      await _applyPRRPaymentPerInvoice(payload.reference, payload.perInvoice);
+    } else {
+      await _applyPayment(payload.type, payload.reference, payload.amount);
+    }
+    _cacheBust('allRequests','prrList','arrList','hrrList','hobList','unpaidBills');
+    return { ok: true };
+  } catch(e) {
+    return { ok: false, error: e.message };
+  } finally {
+    pbDone();
   }
-  const payId = 'PAY' + String(nextNum).padStart(4,'0');
+}
 
-  const { error: pe } = await sb.from('ho_payments').insert({
-    payment_id: payId, payment_date: payload.date, payment_type: payload.type,
-    reference: payload.reference||'DIRECT',
-    vendor: payload.directVendor || await _vendorFromRef(payload.type, payload.reference),
-    amount_paid: payload.amount, mode: payload.mode, utr: payload.utr||null,
-    remarks: payload.remarks||null, entered_by: state.userName, entered_by_id: state.userId
-  });
-  if (pe) { pbDone(); return { ok: false, error: pe.message }; }
+// Per-invoice PRR payment — each bill gets its own specified amount
+async function _applyPRRPaymentPerInvoice(prrNumber, perInvoice) {
+  for (const entry of perInvoice) {
+    const { data: prrItem } = await sb.from('ho_prr_items')
+      .select('id, requested_amount, paid_amount')
+      .eq('prr_number', prrNumber)
+      .eq('bill_number', entry.billNumber)
+      .single();
+    if (!prrItem) continue;
 
-  // Update source document paid amounts
-  await _applyPayment(payload.type, payload.reference, payload.amount);
-  pbDone(); _cacheBust('allRequests','prrList','arrList','hrrList');
-  return { ok: true };
+    const newPaid = num(prrItem.paid_amount) + num(entry.amount);
+    const itemStatus = newPaid >= num(prrItem.requested_amount) - 0.005 ? 'Paid' : 'Partial';
+    await sb.from('ho_prr_items')
+      .update({ paid_amount: newPaid, status: itemStatus })
+      .eq('id', prrItem.id);
+
+    // Update the bill's own status
+    const { data: bill } = await sb.from('ho_bills')
+      .select('net_payable').eq('bill_number', entry.billNumber).single();
+    if (bill) {
+      const { data: allItems } = await sb.from('ho_prr_items')
+        .select('paid_amount').eq('bill_number', entry.billNumber);
+      const totalBillPaid = (allItems||[]).reduce((s,r) => s + num(r.paid_amount), 0)
+        + (num(entry.amount)); // include this payment
+      const netPayable = num(bill.net_payable);
+      const billStatus = totalBillPaid >= netPayable - 0.005 ? 'Paid'
+        : totalBillPaid > 0 ? 'Partial' : 'Unpaid';
+      await sb.from('ho_bills').update({ status: billStatus }).eq('bill_number', entry.billNumber);
+    }
+  }
+
+  // Recompute PRR header status
+  const { data: updated } = await sb.from('ho_prr_items')
+    .select('requested_amount, paid_amount').eq('prr_number', prrNumber);
+  const totalReq  = (updated||[]).reduce((s,r) => s + num(r.requested_amount), 0);
+  const totalPaid = (updated||[]).reduce((s,r) => s + num(r.paid_amount), 0);
+  const prrStatus = totalPaid >= totalReq - 0.005 ? 'Paid'
+    : totalPaid > 0 ? 'Partial' : 'Unpaid';
+  await sb.from('ho_prr').update({ status: prrStatus }).eq('prr_number', prrNumber);
 }
 
 async function _vendorFromRef(type, ref) {
@@ -2221,7 +2391,7 @@ async function apiSaveMaster(type, row) {
 
 // ── USER MANAGEMENT ───────────────────────────────────────────
 async function loadUsersList() {
-  pbShow('Loading users\u2026');
+  pbShow('Loading\u2026');
   const { data, error } = await sb.from('user_profiles').select('id, full_name, role, is_active, email');
   pbDone();
   const tbody = document.getElementById('users_list');
@@ -2352,6 +2522,7 @@ async function doLogin() {
 
     // Small delay for session to propagate
     await new Promise(r => setTimeout(r, 400));
+    if (!_authHandled) _authHandled = true;
     await onSignedIn(data.user);
 
   } catch(e) {
@@ -2442,7 +2613,7 @@ async function onSignedIn(user) {
   if (profile.role === 'Admin') document.getElementById('tab-users').style.display = '';
 
   applyRoleUI();
-  initApp();
+  await initApp();
 }
 
 async function doLogout() {
@@ -2463,7 +2634,7 @@ async function doLogout() {
 // If yes, skip the login screen entirely
 (async () => {
   const { data: { session } } = await sb.auth.getSession();
-  if (session && session.user) {
+  if (session && session.user && !_authHandled) {
     _authHandled = true;
     await onSignedIn(session.user);
   }
@@ -2555,19 +2726,13 @@ function switchMasterTab(tab) {
 // ============================================================
 // APP INIT
 // ============================================================
-async function initApp() {
-  // Disable individual progress bars during parallel init
-  window._pbShowDisabled = true;
-  // Show a single init bar manually
-  const pb = document.getElementById('progressBar');
-  const fill = document.getElementById('pb-fill');
-  document.getElementById('pb-labelText').textContent = 'Loading\u2026';
-  document.getElementById('pb-msg').textContent = 'Please wait';
-  fill.style.width = '10%';
-  pb.classList.add('show');
-  setTimeout(() => { fill.style.width = '60%'; }, 400);
-  setTimeout(() => { fill.style.width = '85%'; }, 1500);
+let _initInProgress = false;
 
+async function initApp() {
+  if (_initInProgress) return;
+  _initInProgress = true;
+
+  pbShow('Loading\u2026', 'Please wait');
   try {
     await apiLoadMasters();
     await Promise.all([
@@ -2579,16 +2744,8 @@ async function initApp() {
   } catch(e) {
     console.error('initApp error:', e);
   } finally {
-    // Re-enable progress bars and forcibly hide init bar
-    window._pbShowDisabled = false;
-    _pbActive = 0;
-    clearTimeout(_pbTimer);
-    clearTimeout(_pbForceTimer);
-    fill.style.width = '100%';
-    setTimeout(() => {
-      pb.classList.remove('show');
-      fill.style.width = '0%';
-    }, 500);
+    pbDone();
+    _initInProgress = false;
   }
 }
 
@@ -3312,7 +3469,8 @@ async function onHOCHOChange() {
   document.getElementById('hoc_totalCertified').textContent = '0.00';
   if (!hoNum) { document.getElementById('hoc_number').value = '— select HO first —'; return; }
 
-  document.getElementById('hoc_number').value = 'HOC/' + currentFY() + '/\u2014\u2014\u2014 (auto)';
+  const hoSerial = hoNum.split('/').pop();
+  document.getElementById('hoc_number').value = `HOC/HO-${hoSerial}/\u2014\u2014\u2014 (auto)`;
   const [detRes, prevRes] = await Promise.all([
     apiGetHODetails(hoNum),
     apiGetHOCumulativeQty(hoNum)
@@ -3547,7 +3705,7 @@ function renderHOBList() {
   let rows = state.bills;
   if (q)  rows = rows.filter(b => ['Bill Number','HO Number','HOC Number'].some(f => String(b[f]||'').toLowerCase().includes(q)));
   if (sf) rows = rows.filter(b => b['Status'] === sf);
-  if (!rows.length) { tbody.innerHTML = '<tr><td colspan="8" class="center muted">No bills found.</td></tr>'; return; }
+  if (!rows.length) { tbody.innerHTML = '<tr><td colspan="9" class="center muted">No bills found.</td></tr>'; return; }
 
   const perms = ROLE_PERMS[state.role] || {};
   tbody.innerHTML = rows.map(b => {
@@ -3567,9 +3725,10 @@ function renderHOBList() {
       <td data-sort="${esc(b['Bill Date'])}">${fmtDate(b['Bill Date'])}</td>
       <td class="mono" data-sort="${esc(b['HO Number'])}">${esc(b['HO Number'])}</td>
       <td class="mono" data-sort="${esc(b['HOC Number'])}">${esc(b['HOC Number'])}</td>
+      <td data-sort="${esc(b['Vendor Name'])}">${esc(b['Vendor Name'])}</td>
       <td class="num mono" data-sort="${num(b['Invoice Value'])}">${fmtINRSym(b['Invoice Value'])}</td>
       <td class="num mono" data-sort="${num(b['Net Payable'])}">${fmtINRSym(b['Net Payable'])}</td>
-      <td data-sort="${esc(st)}"><span class="status ${st.toLowerCase()}">${esc(st)}</span>${rejReason}</td>
+      <td data-sort="${esc(st)}"><span class="status ${st.toLowerCase().replace(' ','-')}">${esc(st)}</span>${rejReason}</td>
       <td class="center" style="white-space:nowrap;">${actionBtns}</td>
     </tr>`;
   }).join('');
@@ -3623,7 +3782,7 @@ function closeHOBForm() {
 async function onHOBHOCChange() {
   const hocNum = document.getElementById('hob_hocSelect').value;
   if (!hocNum) return;
-  document.getElementById('hob_number').value = 'HOB/' + currentFY() + '/\u2014\u2014\u2014 (auto)';
+  document.getElementById('hob_number').value = 'HOB/HO-\u2014\u2014\u2014/\u2014\u2014\u2014 (auto)';
 
   const hocRes = await apiGetHOCDetails(hocNum);
 
@@ -3631,6 +3790,8 @@ async function onHOBHOCChange() {
   const items = hocRes.items || [];
   const hoNum = hocRes.header['HO Number'];
   const vendor = hocRes.header['Vendor Name'] || '';
+  const hoSerial = hoNum.split('/').pop();
+  document.getElementById('hob_number').value = `HOB/HO-${hoSerial}/\u2014\u2014\u2014 (auto)`;
 
   // Get HO GST %
   const hoRes = await apiGetHODetails(hoNum);
@@ -3796,6 +3957,7 @@ async function saveHOB_direct() {
   const data = getHOBFormData();
   if (!data.hocNumber)  { toast('Select a certification','error'); return; }
   if (!data.billDate)   { toast('Bill date required','error'); return; }
+  if (!data.vendorInvDate) { toast('Vendor Invoice Date is mandatory','error'); return; }
   if (!data.items.length) { toast('No items loaded — select a certification first','error'); return; }
   if (!data.boqItem || !hob_boq_locked) { toast('BOQ Item is mandatory — select from the master list','error'); return; }
 
@@ -4044,6 +4206,7 @@ async function loadPRRList() {
       <td class="center">
         <button class="btn btn-ghost btn-sm" onclick="viewRequestDetail('${esc(p['PRR Number'])}','PRR')">View</button>
         <button class="btn btn-ghost btn-sm" onclick="printRequest('${esc(p['PRR Number'])}','PRR')">Print</button>
+        ${st === 'Unpaid' && hasPerm('canCreatePRR') ? `<button class="btn btn-danger btn-sm" onclick="cancelPRR('${esc(p['PRR Number'])}')">Cancel</button>` : ''}
       </td>
     </tr>`;
   }).join('');
@@ -4059,24 +4222,44 @@ async function newPRR() {
   document.getElementById('prr_selectedTotal').textContent = '\u20b9 0.00';
 
   const billsRes = await apiGetUnpaidBills();
-
   const tbody = document.getElementById('prr_billsBody');
   const bills = billsRes.ok ? billsRes.bills : [];
-  if (!bills.length) { tbody.innerHTML = '<tr><td colspan="8" class="center muted">No unpaid bills available.</td></tr>'; return; }
-  tbody.innerHTML = bills.map(b => `<tr>
-    <td class="center"><input type="checkbox" class="prr_billCheck" data-net="${num(b['Net Payable'])}" onchange="updatePRRTotal()"></td>
-    <td class="mono">${esc(b['Bill Number'])}</td>
-    <td class="mono">${esc(b['HO Number'])}</td>
-    <td>${esc(b['Vendor Name']||b['Vendor']||'—')}</td>
-    <td class="num mono">${fmtINRSym(b['Invoice Value'])}</td>
-    <td class="num mono">${fmtINRSym(b['Net Payable'])}</td>
-    <td class="num mono" style="color:var(--warn);">${fmtINRSym(b['Already Requested']||0)}</td>
-    <td class="num mono" style="color:var(--accent);">${fmtINRSym(Math.max(0, num(b['Net Payable']) - num(b['Already Requested']||0)))}</td>
-  </tr>`).join('');
+  if (!bills.length) { tbody.innerHTML = '<tr><td colspan="7" class="center muted">No outstanding bills available.</td></tr>'; return; }
+  tbody.innerHTML = bills.map(b => {
+    const os = num(b['Outstanding']);
+    return `<tr>
+      <td class="center"><input type="checkbox" class="prr_billCheck"
+        data-billnum="${esc(b['Bill Number'])}"
+        data-honum="${esc(b['HO Number'])}"
+        data-vendor="${esc(b['Vendor Name']||'')}"
+        data-os="${os}"
+        onchange="updatePRRTotal()"></td>
+      <td class="mono">${esc(b['Bill Number'])}</td>
+      <td class="mono">${esc(b['HO Number'])}</td>
+      <td>${esc(b['Vendor Name']||'—')}</td>
+      <td class="num mono">${fmtINRSym(b['Invoice Value'])}</td>
+      <td class="num mono">${fmtINRSym(b['Net Payable'])}</td>
+      <td class="num mono" style="color:var(--accent);font-weight:600;">${fmtINRSym(os)}</td>
+    </tr>`;
+  }).join('');
 }
 
 function closePRRForm() {
   document.getElementById('prr_form').style.display = 'none';
+}
+
+async function cancelPRR(prrNum) {
+  if (!confirm('Cancel PRR ' + prrNum + '? All bills will become available again for new PRR.')) return;
+  pbShow('Cancelling\u2026');
+  try {
+    const { error } = await sb.from('ho_prr')
+      .update({ status: 'Cancelled' }).eq('prr_number', prrNum);
+    if (error) { toast('Cancel failed: ' + error.message, 'error'); return; }
+    _cacheBust('prrList','unpaidBills','allRequests');
+    flashSuccess('PRR ' + prrNum + ' cancelled — bills are now available for new PRR');
+    loadPRRList(); loadAllRequests();
+  } catch(e) { toast('Error: ' + e.message, 'error'); }
+  finally { pbDone(); }
 }
 
 function toggleAllBills(cb) {
@@ -4086,7 +4269,7 @@ function toggleAllBills(cb) {
 
 function updatePRRTotal() {
   let total = 0;
-  document.querySelectorAll('.prr_billCheck:checked').forEach(c => total += num(c.dataset.net));
+  document.querySelectorAll('.prr_billCheck:checked').forEach(c => total += num(c.dataset.os));
   document.getElementById('prr_selectedTotal').textContent = fmtINRSym(total);
 }
 
@@ -4100,13 +4283,11 @@ async function savePRR() {
   document.querySelectorAll('#prr_billsBody tr').forEach(tr => {
     const cb = tr.querySelector('.prr_billCheck');
     if (cb && cb.checked) {
-      const cells = tr.cells;
       selectedBills.push({
-        billNumber:      cells[1].textContent.trim(),
-        hoNumber:        cells[2].textContent.trim(),
-        vendor:          cells[3].textContent.trim(),
-        netPayable:      num(cb.dataset.net),
-        requestedAmount: num(cb.dataset.net)
+        billNumber:      cb.dataset.billnum,
+        hoNumber:        cb.dataset.honum,
+        vendor:          cb.dataset.vendor,
+        requestedAmount: num(cb.dataset.os)  // save O/S amount as requested
       });
     }
   });
@@ -4264,71 +4445,163 @@ async function populatePayConfSelects() {
 function onPayConfTypeChange() {
   const type = document.getElementById('payconf_type').value;
   const refSel = document.getElementById('payconf_ref');
-  const directField = document.getElementById('payconf_directVendorField');
-  directField.style.display = type === 'Direct' ? '' : 'none';
+  const isPRR = type === 'PRR';
+  document.getElementById('payconf_prrTable').style.display     = 'none';
+  document.getElementById('payconf_prrMeta').style.display      = 'none';
+  document.getElementById('payconf_singleAmount').style.display = isPRR ? 'none' : '';
+  document.getElementById('payconf_directVendorField').style.display = type === 'Direct' ? '' : 'none';
   if (type === 'Direct') { refSel.innerHTML = '<option value="DIRECT">Direct Payment</option>'; return; }
-  refSel.innerHTML = '<option value="">Loading…</option>';
-  const _listFn = type === 'PRR' ? () => apiGetPRRList(true) : type === 'ARR' ? () => apiGetARRList(true) : () => apiGetHRRList();
-  const numField  = type === 'PRR' ? 'PRR Number' : type === 'ARR' ? 'ARR Number' : 'HRR Number';
-  _listFn().then(r => {
+  refSel.innerHTML = '<option value="">Loading\u2026</option>';
+
+  const fetchFn = isPRR ? () => apiGetPRRList(true)
+    : type === 'ARR' ? () => apiGetARRList(true)
+    : () => apiGetHRRList(true);
+  const numField = isPRR ? 'PRR Number' : type === 'ARR' ? 'ARR Number' : 'HRR Number';
+  const amtField = isPRR ? 'Requested Amount' : 'Amount';
+
+  fetchFn().then(r => {
     const items = r.ok ? (r.prrs || r.arrs || r.hrrs || []) : [];
+    const outstanding = items.filter(it => {
+      return (num(it[amtField]||0) - num(it['Paid Amount']||0)) > 0.005;
+    });
+    if (!outstanding.length) { refSel.innerHTML = '<option value="">No outstanding ' + type + 's</option>'; return; }
     refSel.innerHTML = '<option value="">— Select ' + type + ' —</option>' +
-      items.map(it => `<option value="${esc(it[numField])}" data-req="${num(it['Requested Amount']||it['Amount']||0)}">${esc(it[numField])}</option>`).join('');
+      outstanding.map(it => {
+        const bal = num(it[amtField]||0) - num(it['Paid Amount']||0);
+        return `<option value="${esc(it[numField])}" data-bal="${bal}">${esc(it[numField])} \u2014 O/S: ${fmtINRSym(bal)}</option>`;
+      }).join('');
   });
 }
 
-function onPayConfRefChange() {
-  const opt = document.querySelector('#payconf_ref option:checked');
-  if (!opt) return;
-  const req = num(opt.dataset.req || 0);
-  document.getElementById('payconf_reqHint').textContent = 'Requested: ' + fmtINRSym(req);
-  document.getElementById('payconf_amount').value = req > 0 ? req.toFixed(2) : '';
+async function onPayConfRefChange() {
+  const type = document.getElementById('payconf_type').value;
+  const ref  = document.getElementById('payconf_ref').value;
+  if (!ref || ref === 'DIRECT') return;
+
+  if (type === 'PRR') {
+    document.getElementById('payconf_prrTable').style.display   = '';
+    document.getElementById('payconf_prrMeta').style.display    = '';
+    document.getElementById('payconf_singleAmount').style.display = 'none';
+    document.getElementById('payconf_enteredBy_prr').value = state.userName;
+    pbShow('Loading\u2026');
+    const { data: items, error } = await sb.from('ho_prr_items')
+      .select('*').eq('prr_number', ref).order('sno');
+    pbDone();
+    const tbody = document.getElementById('payconf_prrItemsBody');
+    if (error || !items || !items.length) {
+      tbody.innerHTML = '<tr><td colspan="7" class="center muted">No items.</td></tr>'; return;
+    }
+    tbody.innerHTML = items.map((it, i) => {
+      const req = num(it.requested_amount);
+      const paid = num(it.paid_amount);
+      const os = Math.max(0, req - paid);
+      return `<tr id="prrPayRow_${i}">
+        <td class="mono">${esc(it.bill_number)}</td>
+        <td>${esc(it.vendor_name||'\u2014')}</td>
+        <td class="num mono">${fmtINRSym(req)}</td>
+        <td class="num mono" style="color:var(--accent);">${fmtINRSym(paid)}</td>
+        <td class="num mono" style="color:${os>0.005?'var(--warn)':'var(--muted)'};">${fmtINRSym(os)}</td>
+        <td class="num">
+          <input type="number" class="prr_pay_input" id="prrPayAmt_${i}"
+            data-os="${os}" data-billnum="${esc(it.bill_number)}"
+            value="${os.toFixed(2)}" min="0" step="0.01"
+            style="width:110px;text-align:right;padding:5px;"
+            oninput="updatePRRPayTotal()">
+          <div id="prrPayWarn_${i}" style="display:none;color:var(--warn);font-size:10px;">⚠ Over O/S</div>
+        </td>
+        <td class="center"><span style="font-size:11px;padding:2px 7px;background:var(--panel-2);border-radius:8px;">${esc(it.status||'Unpaid')}</span></td>
+      </tr>`;
+    }).join('');
+    updatePRRPayTotal();
+  } else {
+    document.getElementById('payconf_prrTable').style.display   = 'none';
+    document.getElementById('payconf_prrMeta').style.display    = 'none';
+    document.getElementById('payconf_singleAmount').style.display = '';
+    const opt = document.querySelector('#payconf_ref option:checked');
+    const bal = num(opt ? opt.dataset.bal : 0);
+    document.getElementById('payconf_amount').value = bal > 0 ? bal.toFixed(2) : '';
+    document.getElementById('payconf_reqHint').textContent = 'O/S: ' + fmtINRSym(bal);
+    document.getElementById('payconf_warnHint').style.display = 'none';
+  }
 }
 
-function updatePayConfBalance() {}
+function updatePRRPayTotal() {
+  let total = 0; let warn = false;
+  document.querySelectorAll('.prr_pay_input').forEach((inp, i) => {
+    const val = num(inp.value); const os = num(inp.dataset.os);
+    total += val;
+    const w = document.getElementById('prrPayWarn_' + i);
+    if (w) { if (val > os + 0.005) { w.style.display = ''; warn = true; } else w.style.display = 'none'; }
+  });
+  const el = document.getElementById('payconf_prrTotal');
+  el.textContent = fmtINRSym(total);
+  el.style.color = warn ? 'var(--warn)' : 'var(--accent)';
+}
+
+function onPayConfAmountInput() {
+  const val = num(document.getElementById('payconf_amount').value);
+  const hint = document.getElementById('payconf_reqHint').textContent;
+  const os = num(hint.replace('O/S:','').replace(/[^\d.]/g,''));
+  document.getElementById('payconf_warnHint').style.display = (os > 0 && val > os + 0.005) ? '' : 'none';
+}
+
+function updatePayConfBalance() { onPayConfAmountInput(); }
 
 async function savePaymentConfirmation() {
   if (!hasPerm('canConfirmPayment') && !hasPerm('canCreateDirectPayment')) { toast('Not permitted','error'); return; }
-  const type   = document.getElementById('payconf_type').value;
-  const ref    = document.getElementById('payconf_ref').value;
-  const date   = document.getElementById('payconf_date').value;
-  const amount = num(document.getElementById('payconf_amount').value);
-  if (!type)   { toast('Select payment type','error'); return; }
-  if (!date)   { toast('Payment date required','error'); return; }
-  if (amount <= 0) { toast('Amount must be > 0','error'); return; }
+  const type = document.getElementById('payconf_type').value;
+  const ref  = document.getElementById('payconf_ref').value;
+  const date = document.getElementById('payconf_date').value;
+  if (!type) { toast('Select payment type','error'); return; }
+  if (!date) { toast('Payment date required','error'); return; }
   if (type !== 'Direct' && !ref) { toast('Select reference number','error'); return; }
 
-  // Capture all values BEFORE resetting
-  const payload = {
-    type, reference: ref, date, amount,
-    mode:         document.getElementById('payconf_mode').value,
-    utr:          document.getElementById('payconf_utr').value,
-    remarks:      document.getElementById('payconf_remarks').value,
-    enteredBy:    state.userName,
-    directVendor: document.getElementById('payconf_directVendor').value
-  };
+  let payload;
+  if (type === 'PRR') {
+    const perInvoice = []; let total = 0; let hasOver = false;
+    document.querySelectorAll('.prr_pay_input').forEach((inp, i) => {
+      const val = num(inp.value); const os = num(inp.dataset.os);
+      if (val > os + 0.005) hasOver = true;
+      if (val > 0.005) { total += val; perInvoice.push({ billNumber: inp.dataset.billnum, amount: val }); }
+    });
+    if (!perInvoice.length) { toast('Enter amount for at least one invoice','error'); return; }
+    if (hasOver && !confirm('Some amounts exceed the O/S. Confirm anyway?')) return;
+    payload = { type, reference: ref, date, amount: total, perInvoice,
+      mode: document.getElementById('payconf_mode_prr').value,
+      utr: document.getElementById('payconf_utr_prr').value,
+      remarks: document.getElementById('payconf_remarks').value,
+      enteredBy: state.userName, directVendor: '' };
+    document.getElementById('payconf_prrTable').style.display = 'none';
+    document.getElementById('payconf_prrMeta').style.display  = 'none';
+    document.getElementById('payconf_prrItemsBody').innerHTML = '';
+    document.getElementById('payconf_singleAmount').style.display = '';
+  } else {
+    const amount = num(document.getElementById('payconf_amount').value);
+    if (amount <= 0) { toast('Amount must be > 0','error'); return; }
+    payload = { type, reference: ref, date, amount,
+      mode: document.getElementById('payconf_mode').value,
+      utr: document.getElementById('payconf_utr').value,
+      remarks: document.getElementById('payconf_remarks').value,
+      enteredBy: state.userName,
+      directVendor: document.getElementById('payconf_directVendor').value };
+  }
 
-  // Reset fields IMMEDIATELY — don't wait for sheet response
+  // Reset immediately
   document.getElementById('payconf_type').value    = '';
   document.getElementById('payconf_ref').innerHTML = '<option value="">— Select —</option>';
   document.getElementById('payconf_amount').value  = '';
   document.getElementById('payconf_utr').value     = '';
   document.getElementById('payconf_remarks').value = '';
-  document.getElementById('payconf_directVendor').value = '';
-  document.getElementById('payconf_directVendorField').style.display = 'none';
-  document.getElementById('payconf_reqHint').textContent = 'Requested: —';
-  document.getElementById('payconf_date').value = today();
-
-  toast('Payment submitted — saving to sheet…', 'info', 2500);
+  document.getElementById('payconf_date').value    = today();
+  document.getElementById('payconf_warnHint').style.display = 'none';
+  toast('Payment submitted \u2014 saving\u2026', 'info', 2500);
 
   const r = await apiSavePaymentConfirmation(payload);
   if (r.ok) {
-    flashSuccess('Payment of ' + fmtINRSym(amount) + ' confirmed');
-    loadPayConfHistory();
-    loadAllRequests();
-  } else {
-    toast(r.error || 'Save failed — please re-enter and try again','error', 5000);
-  }
+    flashSuccess('Payment of ' + fmtINRSym(payload.amount) + ' confirmed');
+    loadPayConfHistory(); loadAllRequests();
+    _cacheBust('hobList','unpaidBills','prrList');
+  } else toast(r.error || 'Save failed','error', 5000);
 }
 
 async function loadPayConfHistory() {
