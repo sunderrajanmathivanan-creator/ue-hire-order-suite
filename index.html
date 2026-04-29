@@ -388,7 +388,13 @@ td input, td select { padding: 5px 6px; background: var(--input-bg); color: var(
       </div>
       <div class="field typeahead">
         <label class="req">Vendor</label>
-        <input id="ho_vendor" placeholder="Type to search vendor…" autocomplete="off" oninput="vendorTypeahead('ho_vendor','ho_vendorResults','ho_vendorCode')">
+        <div style="display:flex;gap:4px;align-items:center;">
+          <input id="ho_vendor" placeholder="Type to search vendor…" autocomplete="off"
+            oninput="ho_vendor_locked=false;vendorTypeahead('ho_vendor','ho_vendorResults','ho_vendorCode')"
+            style="flex:1;">
+          <button type="button" class="btn btn-ghost btn-sm" id="ho_vendor_clear"
+            style="display:none;padding:5px 8px;flex-shrink:0;" onclick="clearMasterField('ho_vendor','ho_vendorCode','ho_vendorResults','ho_vendor_clear')">✕</button>
+        </div>
         <input type="hidden" id="ho_vendorCode">
         <div class="typeahead-results" id="ho_vendorResults"></div>
       </div>
@@ -400,7 +406,13 @@ td input, td select { padding: 5px 6px; background: var(--input-bg); color: var(
       </div>
       <div class="field typeahead">
         <label>Location</label>
-        <input id="ho_location" placeholder="Type to search location…" autocomplete="off" oninput="locationTypeahead('ho_location','ho_locationResults')">
+        <div style="display:flex;gap:4px;align-items:center;">
+          <input id="ho_location" placeholder="Type to search location…" autocomplete="off"
+            oninput="ho_location_locked=false;locationTypeahead('ho_location','ho_locationResults')"
+            style="flex:1;">
+          <button type="button" class="btn btn-ghost btn-sm" id="ho_location_clear"
+            style="display:none;padding:5px 8px;flex-shrink:0;" onclick="clearMasterField('ho_location',null,'ho_locationResults','ho_location_clear')">✕</button>
+        </div>
         <div class="typeahead-results" id="ho_locationResults"></div>
       </div>
       <div class="field">
@@ -647,8 +659,14 @@ td input, td select { padding: 5px 6px; background: var(--input-bg); color: var(
     </div>
     <div class="grid-3" style="margin-top:12px;">
       <div class="field typeahead">
-        <label>BOQ Item</label>
-        <input id="hob_boqItem" placeholder="Type to search BOQ item…" autocomplete="off" oninput="boqTypeahead('hob_boqItem','hob_boqResults','hob_boqCode')">
+        <label class="req">BOQ Item</label>
+        <div style="display:flex;gap:4px;align-items:center;">
+          <input id="hob_boqItem" placeholder="Type to search BOQ item…" autocomplete="off"
+            oninput="hob_boq_locked=false;boqTypeahead('hob_boqItem','hob_boqResults','hob_boqCode')"
+            style="flex:1;">
+          <button type="button" class="btn btn-ghost btn-sm" id="hob_boq_clear"
+            style="display:none;padding:5px 8px;flex-shrink:0;" onclick="clearMasterField('hob_boqItem','hob_boqCode','hob_boqResults','hob_boq_clear')">✕</button>
+        </div>
         <input type="hidden" id="hob_boqCode">
         <div class="typeahead-results" id="hob_boqResults"></div>
       </div>
@@ -1504,7 +1522,7 @@ async function dbSelect(cacheKey, queryFn) {
     const hit = _cacheGet(cacheKey);
     if (hit) return { ok: true, ...hit };
   }
-  pbShow('Loading\u2026', cacheKey || '');
+  pbShow('Loading\u2026', '');
   try {
     const result = await queryFn();
     if (result.error) throw new Error(result.error.message);
@@ -1606,27 +1624,41 @@ async function apiGetHODetails(hoNumber) {
 async function apiSaveHO(data) {
   _cacheBust('hoList','openHOs');
   pbShow('Saving HO\u2026');
-  const row = {
-    ho_number: data.hoNumber, ho_date: data.hoDate, project: data.project,
-    vendor_code: data.vendorCode||null, vendor_name: data.vendor, scope: data.scope,
-    location: data.location||null, start_date: data.startDate||null,
-    end_date: data.endDate||null, gst_pct: data.gstPct,
-    gross_amount: data.grossAmount, gst_amount: data.gstAmount, total_amount: data.totalAmount,
-    remarks: data.remarks||null, status: 'Pending Approval',
-    created_by: state.userId, created_by_name: state.userName
-  };
-  const { error: he } = await sb.from('ho_orders').insert(row);
-  if (he) { pbDone(); return { ok: false, error: he.message }; }
-  const items = (data.items||[]).map(it => ({
-    ho_number: data.hoNumber, sno: it.sno, description: it.description,
-    uom: it.uom||null, qty: it.qty, unit_rate: it.rate, amount: it.amount
-  }));
-  if (items.length) {
-    const { error: ie } = await sb.from('ho_order_items').insert(items);
-    if (ie) { pbDone(); return { ok: false, error: ie.message }; }
+  try {
+    // Generate number at save time — never on form open
+    const hoNumber = await nextDocNumber('HO');
+    data.hoNumber = hoNumber;
+    // Update the form field so user sees the assigned number
+    const numEl = document.getElementById('ho_number');
+    if (numEl) numEl.value = hoNumber;
+
+    const row = {
+      ho_number: hoNumber, ho_date: data.hoDate, project: data.project,
+      vendor_code: data.vendorCode||null, vendor_name: data.vendor, scope: data.scope,
+      location: data.location||null, start_date: data.startDate||null,
+      end_date: data.endDate||null, gst_pct: data.gstPct,
+      gross_amount: data.grossAmount, gst_amount: data.gstAmount, total_amount: data.totalAmount,
+      remarks: data.remarks||null, status: 'Pending Approval',
+      created_by: state.userId, created_by_name: state.userName
+    };
+    const { error: he } = await sb.from('ho_orders').insert(row);
+    if (he) return { ok: false, error: he.message };
+
+    const items = (data.items||[]).map(it => ({
+      ho_number: hoNumber, sno: it.sno, description: it.description,
+      uom: it.uom||null, qty: it.qty, unit_rate: it.rate, amount: it.amount
+    }));
+    if (items.length) {
+      const { error: ie } = await sb.from('ho_order_items').insert(items);
+      if (ie) return { ok: false, error: ie.message };
+    }
+    _cacheBust('hoList','openHOs');
+    return { ok: true, hoNumber };
+  } catch(e) {
+    return { ok: false, error: e.message };
+  } finally {
+    pbDone();
   }
-  pbDone(); _cacheBust('hoList','openHOs');
-  return { ok: true };
 }
 
 async function apiUpdateHOStatus(hoNumber, status) {
@@ -1679,45 +1711,53 @@ async function apiGetUnbilledHOCs() {
 async function apiSaveHOC(data) {
   _cacheBust('hocList','unbilledHOCs');
   pbShow('Saving certification\u2026');
-
-  if (data.isRevision) {
-    // Update header
-    const { error: ue } = await sb.from('ho_certifications').update({
-      hoc_date: data.hocDate, period_from: data.periodFrom||null,
-      period_to: data.periodTo||null, gross_value: data.grossValue,
-      remarks: data.remarks||null, status: 'Pending Approval', rejection_reason: null,
-      certified_by: data.certifiedBy, certified_by_id: state.userId
-    }).eq('hoc_number', data.hocNumber);
-    if (ue) { pbDone(); return { ok: false, error: ue.message }; }
-    // Delete old items and reinsert
-    await sb.from('ho_certification_items').delete().eq('hoc_number', data.hocNumber);
-  } else {
-    const { error: ie } = await sb.from('ho_certifications').insert({
-      hoc_number: data.hocNumber, hoc_date: data.hocDate, ho_number: data.hoNumber,
-      vendor_name: data.vendor, period_from: data.periodFrom||null,
-      period_to: data.periodTo||null, certified_by: data.certifiedBy,
-      certified_by_id: state.userId, gross_value: data.grossValue,
-      remarks: data.remarks||null, status: 'Pending Approval', rejection_reason: null
-    });
-    if (ie) { pbDone(); return { ok: false, error: ie.message }; }
-    // Transition HO from Open → Active
-    const { data: ho } = await sb.from('ho_orders').select('status').eq('ho_number', data.hoNumber).single();
-    if (ho && ho.status === 'Open') {
-      await sb.from('ho_orders').update({ status: 'Active', updated_at: new Date().toISOString() }).eq('ho_number', data.hoNumber);
+  try {
+    if (!data.isRevision) {
+      // Generate number at save time only
+      data.hocNumber = await nextDocNumber('HOC');
+      const numEl = document.getElementById('hoc_number');
+      if (numEl) numEl.value = data.hocNumber;
     }
+
+    if (data.isRevision) {
+      const { error: ue } = await sb.from('ho_certifications').update({
+        hoc_date: data.hocDate, period_from: data.periodFrom||null,
+        period_to: data.periodTo||null, gross_value: data.grossValue,
+        remarks: data.remarks||null, status: 'Pending Approval', rejection_reason: null,
+        certified_by: data.certifiedBy, certified_by_id: state.userId
+      }).eq('hoc_number', data.hocNumber);
+      if (ue) return { ok: false, error: ue.message };
+      await sb.from('ho_certification_items').delete().eq('hoc_number', data.hocNumber);
+    } else {
+      const { error: ie } = await sb.from('ho_certifications').insert({
+        hoc_number: data.hocNumber, hoc_date: data.hocDate, ho_number: data.hoNumber,
+        vendor_name: data.vendor, period_from: data.periodFrom||null,
+        period_to: data.periodTo||null, certified_by: data.certifiedBy,
+        certified_by_id: state.userId, gross_value: data.grossValue,
+        remarks: data.remarks||null, status: 'Pending Approval', rejection_reason: null
+      });
+      if (ie) return { ok: false, error: ie.message };
+      const { data: ho } = await sb.from('ho_orders').select('status').eq('ho_number', data.hoNumber).single();
+      if (ho && ho.status === 'Open') {
+        await sb.from('ho_orders').update({ status: 'Active', updated_at: new Date().toISOString() }).eq('ho_number', data.hoNumber);
+      }
+    }
+    const items = (data.items||[]).filter(it => it.thisPeriodQty > 0).map(it => ({
+      hoc_number: data.hocNumber, sno: it.sno, description: it.description, uom: it.uom||null,
+      ho_qty: it.hoQty, prev_cumulative_qty: it.prevCumulativeQty, this_period_qty: it.thisPeriodQty,
+      cumulative_qty: it.cumulativeQty, unit_rate: it.unitRate, cert_value: it.certValue
+    }));
+    if (items.length) {
+      const { error: cite } = await sb.from('ho_certification_items').insert(items);
+      if (cite) return { ok: false, error: cite.message };
+    }
+    _cacheBust('hocList','unbilledHOCs','hoList');
+    return { ok: true, hocNumber: data.hocNumber };
+  } catch(e) {
+    return { ok: false, error: e.message };
+  } finally {
+    pbDone();
   }
-  // Insert items
-  const items = (data.items||[]).filter(it => it.thisPeriodQty > 0).map(it => ({
-    hoc_number: data.hocNumber, sno: it.sno, description: it.description, uom: it.uom||null,
-    ho_qty: it.hoQty, prev_cumulative_qty: it.prevCumulativeQty, this_period_qty: it.thisPeriodQty,
-    cumulative_qty: it.cumulativeQty, unit_rate: it.unitRate, cert_value: it.certValue
-  }));
-  if (items.length) {
-    const { error: cite } = await sb.from('ho_certification_items').insert(items);
-    if (cite) { pbDone(); return { ok: false, error: cite.message }; }
-  }
-  pbDone(); _cacheBust('hocList','unbilledHOCs','hoList');
-  return { ok: true };
 }
 
 async function apiUpdateHOCStatus(hocNumber, status, rejectionReason) {
@@ -1776,47 +1816,58 @@ async function apiGetUnpaidBills() {
 async function apiSaveHOB(data) {
   _cacheBust('hobList','unpaidBills','hocList');
   pbShow('Saving bill\u2026');
+  try {
+    if (!data.isRevision) {
+      data.billNumber = await nextDocNumber('HOB');
+      const numEl = document.getElementById('hob_number');
+      if (numEl) numEl.value = data.billNumber;
+    }
 
-  const billRow = {
-    bill_number: data.billNumber, bill_date: data.billDate,
-    hoc_number: data.hocNumber, ho_number: data.hoNumber, vendor_name: data.vendor,
-    vendor_inv_no: data.vendorInvNo||null, vendor_inv_date: data.vendorInvDate||null,
-    credit_period: data.creditPeriod||30, inv_pay_due: data.invPayDue||null,
-    boq_item: data.boqItem||null, boq_item_code: data.boqItemCode||null,
-    gross_amount: data.grossAmount, extra_before_gst: data.extraBefore||0,
-    gst_pct: data.gstPct, gst_amount: data.gstAmount, extra_after_gst: data.extraAfter||0,
-    invoice_value: data.invoiceValue, advance_recovery: data.advanceRecovery||0,
-    tds_pct: data.tdsPct||0, tds_amount: data.tdsAmount||0,
-    hold_amount: data.holdAmount||0, hold_description: data.holdDescription||null,
-    net_payable: data.netPayable, prepared_by: state.userName,
-    prepared_by_id: state.userId, remarks: data.remarks||null,
-    status: 'Pending Approval', rejection_reason: null
-  };
+    const billRow = {
+      bill_number: data.billNumber, bill_date: data.billDate,
+      hoc_number: data.hocNumber, ho_number: data.hoNumber, vendor_name: data.vendor,
+      vendor_inv_no: data.vendorInvNo||null, vendor_inv_date: data.vendorInvDate||null,
+      credit_period: data.creditPeriod||30, inv_pay_due: data.invPayDue||null,
+      boq_item: data.boqItem||null, boq_item_code: data.boqItemCode||null,
+      gross_amount: data.grossAmount, extra_before_gst: data.extraBefore||0,
+      gst_pct: data.gstPct, gst_amount: data.gstAmount, extra_after_gst: data.extraAfter||0,
+      invoice_value: data.invoiceValue, advance_recovery: data.advanceRecovery||0,
+      tds_pct: data.tdsPct||0, tds_amount: data.tdsAmount||0,
+      hold_amount: data.holdAmount||0, hold_description: data.holdDescription||null,
+      net_payable: data.netPayable, prepared_by: state.userName,
+      prepared_by_id: state.userId, remarks: data.remarks||null,
+      status: 'Pending Approval', rejection_reason: null
+    };
 
-  if (data.isRevision) {
-    const { error: ue } = await sb.from('ho_bills').update({ ...billRow, rejection_reason: null }).eq('bill_number', data.billNumber);
-    if (ue) { pbDone(); return { ok: false, error: ue.message }; }
-    await sb.from('ho_bill_items').delete().eq('bill_number', data.billNumber);
-    await sb.from('ho_bill_extra_lines').delete().eq('bill_number', data.billNumber);
-  } else {
-    const { error: ie } = await sb.from('ho_bills').insert(billRow);
-    if (ie) { pbDone(); return { ok: false, error: ie.message }; }
-  }
+    if (data.isRevision) {
+      const { error: ue } = await sb.from('ho_bills').update({ ...billRow, rejection_reason: null }).eq('bill_number', data.billNumber);
+      if (ue) return { ok: false, error: ue.message };
+      await sb.from('ho_bill_items').delete().eq('bill_number', data.billNumber);
+      await sb.from('ho_bill_extra_lines').delete().eq('bill_number', data.billNumber);
+    } else {
+      const { error: ie } = await sb.from('ho_bills').insert(billRow);
+      if (ie) return { ok: false, error: ie.message };
+    }
 
-  if ((data.items||[]).length) {
-    await sb.from('ho_bill_items').insert(data.items.map(it => ({
-      bill_number: data.billNumber, sno: it.sno, description: it.description,
-      uom: it.uom||null, this_period_qty: it.thisPeriodQty, unit_rate: it.unitRate, amount: it.amount
-    })));
+    if ((data.items||[]).length) {
+      await sb.from('ho_bill_items').insert(data.items.map(it => ({
+        bill_number: data.billNumber, sno: it.sno, description: it.description,
+        uom: it.uom||null, this_period_qty: it.thisPeriodQty, unit_rate: it.unitRate, amount: it.amount
+      })));
+    }
+    if ((data.extraLines||[]).length) {
+      await sb.from('ho_bill_extra_lines').insert(data.extraLines.map(el => ({
+        bill_number: data.billNumber, sno: el.sno, description: el.description||null,
+        line_type: el.type, timing: el.timing, amount: el.amount
+      })));
+    }
+    _cacheBust('hobList','unpaidBills','hocList');
+    return { ok: true, billNumber: data.billNumber };
+  } catch(e) {
+    return { ok: false, error: e.message };
+  } finally {
+    pbDone();
   }
-  if ((data.extraLines||[]).length) {
-    await sb.from('ho_bill_extra_lines').insert(data.extraLines.map(el => ({
-      bill_number: data.billNumber, sno: el.sno, description: el.description||null,
-      line_type: el.type, timing: el.timing, amount: el.amount
-    })));
-  }
-  pbDone(); _cacheBust('hobList','unpaidBills','hocList');
-  return { ok: true };
 }
 
 async function apiUpdateHOBStatus(billNumber, status, rejectionReason) {
@@ -1870,21 +1921,27 @@ async function apiGetPRRList(outstanding) {
 
 async function apiSavePRR(data) {
   pbShow('Saving PRR\u2026');
-  const { error: he } = await sb.from('ho_prr').insert({
-    prr_number: data.prrNumber, prr_date: data.prrDate,
-    requested_by: data.requestedBy, requested_by_id: state.userId,
-    remarks: data.remarks||null, status: 'Unpaid'
-  });
-  if (he) { pbDone(); return { ok: false, error: he.message }; }
-  if ((data.bills||[]).length) {
-    await sb.from('ho_prr_items').insert(data.bills.map((b,i) => ({
-      prr_number: data.prrNumber, sno: i+1, bill_number: b.billNumber,
-      ho_number: b.hoNumber, vendor_name: b.vendor,
-      requested_amount: b.requestedAmount, paid_amount: 0, status: 'Unpaid'
-    })));
-  }
-  pbDone(); _cacheBust('prrList','allRequests','unpaidBills');
-  return { ok: true };
+  try {
+    data.prrNumber = await nextDocNumber('PRR');
+    const numEl = document.getElementById('prr_number');
+    if (numEl) numEl.value = data.prrNumber;
+    const { error: he } = await sb.from('ho_prr').insert({
+      prr_number: data.prrNumber, prr_date: data.prrDate,
+      requested_by: data.requestedBy, requested_by_id: state.userId,
+      remarks: data.remarks||null, status: 'Unpaid'
+    });
+    if (he) return { ok: false, error: he.message };
+    if ((data.bills||[]).length) {
+      await sb.from('ho_prr_items').insert(data.bills.map((b,i) => ({
+        prr_number: data.prrNumber, sno: i+1, bill_number: b.billNumber,
+        ho_number: b.hoNumber, vendor_name: b.vendor,
+        requested_amount: b.requestedAmount, paid_amount: 0, status: 'Unpaid'
+      })));
+    }
+    _cacheBust('prrList','allRequests','unpaidBills');
+    return { ok: true };
+  } catch(e) { return { ok: false, error: e.message }; }
+  finally { pbDone(); }
 }
 
 // ── ARR ───────────────────────────────────────────────────────
@@ -1901,12 +1958,17 @@ async function apiGetARRList(outstanding) {
 }
 
 async function apiSaveARR(data) {
-  const r = await dbInsert('ho_arr', {
-    arr_number: data.arrNumber, arr_date: data.arrDate, vendor: data.vendor,
-    requested_by: data.requestedBy, requested_by_id: state.userId,
-    amount: data.amount, paid_amount: 0, remarks: data.remarks||null, status: 'Unpaid'
-  }, ['arrList','allRequests']);
-  return r;
+  try {
+    data.arrNumber = await nextDocNumber('ARR');
+    const numEl = document.getElementById('arr_number');
+    if (numEl) numEl.value = data.arrNumber;
+    const r = await dbInsert('ho_arr', {
+      arr_number: data.arrNumber, arr_date: data.arrDate, vendor: data.vendor,
+      requested_by: data.requestedBy, requested_by_id: state.userId,
+      amount: data.amount, paid_amount: 0, remarks: data.remarks||null, status: 'Unpaid'
+    }, ['arrList','allRequests']);
+    return r;
+  } catch(e) { return { ok: false, error: e.message }; }
 }
 
 // ── HRR ───────────────────────────────────────────────────────
@@ -1933,14 +1995,19 @@ async function apiGetBillsWithHold() {
 }
 
 async function apiSaveHRR(data) {
-  const { data: bill } = await sb.from('ho_bills').select('vendor_name').eq('bill_number', data.billReference).single();
-  const r = await dbInsert('ho_hrr', {
-    hrr_number: data.hrrNumber, hrr_date: data.date,
-    bill_reference: data.billReference, vendor_name: bill?.vendor_name || '',
-    requested_by: data.requestedBy, requested_by_id: state.userId,
-    amount: data.amount, paid_amount: 0, remarks: data.remarks||null, status: 'Unpaid'
-  }, ['hrrList','allRequests']);
-  return r;
+  try {
+    data.hrrNumber = await nextDocNumber('HRR');
+    const numEl = document.getElementById('hrr_number');
+    if (numEl) numEl.value = data.hrrNumber;
+    const { data: bill } = await sb.from('ho_bills').select('vendor_name').eq('bill_number', data.billReference).single();
+    const r = await dbInsert('ho_hrr', {
+      hrr_number: data.hrrNumber, hrr_date: data.date,
+      bill_reference: data.billReference, vendor_name: bill?.vendor_name || '',
+      requested_by: data.requestedBy, requested_by_id: state.userId,
+      amount: data.amount, paid_amount: 0, remarks: data.remarks||null, status: 'Unpaid'
+    }, ['hrrList','allRequests']);
+    return r;
+  } catch(e) { return { ok: false, error: e.message }; }
 }
 
 // ── ALL REQUESTS ──────────────────────────────────────────────
@@ -2064,6 +2131,26 @@ async function _applyPayment(type, ref, amount) {
       const newPaid = num(it.paid_amount) + thisPayment;
       const newStatus = newPaid >= num(it.requested_amount) - 0.005 ? 'Paid' : 'Partial';
       await sb.from('ho_prr_items').update({ paid_amount: newPaid, status: newStatus }).eq('id', it.id);
+
+      // ── Also update the underlying ho_bill status ──
+      if (it.bill_number) {
+        const { data: bill } = await sb.from('ho_bills')
+          .select('net_payable').eq('bill_number', it.bill_number).single();
+        if (bill) {
+          // Get total paid across ALL PRR items for this bill
+          const { data: allBillItems } = await sb.from('ho_prr_items')
+            .select('paid_amount').eq('bill_number', it.bill_number);
+          // Add the current payment delta
+          const totalPaidForBill = (allBillItems||[]).reduce((s,r) => s + num(r.paid_amount), 0)
+            + (newPaid - num(it.paid_amount)); // delta from this update
+          const netPayable = num(bill.net_payable);
+          const billStatus = totalPaidForBill >= netPayable - 0.005 ? 'Paid'
+            : totalPaidForBill > 0 ? 'Partial' : 'Unpaid';
+          await sb.from('ho_bills').update({ status: billStatus })
+            .eq('bill_number', it.bill_number);
+        }
+      }
+
       remaining -= thisPayment;
     }
     // Recompute PRR header status
@@ -2072,12 +2159,14 @@ async function _applyPayment(type, ref, amount) {
     const totalPaid = (updated||[]).reduce((s,r) => s + num(r.paid_amount), 0);
     const newStatus = totalPaid >= totalReq - 0.005 ? 'Paid' : totalPaid > 0 ? 'Partial' : 'Unpaid';
     await sb.from('ho_prr').update({ status: newStatus }).eq('prr_number', ref);
+    _cacheBust('hobList','unpaidBills','prrList','allRequests');
   } else if (type === 'ARR') {
     const { data } = await sb.from('ho_arr').select('amount, paid_amount').eq('arr_number', ref).single();
     if (data) {
       const newPaid = Math.min(num(data.amount), num(data.paid_amount) + amount);
       const newStatus = newPaid >= num(data.amount) - 0.005 ? 'Paid' : 'Partial Paid';
       await sb.from('ho_arr').update({ paid_amount: newPaid, status: newStatus }).eq('arr_number', ref);
+      _cacheBust('arrList','allRequests');
     }
   } else if (type === 'HRR') {
     const { data } = await sb.from('ho_hrr').select('amount, paid_amount').eq('hrr_number', ref).single();
@@ -2085,6 +2174,7 @@ async function _applyPayment(type, ref, amount) {
       const newPaid = Math.min(num(data.amount), num(data.paid_amount) + amount);
       const newStatus = newPaid >= num(data.amount) - 0.005 ? 'Paid' : 'Partial Paid';
       await sb.from('ho_hrr').update({ paid_amount: newPaid, status: newStatus }).eq('hrr_number', ref);
+      _cacheBust('hrrList','allRequests');
     }
   }
 }
@@ -2132,14 +2222,14 @@ async function apiSaveMaster(type, row) {
 // ── USER MANAGEMENT ───────────────────────────────────────────
 async function loadUsersList() {
   pbShow('Loading users\u2026');
-  const { data, error } = await sb.from('user_profiles').select('id, full_name, role, is_active');
+  const { data, error } = await sb.from('user_profiles').select('id, full_name, role, is_active, email');
   pbDone();
   const tbody = document.getElementById('users_list');
   if (error) { tbody.innerHTML = `<tr><td colspan="5" class="center warn-text">${esc(error.message)}</td></tr>`; return; }
   document.getElementById('users_badge').textContent = (data||[]).length;
   tbody.innerHTML = (data||[]).map(u => `<tr>
     <td>${esc(u.full_name)}</td>
-    <td style="font-size:12px;color:var(--muted);">${esc(u.id.slice(0,8))}…</td>
+    <td style="font-size:12px;color:var(--muted);">${esc(u.email || u.id.slice(0,8) + '\u2026')}</td>
     <td><span class="status ${u.is_active ? 'open' : 'cancelled'}">${esc(u.role)}</span></td>
     <td><span class="status ${u.is_active ? 'paid' : 'rejected'}">${u.is_active ? 'Active' : 'Inactive'}</span></td>
     <td class="center">
@@ -2332,6 +2422,11 @@ async function onSignedIn(user) {
     return;
   }
 
+  // Update email in profile if not stored yet
+  if (!profile.email) {
+    await sb.from('user_profiles').update({ email: user.email }).eq('id', user.id).catch(() => {});
+  }
+
   state.userId   = user.id;
   state.user     = user.email;
   state.role     = profile.role;
@@ -2459,31 +2554,39 @@ function switchMasterTab(tab) {
 // APP INIT
 // ============================================================
 async function initApp() {
-  pbShow('Loading\u2026', 'initialising');
+  // Disable individual progress bars during parallel init
+  window._pbShowDisabled = true;
+  // Show a single init bar manually
+  const pb = document.getElementById('progressBar');
+  const fill = document.getElementById('pb-fill');
+  document.getElementById('pb-labelText').textContent = 'Loading\u2026';
+  document.getElementById('pb-msg').textContent = 'Please wait';
+  fill.style.width = '10%';
+  pb.classList.add('show');
+  setTimeout(() => { fill.style.width = '60%'; }, 400);
+  setTimeout(() => { fill.style.width = '85%'; }, 1500);
+
   try {
-    // Temporarily disable pbShow/pbDone during parallel init
-    // so individual queries don't mess with the single init bar
-    const origPbShow = window._pbShowDisabled = true;
     await apiLoadMasters();
     await Promise.all([
       loadHOList().catch(e => console.error('HOList:', e)),
       loadHOCList().catch(e => console.error('HOCList:', e)),
       loadHOBList().catch(e => console.error('HOBList:', e))
     ]);
-    window._pbShowDisabled = false;
     renderAllMasters();
   } catch(e) {
     console.error('initApp error:', e);
   } finally {
+    // Re-enable progress bars and forcibly hide init bar
     window._pbShowDisabled = false;
-    // Force clear progress bar after init
     _pbActive = 0;
+    clearTimeout(_pbTimer);
     clearTimeout(_pbForceTimer);
-    document.getElementById('pb-fill').style.width = '100%';
+    fill.style.width = '100%';
     setTimeout(() => {
-      document.getElementById('progressBar').classList.remove('show');
-      document.getElementById('pb-fill').style.width = '0%';
-    }, 600);
+      pb.classList.remove('show');
+      fill.style.width = '0%';
+    }, 500);
   }
 }
 
@@ -2506,21 +2609,112 @@ async function _oldLoadMasters_disabled() {
 
 function renderAllMasters() {
   const m = state.masters;
+  const isAdmin = state.role === 'Admin';
+
   document.getElementById('mv_list').innerHTML = (m.vendors||[]).map(v =>
-    `<tr><td class="mono" style="color:var(--accent);">${esc(v['Vendor Code']||'')}</td><td>${esc(v['Vendor Name'])}</td><td>${esc(v['Trade']||'')}</td><td>${esc(v['GSTIN']||'')}</td><td>${esc(v['Contact Person']||'')}</td><td>${esc(v['Phone']||'')}</td></tr>`
-  ).join('') || '<tr><td colspan="6" class="center muted">No vendors.</td></tr>';
+    `<tr>
+      <td class="mono" style="color:var(--accent);">${esc(v['Vendor Code']||'')}</td>
+      <td>${esc(v['Vendor Name'])}</td><td>${esc(v['Trade']||'')}</td>
+      <td>${esc(v['GSTIN']||'')}</td><td>${esc(v['Contact Person']||'')}</td><td>${esc(v['Phone']||'')}</td>
+      ${isAdmin ? `<td class="center"><button class="btn btn-ghost btn-sm" onclick="editMaster('vendor','${esc(v['Vendor Code']||'')}')">Edit</button>
+        <button class="btn btn-danger btn-sm" onclick="deleteMaster('vendor','${esc(v['Vendor Code']||'')}','${esc(v['Vendor Name'])}')">Delete</button></td>` : ''}
+    </tr>`
+  ).join('') || `<tr><td colspan="${isAdmin?7:6}" class="center muted">No vendors.</td></tr>`;
 
   document.getElementById('ma_list').innerHTML = (m.activities||[]).map(a =>
-    `<tr><td class="mono" style="color:var(--accent);">${esc(a['Activity Code']||'')}</td><td>${esc(a['Activity Description'])}</td><td>${esc(a['UOM'])}</td><td>${esc(a['Category']||'')}</td><td class="num mono">${fmtINR(a['Default Rate']||0)}</td></tr>`
-  ).join('') || '<tr><td colspan="5" class="center muted">No activities.</td></tr>';
+    `<tr>
+      <td class="mono" style="color:var(--accent);">${esc(a['Activity Code']||'')}</td>
+      <td>${esc(a['Activity Description'])}</td><td>${esc(a['UOM'])}</td>
+      <td>${esc(a['Category']||'')}</td><td class="num mono">${fmtINR(a['Default Rate']||0)}</td>
+      ${isAdmin ? `<td class="center"><button class="btn btn-ghost btn-sm" onclick="editMaster('activity','${esc(a['Activity Code']||'')}')">Edit</button>
+        <button class="btn btn-danger btn-sm" onclick="deleteMaster('activity','${esc(a['Activity Code']||'')}','${esc(a['Activity Description'])}')">Delete</button></td>` : ''}
+    </tr>`
+  ).join('') || `<tr><td colspan="${isAdmin?6:5}" class="center muted">No activities.</td></tr>`;
 
   document.getElementById('mb_list').innerHTML = (m.boqItems||[]).map(b =>
-    `<tr><td class="mono" style="color:var(--accent);">${esc(b['BOQ Code']||'')}</td><td>${esc(b['BOQ Name'])}</td><td>${esc(b['Description']||'')}</td><td class="num mono">${b['Budget Amount'] ? fmtINRSym(b['Budget Amount']) : '—'}</td></tr>`
-  ).join('') || '<tr><td colspan="4" class="center muted">No BOQ items.</td></tr>';
+    `<tr>
+      <td class="mono" style="color:var(--accent);">${esc(b['BOQ Code']||'')}</td>
+      <td>${esc(b['BOQ Name'])}</td><td>${esc(b['Description']||'')}</td>
+      <td class="num mono">${b['Budget Amount'] ? fmtINRSym(b['Budget Amount']) : '—'}</td>
+      ${isAdmin ? `<td class="center"><button class="btn btn-ghost btn-sm" onclick="editMaster('boq','${esc(b['BOQ Code']||'')}')">Edit</button>
+        <button class="btn btn-danger btn-sm" onclick="deleteMaster('boq','${esc(b['BOQ Code']||'')}','${esc(b['BOQ Name'])}')">Delete</button></td>` : ''}
+    </tr>`
+  ).join('') || `<tr><td colspan="${isAdmin?5:4}" class="center muted">No BOQ items.</td></tr>`;
 
   document.getElementById('ml_list').innerHTML = (m.locations||[]).map(l =>
-    `<tr><td>${esc(l['Location Name'])}</td><td>${esc(l['Block']||'')}</td><td>${esc(l['Description']||'')}</td></tr>`
-  ).join('') || '<tr><td colspan="3" class="center muted">No locations.</td></tr>';
+    `<tr>
+      <td>${esc(l['Location Name'])}</td><td>${esc(l['Block']||'')}</td><td>${esc(l['Description']||'')}</td>
+      ${isAdmin ? `<td class="center"><button class="btn btn-ghost btn-sm" onclick="editMaster('location','${esc(l['Location Name'])}')">Edit</button>
+        <button class="btn btn-danger btn-sm" onclick="deleteMaster('location','${esc(l['Location Name'])}','${esc(l['Location Name'])}')">Delete</button></td>` : ''}
+    </tr>`
+  ).join('') || `<tr><td colspan="${isAdmin?4:3}" class="center muted">No locations.</td></tr>`;
+}
+
+async function deleteMaster(type, code, name) {
+  if (!confirm('Delete "' + name + '"? This cannot be undone.')) return;
+  pbShow('Deleting\u2026', type);
+  try {
+    let error;
+    if (type === 'vendor')   ({ error } = await sb.from('ho_vendors').delete().eq('vendor_code', code));
+    if (type === 'activity') ({ error } = await sb.from('ho_activities').delete().eq('activity_code', code));
+    if (type === 'boq')      ({ error } = await sb.from('ho_boq_items').delete().eq('boq_code', code));
+    if (type === 'location') ({ error } = await sb.from('ho_locations').delete().eq('location_name', code));
+    if (error) { toast('Delete failed: ' + error.message, 'error'); return; }
+    _cacheBust('masters'); state.mastersCached = false;
+    await apiLoadMasters();
+    renderAllMasters();
+    flashSuccess(name + ' deleted');
+  } catch(e) { toast('Delete error: ' + e.message, 'error'); }
+  finally { pbDone(); }
+}
+
+async function editMaster(type, code) {
+  // Load the item and pre-fill the add form for editing
+  const m = state.masters;
+  let item;
+  if (type === 'vendor')   item = m.vendors.find(v => v['Vendor Code'] === code);
+  if (type === 'activity') item = m.activities.find(a => a['Activity Code'] === code);
+  if (type === 'boq')      item = m.boqItems.find(b => b['BOQ Code'] === code);
+  if (type === 'location') item = m.locations.find(l => l['Location Name'] === code);
+  if (!item) { toast('Item not found','error'); return; }
+
+  // Switch to the right sub-tab
+  switchMasterTab(type === 'vendor' ? 'vendors' : type === 'activity' ? 'activities' : type === 'boq' ? 'boq' : 'locations');
+
+  if (type === 'vendor') {
+    document.getElementById('mv_name').value    = item['Vendor Name']||'';
+    document.getElementById('mv_trade').value   = item['Trade']||'';
+    document.getElementById('mv_gstin').value   = item['GSTIN']||'';
+    document.getElementById('mv_pan').value     = item['PAN']||'';
+    document.getElementById('mv_contact').value = item['Contact Person']||'';
+    document.getElementById('mv_phone').value   = item['Phone']||'';
+    document.getElementById('mv_address').value = item['Address']||'';
+    document.getElementById('mv_bankName').value= item['Bank Name']||'';
+    document.getElementById('mv_branch').value  = item['Branch']||'';
+    document.getElementById('mv_bank').value    = item['Bank Account']||'';
+    document.getElementById('mv_ifsc').value    = item['IFSC']||'';
+  } else if (type === 'activity') {
+    document.getElementById('ma_desc').value     = item['Activity Description']||'';
+    document.getElementById('ma_uom').value      = item['UOM']||'';
+    document.getElementById('ma_rate').value     = item['Default Rate']||'';
+    document.getElementById('ma_category').value = item['Category']||'';
+  } else if (type === 'boq') {
+    document.getElementById('mb_name').value   = item['BOQ Name']||'';
+    document.getElementById('mb_desc').value   = item['Description']||'';
+    document.getElementById('mb_budget').value = item['Budget Amount']||'';
+  } else if (type === 'location') {
+    document.getElementById('ml_name').value  = item['Location Name']||'';
+    document.getElementById('ml_block').value = item['Block']||'';
+    document.getElementById('ml_desc').value  = item['Description']||'';
+  }
+
+  // Change the button to "Update" and store the code being edited
+  const btnMap = { vendor: 'mv_saveBtn', activity: 'ma_saveBtn', boq: 'mb_saveBtn', location: 'ml_saveBtn' };
+  // Store edit code on the form
+  document.querySelector(`#master-${type === 'vendor' ? 'vendors' : type === 'activity' ? 'activities' : type === 'boq' ? 'boq' : 'locations'} .card`).dataset.editCode = code;
+
+  toast('Form pre-filled — make changes and click + Add to update', 'info', 4000);
+  window.scrollTo(0, 0);
 }
 
 async function saveMaster(type) {
@@ -2580,22 +2774,55 @@ function vendorTypeahead(inputId, resultsId, codeId) {
   res.classList.add('show');
 }
 
+// Master-field lock flags
+let ho_vendor_locked = false;
+let ho_location_locked = false;
+let hob_boq_locked = false;
+
+function clearMasterField(inputId, codeId, resultsId, clearBtnId) {
+  const el = document.getElementById(inputId);
+  el.value = ''; el.readOnly = false;
+  if (codeId) document.getElementById(codeId).value = '';
+  document.getElementById(resultsId).classList.remove('show');
+  document.getElementById(clearBtnId).style.display = 'none';
+  if (inputId === 'ho_vendor')   ho_vendor_locked = false;
+  if (inputId === 'ho_location') ho_location_locked = false;
+  if (inputId === 'hob_boqItem') hob_boq_locked = false;
+  el.focus();
+}
+
+function lockMasterField(inputId, clearBtnId) {
+  const el = document.getElementById(inputId);
+  if (el) el.readOnly = true;
+  const btn = document.getElementById(clearBtnId);
+  if (btn) btn.style.display = '';
+}
+
 function selectVendor(inputId, resultsId, codeId, name, code) {
   document.getElementById(inputId).value = name;
   if (codeId) document.getElementById(codeId).value = code;
   document.getElementById(resultsId).classList.remove('show');
+  // Lock if it's the HO vendor field
+  if (inputId === 'ho_vendor') { ho_vendor_locked = true; lockMasterField('ho_vendor','ho_vendor_clear'); }
 }
 
 function locationTypeahead(inputId, resultsId) {
+  if (ho_location_locked && inputId === 'ho_location') return;
   const q = document.getElementById(inputId).value.toLowerCase();
   const res = document.getElementById(resultsId);
   if (!q) { res.classList.remove('show'); return; }
   const matches = (state.masters.locations||[]).filter(l => l['Location Name'].toLowerCase().includes(q)).slice(0,6);
   if (!matches.length) { res.classList.remove('show'); return; }
   res.innerHTML = matches.map(l => `<div class="typeahead-item" onclick="selectLocation('${inputId}','${resultsId}','${esc(l['Location Name'])}')">
-    ${esc(l['Location Name'])}${l['Block'] ? ' <span class="muted">· '+esc(l['Block'])+'</span>' : ''}
+    ${esc(l['Location Name'])}${l['Block'] ? ' <span class="muted">\u00b7 '+esc(l['Block'])+'</span>' : ''}
   </div>`).join('');
   res.classList.add('show');
+}
+
+function selectLocation(inputId, resultsId, name) {
+  document.getElementById(inputId).value = name;
+  document.getElementById(resultsId).classList.remove('show');
+  if (inputId === 'ho_location') { ho_location_locked = true; lockMasterField('ho_location','ho_location_clear'); }
 }
 
 function calcInvPayDue() {
@@ -2608,6 +2835,7 @@ function calcInvPayDue() {
 }
 
 function boqTypeahead(inputId, resultsId, codeId) {
+  if (hob_boq_locked && inputId === 'hob_boqItem') return;
   const q   = document.getElementById(inputId).value.toLowerCase();
   const res = document.getElementById(resultsId);
   if (!q) { res.classList.remove('show'); return; }
@@ -2615,7 +2843,7 @@ function boqTypeahead(inputId, resultsId, codeId) {
   if (!matches.length) { res.classList.remove('show'); return; }
   res.innerHTML = matches.map(b => `<div class="typeahead-item" onclick="selectBOQ('${inputId}','${resultsId}','${codeId}','${esc(b['BOQ Name'])}','${esc(b['BOQ Code']||'')}')">
     <div>${esc(b['BOQ Name'])}</div>
-    <div class="muted">${esc(b['BOQ Code']||'')}${b['Budget Amount'] ? ' &middot; Budget: ₹'+fmtINR(b['Budget Amount']) : ''}</div>
+    <div class="muted">${esc(b['BOQ Code']||'')}${b['Budget Amount'] ? ' &middot; Budget: \u20b9'+fmtINR(b['Budget Amount']) : ''}</div>
   </div>`).join('');
   res.classList.add('show');
 }
@@ -2624,6 +2852,7 @@ function selectBOQ(inputId, resultsId, codeId, name, code) {
   document.getElementById(inputId).value = name;
   if (codeId) document.getElementById(codeId).value = code;
   document.getElementById(resultsId).classList.remove('show');
+  if (inputId === 'hob_boqItem') { hob_boq_locked = true; lockMasterField('hob_boqItem','hob_boq_clear'); }
 }
 
 function activityTypeahead(inputId, resultsId, rateId, uomId, rowIdx) {
@@ -2634,15 +2863,22 @@ function activityTypeahead(inputId, resultsId, rateId, uomId, rowIdx) {
   if (!matches.length) { res.classList.remove('show'); return; }
   res.innerHTML = matches.map(a => `<div class="typeahead-item" onclick="selectActivity(${rowIdx},'${esc(a['Activity Description'])}','${esc(a['UOM']||'')}',${num(a['Default Rate']||0)})">
     <div>${esc(a['Activity Description'])}</div>
-    <div class="muted">${esc(a['UOM']||'')} · ₹${fmtINR(a['Default Rate']||0)}</div>
+    <div class="muted">${esc(a['UOM']||'')} \u00b7 \u20b9${fmtINR(a['Default Rate']||0)}</div>
   </div>`).join('');
   res.classList.add('show');
 }
 
+
 function selectActivity(rowIdx, desc, uom, rate) {
   const row = document.getElementById('hoItem_' + rowIdx);
   if (!row) return;
-  row.querySelector('.ho_desc').value = desc;
+  const descInput = row.querySelector('.ho_desc');
+  descInput.value = desc;
+  descInput.readOnly = true;
+  descInput.style.background = 'var(--input-bg)';
+  // Show clear button for this activity
+  const clearBtn = row.querySelector('.ho_desc_clear');
+  if (clearBtn) clearBtn.style.display = '';
   row.querySelector('.ho_uom').value = uom;
   row.querySelector('.ho_rate').value = rate;
   const res = document.getElementById('hoItemResults_' + rowIdx);
@@ -2650,6 +2886,22 @@ function selectActivity(rowIdx, desc, uom, rate) {
   recalcHORow(rowIdx);
   recalcHOTotals();
 }
+
+function clearActivity(rowIdx) {
+  const row = document.getElementById('hoItem_' + rowIdx);
+  if (!row) return;
+  const descInput = row.querySelector('.ho_desc');
+  descInput.value = '';
+  descInput.readOnly = false;
+  row.querySelector('.ho_uom').value = '';
+  row.querySelector('.ho_rate').value = '';
+  const clearBtn = row.querySelector('.ho_desc_clear');
+  if (clearBtn) clearBtn.style.display = 'none';
+  recalcHORow(rowIdx);
+  recalcHOTotals();
+  descInput.focus();
+}
+
 
 // Close typeaheads on outside click
 document.addEventListener('click', e => {
@@ -2780,10 +3032,8 @@ async function newHO() {
   document.getElementById('ho_totalAmt').textContent = '0.00';
   document.getElementById('ho_formTitle').textContent = 'Hire Order — New';
 
-  // Fetch next HO number
-  document.getElementById('ho_number').value = 'Generating…';
-  const r = await nextDocNumber('HO').then(n => ({ ok:true, number:n })).catch(() => ({ ok:false }));
-  document.getElementById('ho_number').value = r.ok ? r.number : 'HO/AUTO';
+  // Show preview number — actual number generated at save time
+  document.getElementById('ho_number').value = 'HO/' + currentFY() + '/\u2014\u2014\u2014 (auto)';
 
   addHOItem();
   window.scrollTo(0,0);
@@ -2792,6 +3042,16 @@ async function newHO() {
 function closeHOForm() {
   document.getElementById('hoForm').style.display = 'none';
   document.getElementById('hoListCard').style.display = 'block';
+  ho_vendor_locked = false; ho_location_locked = false;
+  // Reset field states
+  const vEl = document.getElementById('ho_vendor');
+  if (vEl) { vEl.readOnly = false; }
+  const lEl = document.getElementById('ho_location');
+  if (lEl) { lEl.readOnly = false; }
+  const vClear = document.getElementById('ho_vendor_clear');
+  if (vClear) vClear.style.display = 'none';
+  const lClear = document.getElementById('ho_location_clear');
+  if (lClear) lClear.style.display = 'none';
 }
 
 let _hoItemCount = 0;
@@ -2803,10 +3063,13 @@ function addHOItem() {
   tr.innerHTML = `
     <td class="center">${i+1}</td>
     <td style="position:relative;">
-      <input class="ho_desc" placeholder="Type activity…" oninput="activityTypeahead('hoDesc_${i}','hoItemResults_${i}',null,null,${i})" id="hoDesc_${i}" style="width:100%;">
+      <div style="display:flex;gap:3px;align-items:center;">
+        <input class="ho_desc" placeholder="Type to search activity…" oninput="activityTypeahead('hoDesc_${i}','hoItemResults_${i}',null,null,${i})" id="hoDesc_${i}" style="flex:1;">
+        <button type="button" class="btn btn-ghost btn-sm ho_desc_clear" onclick="clearActivity(${i})" style="display:none;padding:3px 6px;flex-shrink:0;">✕</button>
+      </div>
       <div class="typeahead-results" id="hoItemResults_${i}"></div>
     </td>
-    <td><input class="ho_uom" placeholder="UOM" style="width:60px;" oninput="recalcHORow(${i})"></td>
+    <td><input class="ho_uom" placeholder="UOM" readonly style="width:60px;background:var(--input-bg);opacity:0.8;"></td>
     <td><input class="ho_qty" type="number" placeholder="0" style="width:80px;text-align:right;" oninput="recalcHORow(${i});recalcHOTotals()"></td>
     <td><input class="ho_rate" type="number" placeholder="0.00" style="width:90px;text-align:right;" oninput="recalcHORow(${i});recalcHOTotals()"></td>
     <td class="num mono" id="hoAmt_${i}">0.00</td>
@@ -2880,13 +3143,17 @@ function getHOFormData() {
 
 async function saveHO_direct() {
   const data = getHOFormData();
-  if (!data.vendor)   { toast('Vendor is required','error'); return; }
-  if (!data.scope)    { toast('Scope / description required','error'); return; }
-  if (!data.hoDate)   { toast('HO Date required','error'); return; }
-  if (!data.items.length) { toast('Add at least one line item','error'); return; }
+  if (!data.vendor)         { toast('Vendor is required','error'); return; }
+  if (!ho_vendor_locked)    { toast('Select vendor from the dropdown list','error'); return; }
+  if (!data.scope)          { toast('Scope / description required','error'); return; }
+  if (!data.hoDate)         { toast('HO Date required','error'); return; }
+  if (!data.items.length)   { toast('Add at least one line item','error'); return; }
+  // Validate all activity items are from master (have non-empty desc and were selected)
+  const emptyDesc = data.items.find(it => !it.description || !it.description.trim());
+  if (emptyDesc) { toast('All line items must have an activity selected from the master list','error'); return; }
   const r = await apiSaveHO(data);
   if (r.ok) {
-    flashSuccess('Hire Order ' + data.hoNumber + ' saved — pending PM approval.');
+    flashSuccess('Hire Order ' + (r.hoNumber||data.hoNumber) + ' saved — pending PM approval.');
     state.hireOrders = [];
     closeHOForm(); loadHOList();
   } else toast(r.error || 'Save failed','error');
@@ -3043,14 +3310,11 @@ async function onHOCHOChange() {
   document.getElementById('hoc_totalCertified').textContent = '0.00';
   if (!hoNum) { document.getElementById('hoc_number').value = '— select HO first —'; return; }
 
-  document.getElementById('hoc_number').value = 'Fetching…';
-  const [detRes, prevRes, numRes] = await Promise.all([
+  document.getElementById('hoc_number').value = 'HOC/' + currentFY() + '/\u2014\u2014\u2014 (auto)';
+  const [detRes, prevRes] = await Promise.all([
     apiGetHODetails(hoNum),
-    apiGetHOCumulativeQty(hoNum),
-    nextDocNumber('HOC').then(n => ({ ok:true, number:n })).catch(() => ({ ok:false }))
+    apiGetHOCumulativeQty(hoNum)
   ]);
-
-  document.getElementById('hoc_number').value = numRes.ok ? numRes.number : 'HOC/AUTO';
 
   if (!detRes.ok) { toast('Failed to load HO details','error'); return; }
   const items = detRes.items || [];
@@ -3345,6 +3609,11 @@ function closeHOBForm() {
   document.getElementById('hobForm').style.display = 'none';
   document.getElementById('hobListCard').style.display = 'block';
   document.getElementById('hobForm').dataset.revising = '';
+  hob_boq_locked = false;
+  const boqEl = document.getElementById('hob_boqItem');
+  if (boqEl) { boqEl.value = ''; boqEl.readOnly = false; }
+  const boqClear = document.getElementById('hob_boq_clear');
+  if (boqClear) boqClear.style.display = 'none';
   const titleEl = document.querySelector('#hobForm h3');
   if (titleEl) titleEl.textContent = 'New Hire Order Running Bill';
 }
@@ -3352,14 +3621,9 @@ function closeHOBForm() {
 async function onHOBHOCChange() {
   const hocNum = document.getElementById('hob_hocSelect').value;
   if (!hocNum) return;
-  document.getElementById('hob_number').value = 'Fetching…';
+  document.getElementById('hob_number').value = 'HOB/' + currentFY() + '/\u2014\u2014\u2014 (auto)';
 
-  const [hocRes, numRes] = await Promise.all([
-    apiGetHOCDetails(hocNum),
-    nextDocNumber('HOB').then(n => ({ ok:true, number:n })).catch(() => ({ ok:false }))
-  ]);
-
-  document.getElementById('hob_number').value = numRes.ok ? numRes.number : 'HOB/AUTO';
+  const hocRes = await apiGetHOCDetails(hocNum);
 
   if (!hocRes.ok) { toast('Failed to load certification','error'); return; }
   const items = hocRes.items || [];
@@ -3528,16 +3792,17 @@ function getHOBFormData() {
 
 async function saveHOB_direct() {
   const data = getHOBFormData();
-  if (!data.hocNumber) { toast('Select a certification','error'); return; }
-  if (!data.billDate)  { toast('Bill date required','error'); return; }
+  if (!data.hocNumber)  { toast('Select a certification','error'); return; }
+  if (!data.billDate)   { toast('Bill date required','error'); return; }
   if (!data.items.length) { toast('No items loaded — select a certification first','error'); return; }
+  if (!data.boqItem || !hob_boq_locked) { toast('BOQ Item is mandatory — select from the master list','error'); return; }
 
   const isRevision = document.getElementById('hobForm').dataset.revising;
   if (isRevision) data.isRevision = true;
 
   const r = await apiSaveHOB(data);
   if (r.ok) {
-    flashSuccess((isRevision ? 'Revised bill' : 'Bill') + ' ' + data.billNumber + ' saved — pending PM approval.');
+    flashSuccess((isRevision ? 'Revised bill' : 'Bill') + ' ' + (r.billNumber||data.billNumber) + ' saved — pending PM approval.');
     state.bills = [];
     closeHOBForm(); loadHOBList(); loadHOCList();
   } else toast(r.error || 'Save failed','error');
@@ -3788,14 +4053,10 @@ async function newPRR() {
   document.getElementById('prr_date').value = today();
   document.getElementById('prr_requestedBy').value = state.userName;
   document.getElementById('prr_remarks').value = '';
-  document.getElementById('prr_number').value = 'Generating…';
-  document.getElementById('prr_selectedTotal').textContent = '₹ 0.00';
+  document.getElementById('prr_number').value = 'PRR/' + currentFY() + '/\u2014\u2014\u2014 (auto)';
+  document.getElementById('prr_selectedTotal').textContent = '\u20b9 0.00';
 
-  const [numRes, billsRes] = await Promise.all([
-    nextDocNumber('PRR').then(n => ({ ok:true, number:n })).catch(() => ({ ok:false })),
-    apiGetUnpaidBills()
-  ]);
-  document.getElementById('prr_number').value = numRes.ok ? numRes.number : 'PRR/AUTO';
+  const billsRes = await apiGetUnpaidBills();
 
   const tbody = document.getElementById('prr_billsBody');
   const bills = billsRes.ok ? billsRes.bills : [];
@@ -3899,15 +4160,12 @@ async function newARR() {
   document.getElementById('arr_vendorCode').value = '';
   document.getElementById('arr_amount').value = '';
   document.getElementById('arr_remarks').value = '';
-
-  const r = await nextDocNumber('ARR').then(n => ({ ok:true, number:n })).catch(() => ({ ok:false }));
-  document.getElementById('arr_number').value = r.ok ? r.number : 'ARR/AUTO';
+  document.getElementById('arr_number').value = 'ARR/' + currentFY() + '/\u2014\u2014\u2014 (auto)';
 }
 
 function closeARRForm() { document.getElementById('arr_form').style.display = 'none'; }
 
 async function saveARR() {
-  const arrNum = document.getElementById('arr_number').value;
   const date   = document.getElementById('arr_date').value;
   const vendor = document.getElementById('arr_vendor').value.trim();
   const amount = num(document.getElementById('arr_amount').value);
@@ -3916,11 +4174,11 @@ async function saveARR() {
   if (amount <= 0) { toast('Amount must be > 0','error'); return; }
 
   const r = await apiSaveARR({
-    arrNumber: arrNum, arrDate: date, vendor,
+    arrDate: date, vendor,
     requestedBy: document.getElementById('arr_requestedBy').value,
     amount, remarks: document.getElementById('arr_remarks').value
   });
-  if (r.ok) { flashSuccess('ARR ' + arrNum + ' created'); closeARRForm(); loadARRList(); loadAllRequests(); }
+  if (r.ok) { flashSuccess('ARR ' + r.arrNumber + ' created'); closeARRForm(); loadARRList(); loadAllRequests(); }
   else toast(r.error || 'Save failed','error');
 }
 
@@ -3934,13 +4192,9 @@ async function newHRR() {
   document.getElementById('hrr_requestedBy').value = state.userName;
   document.getElementById('hrr_amount').value = '';
   document.getElementById('hrr_remarks').value = '';
+  document.getElementById('hrr_number').value = 'HRR/' + currentFY() + '/\u2014\u2014\u2014 (auto)';
 
-  const [numRes, billsRes] = await Promise.all([
-    nextDocNumber('HRR').then(n => ({ ok:true, number:n })).catch(() => ({ ok:false })),
-    apiGetBillsWithHold()
-  ]);
-  document.getElementById('hrr_number').value = numRes.ok ? numRes.number : 'HRR/AUTO';
-
+  const billsRes = await apiGetBillsWithHold();
   const sel = document.getElementById('hrr_billSelect');
   sel.innerHTML = '<option value="">— Select Bill —</option>' +
     (billsRes.ok ? billsRes.bills : []).map(b =>
