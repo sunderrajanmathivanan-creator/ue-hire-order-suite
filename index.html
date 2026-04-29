@@ -2424,7 +2424,9 @@ async function onSignedIn(user) {
 
   // Update email in profile if not stored yet
   if (!profile.email) {
-    await sb.from('user_profiles').update({ email: user.email }).eq('id', user.id).catch(() => {});
+    try {
+      await sb.from('user_profiles').update({ email: user.email }).eq('id', user.id);
+    } catch(e) { /* non-critical, ignore */ }
   }
 
   state.userId   = user.id;
