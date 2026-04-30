@@ -370,7 +370,7 @@ td input, td select { padding: 5px 6px; background: var(--input-bg); color: var(
     </div>
     <div id="ho_headerBtns">
       <button class="btn btn-primary" id="btn_newHO" onclick="newHO()">+ New Hire Order</button>
-      <button class="btn btn-ghost" onclick="loadHOList()">↻ Refresh</button>
+      
     </div>
   </div>
 
@@ -512,7 +512,7 @@ td input, td select { padding: 5px 6px; background: var(--input-bg); color: var(
     </div>
     <div id="hoc_headerBtns">
       <button class="btn btn-primary" id="btn_newHOC" onclick="newHOC()">+ New Certification</button>
-      <button class="btn btn-ghost" onclick="loadHOCList()">↻ Refresh</button>
+      
     </div>
   </div>
 
@@ -543,7 +543,7 @@ td input, td select { padding: 5px 6px; background: var(--input-bg); color: var(
         <input type="date" id="hoc_periodTo">
       </div>
       <div class="field">
-        <label>Certified By (Site Engineer)</label>
+        <label>Certified By (Site Manager)</label>
         <input id="hoc_certifiedBy" readonly>
       </div>
     </div>
@@ -618,7 +618,7 @@ td input, td select { padding: 5px 6px; background: var(--input-bg); color: var(
     </div>
     <div id="hob_headerBtns">
       <button class="btn btn-primary" id="btn_newHOB" onclick="newHOB()">+ New Bill</button>
-      <button class="btn btn-ghost" onclick="loadHOBList()">↻ Refresh</button>
+      
     </div>
   </div>
 
@@ -793,10 +793,12 @@ td input, td select { padding: 5px 6px; background: var(--input-bg); color: var(
           <th onclick="sortTable('hob_listBody',4,this)" style="cursor:pointer;">Vendor ↕</th>
           <th class="num" onclick="sortTable('hob_listBody',5,this,true)" style="cursor:pointer;">Invoice Value ↕</th>
           <th class="num" onclick="sortTable('hob_listBody',6,this,true)" style="cursor:pointer;">Net Payable ↕</th>
-          <th onclick="sortTable('hob_listBody',7,this)" style="cursor:pointer;">Status ↕</th>
+          <th class="num" onclick="sortTable('hob_listBody',7,this,true)" style="cursor:pointer;">Total Paid ↕</th>
+          <th class="num" onclick="sortTable('hob_listBody',8,this,true)" style="cursor:pointer;">Outstanding ↕</th>
+          <th onclick="sortTable('hob_listBody',9,this)" style="cursor:pointer;">Status ↕</th>
           <th class="center">Actions</th>
         </tr></thead>
-        <tbody id="hob_listBody"><tr><td colspan="9" class="center muted">Loading…</td></tr></tbody>
+        <tbody id="hob_listBody"><tr><td colspan="11" class="center muted">Loading…</td></tr></tbody>
       </table>
     </div>
   </div>
@@ -833,7 +835,7 @@ td input, td select { padding: 5px 6px; background: var(--input-bg); color: var(
           <option value="Partial">Partial Paid</option>
           <option value="Paid">Fully Paid</option>
         </select>
-        <button class="btn btn-ghost btn-sm" onclick="loadAllRequests()">↻ Refresh</button>
+        
       </div>
       <div class="table-wrap">
         <table>
@@ -879,8 +881,9 @@ td input, td select { padding: 5px 6px; background: var(--input-bg); color: var(
             <th>Bill Number</th><th>HO Number</th><th>Vendor</th>
             <th class="num">Invoice Value</th><th class="num">Net Payable</th>
             <th class="num">Outstanding (O/S)</th>
+            <th class="num">Request Amount (₹)</th>
           </tr></thead>
-          <tbody id="prr_billsBody"><tr><td colspan="7" class="center muted">Loading bills…</td></tr></tbody>
+          <tbody id="prr_billsBody"><tr><td colspan="8" class="center muted">Loading bills…</td></tr></tbody>
         </table>
       </div>
       <div style="margin-top:10px;color:var(--muted);font-size:12px;">Total Selected: <strong id="prr_selectedTotal" style="color:var(--accent);">₹ 0.00</strong></div>
@@ -1133,7 +1136,7 @@ td input, td select { padding: 5px 6px; background: var(--input-bg); color: var(
     <div class="card">
       <div class="row" style="justify-content:space-between;margin-bottom:12px;">
         <h3 style="margin-bottom:0;border:none;padding:0;">Payment Confirmation History</h3>
-        <button class="btn btn-ghost btn-sm" onclick="loadPayConfHistory()">↻ Refresh</button>
+        
       </div>
       <div class="row" style="margin-bottom:10px;">
         <select id="payHist_typeFilter" style="padding:7px;background:var(--input-bg);color:var(--text);border:1px solid var(--border);border-radius:4px;" onchange="loadPayConfHistory()">
@@ -1171,7 +1174,7 @@ td input, td select { padding: 5px 6px; background: var(--input-bg); color: var(
 
   <!-- VENDORS -->
   <div id="master-vendors">
-    <div class="card">
+    <div class="card" id="masterAddVendorCard">
       <h3>Add Vendor</h3>
       <div class="grid-3">
         <div class="field"><label class="req">Vendor Name</label><input id="mv_name" placeholder="Full legal name"></div>
@@ -1205,7 +1208,7 @@ td input, td select { padding: 5px 6px; background: var(--input-bg); color: var(
 
   <!-- ACTIVITIES -->
   <div id="master-activities" class="hidden">
-    <div class="card">
+    <div class="card" id="masterAddActivityCard">
       <h3>Add Activity</h3>
       <div class="grid-3">
         <div class="field" style="grid-column:1/3;"><label class="req">Activity Description</label><input id="ma_desc" placeholder="e.g. Tower Crane Hire — 10T capacity"></div>
@@ -1228,7 +1231,7 @@ td input, td select { padding: 5px 6px; background: var(--input-bg); color: var(
 
   <!-- BOQ ITEMS -->
   <div id="master-boq" class="hidden">
-    <div class="card">
+    <div class="card" id="masterAddBoqCard">
       <h3>Add BOQ Item</h3>
       <div class="grid-3">
         <div class="field"><label class="req">BOQ Item Name</label><input id="mb_name" placeholder="e.g. Earthwork, RCC Works"></div>
@@ -1248,7 +1251,7 @@ td input, td select { padding: 5px 6px; background: var(--input-bg); color: var(
 
   <!-- LOCATIONS -->
   <div id="master-locations" class="hidden">
-    <div class="card">
+    <div class="card" id="masterAddLocationCard">
       <h3>Add Location</h3>
       <div class="grid-3">
         <div class="field"><label class="req">Location Name</label><input id="ml_name" placeholder="e.g. Block A, Foundation Zone"></div>
@@ -1273,7 +1276,7 @@ td input, td select { padding: 5px 6px; background: var(--input-bg); color: var(
       <div class="section-title">User Management</div>
       <div class="section-sub">Invite users, manage roles and access. Admin only.</div>
     </div>
-    <button class="btn btn-ghost" onclick="loadUsersList()">↻ Refresh</button>
+    
   </div>
 
   <div class="card">
@@ -1290,9 +1293,9 @@ td input, td select { padding: 5px 6px; background: var(--input-bg); color: var(
       <div class="field">
         <label class="req">Role</label>
         <select id="inv_role">
-          <option value="Purchase Executive">Purchase Executive</option>
-          <option value="Site Engineer">Site Engineer</option>
-          <option value="Planning Engineer">Planning Engineer</option>
+          <option value="Procurement">Procurement</option>
+          <option value="Site Manager">Site Manager</option>
+          <option value="Planning/ QS">Planning/ QS</option>
           <option value="Project Manager">Project Manager</option>
           <option value="Admin">Admin</option>
         </select>
@@ -1368,10 +1371,10 @@ const COMPANY = {
 };
 
 const ROLE_PERMS = {
-  'Purchase Executive': { canCreateHO: true },
+  'Procurement': { canCreateHO: true },
   'Project Manager':    { canApproveHO: true, canCreatePRR: true, canCreateARR: true, canShortCloseHO: true, canApproveBill: true, canCreateHRR: true },
-  'Site Engineer':      { canCreateHOC: true },
-  'Planning Engineer':  { canCreateHOB: true, canConfirmPayment: true, canCreateDirectPayment: true },
+  'Site Manager':      { canCreateHOC: true },
+  'Planning/ QS':  { canCreateHOB: true, canConfirmPayment: true, canCreateDirectPayment: true },
   'Admin':              { canCreateHO: true, canApproveHO: true, canCreateHOC: true, canCreateHOB: true, canCreatePRR: true, canCreateARR: true, canConfirmPayment: true, canCreateDirectPayment: true, canShortCloseHO: true, canApproveBill: true, canCreateHRR: true, canManageUsers: true }
 };
 
@@ -1733,8 +1736,10 @@ async function apiSaveHO(data) {
   }
 }
 
-async function apiUpdateHOStatus(hoNumber, status) {
-  return dbUpdate('ho_orders', { ho_number: hoNumber }, { status, updated_at: new Date().toISOString() }, ['hoList','openHOs']);
+async function apiUpdateHOStatus(hoNumber, status, reason) {
+  const updates = { status, updated_at: new Date().toISOString() };
+  if (reason) updates.remarks = reason;
+  return dbUpdate('ho_orders', { ho_number: hoNumber }, updates, ['hoList','openHOs']);
 }
 
 // ── CERTIFICATIONS ────────────────────────────────────────────
@@ -1840,10 +1845,31 @@ async function apiUpdateHOCStatus(hocNumber, status, rejectionReason) {
 
 // ── BILLS ─────────────────────────────────────────────────────
 async function apiGetHOBList() {
-  const r = await dbSelect('hobList', () =>
-    sb.from('ho_bills').select('*').order('created_at', { ascending: false })
-  );
-  return r.ok ? { ok: true, bills: (r.data||[]).map(mapHOB) } : r;
+  const [r, prrRes] = await Promise.all([
+    dbSelect('hobList', () =>
+      sb.from('ho_bills').select('*').order('created_at', { ascending: false })
+    ),
+    sb.from('ho_prr_items').select('bill_number, paid_amount')
+  ]);
+  if (!r.ok) return r;
+
+  // Sum paid amounts per bill across all PRR items
+  const paidMap = {};
+  (prrRes.data||[]).forEach(it => {
+    paidMap[it.bill_number] = (paidMap[it.bill_number]||0) + num(it.paid_amount);
+  });
+
+  return {
+    ok: true,
+    bills: (r.data||[]).map(b => {
+      const mapped = mapHOB(b);
+      const totalPaid = paidMap[b.bill_number] || 0;
+      const outstanding = Math.max(0, num(b.net_payable) - totalPaid);
+      mapped['Total Paid'] = totalPaid;
+      mapped['Outstanding'] = outstanding;
+      return mapped;
+    })
+  };
 }
 
 async function apiGetHOBDetails(billNumber) {
@@ -1876,31 +1902,35 @@ async function apiGetUnpaidBills() {
   );
   if (!r.ok) return r;
 
-  // Get all PRR items with paid amounts
+  // Get all PRR items (paid amounts + requested amounts + which PRR they belong to)
   const { data: prrItems } = await sb.from('ho_prr_items')
-    .select('bill_number, paid_amount, prr_number');
+    .select('bill_number, requested_amount, paid_amount, prr_number');
 
-  // Get active (outstanding) PRR numbers
+  // Get active (Unpaid/Partial) PRR numbers — amounts in these are still "in flight"
   const { data: activePRRs } = await sb.from('ho_prr')
     .select('prr_number').in('status',['Unpaid','Partial']);
   const activePRRSet = new Set((activePRRs||[]).map(p => p.prr_number));
 
-  // Bills currently locked in an active PRR
-  const lockedBills = new Set(
-    (prrItems||[]).filter(it => activePRRSet.has(it.prr_number)).map(it => it.bill_number)
-  );
-
-  // Total confirmed paid per bill
+  // Per bill: total confirmed paid (across ALL PRRs, any status)
   const paidMap = {};
   (prrItems||[]).forEach(it => {
     paidMap[it.bill_number] = (paidMap[it.bill_number]||0) + num(it.paid_amount);
   });
 
+  // Per bill: total amount currently in-flight in active PRRs (requested but not yet paid)
+  // This is the amount already "spoken for" by an open PRR
+  const inFlightMap = {};
+  (prrItems||[]).filter(it => activePRRSet.has(it.prr_number)).forEach(it => {
+    const inflight = Math.max(0, num(it.requested_amount) - num(it.paid_amount));
+    inFlightMap[it.bill_number] = (inFlightMap[it.bill_number]||0) + inflight;
+  });
+
   const bills = (r.data||[])
-    .filter(b => !lockedBills.has(b.bill_number))
     .map(b => {
-      const confirmed = paidMap[b.bill_number] || 0;
-      const outstanding = Math.max(0, num(b.net_payable) - confirmed);
+      const confirmed  = paidMap[b.bill_number]   || 0;
+      const inFlight   = inFlightMap[b.bill_number] || 0;
+      // Outstanding = net payable minus what is already paid or in an active PRR
+      const outstanding = Math.max(0, num(b.net_payable) - confirmed - inFlight);
       return {
         'Bill Number': b.bill_number, 'HO Number': b.ho_number,
         'Vendor Name': b.vendor_name, 'Invoice Value': b.invoice_value,
@@ -2257,14 +2287,13 @@ async function _applyPRRPaymentPerInvoice(prrNumber, perInvoice) {
       .update({ paid_amount: newPaid, status: itemStatus })
       .eq('id', prrItem.id);
 
-    // Update the bill's own status
+    // Update the bill's own status based on total paid across ALL PRR items vs net_payable
     const { data: bill } = await sb.from('ho_bills')
       .select('net_payable').eq('bill_number', entry.billNumber).single();
     if (bill) {
       const { data: allItems } = await sb.from('ho_prr_items')
         .select('paid_amount').eq('bill_number', entry.billNumber);
-      const totalBillPaid = (allItems||[]).reduce((s,r) => s + num(r.paid_amount), 0)
-        + (num(entry.amount)); // include this payment
+      const totalBillPaid = (allItems||[]).reduce((s,r) => s + num(r.paid_amount), 0);
       const netPayable = num(bill.net_payable);
       const billStatus = totalBillPaid >= netPayable - 0.005 ? 'Paid'
         : totalBillPaid > 0 ? 'Partial' : 'Unpaid';
@@ -2307,12 +2336,10 @@ async function _applyPayment(type, ref, amount) {
         const { data: bill } = await sb.from('ho_bills')
           .select('net_payable').eq('bill_number', it.bill_number).single();
         if (bill) {
-          // Get total paid across ALL PRR items for this bill
+          // Re-fetch all PRR items for this bill after the update above
           const { data: allBillItems } = await sb.from('ho_prr_items')
             .select('paid_amount').eq('bill_number', it.bill_number);
-          // Add the current payment delta
-          const totalPaidForBill = (allBillItems||[]).reduce((s,r) => s + num(r.paid_amount), 0)
-            + (newPaid - num(it.paid_amount)); // delta from this update
+          const totalPaidForBill = (allBillItems||[]).reduce((s,r) => s + num(r.paid_amount), 0);
           const netPayable = num(bill.net_payable);
           const billStatus = totalPaidForBill >= netPayable - 0.005 ? 'Paid'
             : totalPaidForBill > 0 ? 'Partial' : 'Unpaid';
@@ -2391,6 +2418,7 @@ async function apiSaveMaster(type, row) {
 
 // ── USER MANAGEMENT ───────────────────────────────────────────
 async function loadUsersList() {
+  if (!hasPerm('canManageUsers')) { toast('Admin access only','error'); return; }
   pbShow('Loading\u2026');
   const { data, error } = await sb.from('user_profiles').select('id, full_name, role, is_active, email');
   pbDone();
@@ -2410,6 +2438,7 @@ async function loadUsersList() {
 }
 
 async function inviteUser() {
+  if (!hasPerm('canManageUsers')) { toast('Admin access only','error'); return; }
   const name  = document.getElementById('inv_name').value.trim();
   const email = document.getElementById('inv_email').value.trim();
   const role  = document.getElementById('inv_role').value;
@@ -2441,14 +2470,15 @@ async function inviteUser() {
 }
 
 async function changeUserRole(userId, name, currentRole) {
+  if (!hasPerm('canManageUsers')) { toast('Admin access only','error'); return; }
   openModal(`
     <h3>Change Role — ${esc(name)}</h3>
     <div class="field" style="margin-bottom:16px;">
       <label>New Role</label>
       <select id="modal_newRole" style="padding:9px;background:var(--input-bg);color:var(--text);border:1px solid var(--border);border-radius:4px;width:100%;">
-        <option value="Purchase Executive" ${currentRole==='Purchase Executive'?'selected':''}>Purchase Executive</option>
-        <option value="Site Engineer"      ${currentRole==='Site Engineer'?'selected':''}>Site Engineer</option>
-        <option value="Planning Engineer"  ${currentRole==='Planning Engineer'?'selected':''}>Planning Engineer</option>
+        <option value="Procurement" ${currentRole==='Procurement'?'selected':''}>Procurement</option>
+        <option value="Site Manager"      ${currentRole==='Site Manager'?'selected':''}>Site Manager</option>
+        <option value="Planning/ QS"  ${currentRole==='Planning/ QS'?'selected':''}>Planning/ QS</option>
         <option value="Project Manager"    ${currentRole==='Project Manager'?'selected':''}>Project Manager</option>
         <option value="Admin"              ${currentRole==='Admin'?'selected':''}>Admin</option>
       </select>
@@ -2460,6 +2490,7 @@ async function changeUserRole(userId, name, currentRole) {
 }
 
 async function saveRoleChange(userId) {
+  if (!hasPerm('canManageUsers')) { toast('Admin access only','error'); return; }
   const newRole = document.getElementById('modal_newRole').value;
   const { error } = await sb.from('user_profiles').update({ role: newRole, updated_at: new Date().toISOString() }).eq('id', userId);
   if (error) { toast(error.message, 'error'); return; }
@@ -2469,6 +2500,7 @@ async function saveRoleChange(userId) {
 }
 
 async function toggleUserActive(userId, newState) {
+  if (!hasPerm('canManageUsers')) { toast('Admin access only','error'); return; }
   const { error } = await sb.from('user_profiles').update({ is_active: newState, updated_at: new Date().toISOString() }).eq('id', userId);
   if (error) { toast(error.message, 'error'); return; }
   flashSuccess(newState ? 'User reactivated' : 'User deactivated');
@@ -2769,6 +2801,13 @@ async function _oldLoadMasters_disabled() {
 function renderAllMasters() {
   const m = state.masters;
   const isAdmin = state.role === 'Admin';
+  const canAddMasters = ['Admin', 'Planning/ QS'].includes(state.role);
+
+  // Show/hide add-entry cards based on role
+  ['masterAddVendorCard','masterAddActivityCard','masterAddBoqCard','masterAddLocationCard'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.style.display = canAddMasters ? '' : 'none';
+  });
 
   document.getElementById('mv_list').innerHTML = (m.vendors||[]).map(v =>
     `<tr>
@@ -2877,6 +2916,7 @@ async function editMaster(type, code) {
 }
 
 async function saveMaster(type) {
+  if (!['Admin', 'Planning/ QS'].includes(state.role)) { toast('Only Admin or Planning/ QS can add master entries','error'); return; }
   let row;
   if (type === 'vendor') {
     const name = document.getElementById('mv_name').value.trim();
@@ -3172,7 +3212,7 @@ function renderHOList() {
 }
 
 async function newHO() {
-  if (!hasPerm('canCreateHO')) { toast('Not permitted — only Purchase Executive can create Hire Orders','error'); return; }
+  if (!hasPerm('canCreateHO')) { toast('Not permitted — only Procurement can create Hire Orders','error'); return; }
   document.getElementById('hoForm').style.display = 'block';
   document.getElementById('hoListCard').style.display = 'none';
   document.getElementById('ho_date').value = today();
@@ -3330,16 +3370,48 @@ async function approveHO(hoNum, decision) {
 
 async function shortCloseHO(hoNum) {
   if (!hasPerm('canShortCloseHO')) { toast('Not permitted','error'); return; }
-  if (!confirm('Short-close HO ' + hoNum + '? No further certifications can be added.')) return;
-  const r = await apiUpdateHOStatus(hoNum, 'Short-Closed');
+  openModal(`
+    <h3 style="color:var(--warn);">Short-Close HO — ${esc(hoNum)}</h3>
+    <p style="color:var(--muted);font-size:13px;margin-bottom:14px;">No further certifications can be raised after short-closing. Please provide a reason.</p>
+    <div class="field" style="margin-bottom:16px;">
+      <label class="req">Reason for Short-Close</label>
+      <textarea id="hoActionReason" rows="3" placeholder="e.g. Scope completed partially, balance scope dropped…" style="width:100%;padding:9px;border:1px solid var(--border);border-radius:4px;font-family:inherit;font-size:13px;resize:vertical;"></textarea>
+    </div>
+    <div class="actions-row">
+      <button class="btn btn-warn" onclick="confirmShortCloseHO('${esc(hoNum)}')">Confirm Short-Close</button>
+      <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+    </div>`);
+}
+
+async function confirmShortCloseHO(hoNum) {
+  const reason = (document.getElementById('hoActionReason')?.value || '').trim();
+  if (!reason) { toast('Reason is mandatory','error'); return; }
+  closeModal();
+  const r = await apiUpdateHOStatus(hoNum, 'Short-Closed', reason);
   if (r.ok) { flashSuccess('HO ' + hoNum + ' Short-Closed'); state.hireOrders = []; loadHOList(); }
   else toast(r.error || 'Update failed','error');
 }
 
 async function cancelHO(hoNum) {
   if (!hasPerm('canShortCloseHO')) { toast('Not permitted','error'); return; }
-  if (!confirm('Cancel HO ' + hoNum + '? This cannot be undone.')) return;
-  const r = await apiUpdateHOStatus(hoNum, 'Cancelled');
+  openModal(`
+    <h3 style="color:var(--danger);">Cancel HO — ${esc(hoNum)}</h3>
+    <p style="color:var(--muted);font-size:13px;margin-bottom:14px;">This action cannot be undone. Please provide a reason for cancellation.</p>
+    <div class="field" style="margin-bottom:16px;">
+      <label class="req">Reason for Cancellation</label>
+      <textarea id="hoActionReason" rows="3" placeholder="e.g. Vendor withdrew, scope cancelled by client…" style="width:100%;padding:9px;border:1px solid var(--border);border-radius:4px;font-family:inherit;font-size:13px;resize:vertical;"></textarea>
+    </div>
+    <div class="actions-row">
+      <button class="btn btn-danger" onclick="confirmCancelHO('${esc(hoNum)}')">Confirm Cancel</button>
+      <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+    </div>`);
+}
+
+async function confirmCancelHO(hoNum) {
+  const reason = (document.getElementById('hoActionReason')?.value || '').trim();
+  if (!reason) { toast('Reason is mandatory','error'); return; }
+  closeModal();
+  const r = await apiUpdateHOStatus(hoNum, 'Cancelled', reason);
   if (r.ok) { flashSuccess('HO ' + hoNum + ' Cancelled'); state.hireOrders = []; loadHOList(); }
   else toast(r.error || 'Update failed','error');
 }
@@ -3434,7 +3506,7 @@ function renderHOCList() {
 }
 
 async function newHOC() {
-  if (!hasPerm('canCreateHOC')) { toast('Only Site Engineer can create certifications','error'); return; }
+  if (!hasPerm('canCreateHOC')) { toast('Only Site Manager can create certifications','error'); return; }
   document.getElementById('hocForm').style.display = 'block';
   document.getElementById('hocListCard').style.display = 'none';
   document.getElementById('hoc_date').value = today();
@@ -3573,14 +3645,14 @@ async function saveHOC_direct() {
 async function saveAndPrintHOC() { saveHOC_direct(); }
 
 async function approveHOC(hocNum, decision) {
-  if (!hasPerm('canCreateHOB')) { toast('Only Planning Engineer can review certifications','error'); return; }
+  if (!hasPerm('canCreateHOB')) { toast('Only Planning/ QS can review certifications','error'); return; }
   const r = await apiUpdateHOCStatus(hocNum, 'Unbilled', '');
   if (r.ok) { flashSuccess('Certification ' + hocNum + ' Approved'); state.certifications = []; loadHOCList(); }
   else toast(r.error || 'Update failed','error');
 }
 
 async function reviseHOC(hocNum) {
-  if (!hasPerm('canCreateHOC')) { toast('Only Site Engineer can revise certifications','error'); return; }
+  if (!hasPerm('canCreateHOC')) { toast('Only Site Manager can revise certifications','error'); return; }
   const r = await apiGetHOCDetails(hocNum);
   if (!r.ok) { toast(r.error,'error'); return; }
   const h = r.header; const items = r.items || [];
@@ -3705,7 +3777,7 @@ function renderHOBList() {
   let rows = state.bills;
   if (q)  rows = rows.filter(b => ['Bill Number','HO Number','HOC Number'].some(f => String(b[f]||'').toLowerCase().includes(q)));
   if (sf) rows = rows.filter(b => b['Status'] === sf);
-  if (!rows.length) { tbody.innerHTML = '<tr><td colspan="9" class="center muted">No bills found.</td></tr>'; return; }
+  if (!rows.length) { tbody.innerHTML = '<tr><td colspan="11" class="center muted">No bills found.</td></tr>'; return; }
 
   const perms = ROLE_PERMS[state.role] || {};
   tbody.innerHTML = rows.map(b => {
@@ -3720,6 +3792,8 @@ function renderHOBList() {
       actionBtns += `<button class="btn btn-warn btn-sm" onclick="reviseHOB('${esc(b['Bill Number'])}')">✎ Revise &amp; Resubmit</button>`;
     }
     const rejReason = b['Rejection Reason'] ? `<br><span style="font-size:11px;color:var(--danger);">Reason: ${esc(b['Rejection Reason'])}</span>` : '';
+    const totalPaid = num(b['Total Paid'] || 0);
+    const outstanding = num(b['Outstanding'] || 0);
     return `<tr>
       <td class="mono" style="font-weight:600;" data-sort="${esc(b['Bill Number'])}">${esc(b['Bill Number'])}</td>
       <td data-sort="${esc(b['Bill Date'])}">${fmtDate(b['Bill Date'])}</td>
@@ -3728,6 +3802,8 @@ function renderHOBList() {
       <td data-sort="${esc(b['Vendor Name'])}">${esc(b['Vendor Name'])}</td>
       <td class="num mono" data-sort="${num(b['Invoice Value'])}">${fmtINRSym(b['Invoice Value'])}</td>
       <td class="num mono" data-sort="${num(b['Net Payable'])}">${fmtINRSym(b['Net Payable'])}</td>
+      <td class="num mono" data-sort="${totalPaid}" style="color:var(--success,#1a6b4a);">${fmtINRSym(totalPaid)}</td>
+      <td class="num mono" data-sort="${outstanding}" style="color:${outstanding > 0.005 ? 'var(--warn)' : 'var(--muted)'};">${fmtINRSym(outstanding)}</td>
       <td data-sort="${esc(st)}"><span class="status ${st.toLowerCase().replace(' ','-')}">${esc(st)}</span>${rejReason}</td>
       <td class="center" style="white-space:nowrap;">${actionBtns}</td>
     </tr>`;
@@ -3735,7 +3811,7 @@ function renderHOBList() {
 }
 
 async function newHOB() {
-  if (!hasPerm('canCreateHOB')) { toast('Only Planning Engineer can create bills','error'); return; }
+  if (!hasPerm('canCreateHOB')) { toast('Only Planning/ QS can create bills','error'); return; }
   document.getElementById('hobForm').style.display = 'block';
   document.getElementById('hobListCard').style.display = 'none';
   document.getElementById('hob_date').value = today();
@@ -3882,6 +3958,15 @@ function recalcHOBTotals() {
   document.getElementById('hob_s_tds').textContent          = fmtINR(tds);
   document.getElementById('hob_s_hold').textContent         = fmtINR(hold);
   document.getElementById('hob_s_net').textContent          = fmtINR(net);
+  // Visual warning when net payable is zero or negative
+  const netRow = document.getElementById('hob_s_net').closest('tr');
+  if (net <= 0) {
+    netRow.style.background = '#fee2e2';
+    document.getElementById('hob_s_net').style.color = 'var(--danger)';
+  } else {
+    netRow.style.background = '';
+    document.getElementById('hob_s_net').style.color = 'var(--accent)';
+  }
 }
 
 function getHOBFormData() {
@@ -3960,6 +4045,7 @@ async function saveHOB_direct() {
   if (!data.vendorInvDate) { toast('Vendor Invoice Date is mandatory','error'); return; }
   if (!data.items.length) { toast('No items loaded — select a certification first','error'); return; }
   if (!data.boqItem || !hob_boq_locked) { toast('BOQ Item is mandatory — select from the master list','error'); return; }
+  if (data.netPayable <= 0) { toast('Net Payable is zero or negative. Reduce deductions before saving.','error'); return; }
 
   const isRevision = document.getElementById('hobForm').dataset.revising;
   if (isRevision) data.isRevision = true;
@@ -3985,7 +4071,7 @@ async function approveHOB(billNum) {
 }
 
 async function reviseHOB(billNum) {
-  if (!hasPerm('canCreateHOB')) { toast('Only Planning Engineer can revise bills','error'); return; }
+  if (!hasPerm('canCreateHOB')) { toast('Only Planning/ QS can revise bills','error'); return; }
   const r = await apiGetHOBDetails(billNum);
   if (!r.ok) { toast(r.error,'error'); return; }
   const h = r.header; const items = r.items || []; const extraLines = r.extraLines || [];
@@ -4217,7 +4303,7 @@ async function newPRR() {
   const billsRes = await apiGetUnpaidBills();
   const tbody = document.getElementById('prr_billsBody');
   const bills = billsRes.ok ? billsRes.bills : [];
-  if (!bills.length) { tbody.innerHTML = '<tr><td colspan="7" class="center muted">No outstanding bills available.</td></tr>'; return; }
+  if (!bills.length) { tbody.innerHTML = '<tr><td colspan="8" class="center muted">No outstanding bills available.</td></tr>'; return; }
   tbody.innerHTML = bills.map(b => {
     const os = num(b['Outstanding']);
     return `<tr>
@@ -4233,6 +4319,9 @@ async function newPRR() {
       <td class="num mono">${fmtINRSym(b['Invoice Value'])}</td>
       <td class="num mono">${fmtINRSym(b['Net Payable'])}</td>
       <td class="num mono" style="color:var(--accent);font-weight:600;">${fmtINRSym(os)}</td>
+      <td class="num"><input type="number" class="prr_reqAmt" step="0.01" min="0.01" max="${os}" value="${os.toFixed(2)}"
+        style="width:110px;text-align:right;padding:5px 6px;border:1px solid var(--border);border-radius:3px;font-size:12px;background:var(--input-bg);color:var(--text);"
+        oninput="updatePRRTotal()" disabled></td>
     </tr>`;
   }).join('');
 }
@@ -4256,13 +4345,41 @@ async function cancelPRR(prrNum) {
 }
 
 function toggleAllBills(cb) {
-  document.querySelectorAll('.prr_billCheck').forEach(c => c.checked = cb.checked);
+  document.querySelectorAll('.prr_billCheck').forEach(c => {
+    c.checked = cb.checked;
+    const row = c.closest('tr');
+    const inp = row?.querySelector('.prr_reqAmt');
+    if (inp) inp.disabled = !cb.checked;
+  });
   updatePRRTotal();
 }
 
 function updatePRRTotal() {
   let total = 0;
-  document.querySelectorAll('.prr_billCheck:checked').forEach(c => total += num(c.dataset.os));
+  document.querySelectorAll('.prr_billCheck').forEach(c => {
+    const row = c.closest('tr');
+    const inp = row?.querySelector('.prr_reqAmt');
+    if (c.checked) {
+      // Enable the input when checked
+      if (inp) inp.disabled = false;
+      const os = num(c.dataset.os);
+      let req = inp ? num(inp.value) : os;
+      // Clamp: silently cap to O/S if user types more
+      if (inp && req > os + 0.005) {
+        inp.value = os.toFixed(2);
+        inp.style.borderColor = 'var(--warn)';
+        inp.title = 'Capped to outstanding amount ₹' + fmtINR(os);
+        req = os;
+      } else if (inp) {
+        inp.style.borderColor = '';
+        inp.title = '';
+      }
+      total += Math.max(0, req);
+    } else {
+      // Disable and reset to OS when unchecked
+      if (inp) { inp.disabled = true; inp.value = num(c.dataset.os).toFixed(2); inp.style.borderColor = ''; inp.title = ''; }
+    }
+  });
   document.getElementById('prr_selectedTotal').textContent = fmtINRSym(total);
 }
 
@@ -4273,17 +4390,24 @@ async function savePRR() {
   if (!date) { toast('PRR date required','error'); return; }
 
   const selectedBills = [];
+  let validationError = null;
   document.querySelectorAll('#prr_billsBody tr').forEach(tr => {
     const cb = tr.querySelector('.prr_billCheck');
     if (cb && cb.checked) {
+      const os = num(cb.dataset.os);
+      const inp = tr.querySelector('.prr_reqAmt');
+      const requestedAmount = inp ? num(inp.value) : os;
+      if (requestedAmount <= 0) { validationError = 'Request amount for ' + cb.dataset.billnum + ' must be greater than zero.'; return; }
+      if (requestedAmount > os + 0.005) { validationError = 'Request amount for ' + cb.dataset.billnum + ' cannot exceed outstanding ₹' + fmtINR(os) + '.'; return; }
       selectedBills.push({
         billNumber:      cb.dataset.billnum,
         hoNumber:        cb.dataset.honum,
         vendor:          cb.dataset.vendor,
-        requestedAmount: num(cb.dataset.os)  // save O/S amount as requested
+        requestedAmount: requestedAmount
       });
     }
   });
+  if (validationError) { toast(validationError, 'error'); return; }
 
   if (!selectedBills.length) { toast('Select at least one bill','error'); return; }
 
@@ -5028,12 +5152,6 @@ function renderPrintPRR(d) {
   <div class="pd-bottom-row">
     <div class="pd-remarks-box">
       <div class="pd-remarks-body">${esc(h['Remarks']||'')||'&nbsp;'}</div>
-    </div>
-    <div class="pd-totals-box">
-      <table>
-        <tr class="tgrand"><td>Total Requested</td><td>₹ ${fmtINR(total)}</td></tr>
-      </table>
-      <div class="pd-words">${esc(numToWordsINR(total))}</div>
     </div>
   </div>`;
 }
