@@ -472,7 +472,7 @@ td input, td select { padding: 5px 6px; background: var(--input-bg); color: var(
 
   <!-- HO List -->
   <div class="card" id="hoListCard">
-    <h3>Hire Orders <span class="badge-count" id="holistBadge">0</span></h3>
+    <h3>Hire Orders <span class="badge-count" id="ho_listBadge">0</span></h3>
     <div class="row" style="margin-bottom:10px;">
       <input id="hoSearch" placeholder="Search HO #, vendor, scope…" style="padding:7px 10px;background:var(--input-bg);color:var(--text);border:1px solid var(--border);border-radius:4px;flex:1;max-width:320px;" oninput="renderHOList()">
       <select id="hoStatusFilter" style="padding:7px;background:var(--input-bg);color:var(--text);border:1px solid var(--border);border-radius:4px;" onchange="renderHOList()">
@@ -581,7 +581,7 @@ td input, td select { padding: 5px 6px; background: var(--input-bg); color: var(
 
   <!-- HOC List -->
   <div class="card" id="hocListCard">
-    <h3>Hire Order Certifications <span class="badge-count" id="hoclistBadge">0</span></h3>
+    <h3>Hire Order Certifications <span class="badge-count" id="hoc_listBadge">0</span></h3>
     <div class="row" style="margin-bottom:10px;">
       <input id="hocSearch" placeholder="Search certification #, HO #, vendor…" style="padding:7px 10px;background:var(--input-bg);color:var(--text);border:1px solid var(--border);border-radius:4px;flex:1;max-width:320px;" oninput="renderHOCList()">
       <select id="hocStatusFilter" style="padding:7px;background:var(--input-bg);color:var(--text);border:1px solid var(--border);border-radius:4px;" onchange="renderHOCList()">
@@ -771,7 +771,7 @@ td input, td select { padding: 5px 6px; background: var(--input-bg); color: var(
 
   <!-- HOB List -->
   <div class="card" id="hobListCard">
-    <h3>Hire Order Running Bills <span class="badge-count" id="hoblistBadge">0</span></h3>
+    <h3>Hire Order Running Bills <span class="badge-count" id="hob_listBadge">0</span></h3>
     <div class="row" style="margin-bottom:10px;">
       <input id="hobSearch" placeholder="Search bill #, HO #, vendor…" style="padding:7px 10px;background:var(--input-bg);color:var(--text);border:1px solid var(--border);border-radius:4px;flex:1;max-width:320px;" oninput="renderHOBList()">
       <select id="hobStatusFilter" style="padding:7px;background:var(--input-bg);color:var(--text);border:1px solid var(--border);border-radius:4px;" onchange="renderHOBList()">
@@ -2568,12 +2568,7 @@ async function doUpdatePassword() {
   }
 }
 
-let _authHandledUserId = null;
-
-async function onSignedIn(user, forceInit = false) {
-  if (!user) return;
-  if (_authHandledUserId === user.id && !forceInit && _initDone) return;
-
+async function onSignedIn(user) {
   // Retry profile fetch up to 3 times — RLS can take a moment to recognise new session
   let profile = null;
   let fetchError = null;
@@ -2582,7 +2577,7 @@ async function onSignedIn(user, forceInit = false) {
       .select('full_name, role, is_active').eq('id', user.id).single();
     if (data) { profile = data; break; }
     fetchError = error;
-    await new Promise(r => setTimeout(r, 500));
+    await new Promise(r => setTimeout(r, 500)); // wait 500ms before retry
   }
 
   if (!profile) {
@@ -2598,7 +2593,13 @@ async function onSignedIn(user, forceInit = false) {
     return;
   }
 
-  _authHandledUserId = user.id;
+  // Update email in profile if not stored yet
+  if (!profile.email) {
+    try {
+      await sb.from('user_profiles').update({ email: user.email }).eq('id', user.id);
+    } catch(e) { /* non-critical, ignore */ }
+  }
+
   state.userId   = user.id;
   state.user     = user.email;
   state.role     = profile.role;
@@ -2612,7 +2613,7 @@ async function onSignedIn(user, forceInit = false) {
   if (profile.role === 'Admin') document.getElementById('tab-users').style.display = '';
 
   applyRoleUI();
-  await initApp(forceInit);
+  await initApp();
 }
 
 async function doLogout() {
@@ -2629,42 +2630,29 @@ async function doLogout() {
 }
 
 // ── Session restore on page load ─────────────────────────────
-let _authHandled = false;
-let _loginInProgress = false;
-
+// Check if user already has a valid session (e.g. reopened the file)
+// If yes, skip the login screen entirely
 (async () => {
-  try {
-    const { data, error } = await sb.auth.getSession();
-    if (error) console.error('getSession error:', error);
-    const session = data?.session;
-    if (session && session.user) {
-      _authHandled = true;
-      await onSignedIn(session.user);
-    }
-  } catch (e) {
-    console.error('boot auth error:', e);
+  const { data: { session } } = await sb.auth.getSession();
+  if (session && session.user && !_authHandled) {
+    _authHandled = true;
+    await onSignedIn(session.user);
   }
 })();
 
+// Listen for auth state changes (password reset redirect only)
+let _authHandled = false;
+let _loginInProgress = false;
 sb.auth.onAuthStateChange(async (event, session) => {
   if (event === 'PASSWORD_RECOVERY') {
+    // User clicked password reset link — show update panel
     document.getElementById('authPanel-login').style.display  = 'none';
     document.getElementById('authPanel-update').style.display = 'block';
     return;
   }
-
   if (event === 'SIGNED_OUT' && !_loginInProgress) {
+    // Only handle external sign-out (not triggered by our own doLogin/doLogout)
     _authHandled = false;
-    _authHandledUserId = null;
-    _initInProgress = false;
-    _initDone = false;
-    return;
-  }
-
-  const user = session?.user || null;
-  if (user && ['SIGNED_IN', 'TOKEN_REFRESHED', 'USER_UPDATED', 'INITIAL_SESSION'].includes(event)) {
-    _authHandled = true;
-    await onSignedIn(user);
   }
 });
 
@@ -3138,7 +3126,7 @@ async function loadHOList() {
   const r = await apiGetHOList();
   if (r.ok) {
     state.hireOrders = r.orders || [];
-    document.getElementById('holistBadge').textContent = state.hireOrders.length;
+    document.getElementById('ho_listBadge').textContent = state.hireOrders.length;
   } else {
     toast('Error loading HO list: ' + r.error, 'error', 6000);
     console.error('loadHOList error:', r.error);
@@ -3406,7 +3394,7 @@ async function loadHOCList() {
   const r = await apiGetHOCList();
   if (r.ok) {
     state.certifications = r.certs || [];
-    document.getElementById('hoclistBadge').textContent = state.certifications.length;
+    document.getElementById('hoc_listBadge').textContent = state.certifications.length;
   }
   renderHOCList();
 }
@@ -3705,7 +3693,7 @@ async function loadHOBList() {
   const r = await apiGetHOBList();
   if (r.ok) {
     state.bills = r.bills || [];
-    document.getElementById('hoblistBadge').textContent = state.bills.length;
+    document.getElementById('hob_listBadge').textContent = state.bills.length;
   }
   renderHOBList();
 }
@@ -4122,14 +4110,7 @@ async function printHOBById(billNum) {
 async function initPaymentsModule() {
   document.getElementById('payconf_enteredBy').value = state.userName;
   document.getElementById('payconf_date').value = today();
-  // Show the 'all' sub-tab by default and fetch data immediately
-  ['all','prr','arr','hold','confirm'].forEach(t => {
-    const el = document.getElementById('payTab-' + t);
-    if (el) el.style.display = (t === 'all') ? '' : 'none';
-    const stab = document.querySelector(`.sub-tab[data-paytab="${t}"]`);
-    if (stab) stab.classList.toggle('active', t === 'all');
-  });
-  loadAllRequests();
+  switchPayTab('all');
 }
 
 // ============================================================
