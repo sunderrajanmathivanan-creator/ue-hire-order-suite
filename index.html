@@ -1248,7 +1248,7 @@ td input, td select { padding: 5px 6px; background: var(--input-bg); color: var(
       <div class="field">
         <label class="req">Role</label>
         <select id="inv_role">
-          <option value="Purchase Executive">Purchase Executive</option>
+          <option value="Procurement">Procurement</option>
           <option value="Site Engineer">Site Engineer</option>
           <option value="Planning Engineer">Planning Engineer</option>
           <option value="Project Manager">Project Manager</option>
@@ -1326,7 +1326,7 @@ const COMPANY = {
 };
 
 const ROLE_PERMS = {
-  'Purchase Executive': { canCreateHO: true },
+  'Procurement': { canCreateHO: true },
   'Project Manager':    { canApproveHO: true, canCreatePRR: true, canCreateARR: true, canShortCloseHO: true, canApproveBill: true, canCreateHRR: true },
   'Site Engineer':      { canCreateHOC: true },
   'Planning Engineer':  { canCreateHOB: true, canConfirmPayment: true, canCreateDirectPayment: true },
@@ -1541,7 +1541,7 @@ async function dbSelect(cacheKey, queryFn) {
 
 async function dbInsert(table, row, bustKeys = []) {
   bustKeys.forEach(k => _cacheBust(k));
-  pbShow('Saving\u2026', table);
+  pbShow('Saving\u2026');
   const { error } = await sb.from(table).insert(row);
   pbDone();
   if (error) return { ok: false, error: error.message };
@@ -1551,7 +1551,7 @@ async function dbInsert(table, row, bustKeys = []) {
 
 async function dbUpdate(table, match, updates, bustKeys = []) {
   bustKeys.forEach(k => _cacheBust(k));
-  pbShow('Updating\u2026', table);
+  pbShow('Updating\u2026');
   let q = sb.from(table).update(updates);
   Object.entries(match).forEach(([k,v]) => { q = q.eq(k, v); });
   const { error } = await q;
@@ -2319,7 +2319,7 @@ async function changeUserRole(userId, name, currentRole) {
     <div class="field" style="margin-bottom:16px;">
       <label>New Role</label>
       <select id="modal_newRole" style="padding:9px;background:var(--input-bg);color:var(--text);border:1px solid var(--border);border-radius:4px;width:100%;">
-        <option value="Purchase Executive" ${currentRole==='Purchase Executive'?'selected':''}>Purchase Executive</option>
+        <option value="Procurement" ${currentRole==='Procurement'?'selected':''}>Procurement</option>
         <option value="Site Engineer"      ${currentRole==='Site Engineer'?'selected':''}>Site Engineer</option>
         <option value="Planning Engineer"  ${currentRole==='Planning Engineer'?'selected':''}>Planning Engineer</option>
         <option value="Project Manager"    ${currentRole==='Project Manager'?'selected':''}>Project Manager</option>
@@ -3065,7 +3065,7 @@ function renderHOList() {
 }
 
 async function newHO() {
-  if (!hasPerm('canCreateHO')) { toast('Not permitted — only Purchase Executive can create Hire Orders','error'); return; }
+  if (!hasPerm('canCreateHO')) { toast('Not permitted — only Procurement can create Hire Orders','error'); return; }
   document.getElementById('hoForm').style.display = 'block';
   document.getElementById('hoListCard').style.display = 'none';
   document.getElementById('ho_date').value = today();
