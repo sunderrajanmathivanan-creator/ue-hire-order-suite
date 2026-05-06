@@ -4495,6 +4495,7 @@ async function initApp() {
 
   try {
     await apiLoadMasters();
+    await apiLoadMaterials();
     await Promise.all([
       loadHOList().catch(e  => console.error('HOList:', e)),
       loadWOList().catch(e  => console.error('WOList:', e))
@@ -8420,6 +8421,7 @@ function renderMIRList() {
 
 async function newMIR() {
   if (!hasPerm('canCreateMIR')) { toast('Only Site Manager can raise MIR','error'); return; }
+  if (!puState.materials.length) await apiLoadMaterials();
   document.getElementById('mirForm').style.display = 'block';
   document.getElementById('mirListCard').style.display = 'none';
   document.getElementById('mir_date').value = today();
@@ -8564,6 +8566,7 @@ function renderRFQList() {
 
 async function newRFQ() {
   if (!hasPerm('canCreateRFQ')) { toast('Only Procurement can create RFQ','error'); return; }
+  if (!puState.materials.length) await apiLoadMaterials();
   document.getElementById('rfqForm').style.display='block';
   document.getElementById('rfqListCard').style.display='none';
   document.getElementById('qcListCard').style.display='none';
@@ -8922,6 +8925,7 @@ function renderPOList() {
 
 async function newPO() {
   if(!hasPerm('canCreatePO')){toast('Only Procurement can create POs','error');return;}
+  if (!puState.materials.length) await apiLoadMaterials();
   document.getElementById('poForm').style.display='block';
   document.getElementById('poListCard').style.display='none';
   document.getElementById('po_date').value=today();
