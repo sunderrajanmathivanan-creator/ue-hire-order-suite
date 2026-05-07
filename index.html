@@ -4385,12 +4385,32 @@ async function doLogout() {
   }
 })();
 
+// ── Early hash detection — runs before initApp to catch password reset tokens ──
+(function detectPasswordReset() {
+  const hash = window.location.hash;
+  if (hash && hash.includes('access_token') && hash.includes('type=recovery')) {
+    // Show update panel immediately — don't wait for onAuthStateChange
+    document.addEventListener('DOMContentLoaded', () => {
+      const loginPanel  = document.getElementById('authPanel-login');
+      const updatePanel = document.getElementById('authPanel-update');
+      if (loginPanel)  loginPanel.style.display  = 'none';
+      if (updatePanel) updatePanel.style.display = 'block';
+    });
+  }
+})();
+
 // Listen for auth state changes (password reset redirect only)
 let _authHandled = false;
 let _loginInProgress = false;
 sb.auth.onAuthStateChange(async (event, session) => {
   if (event === 'PASSWORD_RECOVERY') {
     // User clicked password reset link — show update panel
+    document.getElementById('authPanel-login').style.display  = 'none';
+    document.getElementById('authPanel-update').style.display = 'block';
+    return;
+  }
+  if (event === 'SIGNED_IN' && window.location.hash.includes('type=recovery')) {
+    // Supabase signed the user in via recovery token — show update panel
     document.getElementById('authPanel-login').style.display  = 'none';
     document.getElementById('authPanel-update').style.display = 'block';
     return;
