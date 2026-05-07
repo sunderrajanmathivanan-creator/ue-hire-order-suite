@@ -281,6 +281,18 @@ td input, td select { padding: 5px 6px; background: var(--input-bg); color: var(
 #progressBar .pb-fill { height:100%; background:linear-gradient(90deg,#0d9488,#14b8a6); border-radius:2px; width:0%; transition:width 0.4s ease; }
 #progressBar .pb-msg { font-size:11px; color:var(--muted); margin-top:5px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 @keyframes pbPulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.4;transform:scale(0.85)} }
+
+/* ── SORTABLE TABLES ── */
+th.sortable { cursor:pointer; user-select:none; white-space:nowrap; }
+th.sortable::after { content:' ⇅'; opacity:.4; font-size:10px; }
+th.sortable.asc::after  { content:' ↑'; opacity:.9; }
+th.sortable.desc::after { content:' ↓'; opacity:.9; }
+/* ── PRINT OVERLAY ── */
+.print-doc-overlay { display:none; position:fixed; inset:0; background:#fff; z-index:99990; overflow:auto; padding:15mm; }
+.print-doc-overlay.show { display:block; }
+.pdo-close { position:fixed; top:16px; right:130px; z-index:99991; background:#64748b; color:#fff; border:none; border-radius:6px; padding:8px 18px; cursor:pointer; font-size:13px; }
+.pdo-print { position:fixed; top:16px; right:20px; z-index:99991; background:#16a34a; color:#fff; border:none; border-radius:6px; padding:8px 18px; cursor:pointer; font-size:13px; }
+@media print { .pdo-close, .pdo-print { display:none !important; } .print-doc-overlay.show { position:absolute; } }
 </style>
 </head>
 <body>
@@ -1614,21 +1626,21 @@ td input, td select { padding: 5px 6px; background: var(--input-bg); color: var(
       <h3>Add Vendor</h3>
       <div class="grid-3">
         <div class="field"><label class="req">Vendor Name</label><input id="mv_name" placeholder="Full legal name"></div>
-        <div class="field"><label>Trade / Category</label><input id="mv_trade" placeholder="e.g. Equipment Hire"></div>
-        <div class="field"><label>GSTIN</label><input id="mv_gstin" placeholder="29XXXXX…"></div>
+        <div class="field"><label class="req">Trade / Category</label><input id="mv_trade" placeholder="e.g. Equipment Hire"></div>
+        <div class="field"><label class="req">GSTIN</label><input id="mv_gstin" placeholder="29XXXXX…"></div>
       </div>
       <div class="grid-3" style="margin-top:12px;">
         <div class="field"><label>PAN</label><input id="mv_pan"></div>
-        <div class="field"><label>Contact Person</label><input id="mv_contact"></div>
-        <div class="field"><label>Phone</label><input id="mv_phone"></div>
+        <div class="field"><label class="req">Contact Person</label><input id="mv_contact"></div>
+        <div class="field"><label class="req">Phone</label><input id="mv_phone"></div>
       </div>
       <div class="grid-2" style="margin-top:12px;">
-        <div class="field"><label>Address</label><textarea id="mv_address" rows="2"></textarea></div>
+        <div class="field"><label class="req">Address</label><textarea id="mv_address" rows="2"></textarea></div>
         <div class="grid-2">
-          <div class="field"><label>Bank Name</label><input id="mv_bankName"></div>
-          <div class="field"><label>Branch</label><input id="mv_branch"></div>
-          <div class="field"><label>Account No.</label><input id="mv_bank"></div>
-          <div class="field"><label>IFSC</label><input id="mv_ifsc"></div>
+          <div class="field"><label class="req">Bank Name</label><input id="mv_bankName"></div>
+          <div class="field"><label class="req">Branch</label><input id="mv_branch"></div>
+          <div class="field"><label class="req">Account No.</label><input id="mv_bank"></div>
+          <div class="field"><label class="req">IFSC</label><input id="mv_ifsc"></div>
         </div>
       </div>
       <div class="actions-row"><button class="btn btn-primary" onclick="saveMaster('vendor')">+ Add Vendor</button></div>
@@ -1987,14 +1999,14 @@ td input, td select { padding: 5px 6px; background: var(--input-bg); color: var(
         <div id="qc_comparisonGrid"></div>
       </div>
       <div class="grid-2" style="margin-top:12px;">
-        <div class="field"><label class="req">Recommended Vendor</label>
-          <select id="qc_recommendedVendor"><option value="">— Select after comparison —</option></select>
+        <div class="field"><label class="req" style="color:var(--danger);">★ Recommended Vendor (Mandatory)</label>
+          <select id="qc_recommendedVendor" style="border:2px solid var(--accent);"><option value="">— Select after comparison —</option></select>
         </div>
         <div class="field"><label>Reason for Selection</label>
           <input id="qc_recommendReason" placeholder="e.g. L1 price with acceptable delivery terms">
         </div>
       </div>
-      <div class="field" style="margin-top:8px;max-width:600px;"><label>Remarks</label><textarea id="qc_remarks" rows="2"></textarea></div>
+      <div class="field" style="margin-top:8px;max-width:600px;"><label>General Remarks</label><textarea id="qc_remarks" rows="2"></textarea></div>
       <div class="actions-row">
         <button class="btn btn-primary" onclick="saveQC()">Submit for PM Approval</button>
         <button class="btn btn-ghost" onclick="closeQCForm()">Cancel</button>
@@ -2041,6 +2053,7 @@ td input, td select { padding: 5px 6px; background: var(--input-bg); color: var(
         <div class="field"><label>PO Number</label><input id="po_number" readonly style="opacity:.6;"></div>
         <div class="field"><label class="req">PO Date</label><input type="date" id="po_date"></div>
         <div class="field"><label>QC Reference</label><input id="po_qcRef" readonly style="opacity:.6;"></div>
+        <div class="field"><label>MIR Reference</label><input id="po_mirRef" readonly style="opacity:.6;" placeholder="—"></div>
         <div class="field"><label class="req">Project</label>
           <select id="po_project"><option value="PoE, Ph-01">PoE, Ph-01</option><option value="PoE, Ph-02">PoE, Ph-02</option></select>
         </div>
@@ -2131,7 +2144,7 @@ td input, td select { padding: 5px 6px; background: var(--input-bg); color: var(
       </div>
       <div class="actions-row">
         <button class="btn btn-primary" onclick="savePO()">Submit PO for Approval</button>
-        <button class="btn btn-secondary" onclick="printPOById()">🖨 Print &amp; Submit</button>
+
         <button class="btn btn-ghost" onclick="closePOForm()">Cancel</button>
       </div>
     </div>
@@ -2153,7 +2166,7 @@ td input, td select { padding: 5px 6px; background: var(--input-bg); color: var(
       <div class="table-wrap">
         <table>
           <thead><tr>
-            <th>PO Number</th><th>Date</th><th>Vendor</th><th>QC Ref</th>
+            <th>PO Number</th><th>Date</th><th>Vendor</th><th>QC Ref</th><th>MIR Ref</th>
             <th class="num">Basic Value</th><th class="num">Grand Total</th>
             <th>Status</th><th>Actions</th>
           </tr></thead>
@@ -2574,6 +2587,17 @@ const ROLE_PERMS = {
                        canCreateMIS: true, canApproveMIS: true, canManageMasters: true }
 };
 
+// ── Purchase module state (defined early so initApp can call apiLoadMaterials) ──
+var puState = {
+  materials: [],
+  mirList: [], mirItemsMap: {},
+  rfqList: [], rfqWithQC: new Set(), qcList: [],
+  poList: [], grnList: [], pobList: [],
+  misList: [], misLedger: [], stockBalance: [],
+  qcVendorCols: [], qcRFQItems: [],
+};
+
+
 // ============================================================
 // STATE
 // ============================================================
@@ -2688,8 +2712,16 @@ function toast(msg, type='info', dur=3500) {
 }
 function flashSuccess(msg) { toast(msg, 'success', 4000); }
 
-function openModal(html) {
+function openModal(html, size) {
   document.getElementById('modalContent').innerHTML = html;
+  const box = document.getElementById('modalBox');
+  if (size === 'large') {
+    box.style.maxWidth = '980px';
+    box.style.width = '95vw';
+  } else {
+    box.style.maxWidth = '';
+    box.style.width = '';
+  }
   document.getElementById('modalBg').classList.add('show');
 }
 function closeModal() { document.getElementById('modalBg').classList.remove('show'); }
@@ -4256,7 +4288,7 @@ async function doResetPassword() {
   btn.textContent = 'Sending\u2026'; btn.disabled = true;
 
   const { error } = await sb.auth.resetPasswordForEmail(email, {
-    redirectTo: window.location.href
+    redirectTo: 'https://ue-poe.github.io/ue_procurement_erp/'
   });
   btn.textContent = 'Send Reset Link'; btn.disabled = false;
   if (error) { msgEl.style.color = 'var(--danger)'; msgEl.textContent = error.message; }
@@ -4384,12 +4416,22 @@ function applyRoleUI() {
     btn_newHO:'canCreateHO', btn_newHOC:'canCreateHOC', btn_newHOB:'canCreateHOB',
     btn_newWO:'canCreateWO', btn_newWOC:'canCreateWOC', btn_newWOB:'canCreateWOB',
     btn_newPRR:'canCreatePRR', btn_newARR:'canCreateARR',
-    btn_newHRR:'canCreateHRR', btn_newRRR:'canCreateRRR'
+    btn_newHRR:'canCreateHRR', btn_newRRR:'canCreateRRR',
+    // Purchase buttons
+    btn_newMIR:'canCreateMIR', btn_newRFQ:'canCreateRFQ', btn_newPO:'canCreatePO',
+    btn_newGRN:'canCreateGRN', btn_newPOB:'canCreatePOB', btn_newMIS:'canCreateMIS'
   };
   Object.entries(ids).forEach(([id, perm]) => {
     const el = document.getElementById(id);
     if (el) el.style.display = perms[perm] ? '' : 'none';
   });
+  // Purchase tab visibility
+  const puPerms = ['canCreateMIR','canApproveMIR','canCreateRFQ','canCreateQC','canApproveQC',
+    'canCreatePO','canApprovePO','canCreateGRN','canApproveGRN',
+    'canCreatePOB','canApprovePOB','canCreateMIS','canApproveMIS'];
+  const hasPU = puPerms.some(p => perms[p]) || perms.canManageMasters;
+  const puTab = document.getElementById('tab-purchase');
+  if (puTab) puTab.style.display = hasPU ? '' : 'none';
 }
 
 // ============================================================
@@ -4409,6 +4451,7 @@ document.querySelectorAll('.tabs .tab').forEach(t => {
     else if (tab === 'wo')  { switchWOTab('orders'); }
     else if (tab === 'payments') initPaymentsModule();
     else if (tab === 'masters')  { apiLoadMasters().then(renderAllMasters); }
+    else if (tab === 'purchase') { switchPUTab('mir'); }
     else if (tab === 'users')    { loadUsersList(); }
   });
 });
@@ -4495,7 +4538,7 @@ async function initApp() {
 
   try {
     await apiLoadMasters();
-    await apiLoadMaterials();
+    await apiLoadMaterials();   // load material master for Purchase module typeaheads
     await Promise.all([
       loadHOList().catch(e  => console.error('HOList:', e)),
       loadWOList().catch(e  => console.error('WOList:', e))
@@ -4723,12 +4766,38 @@ async function saveMaster(type) {
   let row;
   if (type === 'vendor') {
     const name = document.getElementById('mv_name').value.trim();
-    if (!name) { toast('Vendor name required','error'); return; }
-    row = { name, trade: document.getElementById('mv_trade').value, gstin: document.getElementById('mv_gstin').value, pan: document.getElementById('mv_pan').value, contact: document.getElementById('mv_contact').value, phone: document.getElementById('mv_phone').value, address: document.getElementById('mv_address').value, bankName: document.getElementById('mv_bankName').value, branch: document.getElementById('mv_branch').value, bank: document.getElementById('mv_bank').value, ifsc: document.getElementById('mv_ifsc').value };
+    const trade = document.getElementById('mv_trade').value.trim();
+    const gstin = document.getElementById('mv_gstin').value.trim();
+    const contact = document.getElementById('mv_contact').value.trim();
+    const phone = document.getElementById('mv_phone').value.trim();
+    const address = document.getElementById('mv_address').value.trim();
+    const bankName = document.getElementById('mv_bankName').value.trim();
+    const branch = document.getElementById('mv_branch').value.trim();
+    const bank = document.getElementById('mv_bank').value.trim();
+    const ifsc = document.getElementById('mv_ifsc').value.trim();
+    if (!name) { toast('Vendor Name is required','error'); return; }
+    if (!trade) { toast('Trade / Category is required','error'); return; }
+    if (!gstin) { toast('GSTIN is required','error'); return; }
+    if (!contact) { toast('Contact Person is required','error'); return; }
+    if (!phone) { toast('Phone is required','error'); return; }
+    if (!address) { toast('Address is required','error'); return; }
+    if (!bankName) { toast('Bank Name is required','error'); return; }
+    if (!branch) { toast('Branch is required','error'); return; }
+    if (!bank) { toast('Account No. is required','error'); return; }
+    if (!ifsc) { toast('IFSC Code is required','error'); return; }
+    // Duplicate check
+    const isEdit = document.querySelector('#master-vendors .card')?.dataset.editCode;
+    const dup = (state.masters.vendors||[]).find(v => v['Vendor Name'].toLowerCase() === name.toLowerCase() && v['Vendor Code'] !== isEdit);
+    if (dup) { toast('Vendor "' + name + '" already exists','error'); return; }
+    row = { name, trade, gstin, pan: document.getElementById('mv_pan').value, contact, phone, address, bankName, branch, bank, ifsc };
   } else if (type === 'activity') {
     const desc = document.getElementById('ma_desc').value.trim();
     const uom  = document.getElementById('ma_uom').value.trim();
     if (!desc || !uom) { toast('Description & UOM required','error'); return; }
+    // Duplicate check
+    const isEdit = document.querySelector('#master-activities .card')?.dataset.editCode;
+    const actDup = (state.masters.activities||[]).find(a => a['Activity Description'].toLowerCase() === desc.toLowerCase() && a['Activity Code'] !== isEdit);
+    if (actDup) { toast('Activity "' + desc + '" already exists','error'); return; }
     row = { desc, uom, rate: num(document.getElementById('ma_rate').value), category: document.getElementById('ma_category').value };
   } else if (type === 'boq') {
     const name  = document.getElementById('mb_name').value.trim();
@@ -4804,8 +4873,23 @@ function selectVendor(inputId, resultsId, codeId, name, code) {
   document.getElementById(inputId).value = name;
   if (codeId) document.getElementById(codeId).value = code;
   document.getElementById(resultsId).classList.remove('show');
-  // Lock if it's the HO vendor field
   if (inputId === 'ho_vendor') { ho_vendor_locked = true; lockMasterField('ho_vendor','ho_vendor_clear'); }
+  // Auto-fill vendor details for PO form
+  if (inputId === 'po_vendor') {
+    _poVendorLocked = true;
+    lockMasterField('po_vendor','po_vendor_clear');
+    const vm = (state.masters.vendors||[]).find(v => v['Vendor Name'] === name);
+    if (vm) {
+      const gEl = document.getElementById('po_vendorGSTIN');
+      const aEl = document.getElementById('po_vendorAddress');
+      const cEl = document.getElementById('po_contactPerson');
+      if (gEl) gEl.value = vm['GSTIN'] || '';
+      if (aEl) aEl.value = vm['Address'] || '';
+      if (cEl && !cEl.value) cEl.value = vm['Contact Person'] || '';
+    }
+  }
+  // QC vendor columns — update recommend dropdown
+  if (/^qcV_name_\d+$/.test(inputId)) { setTimeout(updateQCRecommendDropdown, 100); }
 }
 
 function locationTypeahead(inputId, resultsId) {
@@ -8259,31 +8343,9 @@ function switchPUTab(tab) {
   if (tab === 'stock') loadStockBalance();
 }
 
-// ============================================================
-// PURCHASE MODULE — STATE
-// ============================================================
-const puState = {
-  materials: [],
-  mirList: [], rfqList: [], qcList: [],
-  poList: [], grnList: [], pobList: [],
-  misList: [], misLedger: [], stockBalance: [],
-  qcVendorCols: [], qcRFQItems: [],
-};
+// puState is defined early in the file (after ROLE_PERMS) so initApp can use it
 
-// Hook Purchase tab click
-document.addEventListener('DOMContentLoaded', () => {
-  document.querySelectorAll('.tabs .tab').forEach(t => {
-    t.addEventListener('click', () => {
-      if (t.dataset.tab === 'purchase') {
-        PU_TABS.forEach(id => {
-          const el = document.getElementById('puTab-' + id);
-          if (el) el.style.display = 'none';
-        });
-        switchPUTab('mir');
-      }
-    });
-  });
-});
+// Purchase tab is handled by main tab click handler (see switchPUTab call in tab nav section)
 
 // ============================================================
 // MATERIAL MASTER
@@ -8325,6 +8387,9 @@ async function saveMaterialMaster() {
   if (!name) { toast('Material name required','error'); return; }
   if (!uom)  { toast('UOM required','error'); return; }
   if (!cat)  { toast('Category required','error'); return; }
+  // Duplicate check
+  const dup = puState.materials.find(m => m.material_name.toLowerCase() === name.toLowerCase());
+  if (dup) { toast('Material "' + name + '" already exists (Code: ' + dup.material_code + ')','error'); return; }
   pbShow('Saving material…');
   try {
     const { data: last } = await sb.from('pu_material_master')
@@ -8388,6 +8453,20 @@ let _mirItemC = 0;
 async function loadMIRList() {
   const { data } = await sb.from('pu_mir').select('*').order('created_at', { ascending: false });
   puState.mirList = data||[];
+  // Also load all mir_items to track line-item level status
+  if (data?.length) {
+    const mirNums = data.map(m => m.mir_number);
+    const { data: allItems } = await sb.from('pu_mir_items')
+      .select('mir_number,sno,material_name,uom,qty_required,item_status,rfq_number,po_number,specification')
+      .in('mir_number', mirNums).order('sno');
+    puState.mirItemsMap = {};
+    (allItems||[]).forEach(it => {
+      if (!puState.mirItemsMap[it.mir_number]) puState.mirItemsMap[it.mir_number] = [];
+      puState.mirItemsMap[it.mir_number].push(it);
+    });
+  } else {
+    puState.mirItemsMap = {};
+  }
   renderMIRList();
 }
 
@@ -8406,9 +8485,7 @@ function renderMIRList() {
       acts += ` <button class="btn btn-primary btn-sm" onclick="approveMIR('${esc(m.mir_number)}')">Approve</button>
                <button class="btn btn-danger btn-sm" onclick="rejectDoc('MIR','${esc(m.mir_number)}')">Reject</button>`;
     }
-    if (perms.canCreateRFQ && (st==='Approved'||st==='RFQ Raised')) {
-      acts += ` <button class="btn btn-secondary btn-sm" onclick="newRFQFromMIR('${esc(m.mir_number)}')">Raise RFQ</button>`;
-    }
+    // Raise RFQ and Direct PO moved inside viewMIR popup
     return `<tr>
       <td class="mono">${esc(m.mir_number)}</td><td>${fmtDate(m.mir_date)}</td>
       <td>${m.required_by_date?fmtDate(m.required_by_date):'—'}</td>
@@ -8417,6 +8494,7 @@ function renderMIRList() {
       <td><span class="status ${stCls}">${st}</span></td>
       <td>${acts}</td></tr>`;
   }).join('')||'<tr><td colspan="8" class="center muted">No MIRs found.</td></tr>';
+  setTimeout(() => { const t=document.getElementById('mir_listBody')?.closest('table'); if(t) makeSortable(t); }, 50);
 }
 
 async function newMIR() {
@@ -8450,10 +8528,10 @@ function addMIRItem() {
   tr.id = 'mirItem_' + i;
   tr.innerHTML = `
     <td>${i+1}</td>
-    <td><div class="typeahead" style="min-width:200px;">
+    <td style="min-width:280px;"><div style="position:relative;">
       <input class="pu_material" id="mirMat_${i}" placeholder="Type material…" style="width:100%;"
         oninput="materialTypeahead('mirMat_${i}','mirMatRes_${i}')" autocomplete="off">
-      <div class="typeahead-results" id="mirMatRes_${i}"></div>
+      <div class="typeahead-results" id="mirMatRes_${i}" style="min-width:380px;position:absolute;top:100%;left:0;z-index:9999;box-shadow:0 4px 16px rgba(0,0,0,.15);"></div>
     </div></td>
     <td><input class="pu_uom" id="mirUom_${i}" style="width:70px;" placeholder="UOM"></td>
     <td><input type="number" class="num" id="mirQty_${i}" style="width:90px;" step="0.001" placeholder="0"></td>
@@ -8496,7 +8574,9 @@ async function saveMIR() {
       status: 'Pending Approval',
     });
     if (error) throw new Error(error.message);
-    await sb.from('pu_mir_items').insert(items.map(it=>({...it, mir_number: mirNumber})));
+    await sb.from('pu_mir_items').insert(items.map(it=>({
+      ...it, mir_number: mirNumber, item_status: 'Pending', rfq_number: null, po_number: null
+    })));
     flashSuccess('MIR ' + mirNumber + ' submitted for PM approval');
     closeMIRForm(); loadMIRList();
   } catch(e) { toast('Error: '+e.message,'error'); }
@@ -8521,22 +8601,150 @@ async function viewMIR(mirNum) {
   ]);
   pbDone();
   if (!h) { toast('MIR not found','error'); return; }
-  openModal(`<h3>MIR — ${esc(h.mir_number)}</h3>
-    <div class="grid-3" style="margin-bottom:12px;">
-      <div><label class="muted" style="font-size:11px;">DATE</label><div>${fmtDate(h.mir_date)}</div></div>
-      <div><label class="muted" style="font-size:11px;">REQUIRED BY</label><div>${h.required_by_date?fmtDate(h.required_by_date):'—'}</div></div>
-      <div><label class="muted" style="font-size:11px;">STATUS</label><div>${esc(h.status)}</div></div>
-      <div><label class="muted" style="font-size:11px;">PURPOSE</label><div>${esc(h.purpose||'—')}</div></div>
-      <div><label class="muted" style="font-size:11px;">LOCATION</label><div>${esc(h.location_name||'—')}</div></div>
-      <div><label class="muted" style="font-size:11px;">RAISED BY</label><div>${esc(h.raised_by||'—')}</div></div>
+
+  const perms = ROLE_PERMS[state.role]||{};
+  const mirSt = h.status||'Pending Approval';
+  const canAct = perms.canCreateRFQ &&
+    (mirSt==='Approved'||mirSt==='Partial RFQ'||mirSt==='RFQ Raised');
+
+  const statusColor = {
+    'Pending':    '#64748b',
+    'RFQ Raised': '#d97706',
+    'PO Raised':  '#2563eb',
+    'Received':   '#16a34a',
+    'Closed':     '#16a34a',
+  };
+
+  const total   = (items||[]).length;
+  const pending = (items||[]).filter(it=>(it.item_status||'Pending')==='Pending').length;
+  const rfqDone = (items||[]).filter(it=>it.item_status==='RFQ Raised').length;
+  const poDone  = (items||[]).filter(it=>it.item_status==='PO Raised'||it.item_status==='Received').length;
+
+  const itemRows = (items||[]).map(it => {
+    const ist = it.item_status||'Pending';
+    const sc  = statusColor[ist]||'#64748b';
+    const isPending = ist === 'Pending';
+    const chkCell = canAct && isPending
+      ? `<td style="width:32px;"><input type="checkbox" class="mir_item_chk"
+           value="${it.sno}"
+           data-mat="${esc(it.material_name)}"
+           data-uom="${esc(it.uom)}"
+           data-qty="${it.qty_required}"
+           data-spec="${esc(it.specification||'')}"
+           style="width:16px;height:16px;cursor:pointer;" checked></td>`
+      : `<td style="width:32px;"></td>`;
+    return `<tr>
+      ${chkCell}
+      <td>${it.sno}</td>
+      <td>${esc(it.material_name)}</td>
+      <td>${esc(it.uom)}</td>
+      <td class="num">${it.qty_required}</td>
+      <td style="font-size:11px;">${esc(it.specification||'—')}</td>
+      <td><span style="padding:2px 8px;border-radius:10px;font-size:11px;font-weight:600;
+           background:${sc}20;color:${sc};border:1px solid ${sc}40;">${ist}</span></td>
+      <td style="font-size:11px;">${it.rfq_number
+        ? `<span class="mono" style="color:#d97706;">${esc(it.rfq_number)}</span>`
+        : '—'}</td>
+      <td style="font-size:11px;">${it.po_number
+        ? `<span class="mono" style="color:#2563eb;">${esc(it.po_number)}</span>`
+        : '—'}</td>
+    </tr>`;
+  }).join('');
+
+  const selectAllRow = canAct && pending > 0 ? `
+    <tr style="background:#f8fafc;">
+      <td><input type="checkbox" id="mir_selectAll" checked
+        onchange="document.querySelectorAll('.mir_item_chk').forEach(c=>c.checked=this.checked)"
+        style="width:16px;height:16px;cursor:pointer;"></td>
+      <td colspan="8" style="font-size:11px;color:var(--muted);padding:6px 8px;">
+        Select / Deselect All Pending Items
+      </td>
+    </tr>` : '';
+
+  const actionBtns = canAct && pending > 0 ? `
+    <div style="margin-top:12px;padding:10px 14px;background:#f0f5fb;border-radius:6px;
+         border:1px solid #dde6f0;display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+      <span style="font-size:12px;color:#1e3a5f;font-weight:600;">With selected items:</span>
+      <button class="btn btn-secondary btn-sm"
+        onclick="mirActionFromView('${esc(mirNum)}','rfq')">Raise RFQ</button>
+      <button class="btn btn-ghost btn-sm"
+        onclick="mirActionFromView('${esc(mirNum)}','po')">Direct PO</button>
+    </div>` : '';
+
+  openModal(`
+    <h3 style="margin-bottom:4px;">MIR — ${esc(h.mir_number)}
+      <span class="status ${mirSt.toLowerCase().replace(/\s/g,'-')}"
+        style="margin-left:8px;font-size:12px;">${mirSt}</span>
+    </h3>
+    <div style="font-size:11px;color:var(--muted);margin-bottom:10px;">
+      ${fmtDate(h.mir_date)}
+      ${h.purpose?' &nbsp;|&nbsp; '+esc(h.purpose):''}
+      &nbsp;|&nbsp; Raised by: <strong>${esc(h.raised_by||'—')}</strong>
+      ${h.location_name?' &nbsp;|&nbsp; '+esc(h.location_name):''}
     </div>
-    <div class="table-wrap"><table>
-      <thead><tr><th>#</th><th>Material</th><th>UOM</th><th class="num">Qty</th><th>Spec</th></tr></thead>
-      <tbody>${(items||[]).map(it=>`<tr><td>${it.sno}</td><td>${esc(it.material_name)}</td><td>${esc(it.uom)}</td><td class="num">${it.qty_required}</td><td>${esc(it.specification||'—')}</td></tr>`).join('')}</tbody>
-    </table></div>
-    ${h.remarks?`<div style="margin-top:10px;"><label class="muted" style="font-size:11px;">REMARKS</label><div>${esc(h.remarks)}</div></div>`:''}
-    <div class="actions-row"><button class="btn btn-ghost" onclick="closeModal()">Close</button></div>`);
+    <div style="display:flex;gap:10px;margin-bottom:12px;flex-wrap:wrap;">
+      <div style="padding:5px 12px;border-radius:6px;background:#f1f5f9;font-size:12px;">
+        Total: <strong>${total}</strong>
+      </div>
+      <div style="padding:5px 12px;border-radius:6px;background:#fef3c7;font-size:12px;color:#92400e;">
+        Pending: <strong>${pending}</strong>
+      </div>
+      <div style="padding:5px 12px;border-radius:6px;background:#fff7ed;font-size:12px;color:#d97706;">
+        RFQ Raised: <strong>${rfqDone}</strong>
+      </div>
+      <div style="padding:5px 12px;border-radius:6px;background:#eff6ff;font-size:12px;color:#2563eb;">
+        PO Raised: <strong>${poDone}</strong>
+      </div>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr>
+          <th style="width:32px;"></th>
+          <th>#</th><th>Material</th><th>UOM</th><th class="num">Qty</th>
+          <th>Spec</th><th>Status</th><th>RFQ Ref</th><th>PO Ref</th>
+        </tr></thead>
+        <tbody>
+          ${selectAllRow}
+          ${itemRows}
+        </tbody>
+      </table>
+    </div>
+    ${h.remarks ? `<div style="margin-top:8px;font-size:11px;color:var(--muted);">
+      Remarks: ${esc(h.remarks)}</div>` : ''}
+    ${actionBtns}
+    <div class="actions-row">
+      <button class="btn btn-ghost" onclick="closeModal()">Close</button>
+    </div>
+  `, 'large');
 }
+
+// Called when Raise RFQ or Direct PO is clicked from inside viewMIR popup
+function mirActionFromView(mirNum, action) {
+  const selected = [...document.querySelectorAll('.mir_item_chk:checked')];
+  if (!selected.length) {
+    toast('Select at least one pending item first','error');
+    return;
+  }
+  closeModal();
+  if (action === 'rfq') {
+    _mirSelectedItems = selected.map(c => ({
+      sno: c.value, mat: c.dataset.mat, uom: c.dataset.uom,
+      qty: c.dataset.qty, spec: c.dataset.spec
+    }));
+    _mirSelectedMirNum = mirNum;
+    confirmMIRItemSelection(mirNum, selected);
+  } else {
+    _mirSelectedItems = selected.map(c => ({
+      sno: c.value, mat: c.dataset.mat, uom: c.dataset.uom,
+      qty: c.dataset.qty, spec: c.dataset.spec
+    }));
+    _mirSelectedMirNum = mirNum;
+    directPOFromSelection(mirNum, selected);
+  }
+}
+
+let _mirSelectedItems = [];
+let _mirSelectedMirNum = '';
 
 // ============================================================
 // RFQ — REQUEST FOR QUOTE
@@ -8544,8 +8752,13 @@ async function viewMIR(mirNum) {
 let _rfqItemC = 0;
 
 async function loadRFQList() {
-  const {data} = await sb.from('pu_rfq').select('*').order('created_at',{ascending:false});
-  puState.rfqList = data||[];
+  const [{data:rfqs},{data:qcs}] = await Promise.all([
+    sb.from('pu_rfq').select('*').order('created_at',{ascending:false}),
+    sb.from('pu_quote_comparison').select('rfq_number,status'),
+  ]);
+  puState.rfqList = rfqs||[];
+  // Build a set of RFQ numbers that already have a QC (any status)
+  puState.rfqWithQC = new Set((qcs||[]).map(q=>q.rfq_number).filter(Boolean));
   renderRFQList();
 }
 
@@ -8554,14 +8767,13 @@ function renderRFQList() {
   document.getElementById('rfq_listBody').innerHTML = puState.rfqList.map(r => {
     const stCls = r.status.toLowerCase().replace(/\s/g,'-');
     let acts = `<button class="btn btn-ghost btn-sm" onclick="viewRFQ('${esc(r.rfq_number)}')">View</button>`;
-    if (perms.canCreateQC && r.status==='Open')
-      acts += ` <button class="btn btn-secondary btn-sm" onclick="newQCFromRFQ('${esc(r.rfq_number)}')">+ Compare Quotes</button>`;
     return `<tr>
       <td class="mono">${esc(r.rfq_number)}</td><td>${fmtDate(r.rfq_date)}</td>
       <td>${esc(r.mir_number||'—')}</td><td>${esc(r.description||'—')}</td>
       <td>${r.response_due?fmtDate(r.response_due):'—'}</td>
       <td><span class="status ${stCls}">${r.status}</span></td><td>${acts}</td></tr>`;
   }).join('')||'<tr><td colspan="7" class="center muted">No RFQs.</td></tr>';
+  setTimeout(() => { const t=document.getElementById('rfq_listBody')?.closest('table'); if(t) makeSortable(t); }, 50);
 }
 
 async function newRFQ() {
@@ -8576,26 +8788,121 @@ async function newRFQ() {
   document.getElementById('rfqItemsBody').innerHTML=''; _rfqItemC=0;
   const sel=document.getElementById('rfq_mirLink');
   sel.innerHTML='<option value="">— Optional —</option>'+
-    puState.mirList.filter(m=>m.status==='Approved').map(m=>
-      `<option value="${esc(m.mir_number)}">${esc(m.mir_number)} — ${esc(m.purpose||'')}</option>`).join('');
+    puState.mirList
+      .filter(m=>['Approved','Partial RFQ','RFQ Raised'].includes(m.status))
+      .map(m=>`<option value="${esc(m.mir_number)}">${esc(m.mir_number)} — ${esc(m.purpose||'')} (${m.status})</option>`)
+      .join('');
   addRFQItem(); window.scrollTo(0,0);
 }
 
+async function directPOFromSelection(mirNum, selectedEls) {
+  const items = selectedEls
+    ? selectedEls.map(c=>({sno:c.value,mat:c.dataset.mat,uom:c.dataset.uom,qty:c.dataset.qty,spec:c.dataset.spec}))
+    : _mirSelectedItems;
+  if (!items.length) { toast('Select at least one item','error'); return; }
+  switchPUTab('po');
+  await newPO();
+  document.getElementById('poItemsBody').innerHTML=''; _poItemCount=0;
+  document.getElementById('poForm').dataset.directMirNum  = mirNum;
+  document.getElementById('poForm').dataset.directMirSnos = items.map(it=>it.sno).join(',');
+  document.getElementById('poForm').dataset.directMirMats = items.map(it=>it.mat).join('|||');
+  document.getElementById('poForm').dataset.poMirNum      = mirNum;
+  const mirRefEl = document.getElementById('po_mirRef');
+  if(mirRefEl) mirRefEl.value = mirNum;
+  items.forEach(it => {
+    addPOItem();
+    const i = _poItemCount-1;
+    document.getElementById('poMat_'+i).value = it.mat;
+    document.getElementById('poUom_'+i).value = it.uom;
+    document.getElementById('poQty_'+i).value = it.qty;
+    const rmkEl = document.getElementById('poRmk_'+i);
+    if(rmkEl && it.spec) rmkEl.value = it.spec;
+  });
+  recalcPOTotals();
+  const qcEl = document.getElementById('po_qcRef');
+  if(qcEl) { qcEl.value = 'Direct from '+mirNum; qcEl.readOnly = false; }
+  toast('PO pre-filled from MIR '+mirNum+' — select preferred vendor and enter rates. Save PO to confirm.','info',5000);
+}
+
 async function newRFQFromMIR(mirNum) {
+  switchPUTab('rfq');
+  // Load MIR items FIRST to let user select which items to include
+  pbShow('Loading MIR items…');
+  const {data:allItems} = await sb.from('pu_mir_items')
+    .select('*').eq('mir_number', mirNum).order('sno');
+  pbDone();
+
+  const pendingItems = (allItems||[]).filter(it => (it.item_status||'Pending') === 'Pending');
+  if (!pendingItems.length) {
+    toast('All items in this MIR already have RFQs raised — no pending items left','warn');
+    return;
+  }
+
+  // Show item selection modal
+  const checkList = pendingItems.map(it => `
+    <label style="display:flex;align-items:flex-start;gap:10px;padding:8px;border-bottom:1px solid var(--border);cursor:pointer;">
+      <input type="checkbox" class="mir_item_chk" value="${it.sno}"
+        data-mat="${esc(it.material_name)}" data-uom="${esc(it.uom)}"
+        data-qty="${it.qty_required}" data-spec="${esc(it.specification||'')}"
+        style="margin-top:3px;" checked>
+      <div>
+        <div style="font-weight:600;font-size:13px;">${esc(it.material_name)}</div>
+        <div style="font-size:11px;color:var(--muted);">
+          ${esc(it.uom)} &nbsp;·&nbsp; Qty: ${it.qty_required}
+          ${it.specification?' &nbsp;·&nbsp; '+esc(it.specification):''}
+        </div>
+      </div>
+    </label>`).join('');
+
+  openModal(`
+    <h3 style="margin-bottom:4px;">Select Items for RFQ — ${esc(mirNum)}</h3>
+    <div style="font-size:11px;color:var(--muted);margin-bottom:10px;">
+      ${pendingItems.length} pending item(s) available. Select which items to include in this RFQ.
+    </div>
+    <div style="margin-bottom:8px;">
+      <label style="font-size:12px;cursor:pointer;">
+        <input type="checkbox" id="mir_selectAll" checked onchange="
+          document.querySelectorAll('.mir_item_chk').forEach(c=>c.checked=this.checked)">
+        &nbsp;Select / Deselect All
+      </label>
+    </div>
+    <div style="max-height:320px;overflow-y:auto;border:1px solid var(--border);border-radius:6px;">
+      ${checkList}
+    </div>
+    <div class="actions-row">
+      <button class="btn btn-primary" onclick="confirmMIRItemSelection('${esc(mirNum)}')">Proceed to RFQ →</button>
+      <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+    </div>
+  `);
+}
+
+async function confirmMIRItemSelection(mirNum, selectedEls) {
+  // selectedEls can be array of checkbox elements or use _mirSelectedItems
+  const items = selectedEls
+    ? selectedEls.map(c=>({sno:c.value,mat:c.dataset.mat,uom:c.dataset.uom,qty:c.dataset.qty,spec:c.dataset.spec}))
+    : _mirSelectedItems;
+  if (!items.length) { toast('Select at least one item','error'); return; }
+  switchPUTab('rfq');
+  // Store mirNum and selected items in module-level vars BEFORE newRFQ() resets the form
+  _mirSelectedMirNum = mirNum;
+  _mirSelectedItems  = items;
   await newRFQ();
-  document.getElementById('rfq_mirLink').value = mirNum;
-  const {data:items} = await sb.from('pu_mir_items').select('*').eq('mir_number',mirNum).order('sno');
+  // After newRFQ() runs, restore the MIR link and dataset
+  document.getElementById('rfq_mirLink').value = mirNum; // works now since dropdown includes Partial RFQ
   document.getElementById('rfqItemsBody').innerHTML=''; _rfqItemC=0;
-  (items||[]).forEach(it => {
+  document.getElementById('rfqForm').dataset.mirNum   = mirNum;
+  document.getElementById('rfqForm').dataset.mirSnos  = items.map(it=>it.sno).join(',');
+  document.getElementById('rfqForm').dataset.mirMats  = items.map(it=>it.mat).join('|||');
+  items.forEach(it => {
     addRFQItem();
     const i = _rfqItemC-1;
-    document.getElementById('rfqMat_'+i).value = it.material_name;
+    document.getElementById('rfqMat_'+i).value = it.mat;
     document.getElementById('rfqUom_'+i).value = it.uom;
-    document.getElementById('rfqQty_'+i).value = it.qty_required;
+    document.getElementById('rfqQty_'+i).value = it.qty;
     const specEl = document.getElementById('rfqSpec_'+i);
-    if(specEl && it.specification) specEl.value = it.specification;
+    if(specEl && it.spec) specEl.value = it.spec;
   });
-  document.getElementById('rfq_description').value='Procurement for MIR '+mirNum;
+  document.getElementById('rfq_description').value = 'Procurement for MIR '+mirNum;
 }
 
 function addRFQItem() {
@@ -8603,10 +8910,10 @@ function addRFQItem() {
   const tr = document.createElement('tr'); tr.id='rfqItem_'+i;
   tr.innerHTML=`
     <td>${i+1}</td>
-    <td><div class="typeahead" style="min-width:200px;">
+    <td style="min-width:280px;"><div style="position:relative;">
       <input class="pu_material" id="rfqMat_${i}" placeholder="Type material…" style="width:100%;"
         oninput="materialTypeahead('rfqMat_${i}','rfqMatRes_${i}')" autocomplete="off">
-      <div class="typeahead-results" id="rfqMatRes_${i}"></div>
+      <div class="typeahead-results" id="rfqMatRes_${i}" style="min-width:380px;position:absolute;top:100%;left:0;z-index:9999;box-shadow:0 4px 16px rgba(0,0,0,.15);"></div>
     </div></td>
     <td><input class="pu_uom" id="rfqUom_${i}" style="width:70px;"></td>
     <td><input type="number" class="num" id="rfqQty_${i}" style="width:90px;" step="0.001"></td>
@@ -8638,7 +8945,9 @@ async function saveRFQ() {
   pbShow('Saving RFQ…');
   try {
     const rfqNumber=await nextPUDocNumber('RFQ');
-    const mirNum=document.getElementById('rfq_mirLink').value||null;
+    // Primary: use mirNum stored in dataset (more reliable than dropdown for Partial RFQ MIRs)
+    const mirNumFromDataset = document.getElementById('rfqForm')?.dataset?.mirNum||'';
+    const mirNum = mirNumFromDataset || document.getElementById('rfq_mirLink').value||null;
     const {error}=await sb.from('pu_rfq').insert({
       rfq_number:rfqNumber, rfq_date:date, mir_number:mirNum,
       description:desc, response_due:document.getElementById('rfq_responseDue').value||null,
@@ -8646,8 +8955,46 @@ async function saveRFQ() {
       remarks:document.getElementById('rfq_remarks').value.trim()||null, status:'Open',
     });
     if(error) throw new Error(error.message);
-    if(mirNum) await sb.from('pu_mir').update({status:'RFQ Raised'}).eq('mir_number',mirNum);
-    await sb.from('pu_rfq_items').insert(items.map(it=>({...it,rfq_number:rfqNumber})));
+    // Save RFQ items with mir_item_sno link
+    const rfqItemPayloads = items.map(it => ({...it, rfq_number: rfqNumber}));
+    await sb.from('pu_rfq_items').insert(rfqItemPayloads);
+
+    if (mirNum) {
+      // Update status of selected MIR items to RFQ Raised
+      const mirSnosStr = document.getElementById('rfqForm')?.dataset?.mirSnos||'';
+      const mirSnos = mirSnosStr ? mirSnosStr.split(',').map(Number).filter(Boolean) : [];
+      if (mirSnos.length) {
+        // Use material_name list as the filter (most reliable cross-DB identifier)
+        const mirMatsStr = document.getElementById('rfqForm')?.dataset?.mirMats||'';
+        const mirMats = mirMatsStr ? mirMatsStr.split('|||').filter(Boolean) : [];
+        if (mirMats.length) {
+          const { error: updErr } = await sb.from('pu_mir_items').update({
+            item_status: 'RFQ Raised', rfq_number: rfqNumber
+          }).eq('mir_number', mirNum).in('material_name', mirMats);
+          if (updErr) {
+            console.error('MIR item update error (material_name):', updErr.message);
+            // Fallback to sno
+            for (const sno of mirSnos) {
+              await sb.from('pu_mir_items').update({
+                item_status: 'RFQ Raised', rfq_number: rfqNumber
+              }).eq('mir_number', mirNum).eq('sno', sno);
+            }
+          }
+        }
+      }
+      // Check if all items are now processed — update MIR header status
+      const {data:allMirItems} = await sb.from('pu_mir_items').select('item_status').eq('mir_number', mirNum);
+      const allProcessed = (allMirItems||[]).every(it => (it.item_status||'Pending') !== 'Pending');
+      const anyProcessed = (allMirItems||[]).some(it => (it.item_status||'Pending') !== 'Pending');
+      const newMIRStatus = allProcessed ? 'RFQ Raised' : anyProcessed ? 'Partial RFQ' : 'Approved';
+      await sb.from('pu_mir').update({status: newMIRStatus}).eq('mir_number', mirNum);
+      // Clear stored snos
+      if (document.getElementById('rfqForm')) {
+        delete document.getElementById('rfqForm').dataset.mirSnos;
+        delete document.getElementById('rfqForm').dataset.mirNum;
+        delete document.getElementById('rfqForm').dataset.mirMats;
+      }
+    }
     flashSuccess('RFQ '+rfqNumber+' saved');
     closeRFQForm(); loadRFQList(); loadMIRList();
   } catch(e){toast('Error: '+e.message,'error');}
@@ -8659,13 +9006,38 @@ async function viewRFQ(rfqNum) {
     sb.from('pu_rfq').select('*').eq('rfq_number',rfqNum).single(),
     sb.from('pu_rfq_items').select('*').eq('rfq_number',rfqNum).order('sno'),
   ]);
-  openModal(`<h3>RFQ — ${esc(rfqNum)}</h3>
-    <p style="margin-bottom:10px;">${esc(h?.description||'')}</p>
+  const permsRFQ = ROLE_PERMS[state.role]||{};
+  const hasQC = puState.rfqWithQC?.has(rfqNum);
+  const rfqActionBtns = permsRFQ.canCreateQC && !hasQC && (h?.status==='Open'||h?.status==='Comparison Ready')
+    ? `<button class="btn btn-secondary" onclick="closeModal();newQCFromRFQ('${esc(rfqNum)}')">+ Compare Quotes</button>`
+    : hasQC
+      ? `<span style="font-size:12px;color:var(--muted);padding:6px 10px;background:#f1f5f9;border-radius:6px;">
+           🔒 Quote Comparison already raised
+         </span>`
+      : '';
+  openModal(`
+    <h3 style="margin-bottom:4px;">RFQ — ${esc(rfqNum)}</h3>
+    <div style="font-size:11px;color:var(--muted);margin-bottom:8px;">
+      Date: ${fmtDate(h?.rfq_date)} &nbsp;|&nbsp; Status: <strong>${esc(h?.status||'')}</strong>
+      ${h?.mir_number?' &nbsp;|&nbsp; MIR: '+esc(h.mir_number):''}
+      ${h?.response_due?' &nbsp;|&nbsp; Due: '+fmtDate(h.response_due):''}
+    </div>
+    <div style="margin-bottom:10px;font-size:13px;">${esc(h?.description||'')}</div>
     <div class="table-wrap"><table>
       <thead><tr><th>#</th><th>Material</th><th>UOM</th><th class="num">Qty</th><th>Spec</th></tr></thead>
-      <tbody>${(items||[]).map(it=>`<tr><td>${it.sno}</td><td>${esc(it.material_name)}</td><td>${esc(it.uom)}</td><td class="num">${it.qty_required}</td><td>${esc(it.specification||'—')}</td></tr>`).join('')}</tbody>
+      <tbody>${(items||[]).map(it=>`<tr>
+        <td>${it.sno}</td><td>${esc(it.material_name)}</td>
+        <td>${esc(it.uom)}</td><td class="num">${it.qty_required}</td>
+        <td style="font-size:11px;">${esc(it.specification||'—')}</td>
+      </tr>`).join('')}</tbody>
     </table></div>
-    <div class="actions-row"><button class="btn btn-ghost" onclick="closeModal()">Close</button></div>`);
+    ${h?.remarks?`<div style="margin-top:8px;font-size:11px;color:var(--muted);">Remarks: ${esc(h.remarks)}</div>`:''}
+    <div class="actions-row">
+      ${rfqActionBtns}
+      <button class="btn btn-ghost btn-sm" onclick="closeModal();printRFQ('${esc(rfqNum)}')">🖨 Print</button>
+      <button class="btn btn-ghost" onclick="closeModal()">Close</button>
+    </div>
+  `);
 }
 
 // ============================================================
@@ -8676,6 +9048,8 @@ let _qcVendorCount=0, _qcRFQItems=[];
 async function loadQCList() {
   const {data}=await sb.from('pu_quote_comparison').select('*').order('created_at',{ascending:false});
   puState.qcList=data||[];
+  // Keep rfqWithQC in sync
+  puState.rfqWithQC = new Set((data||[]).map(q=>q.rfq_number).filter(Boolean));
   renderQCList();
 }
 
@@ -8684,15 +9058,11 @@ function renderQCList() {
   document.getElementById('qc_listBody').innerHTML=puState.qcList.map(q=>{
     const stCls=q.status.toLowerCase().replace(/\s/g,'-');
     let acts=`<button class="btn btn-ghost btn-sm" onclick="viewQC('${esc(q.qc_number)}')">View</button>`;
-    if(perms.canApproveQC && q.status==='Pending Approval')
-      acts+=` <button class="btn btn-primary btn-sm" onclick="approveQC('${esc(q.qc_number)}')">Approve</button>
-              <button class="btn btn-danger btn-sm" onclick="rejectDoc('QC','${esc(q.qc_number)}')">Reject</button>`;
-    if(perms.canCreatePO && q.status==='Approved')
-      acts+=` <button class="btn btn-secondary btn-sm" onclick="newPOFromQC('${esc(q.qc_number)}')">Create PO</button>`;
+    // Approve/Reject and Create PO handled inside viewQC popup
     return `<tr>
       <td class="mono">${esc(q.qc_number)}</td><td>${fmtDate(q.qc_date)}</td>
       <td class="mono">${esc(q.rfq_number||'—')}</td>
-      <td>${esc(q.recommended_vendor_name||'—')}</td>
+      <td>${esc(q.approved_vendor_name||q.recommended_vendor_name||'—')}${q.approved_vendor_name&&q.approved_vendor_name!==q.recommended_vendor_name?' <span style="font-size:10px;color:var(--muted);">(changed)</span>':''}</td>
       <td>${esc(q.prepared_by||'—')}</td>
       <td><span class="status ${stCls}">${q.status}</span></td><td>${acts}</td></tr>`;
   }).join('')||'<tr><td colspan="7" class="center muted">No quote comparisons.</td></tr>';
@@ -8734,13 +9104,18 @@ function addQCVendorCol() {
   div.style.cssText='background:#f0f5fb;border:1px solid var(--border);border-radius:6px;padding:8px;';
   div.innerHTML=`
     <div class="field"><label>Vendor ${i+1}</label>
-      <input id="qcV_name_${i}" placeholder="Vendor name" style="margin-bottom:4px;"
-        oninput="vendorTypeahead('qcV_name_${i}','qcV_results_${i}','qcV_code_${i}');updateQCRecommendDropdown()">
-      <div class="typeahead-results" id="qcV_results_${i}"></div>
+      <div style="position:relative;">
+        <input id="qcV_name_${i}" placeholder="Vendor name" style="width:100%;"
+          oninput="vendorTypeahead('qcV_name_${i}','qcV_results_${i}','qcV_code_${i}');updateQCRecommendDropdown()">
+        <div class="typeahead-results" id="qcV_results_${i}" style="position:absolute;top:100%;left:0;right:0;z-index:9999;"></div>
+      </div>
       <input type="hidden" id="qcV_code_${i}">
     </div>
     <div class="field"><label style="font-size:11px;">Quote Ref</label><input id="qcV_ref_${i}" placeholder="Quote #" style="font-size:12px;"></div>
-    <div class="field"><label style="font-size:11px;">Delivery (days)</label><input type="number" id="qcV_days_${i}" placeholder="7"></div>`;
+    <div class="field"><label style="font-size:11px;">Delivery (days)</label><input type="number" id="qcV_days_${i}" placeholder="7"></div>
+    <div class="field"><label style="font-size:11px;">Payment Terms</label><input id="qcV_payTerms_${i}" placeholder="e.g. 30 days from invoice"></div>
+    <div class="field"><label style="font-size:11px;">Technical Specs / Remarks</label><textarea id="qcV_techSpecs_${i}" rows="2" placeholder="Grade, brand, standard, warranty…" style="font-size:12px;width:100%;"></textarea></div>
+    <div style="text-align:right;margin-top:4px;"><button class="btn btn-danger btn-sm" onclick="removeQCVendorCol(${i})">✕ Remove</button></div>`;
   hdr.appendChild(div);
   renderQCGrid();
   updateQCRecommendDropdown();
@@ -8764,6 +9139,18 @@ function renderQCGrid() {
   });
   html+='<tr style="background:#e6f4f1;font-weight:700;"><td colspan="4" style="padding:8px;">Grand Total (incl. GST)</td>';
   for(let v=0;v<_qcVendorCount;v++) html+=`<td colspan="3" class="num" id="qcGrandTotal_${v}">—</td>`;
+  html+='</tr>';
+  // Position row (L1/L2/L3) - populated by calcQCPositions()
+  html+='<tr><td colspan="4" style="padding:6px 8px;font-weight:700;background:#e8ecf2;color:#1e3a5f;">Position</td>';
+  for(let v=0;v<_qcVendorCount;v++) html+=`<td colspan="3" class="num" style="padding:6px 8px;font-weight:700;font-size:14px;" id="qcPosition_${v}">—</td>`;
+  html+='</tr>';
+  // % over L1 row
+  html+='<tr style="background:#f8fafc;font-size:11px;"><td colspan="4" style="padding:6px 8px;font-weight:600;color:#1e3a5f;">Premium over L1</td>';
+  for(let v=0;v<_qcVendorCount;v++) html+=`<td colspan="3" class="num" style="padding:6px 8px;" id="qcPremium_${v}">—</td>`;
+  html+='</tr>';
+  // Amount difference row
+  html+='<tr style="background:#f8fafc;font-size:11px;"><td colspan="4" style="padding:6px 8px;font-weight:600;color:#1e3a5f;">Difference over L1 (₹)</td>';
+  for(let v=0;v<_qcVendorCount;v++) html+=`<td colspan="3" class="num" style="padding:6px 8px;" id="qcDiffAmt_${v}">—</td>`;
   html+='</tr></tbody></table></div>';
   grid.innerHTML=html;
 }
@@ -8782,6 +9169,73 @@ function calcQCTotal(rowIdx,vendorIdx,qty) {
   });
   const gtEl=document.getElementById(`qcGrandTotal_${vendorIdx}`);
   if(gtEl) gtEl.textContent=fmtINRSym(grand);
+  // Recalculate L positions after every change
+  calcQCPositions();
+}
+
+function calcQCPositions() {
+  // Gather grand totals for all vendors
+  const totals=[];
+  for(let v=0;v<_qcVendorCount;v++){
+    let grand=0;
+    _qcRFQItems.forEach((_,idx)=>{
+      const r=parseFloat(document.getElementById(`qcRate_${idx}_${v}`)?.value)||0;
+      const g=parseFloat(document.getElementById(`qcGST_${idx}_${v}`)?.value)||0;
+      grand+=_qcRFQItems[idx].qty_required*r*(1+g/100);
+    });
+    totals.push({v, grand});
+  }
+  // Sort to rank
+  const withGrand=totals.filter(t=>t.grand>0);
+  const sorted=[...withGrand].sort((a,b)=>a.grand-b.grand);
+  const l1=sorted[0]?.grand||0;
+  const rankMap={};
+  sorted.forEach((t,i)=>{ rankMap[t.v]='L'+(i+1); });
+
+  const bgMap={L1:'#16a34a',L2:'#d97706',L3:'#dc2626',L4:'#64748b'};
+  totals.forEach(({v,grand})=>{
+    const pos=grand>0?(rankMap[v]||'—'):'—';
+    // Position cell
+    const posEl=document.getElementById(`qcPosition_${v}`);
+    if(posEl){
+      posEl.textContent=pos;
+      posEl.style.color='#fff';
+      posEl.style.background=bgMap[pos]||'#94a3b8';
+    }
+    // Premium % cell
+    const premEl=document.getElementById(`qcPremium_${v}`);
+    if(premEl){
+      if(pos==='L1'){ premEl.textContent='Base (L1)'; premEl.style.color='#16a34a'; premEl.style.fontWeight='600'; }
+      else if(grand>0&&l1>0){
+        const pct=((grand-l1)/l1*100).toFixed(1);
+        premEl.textContent='+'+pct+'%';
+        premEl.style.color='#dc2626';
+        premEl.style.fontWeight='600';
+      } else { premEl.textContent='—'; premEl.style.color=''; }
+    }
+    // Amount difference cell
+    const diffEl=document.getElementById(`qcDiffAmt_${v}`);
+    if(diffEl){
+      if(pos==='L1'){ diffEl.textContent='Base (L1)'; diffEl.style.color='#16a34a'; diffEl.style.fontWeight='600'; }
+      else if(grand>0&&l1>0){
+        const diff=grand-l1;
+        diffEl.textContent='+'+fmtINRSym(diff);
+        diffEl.style.color='#dc2626';
+        diffEl.style.fontWeight='600';
+      } else { diffEl.textContent='—'; diffEl.style.color=''; }
+    }
+  });
+}
+
+function removeQCVendorCol(idx) {
+  // Remove vendor column at index idx from qc_vendorHeaders
+  const hdr = document.getElementById('qc_vendorHeaders');
+  if (!hdr) return;
+  const divs = Array.from(hdr.children);
+  if (divs[idx]) divs[idx].remove();
+  _qcVendorCount = Math.max(0, _qcVendorCount - 1);
+  renderQCGrid();
+  updateQCRecommendDropdown();
 }
 
 function updateQCRecommendDropdown() {
@@ -8806,7 +9260,21 @@ async function saveQC() {
   const rfqNum=document.getElementById('qc_rfqLink').value;
   const recV=document.getElementById('qc_recommendedVendor').value;
   if(!rfqNum){toast('Select an RFQ','error');return;}
-  if(recV===''){toast('Select recommended vendor','error');return;}
+  if(!recV||recV===''){
+    toast('Recommended Vendor is mandatory — please select a vendor','error');
+    document.getElementById('qc_recommendedVendor')?.focus();
+    return;
+  }
+  // Validate all vendor names are from vendor master
+  for(let v=0;v<_qcVendorCount;v++){
+    const vName=document.getElementById(`qcV_name_${v}`)?.value?.trim();
+    if(!vName) continue;
+    const vCode=document.getElementById(`qcV_code_${v}`)?.value?.trim();
+    if(!vCode){
+      toast(`Vendor ${v+1} "${vName}" is not from vendor master — please select from dropdown`,'error');
+      return;
+    }
+  }
   pbShow('Saving QC…');
   try {
     const qcNumber=await nextPUDocNumber('QC');
@@ -8818,6 +9286,7 @@ async function saveQC() {
       rfq_number:rfqNum, prepared_by:state.userName, prepared_by_id:state.userId,
       recommended_vendor_code:recCode, recommended_vendor_name:recName,
       recommended_remarks:document.getElementById('qc_recommendReason').value.trim()||null,
+      creator_remarks:document.getElementById('qc_recommendReason').value.trim()||null,
       remarks:document.getElementById('qc_remarks').value.trim()||null,
       status:'Pending Approval',
     });
@@ -8831,6 +9300,8 @@ async function saveQC() {
         vendor_name:vName,
         quote_ref:document.getElementById(`qcV_ref_${v}`)?.value?.trim()||null,
         delivery_days:parseInt(document.getElementById(`qcV_days_${v}`)?.value)||null,
+        payment_terms:document.getElementById(`qcV_payTerms_${v}`)?.value?.trim()||null,
+        tech_specs:document.getElementById(`qcV_techSpecs_${v}`)?.value?.trim()||null,
         is_recommended:v===recIdx,
       }).select().single();
       if(qve||!quote) continue;
@@ -8851,11 +9322,8 @@ async function saveQC() {
 }
 
 async function approveQC(qcNum) {
-  if(!hasPerm('canApproveQC')){toast('Only PM can approve','error');return;}
-  await sb.from('pu_quote_comparison').update({
-    status:'Approved', approved_by:state.userName, approved_by_id:state.userId, approved_at:new Date().toISOString()
-  }).eq('qc_number',qcNum);
-  flashSuccess('QC '+qcNum+' Approved'); loadQCList();
+  // Route through viewQC so PM can confirm/edit recommended vendor before approving
+  await viewQC(qcNum);
 }
 
 async function viewQC(qcNum) {
@@ -8867,27 +9335,229 @@ async function viewQC(qcNum) {
   ]);
   pbDone();
   if(!h){toast('QC not found','error');return;}
-  let tableHTML='<div class="table-wrap"><table><thead><tr><th>#</th><th>Material</th><th>UOM</th><th>Qty</th>';
-  (quotes||[]).forEach(v=>{tableHTML+=`<th class="num">${esc(v.vendor_name)}${v.is_recommended?' ★':''}</th><th class="num">Total</th>`;});
-  tableHTML+='</tr></thead><tbody>';
+  const perms=ROLE_PERMS[state.role]||{};
+
+  // Compute grand totals per vendor for L-ranking
+  const grandTotals=(quotes||[]).map((v,vi)=>{
+    let grand=0;
+    const mSet=[...new Set((qItems||[]).map(qi=>qi.material_name))];
+    mSet.forEach(mat=>{
+      const sample=(qItems||[]).find(qi=>qi.material_name===mat);
+      const qi=(qItems||[]).find(qi=>qi.material_name===mat&&qi.quote_id===v.id);
+      const qty=qi?.qty_required||sample?.qty_required||0;
+      const rate=qi?.unit_rate||0;
+      const gst=(qi?.gst_pct||0)/100;
+      grand+=qty*rate*(1+gst);
+    });
+    return {vi, grand, vendorId:v.id};
+  });
+  // Sort by grand total to get L1/L2/L3
+  const ranked=[...grandTotals].filter(x=>x.grand>0).sort((a,b)=>a.grand-b.grand);
+  const l1Grand=ranked[0]?.grand||0;
+  const posMap={};
+  ranked.forEach((r,i)=>{ posMap[r.vendorId]={pos:'L'+(i+1), grand:r.grand}; });
+
+  // Build header
+  let thead='<tr><th>#</th><th>Material</th><th class="c">UOM</th><th class="num">Qty</th>';
+  (quotes||[]).forEach(v=>{
+    const isRec=v.is_recommended;
+    const isBg=isRec?'background:#d1fae5;':'';
+    thead+=`<th class="num" style="${isBg}">${esc(v.vendor_name)}${isRec?' ★':''}<br>
+      <span style="font-size:10px;font-weight:400;">${esc(v.quote_ref||'')}${v.delivery_days?' · '+v.delivery_days+'d':''}</span></th>
+      <th class="num" style="${isBg}">GST%</th>
+      <th class="num" style="${isBg}">Total (₹)</th>`;
+  });
+  thead+='</tr>';
+
+  // Material rows
   const mats=[...new Set((qItems||[]).map(qi=>qi.material_name))];
+  let tbody='';
   mats.forEach((mat,idx)=>{
     const sample=(qItems||[]).find(qi=>qi.material_name===mat);
-    tableHTML+=`<tr><td>${idx+1}</td><td>${esc(mat)}</td><td>${esc(sample?.uom||'')}</td><td class="num">${sample?.qty_required||0}</td>`;
+    tbody+=`<tr><td>${idx+1}</td><td>${esc(mat)}</td><td class="c">${esc(sample?.uom||'')}</td><td class="num">${sample?.qty_required||0}</td>`;
     (quotes||[]).forEach(v=>{
       const qi=(qItems||[]).find(qi=>qi.material_name===mat&&qi.quote_id===v.id);
-      const rec=v.is_recommended?' style="background:#d1fae5;font-weight:700;"':'';
-      tableHTML+=`<td class="num"${rec}>${qi?.unit_rate!=null?fmtINR(qi.unit_rate):'—'}</td>`;
-      tableHTML+=`<td class="num"${rec}>${qi?.amount!=null?fmtINRSym(qi.amount):'—'}</td>`;
+      const isRec=v.is_recommended;
+      const bg=isRec?'style="background:#d1fae5;font-weight:700;"':'';
+      const qty=qi?.qty_required||sample?.qty_required||0;
+      const rate=qi?.unit_rate||0;
+      const gst=(qi?.gst_pct||0)/100;
+      const total=qty*rate*(1+gst);
+      tbody+=`<td class="num" ${bg}>${rate>0?('₹ '+fmtINR(rate)):'—'}</td>`;
+      tbody+=`<td class="num" ${bg}>${qi?.gst_pct!=null?(qi.gst_pct+'%'):'—'}</td>`;
+      tbody+=`<td class="num" ${bg}>${rate>0?fmtINRSym(total):'—'}</td>`;
     });
-    tableHTML+='</tr>';
+    tbody+='</tr>';
   });
-  tableHTML+='</tbody></table></div>';
-  openModal(`<h3>Quote Comparison — ${esc(qcNum)}</h3>
-    <div style="margin-bottom:10px;"><strong>Recommended:</strong> ${esc(h.recommended_vendor_name||'—')}
-    ${h.recommended_remarks?' · '+esc(h.recommended_remarks):''}</div>
-    ${tableHTML}
-    <div class="actions-row"><button class="btn btn-ghost" onclick="closeModal()">Close</button></div>`);
+
+  // Grand Total row
+  tbody+='<tr style="background:#e6f4f1;font-weight:700;"><td colspan="4" style="padding:8px;">Grand Total (incl. GST)</td>';
+  (quotes||[]).forEach(v=>{
+    const gt=grandTotals.find(g=>g.vendorId===v.id);
+    tbody+=`<td colspan="3" class="num" style="padding:8px;">${gt&&gt.grand>0?fmtINRSym(gt.grand):'—'}</td>`;
+  });
+  tbody+='</tr>';
+
+  // L1/L2/L3 Position row
+  const bgMap2={L1:'#16a34a',L2:'#d97706',L3:'#dc2626',L4:'#64748b'};
+  tbody+='<tr><td colspan="4" style="padding:6px 8px;font-weight:700;background:#e8ecf2;color:#1e3a5f;">Position</td>';
+  (quotes||[]).forEach(v=>{
+    const pos=posMap[v.id];
+    const label=pos?pos.pos:'—';
+    const bg=bgMap2[label]||'#94a3b8';
+    tbody+=`<td colspan="3" class="num" style="padding:6px 8px;background:${bg};color:#fff;font-weight:700;font-size:14px;">${label}</td>`;
+  });
+  tbody+='</tr>';
+
+  // % over L1 row
+  tbody+='<tr style="background:#f8fafc;font-size:11px;"><td colspan="4" style="padding:6px 8px;font-weight:600;color:#1e3a5f;">Premium over L1</td>';
+  (quotes||[]).forEach(v=>{
+    const pos=posMap[v.id];
+    if(!pos||pos.pos==='L1'||!l1Grand){
+      tbody+=`<td colspan="3" class="num" style="padding:6px 8px;color:#16a34a;font-weight:600;">${pos?.pos==='L1'?'Base (L1)':'—'}</td>`;
+    } else {
+      const pct=((pos.grand-l1Grand)/l1Grand*100).toFixed(1);
+      tbody+=`<td colspan="3" class="num" style="padding:6px 8px;color:#dc2626;font-weight:600;">+${pct}%</td>`;
+    }
+  });
+  tbody+='</tr>';
+
+  // Amount difference over L1 row
+  tbody+='<tr style="background:#f8fafc;font-size:11px;"><td colspan="4" style="padding:6px 8px;font-weight:600;color:#1e3a5f;">Difference over L1 (₹)</td>';
+  (quotes||[]).forEach(v=>{
+    const pos=posMap[v.id];
+    if(!pos||pos.pos==='L1'||!l1Grand){
+      tbody+=`<td colspan="3" class="num" style="padding:6px 8px;color:#16a34a;font-weight:600;">${pos?.pos==='L1'?'Base (L1)':'—'}</td>`;
+    } else {
+      const diff=pos.grand-l1Grand;
+      tbody+=`<td colspan="3" class="num" style="padding:6px 8px;color:#dc2626;font-weight:600;">+${fmtINRSym(diff)}</td>`;
+    }
+  });
+  tbody+='</tr>';
+
+  // Per-vendor terms summary
+  let termsRows='';
+  const hasTerms=(quotes||[]).some(v=>v.payment_terms||v.tech_specs);
+  if(hasTerms){
+    termsRows+='<tr><td colspan="4" style="padding:6px 8px;font-weight:700;font-size:11px;background:#f8fafc;color:#1e3a5f;border-top:2px solid #dde6f0;">VENDOR TERMS</td>';
+    termsRows+=`<td colspan="${(quotes||[]).length*3}" style="background:#f8fafc;"></td></tr>`;
+    (quotes||[]).forEach(v=>{
+      if(v.payment_terms||v.tech_specs){
+        termsRows+=`<tr style="font-size:11px;">
+          <td colspan="4" style="padding:4px 8px;font-weight:600;color:var(--accent);">${esc(v.vendor_name)}</td>
+          <td colspan="${(quotes||[]).length*3}" style="padding:4px 8px;line-height:1.6;">
+            ${v.payment_terms?'<strong>Payment Terms:</strong> '+esc(v.payment_terms)+'<br>':''}
+            ${v.tech_specs?'<strong>Technical Specs:</strong> '+esc(v.tech_specs):''}
+          </td></tr>`;
+      }
+    });
+  }
+
+  // Creator / Approver info — 40/60 two-column layout
+  const approvedCol = h.status==='Approved' ? `
+    <div style="flex:0 0 60%;padding:10px 14px;border-left:1px solid #dde6f0;">
+      <div style="font-size:9px;font-weight:700;color:#16a34a;text-transform:uppercase;letter-spacing:.5px;margin-bottom:2px;">Approved By</div>
+      <div style="font-size:12px;font-weight:600;margin-bottom:6px;">${esc(h.approved_by||'—')}</div>
+      <div style="font-size:9px;font-weight:700;color:#1e3a5f;text-transform:uppercase;letter-spacing:.5px;margin-bottom:2px;">Approved Vendor</div>
+      <div style="font-size:13px;font-weight:700;color:#1e3a5f;margin-bottom:4px;">${esc(h.approved_vendor_name||h.recommended_vendor_name||'—')}</div>
+      ${h.approver_remarks?`<div style="font-size:11px;color:#555;font-style:italic;">${esc(h.approver_remarks)}</div>`:''}
+    </div>` : `<div style="flex:0 0 60%;padding:10px 14px;border-left:1px solid #dde6f0;display:flex;align-items:center;justify-content:center;">
+      <span style="color:#aaa;font-size:12px;">Pending PM approval</span>
+    </div>`;
+
+  const creatorSection=`
+    <div style="display:flex;margin-bottom:10px;background:#f8fafc;border-radius:6px;border:1px solid #dde6f0;overflow:hidden;">
+      <div style="flex:0 0 40%;padding:10px 14px;">
+        <div style="font-size:9px;font-weight:700;color:#1e3a5f;text-transform:uppercase;letter-spacing:.5px;margin-bottom:2px;">Prepared By</div>
+        <div style="font-size:12px;font-weight:600;margin-bottom:6px;">${esc(h.prepared_by||'—')}</div>
+        <div style="font-size:9px;font-weight:700;color:#1e3a5f;text-transform:uppercase;letter-spacing:.5px;margin-bottom:2px;">Recommended Vendor</div>
+        <div style="font-size:13px;font-weight:700;color:#1e3a5f;margin-bottom:4px;">${esc(h.recommended_vendor_name||'—')}</div>
+        ${h.creator_remarks||h.recommended_remarks?`<div style="font-size:11px;color:#555;font-style:italic;">${esc(h.creator_remarks||h.recommended_remarks||'')}</div>`:''}
+      </div>
+      ${approvedCol}
+    </div>`;
+
+  // PM approval panel
+  const vendorOptions=(quotes||[]).map(v=>
+    `<option value="${esc(v.vendor_name)}" data-code="${esc(v.vendor_code||'')}">${esc(v.vendor_name)}</option>`
+  ).join('');
+  const isApproval=perms.canApproveQC && h.status==='Pending Approval';
+  const approvalSection=isApproval?`
+    <div class="card" style="background:#fffbeb;border-color:#fbbf24;margin-top:8px;">
+      <h3 style="font-size:13px;margin-bottom:8px;color:#92400e;">PM Approval — Confirm or Change Vendor</h3>
+      <div class="grid-2">
+        <div class="field">
+          <label class="req" style="color:var(--danger);">★ Approved Vendor (Mandatory)</label>
+          <select id="qc_view_recVendor" style="width:100%;border:2px solid var(--accent);"
+            onchange="this.style.borderColor=this.value?'var(--accent)':'#dc2626'">
+            <option value="">— Select Vendor to Approve —</option>${vendorOptions}
+          </select>
+        </div>
+        <div class="field"><label class="req">Approver Remarks</label>
+          <input id="qc_view_recRemarks" placeholder="Reason / conditions / notes">
+        </div>
+      </div>
+    </div>`:'';
+
+  const statusBadge=`<span class="status ${h.status.toLowerCase().replace(/\s/g,'-')}" style="margin-left:8px;">${h.status}</span>`;
+  const canCreatePONow = (ROLE_PERMS[state.role]||{}).canCreatePO && h.status==='Approved';
+  const actionBtns=isApproval
+    ?`<button class="btn btn-primary" onclick="confirmApproveQC('${esc(qcNum)}')">✓ Approve</button>
+      <button class="btn btn-danger" onclick="closeModal();rejectDoc('QC','${esc(qcNum)}')">✕ Reject</button>
+      <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>`
+    :`${canCreatePONow?`<button class="btn btn-primary" onclick="closeModal();newPOFromQC('${esc(qcNum)}')">Create PO</button>`:''}
+      <button class="btn btn-ghost btn-sm" onclick="closeModal();printQC('${esc(qcNum)}')">🖨 Print</button>
+      <button class="btn btn-ghost" onclick="closeModal()">Close</button>`;
+
+  openModal(`
+    <h3 style="margin-bottom:2px;">Quote Comparison — ${esc(qcNum)} ${statusBadge}</h3>
+    <div style="font-size:11px;color:var(--muted);margin-bottom:10px;">
+      RFQ: <strong>${esc(h.rfq_number||'—')}</strong> &nbsp;|&nbsp; Date: ${fmtDate(h.qc_date)}
+    </div>
+    ${creatorSection}
+    ${approvalSection}
+    <div class="table-wrap" style="margin-top:10px;">
+      <table><thead>${thead}</thead><tbody>${tbody}${termsRows}</tbody></table>
+    </div>
+    ${h.remarks?`<div style="margin-top:8px;font-size:11px;color:var(--muted);padding:6px 8px;background:#f8fafc;border-radius:4px;">General Remarks: ${esc(h.remarks)}</div>`:''}
+    <div class="actions-row">${actionBtns}</div>
+  `, 'large');
+}
+
+async function confirmApproveQC(qcNum) {
+  const sel = document.getElementById('qc_view_recVendor');
+  const recName = sel?.value ? sel.options[sel.selectedIndex]?.text : '';
+  const recCode = sel?.value ? (sel.options[sel.selectedIndex]?.dataset?.code||null) : null;
+  const approverRemarks = document.getElementById('qc_view_recRemarks')?.value?.trim() || null;
+  if (!sel?.value || !recName) {
+    toast('Approved Vendor is mandatory — please select a vendor','error');
+    if (sel) sel.style.borderColor = '#dc2626';
+    sel?.focus();
+    return;
+  }
+  if (!approverRemarks) {
+    toast('Approver Remarks is mandatory','error');
+    document.getElementById('qc_view_recRemarks')?.focus();
+    return;
+  }
+  closeModal();
+  pbShow('Approving QC…');
+  // Update is_recommended flag on pu_quotes
+  await sb.from('pu_quotes').update({is_recommended:false}).eq('qc_number',qcNum);
+  await sb.from('pu_quotes').update({is_recommended:true}).eq('qc_number',qcNum).eq('vendor_name',recName);
+  // Store approved vendor separately — preserve creator's recommended_vendor and creator_remarks
+  const { error } = await sb.from('pu_quote_comparison').update({
+    status:'Approved',
+    approved_vendor_name:recName,
+    approved_vendor_code:recCode,
+    approver_remarks:approverRemarks,
+    approved_by:state.userName,
+    approved_by_id:state.userId,
+    approved_at:new Date().toISOString()
+  }).eq('qc_number',qcNum);
+  pbDone();
+  if(!error){ flashSuccess('QC '+qcNum+' Approved — '+recName+' selected'); loadQCList(); }
+  else toast(error.message,'error');
 }
 
 // ============================================================
@@ -8910,17 +9580,20 @@ function renderPOList() {
   const perms=ROLE_PERMS[state.role]||{};
   document.getElementById('po_listBody').innerHTML=rows.map(p=>{
     const stCls=p.status.toLowerCase().replace(/[\s/]+/g,'-');
-    let acts=`<button class="btn btn-ghost btn-sm" onclick="viewPO('${esc(p.po_number)}')">View</button>`;
+    let acts=`<button class="btn btn-ghost btn-sm" onclick="viewPO('${esc(p.po_number)}')">View</button>
+              <button class="btn btn-ghost btn-sm" onclick="printPO('${esc(p.po_number)}')">🖨</button>`;
     if(perms.canApprovePO && p.status==='Pending Approval')
       acts+=` <button class="btn btn-primary btn-sm" onclick="approvePO('${esc(p.po_number)}')">Approve</button>
               <button class="btn btn-danger btn-sm" onclick="rejectDoc('PO','${esc(p.po_number)}')">Reject</button>`;
     return `<tr>
       <td class="mono">${esc(p.po_number)}</td><td>${fmtDate(p.po_date)}</td>
       <td>${esc(p.vendor_name)}</td><td class="mono">${esc(p.qc_number||'—')}</td>
+      <td class="mono">${esc(p.mir_number||'—')}</td>
       <td class="num">${fmtINR(p.basic_value)}</td>
       <td class="num" style="font-weight:600;">${fmtINR(p.grand_total)}</td>
       <td><span class="status ${stCls}">${p.status}</span></td><td>${acts}</td></tr>`;
-  }).join('')||'<tr><td colspan="8" class="center muted">No POs.</td></tr>';
+  }).join('')||'<tr><td colspan="9" class="center muted">No POs.</td></tr>';
+  setTimeout(() => { const t=document.getElementById('po_listBody')?.closest('table'); if(t) makeSortable(t); }, 50);
 }
 
 async function newPO() {
@@ -8931,9 +9604,12 @@ async function newPO() {
   document.getElementById('po_date').value=today();
   document.getElementById('po_number').value='PO/'+currentFY()+'/—— (auto)';
   document.getElementById('po_preparedBy').value=state.userName;
-  ['po_qcRef','po_remarks','po_vendor','po_vendorCode','po_vendorGSTIN','po_vendorAddress','po_contactPerson','po_paymentTerms','po_deliveryAddr'].forEach(id=>{
+  ['po_qcRef','po_mirRef','po_remarks','po_vendor','po_vendorCode','po_vendorGSTIN','po_vendorAddress','po_contactPerson','po_paymentTerms'].forEach(id=>{
     const e=document.getElementById(id); if(e) e.value='';
   });
+  // Pre-fill delivery address with site address (editable)
+  const daEl=document.getElementById('po_deliveryAddr');
+  if(daEl) daEl.value='Poetry of Earth, Sy.no.199, Varthur-Sarjapur Road, Opposite to Vinayaka Theatre, Varthur, Bengaluru-560087, Karnataka.';
   document.getElementById('po_cgstPct').value='9';
   document.getElementById('po_sgstPct').value='9';
   document.getElementById('po_igstPct').value='0';
@@ -8949,16 +9625,28 @@ async function newPO() {
 }
 
 async function newPOFromQC(qcNum) {
+  switchPUTab('po');
   await newPO();
   pbShow('Loading QC…');
   const [{data:qc},{data:recQuote}]=await Promise.all([
     sb.from('pu_quote_comparison').select('*').eq('qc_number',qcNum).single(),
+    // is_recommended was updated to reflect PM's approved vendor
     sb.from('pu_quotes').select('*').eq('qc_number',qcNum).eq('is_recommended',true).maybeSingle(),
   ]);
+  // If PM changed the vendor (approved_vendor_name differs), use that
+  const approvedName = qc?.approved_vendor_name || qc?.recommended_vendor_name;
   if(recQuote) {
     const {data:qItems}=await sb.from('pu_quote_items').select('*').eq('qc_number',qcNum).eq('quote_id',recQuote.id).order('rfq_item_sno');
     document.getElementById('po_qcRef').value=qcNum;
-    document.getElementById('po_vendor').value=recQuote.vendor_name;
+    // Trace MIR number: QC → RFQ → MIR
+    if(qc?.rfq_number) {
+      const {data:rfqH}=await sb.from('pu_rfq').select('mir_number').eq('rfq_number',qc.rfq_number).single();
+      if(rfqH?.mir_number) {
+        document.getElementById('po_mirRef').value=rfqH.mir_number;
+        document.getElementById('poForm').dataset.poMirNum=rfqH.mir_number;
+      }
+    }
+    document.getElementById('po_vendor').value=recQuote ? recQuote.vendor_name : (approvedName||'');
     document.getElementById('po_vendorCode').value=recQuote.vendor_code||'';
     _poVendorLocked=true;
     const vClear=document.getElementById('po_vendor_clear');
@@ -8967,8 +9655,13 @@ async function newPOFromQC(qcNum) {
     if(po_vendor_el) po_vendor_el.readOnly=true;
     const vm=(state.masters.vendors||[]).find(v=>v['Vendor Name']===recQuote.vendor_name);
     if(vm){
-      document.getElementById('po_vendorGSTIN').value=vm['GSTIN']||'';
-      document.getElementById('po_vendorAddress').value=vm['Address']||'';
+      document.getElementById('po_vendorGSTIN').value=vm['GSTIN']||vm['gstin']||'';
+      document.getElementById('po_vendorAddress').value=vm['Address']||vm['address']||'';
+    }
+    // Also pull payment terms from recommended vendor's quote
+    if(recQuote.payment_terms){
+      const ptEl=document.getElementById('po_paymentTerms');
+      if(ptEl && !ptEl.value) ptEl.value=recQuote.payment_terms;
     }
     document.getElementById('poItemsBody').innerHTML=''; _poItemCount=0;
     (qItems||[]).forEach(qi=>{
@@ -8997,7 +9690,12 @@ function onPOGSTModeChange() {
   _gstMode=document.querySelector('input[name="po_gstMode"]:checked')?.value||'overall';
   const isPerLine=_gstMode==='per_line';
   document.getElementById('po_overallGSTPanel').style.display=isPerLine?'none':'';
+  // Hide/show per-line GST data cells in rows
   document.querySelectorAll('.po_perlineGST').forEach(el=>el.style.display=isPerLine?'':'none');
+  // Hide/show per-line GST header columns
+  ['po_cgstHdr','po_cgstAmtHdr','po_sgstHdr','po_sgstAmtHdr','po_igstHdr','po_igstAmtHdr'].forEach(id=>{
+    const el=document.getElementById(id); if(el) el.style.display=isPerLine?'':'none';
+  });
   recalcPOTotals();
 }
 
@@ -9006,10 +9704,10 @@ function addPOItem() {
   const tr=document.createElement('tr'); tr.id='poItem_'+i;
   tr.innerHTML=`
     <td>${i+1}</td>
-    <td><div class="typeahead" style="min-width:180px;">
+    <td style="min-width:280px;"><div style="position:relative;">
       <input class="po_material" id="poMat_${i}" placeholder="Type material…" style="width:100%;"
         oninput="materialTypeahead('poMat_${i}','poMatRes_${i}')" autocomplete="off">
-      <div class="typeahead-results" id="poMatRes_${i}"></div>
+      <div class="typeahead-results" id="poMatRes_${i}" style="min-width:380px;position:absolute;top:100%;left:0;z-index:9999;box-shadow:0 4px 16px rgba(0,0,0,.15);"></div>
     </div></td>
     <td><input class="po_uom" id="poUom_${i}" style="width:65px;"></td>
     <td><input type="number" class="po_qty num" id="poQty_${i}" style="width:80px;" step="0.001" oninput="recalcPORow(${i})"></td>
@@ -9126,7 +9824,8 @@ async function savePO() {
     const poNumber=await nextPUDocNumber('PO');
     const {error}=await sb.from('pu_po_orders').insert({
       po_number:poNumber, po_date:date, project:document.getElementById('po_project').value,
-      qc_number:document.getElementById('po_qcRef').value||null,
+      qc_number:(()=>{const v=document.getElementById('po_qcRef').value||''; return v.startsWith('QC/')?v:null;})(),
+      mir_number:document.getElementById('poForm').dataset.poMirNum||document.getElementById('po_mirRef')?.value||null,
       vendor_name:vendor, vendor_code:document.getElementById('po_vendorCode').value||null,
       vendor_address:document.getElementById('po_vendorAddress').value.trim()||null,
       vendor_gstin:document.getElementById('po_vendorGSTIN').value.trim()||null,
@@ -9149,7 +9848,55 @@ async function savePO() {
     if(error) throw new Error(error.message);
     await sb.from('pu_po_items').insert(items.map(it=>({...it,po_number:poNumber})));
     const qcRef=document.getElementById('po_qcRef').value;
-    if(qcRef) await sb.from('pu_quote_comparison').update({status:'PO Raised'}).eq('qc_number',qcRef);
+    if(qcRef && qcRef.startsWith('QC/')) {
+      await sb.from('pu_quote_comparison').update({status:'PO Raised'}).eq('qc_number',qcRef);
+      // Trace back: QC → RFQ → MIR items — mark them as PO Raised
+      const {data:qcH} = await sb.from('pu_quote_comparison').select('rfq_number').eq('qc_number',qcRef).single();
+      if(qcH?.rfq_number) {
+        const {data:rfqH} = await sb.from('pu_rfq').select('mir_number').eq('rfq_number',qcH.rfq_number).single();
+        if(rfqH?.mir_number) {
+          await sb.from('pu_mir_items').update({item_status:'PO Raised', po_number:poNumber})
+            .eq('mir_number',rfqH.mir_number).eq('rfq_number',qcH.rfq_number);
+          const {data:allMirItems} = await sb.from('pu_mir_items').select('item_status').eq('mir_number',rfqH.mir_number);
+          const allPO=(allMirItems||[]).every(it=>it.item_status==='PO Raised'||it.item_status==='Received');
+          if(allPO) await sb.from('pu_mir').update({status:'PO Raised'}).eq('mir_number',rfqH.mir_number);
+        }
+      }
+    }
+    // If this PO came from a Direct PO (MIR bypass), update MIR item statuses
+    const directMir  = document.getElementById('poForm').dataset.directMirNum;
+    const directSnos = document.getElementById('poForm').dataset.directMirSnos;
+    if(directMir) {
+      const snos = directSnos ? directSnos.split(',').map(Number).filter(Boolean) : [];
+      const directMatsStr = document.getElementById('poForm')?.dataset?.directMirMats||'';
+      const directMats = directMatsStr ? directMatsStr.split('|||').filter(Boolean) : [];
+      if(directMats.length) {
+        const {error:dmErr} = await sb.from('pu_mir_items').update({item_status:'PO Raised', po_number:poNumber})
+          .eq('mir_number',directMir).in('material_name', directMats);
+        if(dmErr) {
+          // Fallback to sno
+          for(const sno of snos) {
+            await sb.from('pu_mir_items').update({item_status:'PO Raised', po_number:poNumber})
+              .eq('mir_number',directMir).eq('sno',sno);
+          }
+        }
+      } else if(snos.length) {
+        for(const sno of snos) {
+          await sb.from('pu_mir_items').update({item_status:'PO Raised', po_number:poNumber})
+            .eq('mir_number',directMir).eq('sno',sno);
+        }
+      }
+      // Check if all MIR items are now PO Raised
+      const {data:allMirItems} = await sb.from('pu_mir_items').select('item_status').eq('mir_number',directMir);
+      const allPO = (allMirItems||[]).every(it=>it.item_status==='PO Raised'||it.item_status==='Received');
+      const anyPO = (allMirItems||[]).some(it=>it.item_status==='PO Raised'||it.item_status==='Received');
+      const newSt  = allPO ? 'PO Raised' : anyPO ? 'Partial RFQ' : 'Approved';
+      await sb.from('pu_mir').update({status:newSt}).eq('mir_number',directMir);
+      delete document.getElementById('poForm').dataset.directMirNum;
+      delete document.getElementById('poForm').dataset.directMirSnos;
+      delete document.getElementById('poForm').dataset.directMirMats;
+      delete document.getElementById('poForm').dataset.poMirNum;
+    }
     flashSuccess('PO '+poNumber+' submitted for PM approval');
     closePOForm(); loadPOList();
   } catch(e){toast('Error: '+e.message,'error');}
@@ -9179,6 +9926,7 @@ async function viewPO(poNum) {
       <div><label class="muted" style="font-size:11px;">STATUS</label><div>${esc(h.status)}</div></div>
       <div><label class="muted" style="font-size:11px;">GST MODE</label><div>${h.gst_mode==='per_line'?'Per-Line':'Overall'}</div></div>
       <div><label class="muted" style="font-size:11px;">QC REF</label><div>${esc(h.qc_number||'—')}</div></div>
+      <div><label class="muted" style="font-size:11px;">MIR REF</label><div class="mono" style="color:#d97706;">${esc(h.mir_number||'—')}</div></div>
       <div><label class="muted" style="font-size:11px;">GRAND TOTAL</label><div style="font-weight:700;color:var(--accent);">${fmtINRSym(h.grand_total)}</div></div>
     </div>
     <div class="table-wrap"><table>
@@ -9220,6 +9968,7 @@ function renderGRNList() {
       <td>${esc(g.received_by||'—')}</td><td>${esc(g.verified_by||'—')}</td>
       <td><span class="status ${stCls}">${st}</span></td><td>${acts}</td></tr>`;
   }).join('')||'<tr><td colspan="9" class="center muted">No GRNs.</td></tr>';
+  setTimeout(() => { const t=document.getElementById('grn_listBody')?.closest('table'); if(t) makeSortable(t); }, 50);
 }
 
 async function newGRN() {
@@ -9342,6 +10091,8 @@ async function saveGRN() {
     const poTotalQty=(allPoItems||[]).reduce((s,r)=>s+num(r.qty),0);
     const newStatus=totalRecvd>=poTotalQty-0.005?'Fully Received':'Partial Receipt';
     await sb.from('pu_po_orders').update({status:newStatus}).eq('po_number',poNum);
+    // After GRN save, check if PO has a MIR reference and update item statuses
+    // Note: final 'Received' status set only after Site Manager verifies (verifyGRN)
     flashSuccess('GRN '+grnNumber+' saved — pending Site Manager verification');
     closeGRNForm(); loadGRNList(); loadPOList();
   } catch(e){toast('Error: '+e.message,'error');}
@@ -9355,8 +10106,34 @@ function closeGRNForm() {
 
 async function verifyGRN(grnNum) {
   if(!hasPerm('canApproveGRN')){toast('Only Site Manager can verify GRNs','error');return;}
-  await sb.from('pu_grn').update({status:'Verified',verified_by:state.userName,verified_by_id:state.userId}).eq('grn_number',grnNum);
-  flashSuccess('GRN '+grnNum+' Verified'); loadGRNList();
+  pbShow('Verifying GRN…');
+  await sb.from('pu_grn').update({
+    status:'Verified', verified_by:state.userName, verified_by_id:state.userId
+  }).eq('grn_number',grnNum);
+
+  // Trace GRN → PO → MIR and update MIR item statuses to Received
+  try {
+    const {data:grn}=await sb.from('pu_grn').select('po_number').eq('grn_number',grnNum).single();
+    if(grn?.po_number) {
+      const {data:po}=await sb.from('pu_po_orders').select('mir_number').eq('po_number',grn.po_number).single();
+      if(po?.mir_number) {
+        // Update all MIR items that have this PO number to Received
+        await sb.from('pu_mir_items').update({item_status:'Received'})
+          .eq('mir_number',po.mir_number).eq('po_number',grn.po_number);
+        // Check if all items on the MIR are now Received → close the MIR
+        const {data:allItems}=await sb.from('pu_mir_items').select('item_status').eq('mir_number',po.mir_number);
+        const allReceived=(allItems||[]).length>0 &&
+          (allItems||[]).every(it=>it.item_status==='Received'||it.item_status==='Closed');
+        if(allReceived) {
+          await sb.from('pu_mir').update({status:'Closed'}).eq('mir_number',po.mir_number);
+        }
+      }
+    }
+  } catch(e){ console.error('MIR Received update error:',e.message); }
+
+  pbDone();
+  flashSuccess('GRN '+grnNum+' Verified — MIR item statuses updated to Received');
+  loadGRNList(); loadMIRList();
 }
 
 async function viewGRN(grnNum) {
@@ -9409,7 +10186,8 @@ function renderPOBList() {
   const perms=ROLE_PERMS[state.role]||{};
   document.getElementById('pob_listBody').innerHTML=rows.map(b=>{
     const stCls=b.status.toLowerCase().replace(/\s/g,'-');
-    let acts=`<button class="btn btn-ghost btn-sm" onclick="viewPOB('${esc(b.bill_number)}')">View</button>`;
+    let acts=`<button class="btn btn-ghost btn-sm" onclick="viewPOB('${esc(b.bill_number)}')">View</button>
+              <button class="btn btn-ghost btn-sm" onclick="printPOB('${esc(b.bill_number)}')">🖨</button>`;
     if(perms.canApprovePOB && b.status==='Pending Approval')
       acts+=` <button class="btn btn-primary btn-sm" onclick="approvePOB('${esc(b.bill_number)}')">Approve</button>
               <button class="btn btn-danger btn-sm" onclick="rejectDoc('POB','${esc(b.bill_number)}')">Reject</button>`;
@@ -9423,6 +10201,7 @@ function renderPOBList() {
       <td class="num" style="color:${b.outstanding>0?'var(--warn)':'inherit'};">${fmtINR(b.outstanding||0)}</td>
       <td><span class="status ${stCls}">${b.status}</span></td><td>${acts}</td></tr>`;
   }).join('')||'<tr><td colspan="11" class="center muted">No POB bills.</td></tr>';
+  setTimeout(() => { const t=document.getElementById('pob_listBody')?.closest('table'); if(t) makeSortable(t); }, 50);
 }
 
 async function newPOB() {
@@ -9706,6 +10485,7 @@ function renderMISList() {
       <td><span class="status ${stCls}">${m.status||'Pending Approval'}</span></td>
       <td>${acts}</td></tr>`;
   }).join('')||'<tr><td colspan="9" class="center muted">No material issues.</td></tr>';
+  setTimeout(() => { const t=document.getElementById('mis_listBody')?.closest('table'); if(t) makeSortable(t); }, 50);
 }
 
 function renderMISLedger() {
@@ -9986,19 +10766,7 @@ function switchMasterTab(tab) {
   if(tab==='materials'){apiLoadMaterials().then(renderMaterialMaster);}
 }
 
-// Override applyRoleUI to also show/hide Purchase tab and buttons
-const _origApplyRoleUI = typeof applyRoleUI==='function' ? applyRoleUI : ()=>{};
-function applyRoleUI() {
-  _origApplyRoleUI();
-  const perms=ROLE_PERMS[state.role]||{};
-  const puBtns={btn_newMIR:'canCreateMIR',btn_newRFQ:'canCreateRFQ',btn_newPO:'canCreatePO',
-    btn_newGRN:'canCreateGRN',btn_newPOB:'canCreatePOB',btn_newMIS:'canCreateMIS'};
-  Object.entries(puBtns).forEach(([id,perm])=>{const el=document.getElementById(id);if(el) el.style.display=perms[perm]?'':'none';});
-  // Purchase tab visibility
-  const hasPU=Object.keys(perms).some(p=>/^can(Create|Approve)(MIR|QC|PO|GRN|POB|MIS|RFQ)/.test(p))||perms.canManageMasters;
-  const puTab=document.getElementById('tab-purchase');
-  if(puTab) puTab.style.display=hasPU?'':'none';
-}
+// applyRoleUI purchase logic is now merged into the main applyRoleUI function above
 
 // Extend apiGetUnpaidBills to include POB
 const _origApiGetUnpaidBills = typeof apiGetUnpaidBills==='function' ? apiGetUnpaidBills : async()=>({ok:true,bills:[]});
@@ -10044,6 +10812,314 @@ async function _applyPRRPaymentPerInvoice(prrNumber, perInvoice) {
 
 // Also load materials on initApp
 const _origInitAppForPU = window.initApp;
+
+
+// ============================================================
+// SORTABLE TABLES
+// ============================================================
+function makeSortable(tableOrId) {
+  const table = (typeof tableOrId === 'string') ? document.getElementById(tableOrId) : tableOrId;
+  if (!table || !table.querySelector) return;
+  const ths = table.querySelectorAll('thead th');
+  ths.forEach((th, col) => {
+    th.classList.add('sortable');
+    th.dataset.sortDir = '';
+    th.addEventListener('click', () => {
+      const dir = th.dataset.sortDir === 'asc' ? 'desc' : 'asc';
+      ths.forEach(h => { h.classList.remove('asc','desc'); h.dataset.sortDir = ''; });
+      th.dataset.sortDir = dir;
+      th.classList.add(dir);
+      const tbody = table.querySelector('tbody');
+      const rows = Array.from(tbody.querySelectorAll('tr'));
+      rows.sort((a, b) => {
+        const av = a.cells[col]?.textContent?.trim() || '';
+        const bv = b.cells[col]?.textContent?.trim() || '';
+        const an = parseFloat(av.replace(/[^0-9.\-]/g,''));
+        const bn = parseFloat(bv.replace(/[^0-9.\-]/g,''));
+        const cmp = (!isNaN(an) && !isNaN(bn)) ? an - bn : av.localeCompare(bv, 'en-IN');
+        return dir === 'asc' ? cmp : -cmp;
+      });
+      rows.forEach(r => tbody.appendChild(r));
+    });
+  });
+}
+
+// Sortable applied inside renderMIRList directly
+
+// Sortable is applied at end of each renderXXXList() call
+
+// ============================================================
+// PRINT FUNCTIONS — RFQ, QC, PO, GRN BILLING
+// ============================================================
+function openPrintOverlay(html) {
+  let ov = document.getElementById('printOverlay');
+  if (!ov) {
+    ov = document.createElement('div');
+    ov.id = 'printOverlay';
+    ov.className = 'print-doc-overlay';
+    ov.innerHTML = `
+      <button class="pdo-close" onclick="closePrintOverlay()">✕ Close</button>
+      <button class="pdo-print" onclick="window.print()">🖨 Print</button>
+      <div id="printOverlayContent"></div>`;
+    document.body.appendChild(ov);
+  }
+  document.getElementById('printOverlayContent').innerHTML = html;
+  ov.classList.add('show');
+}
+function closePrintOverlay() {
+  document.getElementById('printOverlay')?.classList.remove('show');
+}
+
+const CO_NAME = 'URBAN EXCELLENCE LLP';
+const CO_ADDR = '76/1, Windchimes, Muthsandra Main Road, Bengaluru – 560087';
+const CO_GSTIN = '29AAHFU0117D1ZH';
+const SITE_ADDR = 'Poetry of Earth, Sy.No.199, Varthur–Sarjapur Road, Varthur, Bengaluru – 560087';
+
+function printStyles() {
+  return `<style>
+    body{font-family:Helvetica,Arial,sans-serif;font-size:9.5pt;color:#111;margin:0;padding:0;}
+    .pd-top{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:2pt solid #1e3a5f;padding-bottom:8pt;margin-bottom:10pt;}
+    .co-name{font-size:14pt;font-weight:700;color:#1e3a5f;}
+    .co-detail{font-size:8pt;color:#555;line-height:1.6;}
+    .doc-title{font-size:18pt;font-weight:700;color:#1e3a5f;text-align:right;letter-spacing:1px;}
+    .doc-meta{font-size:8.5pt;border-collapse:collapse;margin-top:4pt;margin-left:auto;}
+    .doc-meta td{padding:2pt 6pt;border:0.5pt solid #bbb;}
+    .doc-meta td:first-child{font-weight:700;background:#e8ecf2;color:#1e3a5f;}
+    .addr-row{display:flex;gap:12pt;margin-bottom:10pt;}
+    .addr-box{flex:1;border:0.5pt solid #ccc;border-radius:3pt;padding:6pt;}
+    .addr-hdr{font-size:7.5pt;font-weight:700;text-transform:uppercase;color:#1e3a5f;border-bottom:0.5pt solid #dde;margin-bottom:4pt;padding-bottom:2pt;}
+    .addr-body{font-size:8.5pt;line-height:1.6;}
+    table.items{width:100%;border-collapse:collapse;margin-bottom:8pt;}
+    table.items th{background:#1e3a5f;color:#fff;font-size:8.5pt;padding:4pt 6pt;text-align:left;}
+    table.items th.r, table.items td.r{text-align:right;}
+    table.items th.c, table.items td.c{text-align:center;}
+    table.items td{font-size:8.5pt;padding:4pt 6pt;border-bottom:0.5pt solid #eee;}
+    table.items tr:nth-child(even) td{background:#f8fafc;}
+    .totals{margin-left:auto;width:260pt;border-collapse:collapse;margin-bottom:10pt;}
+    .totals td{padding:3pt 6pt;font-size:8.5pt;border:0.5pt solid #ddd;}
+    .totals td:first-child{font-weight:600;background:#f0f5fb;}
+    .totals tr.grand td{font-weight:700;background:#1e3a5f;color:#fff;font-size:10pt;}
+    .footer-row{display:flex;gap:12pt;margin-top:10pt;border-top:0.5pt solid #ccc;padding-top:8pt;}
+    .footer-box{flex:1;font-size:8pt;}
+    .footer-hdr{font-weight:700;color:#1e3a5f;margin-bottom:3pt;}
+    .sign-box{width:120pt;border-top:0.5pt solid #333;padding-top:3pt;font-size:8pt;text-align:center;margin-top:30pt;}
+  </style>`;
+}
+
+async function printRFQ(rfqNum) {
+  pbShow('Building print…');
+  const [{data:h},{data:items}] = await Promise.all([
+    sb.from('pu_rfq').select('*').eq('rfq_number',rfqNum).single(),
+    sb.from('pu_rfq_items').select('*').eq('rfq_number',rfqNum).order('sno'),
+  ]);
+  pbDone();
+  if (!h) { toast('RFQ not found','error'); return; }
+  const rows = (items||[]).map((it,i) => `<tr>
+    <td class="c">${i+1}</td><td>${esc(it.material_name)}</td><td class="c">${esc(it.uom)}</td>
+    <td class="r">${it.qty_required}</td><td>${esc(it.specification||'—')}</td>
+  </tr>`).join('');
+  openPrintOverlay(`${printStyles()}
+  <div class="pd-top">
+    <div><div class="co-name">${CO_NAME}</div><div class="co-detail">${CO_ADDR}<br>GSTIN: ${CO_GSTIN}</div></div>
+    <div><div class="doc-title">REQUEST FOR QUOTE</div>
+      <table class="doc-meta"><tr><td>RFQ No.</td><td>${esc(rfqNum)}</td></tr>
+      <tr><td>Date</td><td>${fmtDate(h.rfq_date)}</td></tr>
+      ${h.response_due?`<tr><td>Response Due</td><td>${fmtDate(h.response_due)}</td></tr>`:''}
+      ${h.mir_number?`<tr><td>MIR Ref</td><td>${esc(h.mir_number)}</td></tr>`:''}
+      </table>
+    </div>
+  </div>
+  <div style="margin-bottom:8pt;font-size:9pt;"><strong>Description:</strong> ${esc(h.description||'')}</div>
+  <table class="items"><thead><tr>
+    <th class="c" style="width:30pt">#</th><th>Material / Description</th>
+    <th class="c" style="width:50pt">UOM</th><th class="r" style="width:60pt">Qty</th>
+    <th>Specification</th>
+  </tr></thead><tbody>${rows}</tbody></table>
+  <div class="footer-row">
+    <div class="footer-box"><div class="footer-hdr">Delivery Address</div>${SITE_ADDR}</div>
+    <div class="footer-box"><div class="footer-hdr">Remarks</div>${esc(h.remarks||'—')}</div>
+    <div style="text-align:right;"><div class="sign-box">Authorised Signatory<br>${CO_NAME}</div></div>
+  </div>`);
+}
+
+async function printQC(qcNum) {
+  pbShow('Building print…');
+  const [{data:h},{data:quotes},{data:qItems}] = await Promise.all([
+    sb.from('pu_quote_comparison').select('*').eq('qc_number',qcNum).single(),
+    sb.from('pu_quotes').select('*').eq('qc_number',qcNum).order('sno'),
+    sb.from('pu_quote_items').select('*').eq('qc_number',qcNum),
+  ]);
+  pbDone();
+  if (!h) { toast('QC not found','error'); return; }
+  const mats = [...new Set((qItems||[]).map(qi=>qi.material_name))];
+  let thead = `<tr><th class="c">#</th><th>Material</th><th class="c">UOM</th><th class="r">Qty</th>`;
+  (quotes||[]).forEach(v => { thead += `<th class="r">${esc(v.vendor_name)}${v.is_recommended?' ★':''}<br><span style="font-weight:400;font-size:7.5pt;">${esc(v.quote_ref||'')}</span></th><th class="r">Total</th>`; });
+  thead += '</tr>';
+  const tbody = mats.map((mat,idx) => {
+    const sample = (qItems||[]).find(qi=>qi.material_name===mat);
+    let row = `<tr><td class="c">${idx+1}</td><td>${esc(mat)}</td><td class="c">${esc(sample?.uom||'')}</td><td class="r">${sample?.qty_required||0}</td>`;
+    (quotes||[]).forEach(v => {
+      const qi = (qItems||[]).find(qi=>qi.material_name===mat&&qi.quote_id===v.id);
+      const bg = v.is_recommended ? 'background:#d1fae5;' : '';
+      row += `<td class="r" style="${bg}">${qi?.unit_rate!=null?'₹ '+fmtINR(qi.unit_rate):'—'}</td>`;
+      row += `<td class="r" style="${bg}">${qi?.amount!=null?'₹ '+fmtINR(qi.amount):'—'}</td>`;
+    });
+    return row + '</tr>';
+  }).join('');
+  openPrintOverlay(`${printStyles()}
+  <div class="pd-top">
+    <div><div class="co-name">${CO_NAME}</div><div class="co-detail">${CO_ADDR}</div></div>
+    <div><div class="doc-title">QUOTE COMPARISON</div>
+      <table class="doc-meta"><tr><td>QC No.</td><td>${esc(qcNum)}</td></tr>
+      <tr><td>Date</td><td>${fmtDate(h.qc_date)}</td></tr>
+      ${h.rfq_number?`<tr><td>RFQ Ref</td><td>${esc(h.rfq_number)}</td></tr>`:''}
+      </table>
+    </div>
+  </div>
+  <table class="items"><thead>${thead}</thead><tbody>${tbody}</tbody></table>
+  <div class="footer-row">
+    <div class="footer-box"><div class="footer-hdr">Recommended Vendor</div><strong>${esc(h.recommended_vendor_name||'—')}</strong>${h.recommended_remarks?' — '+esc(h.recommended_remarks):''}</div>
+    ${h.payment_terms?`<div class="footer-box"><div class="footer-hdr">Payment Terms</div>${esc(h.payment_terms)}</div>`:''}
+    ${h.tech_specs?`<div class="footer-box"><div class="footer-hdr">Technical Specs</div>${esc(h.tech_specs)}</div>`:''}
+  </div>`);
+}
+
+async function printPO(poNum) {
+  pbShow('Building print…');
+  const [{data:h},{data:items}] = await Promise.all([
+    sb.from('pu_po_orders').select('*').eq('po_number',poNum).single(),
+    sb.from('pu_po_items').select('*').eq('po_number',poNum).order('sno'),
+  ]);
+  pbDone();
+  if (!h) { toast('PO not found','error'); return; }
+  const fmtI = n => (n||0).toLocaleString('en-IN',{minimumFractionDigits:2,maximumFractionDigits:2});
+  const rows = (items||[]).map((it,i) => `<tr>
+    <td class="c">${it.sno||i+1}</td><td>${esc(it.material_name)}</td><td class="c">${esc(it.uom)}</td>
+    <td class="r">${fmtI(it.qty)}</td><td class="r">₹ ${fmtI(it.unit_rate)}</td>
+    <td class="c">${it.cgst_pct||0}%</td><td class="c">${it.sgst_pct||0}%</td><td class="c">${it.igst_pct||0}%</td>
+    <td class="r">₹ ${fmtI(it.total_amount)}</td>
+  </tr>`).join('');
+  const totals = `<tr><td>Basic Value</td><td>₹ ${fmtI(h.basic_value)}</td></tr>
+    <tr><td>CGST</td><td>₹ ${fmtI(h.cgst_amount)}</td></tr>
+    <tr><td>SGST</td><td>₹ ${fmtI(h.sgst_amount)}</td></tr>
+    ${h.igst_amount>0?`<tr><td>IGST</td><td>₹ ${fmtI(h.igst_amount)}</td></tr>`:''}
+    ${h.round_off?`<tr><td>Round Off</td><td>₹ ${fmtI(h.round_off)}</td></tr>`:''}
+    <tr class="grand"><td>GRAND TOTAL</td><td>₹ ${fmtI(h.grand_total)}</td></tr>`;
+  openPrintOverlay(`${printStyles()}
+  <div class="pd-top">
+    <div><div class="co-name">${CO_NAME}</div><div class="co-detail">${CO_ADDR}<br>GSTIN: ${CO_GSTIN}</div></div>
+    <div><div class="doc-title">PURCHASE ORDER</div>
+      <table class="doc-meta"><tr><td>PO No.</td><td>${esc(poNum)}</td></tr>
+      <tr><td>Date</td><td>${fmtDate(h.po_date)}</td></tr>
+      ${h.qc_number?`<tr><td>QC Ref</td><td>${esc(h.qc_number)}</td></tr>`:''}
+      <tr><td>Project</td><td>${esc(h.project||'PoE, Ph-01')}</td></tr>
+      </table>
+    </div>
+  </div>
+  <div class="addr-row">
+    <div class="addr-box"><div class="addr-hdr">Vendor</div><div class="addr-body">
+      <strong>${esc(h.vendor_name)}</strong><br>
+      ${h.vendor_address?esc(h.vendor_address).split('\n').join('<br>'):''}
+      ${h.vendor_gstin?'<br>GSTIN: <strong>'+esc(h.vendor_gstin)+'</strong>':''}
+    </div></div>
+    <div class="addr-box"><div class="addr-hdr">Bill To</div><div class="addr-body">
+      <strong>${CO_NAME}</strong><br>${CO_ADDR}<br>GSTIN: ${CO_GSTIN}
+    </div></div>
+    <div class="addr-box"><div class="addr-hdr">Deliver To</div><div class="addr-body">${SITE_ADDR}</div></div>
+  </div>
+  <table class="items"><thead><tr>
+    <th class="c">#</th><th>Material</th><th class="c">UOM</th><th class="r">Qty</th>
+    <th class="r">Rate</th><th class="c">CGST%</th><th class="c">SGST%</th><th class="c">IGST%</th>
+    <th class="r">Total (₹)</th>
+  </tr></thead><tbody>${rows}</tbody></table>
+  <div style="display:flex;justify-content:flex-end;"><table class="totals">${totals}</table></div>
+  <div class="footer-row">
+    <div class="footer-box"><div class="footer-hdr">Payment Terms</div>${esc(h.payment_terms||'—')}</div>
+    <div class="footer-box"><div class="footer-hdr">Transportation</div>${esc(h.transport||'—')}</div>
+    ${h.remarks?`<div class="footer-box"><div class="footer-hdr">Remarks</div>${esc(h.remarks)}</div>`:''}
+    <div style="text-align:right;"><div class="sign-box">Authorised Signatory<br>${CO_NAME}</div></div>
+  </div>`);
+}
+
+async function printPOB(billNum) {
+  pbShow('Building print…');
+  const [{data:h},{data:items}] = await Promise.all([
+    sb.from('pu_po_bills').select('*').eq('bill_number',billNum).single(),
+    sb.from('pu_po_bill_items').select('*').eq('bill_number',billNum).order('sno'),
+  ]);
+  pbDone();
+  if (!h) { toast('Bill not found','error'); return; }
+  const fmtI = n => (n||0).toLocaleString('en-IN',{minimumFractionDigits:2,maximumFractionDigits:2});
+  const rows = (items||[]).map((it,i) => `<tr>
+    <td class="c">${it.sno||i+1}</td><td class="mono" style="font-size:8pt;">${esc(it.grn_number||'')}</td>
+    <td>${esc(it.material_name)}</td><td class="c">${esc(it.uom)}</td>
+    <td class="r">${fmtI(it.qty)}</td><td class="r">₹ ${fmtI(it.unit_rate)}</td>
+    <td class="r">₹ ${fmtI(it.base_amount)}</td>
+  </tr>`).join('');
+  const totals = `<tr><td>Gross Amount</td><td>₹ ${fmtI(h.gross_amount)}</td></tr>
+    ${h.extra_before_gst?`<tr><td>Add (Pre-GST)</td><td>₹ ${fmtI(h.extra_before_gst)}</td></tr>`:''}
+    <tr><td>CGST (${h.cgst_pct||0}%)</td><td>₹ ${fmtI(h.cgst_amount)}</td></tr>
+    <tr><td>SGST (${h.sgst_pct||0}%)</td><td>₹ ${fmtI(h.sgst_amount)}</td></tr>
+    ${h.igst_amount>0?`<tr><td>IGST</td><td>₹ ${fmtI(h.igst_amount)}</td></tr>`:''}
+    ${h.extra_after_gst?`<tr><td>Add (Post-GST)</td><td>₹ ${fmtI(h.extra_after_gst)}</td></tr>`:''}
+    <tr><td>Invoice Value</td><td>₹ ${fmtI(h.invoice_value)}</td></tr>
+    <tr><td>TDS (${h.tds_pct||0}%)</td><td>— ₹ ${fmtI(h.tds_amount)}</td></tr>
+    ${h.hold_amount>0?`<tr><td>Hold</td><td>— ₹ ${fmtI(h.hold_amount)}</td></tr>`:''}
+    <tr class="grand"><td>NET PAYABLE</td><td>₹ ${fmtI(h.net_payable)}</td></tr>`;
+  openPrintOverlay(`${printStyles()}
+  <div class="pd-top">
+    <div><div class="co-name">${CO_NAME}</div><div class="co-detail">${CO_ADDR}<br>GSTIN: ${CO_GSTIN}</div></div>
+    <div><div class="doc-title">GRN BILL ABSTRACT</div>
+      <table class="doc-meta"><tr><td>Bill No.</td><td>${esc(billNum)}</td></tr>
+      <tr><td>Date</td><td>${fmtDate(h.bill_date)}</td></tr>
+      <tr><td>PO No.</td><td>${esc(h.po_number)}</td></tr>
+      <tr><td>Vendor Inv.</td><td>${esc(h.vendor_inv_no||'—')}</td></tr>
+      <tr><td>Inv. Date</td><td>${h.vendor_inv_date?fmtDate(h.vendor_inv_date):'—'}</td></tr>
+      </table>
+    </div>
+  </div>
+  <div class="addr-row">
+    <div class="addr-box"><div class="addr-hdr">Vendor</div><div class="addr-body"><strong>${esc(h.vendor_name)}</strong></div></div>
+    <div class="addr-box"><div class="addr-hdr">GRNs Included</div><div class="addr-body" style="font-size:8pt;">${esc(h.grn_numbers||'—')}</div></div>
+  </div>
+  <table class="items"><thead><tr>
+    <th class="c">#</th><th>GRN No.</th><th>Material</th><th class="c">UOM</th>
+    <th class="r">Qty</th><th class="r">Rate</th><th class="r">Amount (₹)</th>
+  </tr></thead><tbody>${rows}</tbody></table>
+  <div style="display:flex;justify-content:flex-end;"><table class="totals">${totals}</table></div>
+  <div class="footer-row">
+    ${h.remarks?`<div class="footer-box"><div class="footer-hdr">Remarks</div>${esc(h.remarks)}</div>`:'<div></div>'}
+    <div style="text-align:right;"><div class="sign-box">Verified By<br>${CO_NAME}</div></div>
+  </div>`);
+}
+
+// ============================================================
+// DIRECT PO FROM MIR (Preferred Vendor — No QC required)
+// ============================================================
+async function newDirectPOFromMIR(mirNum) {
+  if (!hasPerm('canCreatePO')) { toast('Only Procurement can create POs','error'); return; }
+  switchPUTab('po');
+  await newPO();
+  // Pre-fill from MIR items
+  const {data:items} = await sb.from('pu_mir_items').select('*').eq('mir_number',mirNum).order('sno');
+  document.getElementById('poItemsBody').innerHTML=''; _poItemCount=0;
+  (items||[]).forEach(it => {
+    addPOItem();
+    const i = _poItemCount-1;
+    document.getElementById('poMat_'+i).value = it.material_name;
+    document.getElementById('poUom_'+i).value = it.uom;
+    document.getElementById('poQty_'+i).value = it.qty_required;
+    const specEl = document.getElementById('poRmk_'+i);
+    if (specEl && it.specification) specEl.value = it.specification;
+  });
+  recalcPOTotals();
+  // Tag this PO as directly from MIR
+  const qcRefEl = document.getElementById('po_qcRef');
+  if (qcRefEl) { qcRefEl.value = 'Direct from ' + mirNum; qcRefEl.readOnly = false; }
+  toast('PO pre-filled from MIR ' + mirNum + ' — select preferred vendor and enter rates. Save PO to confirm.','info',5000);
+  // Store mirNum on form — status updated ONLY after PO is saved successfully
+  document.getElementById('poForm').dataset.directMirNum = mirNum;
+}
 
 </script>
 </body>
