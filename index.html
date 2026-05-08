@@ -11371,11 +11371,12 @@ async function printPO(poNum) {
 <meta charset="UTF-8">
 <title>Purchase Order — ${esc(poNum)}</title>
 <style>
-  @page { size:A4 portrait; margin:25mm 15mm 20mm 15mm; margin-header:0mm; margin-footer:0mm; }
+  @page { size:A4 portrait; margin:0mm 0mm 0mm 0mm; }
   * { box-sizing:border-box; margin:0; padding:0; }
   body {
     font-family:Arial,Helvetica,sans-serif; font-size:9pt; color:#111;
     -webkit-print-color-adjust:exact; print-color-adjust:exact;
+    padding:25mm 15mm 20mm 15mm;
   }
 
   /* ── TITLE ROW ── */
