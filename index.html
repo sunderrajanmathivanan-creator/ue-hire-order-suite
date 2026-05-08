@@ -288,11 +288,25 @@ th.sortable::after { content:' ⇅'; opacity:.4; font-size:10px; }
 th.sortable.asc::after  { content:' ↑'; opacity:.9; }
 th.sortable.desc::after { content:' ↓'; opacity:.9; }
 /* ── PRINT OVERLAY ── */
-.print-doc-overlay { display:none; position:fixed; inset:0; background:#fff; z-index:99990; overflow:auto; padding:15mm; }
+.print-doc-overlay { display:none; position:fixed; inset:0; background:#fff; z-index:99990; overflow:auto; padding:60px 40px 80px; }
 .print-doc-overlay.show { display:block; }
-.pdo-close { position:fixed; top:16px; right:130px; z-index:99991; background:#64748b; color:#fff; border:none; border-radius:6px; padding:8px 18px; cursor:pointer; font-size:13px; }
-.pdo-print { position:fixed; top:16px; right:20px; z-index:99991; background:#16a34a; color:#fff; border:none; border-radius:6px; padding:8px 18px; cursor:pointer; font-size:13px; }
-@media print { .pdo-close, .pdo-print { display:none !important; } .print-doc-overlay.show { position:absolute; } }
+.pdo-close { position:fixed; top:14px; right:130px; z-index:99991; background:#64748b; color:#fff; border:none; border-radius:6px; padding:8px 20px; cursor:pointer; font-size:13px; font-family:inherit; }
+.pdo-print { position:fixed; top:14px; right:20px; z-index:99991; background:#16a34a; color:#fff; border:none; border-radius:6px; padding:8px 20px; cursor:pointer; font-size:13px; font-family:inherit; }
+@media print {
+  /* Hide everything except the print content div */
+  body * { visibility:hidden !important; }
+  #printOverlayContent, #printOverlayContent * { visibility:visible !important; }
+  #printOverlayContent {
+    position:absolute !important;
+    top:0 !important; left:0 !important;
+    width:100% !important;
+    height:auto !important;
+    overflow:visible !important;
+    padding:0 !important;
+    margin:0 !important;
+  }
+  .pdo-close, .pdo-print { display:none !important; visibility:hidden !important; }
+}
 </style>
 </head>
 <body>
@@ -860,10 +874,10 @@ th.sortable.desc::after { content:' ↓'; opacity:.9; }
       <div class="field"><label class="req">WO Number</label><input id="wo_number" readonly placeholder="Auto-generated…"></div>
       <div class="field"><label class="req">WO Date</label><input type="date" id="wo_date"></div>
       <div class="field typeahead">
-        <label class="req">Vendor</label>
+        <label class="req">Contractor</label>
         <div style="display:flex;gap:4px;align-items:center;">
-          <input id="wo_vendor" placeholder="Type to search vendor…" autocomplete="off"
-            oninput="wo_vendor_locked=false;vendorTypeahead('wo_vendor','wo_vendorResults','wo_vendorCode')" style="flex:1;">
+          <input id="wo_vendor" placeholder="Type to search contractor…" autocomplete="off"
+            oninput="wo_vendor_locked=false;contractorTypeahead('wo_vendor','wo_vendorResults','wo_vendorCode')" style="flex:1;">
           <button type="button" class="btn btn-ghost btn-sm" id="wo_vendor_clear"
             style="display:none;padding:5px 8px;" onclick="clearMasterField('wo_vendor','wo_vendorCode','wo_vendorResults','wo_vendor_clear')">✕</button>
         </div>
@@ -1618,6 +1632,7 @@ th.sortable.desc::after { content:' ↓'; opacity:.9; }
     <div class="sub-tab" data-mastertab="boq" onclick="switchMasterTab('boq')">BOQ Items</div>
     <div class="sub-tab" data-mastertab="service" onclick="switchMasterTab('service')">Service Utilization</div>
     <div class="sub-tab" data-mastertab="materials" onclick="switchMasterTab('materials')">Material Master</div>
+    <div class="sub-tab" data-mastertab="contractors" onclick="switchMasterTab('contractors')">Contractor Master</div>
   </div>
 
   <!-- VENDORS -->
@@ -1791,6 +1806,51 @@ th.sortable.desc::after { content:' ↓'; opacity:.9; }
       <div class="table-wrap">
         <table><thead><tr><th>Code</th><th>Name</th><th>Category</th><th>Sub Category</th><th>UOM</th><th>HSN</th><th>Specification</th></tr></thead>
         <tbody id="mm_list"><tr><td colspan="7" class="center muted">No materials.</td></tr></tbody></table>
+      </div>
+    </div>
+  </div>
+
+  <!-- CONTRACTOR MASTER -->
+  <div id="master-contractors" class="hidden">
+    <div class="card" id="masterAddContractorCard">
+      <h3>Add Contractor</h3>
+      <div class="grid-3">
+        <div class="field" style="grid-column:1/3;"><label class="req">Contractor Name</label>
+          <input id="mc_name" placeholder="Full legal name of contractor / agency"></div>
+        <div class="field"><label class="req">Trade / Specialisation</label>
+          <input id="mc_trade" placeholder="e.g. Civil, MEP, Finishing"></div>
+      </div>
+      <div class="grid-3" style="margin-top:12px;">
+        <div class="field"><label class="req">GSTIN</label><input id="mc_gstin" placeholder="29XXXXX…"></div>
+        <div class="field"><label class="req">Contact Person</label><input id="mc_contact"></div>
+        <div class="field"><label class="req">Phone</label><input id="mc_phone" type="tel"></div>
+      </div>
+      <div class="field" style="margin-top:12px;"><label class="req">Address</label>
+        <textarea id="mc_address" rows="2"></textarea></div>
+      <div class="grid-4" style="margin-top:12px;">
+        <div class="field"><label>Bank Name</label><input id="mc_bankName"></div>
+        <div class="field"><label>Branch</label><input id="mc_branch"></div>
+        <div class="field"><label>Account No.</label><input id="mc_bank"></div>
+        <div class="field"><label>IFSC</label><input id="mc_ifsc"></div>
+      </div>
+      <div class="actions-row">
+        <button class="btn btn-primary" onclick="saveContractorMaster()">+ Add Contractor</button>
+      </div>
+    </div>
+    <div class="card">
+      <h3>Contractor List</h3>
+      <div class="row" style="margin-bottom:10px;">
+        <input id="mc_search" placeholder="Search contractors…"
+          style="padding:7px;background:var(--input-bg);color:var(--text);border:1px solid var(--border);border-radius:4px;width:280px;"
+          oninput="renderContractorMaster()">
+      </div>
+      <div class="table-wrap">
+        <table><thead><tr>
+          <th>Code</th><th>Contractor Name</th><th>Trade</th>
+          <th>GSTIN</th><th>Contact</th><th>Phone</th><th>Actions</th>
+        </tr></thead>
+        <tbody id="mc_list"><tr><td colspan="6" class="center muted">No contractors.</td></tr></tbody>
+        </table>
       </div>
     </div>
   </div>
@@ -2404,7 +2464,21 @@ th.sortable.desc::after { content:' ↓'; opacity:.9; }
       <div class="grid-4">
         <div class="field"><label>MIS Number</label><input id="mis_number" readonly style="opacity:.6;"></div>
         <div class="field"><label class="req">Issue Date</label><input type="date" id="mis_date"></div>
-        <div class="field"><label class="req">Issued To (Contractor)</label><input id="mis_issuedTo" placeholder="Contractor / agency name"></div>
+        <div class="field"><label class="req">Issued To (Contractor)</label>
+          <div style="position:relative;">
+            <div style="display:flex;gap:6px;align-items:center;">
+              <input id="mis_issuedTo" placeholder="Type to search contractor…" autocomplete="off"
+                oninput="mis_contractor_locked=false;contractorTypeahead('mis_issuedTo','mis_contractorResults','mis_contractorCode')"
+                style="flex:1;">
+              <button type="button" id="mis_contractorClear" class="btn btn-ghost btn-sm"
+                style="display:none;padding:5px 8px;"
+                onclick="clearContractorField('mis_issuedTo','mis_contractorCode','mis_contractorResults');document.getElementById('mis_contractorClear').style.display='none';">✕</button>
+            </div>
+            <div class="typeahead-results" id="mis_contractorResults"
+              style="min-width:360px;position:absolute;top:100%;left:0;z-index:9999;box-shadow:0 4px 16px rgba(0,0,0,.15);"></div>
+            <input type="hidden" id="mis_contractorCode">
+          </div>
+        </div>
         <div class="field"><label>Issued By</label><input id="mis_issuedBy" readonly style="opacity:.6;"></div>
       </div>
       <div class="grid-2" style="margin-top:12px;">
@@ -2916,6 +2990,17 @@ async function apiLoadMasters() {
       sb.from('ho_locations').select('*').order('category').order('location_name')
     ]);
     state.masters.vendors          = (v.data||[]).map(mapVendor);
+    // Load contractors
+    const ctr = await sb.from('wo_contractors').select('*').eq('is_active',true).order('contractor_name');
+    state.masters.contractors      = (ctr.data||[]).map(r=>({
+      'Contractor Code': r.contractor_code,
+      'Contractor Name': r.contractor_name,
+      'Trade':           r.trade||'',
+      'GSTIN':           r.gstin||'',
+      'Contact Person':  r.contact_person||'',
+      'Phone':           r.phone||'',
+      'Address':         r.address||'',
+    }));
     state.masters.activities       = (a.data||[]).map(mapActivity);
     state.masters.boqItems         = (b.data||[]).map(mapBOQ);
     state.masters.serviceLocations = (l.data||[]).map(mapServiceLocation);
@@ -6289,6 +6374,10 @@ async function newWO() {
   document.getElementById('wo_date').value = today();
   document.getElementById('wo_vendor').value = '';
   document.getElementById('wo_vendorCode').value = '';
+  document.getElementById('wo_vendor').readOnly = false;
+  wo_vendor_locked = false;
+  const wovClear = document.getElementById('wo_vendor_clear');
+  if(wovClear) wovClear.style.display='none';
   document.getElementById('wo_scope').value = '';
   document.getElementById('wo_gstPct').value = '18';
   document.getElementById('wo_retentionPct').value = '5';
@@ -6419,8 +6508,8 @@ function getWOFormData() {
 
 async function saveWO_direct() {
   const data = getWOFormData();
-  if (!data.vendor)        { toast('Vendor is required','error'); return; }
-  if (!wo_vendor_locked)   { toast('Select vendor from the dropdown list','error'); return; }
+  if (!data.vendor)        { toast('Contractor is required','error'); return; }
+  if (!wo_vendor_locked)   { toast('Contractor must be selected from the master — type and choose from dropdown','error'); return; }
   if (!data.scope)         { toast('Scope required','error'); return; }
   if (!data.woDate)        { toast('WO Date required','error'); return; }
   if (!data.items.length)  { toast('Add at least one line item','error'); return; }
@@ -9348,124 +9437,197 @@ async function approveQC(qcNum) {
 
 async function viewQC(qcNum) {
   pbShow('Loading…');
-  const [{data:h},{data:quotes},{data:qItems}]=await Promise.all([
+  const [{data:h},{data:quotes},{data:qItems},{data:negs}]=await Promise.all([
     sb.from('pu_quote_comparison').select('*').eq('qc_number',qcNum).single(),
     sb.from('pu_quotes').select('*').eq('qc_number',qcNum).order('sno'),
     sb.from('pu_quote_items').select('*').eq('qc_number',qcNum),
+    sb.from('pu_qc_negotiations').select('*').eq('qc_number',qcNum).order('round,vendor_name'),
   ]);
   pbDone();
   if(!h){toast('QC not found','error');return;}
   const perms=ROLE_PERMS[state.role]||{};
 
-  // Compute grand totals per vendor for L-ranking
-  const grandTotals=(quotes||[]).map((v,vi)=>{
+  const allRounds=[...new Set((negs||[]).map(n=>n.round))].sort((a,b)=>a-b);
+  const maxRound=allRounds.length?allRounds[allRounds.length-1]:0;
+
+  // Build neg lookup: round → vendorName → materialName → rate
+  const negByRound={};
+  (negs||[]).forEach(n=>{
+    if(!negByRound[n.round])negByRound[n.round]={};
+    if(!negByRound[n.round][n.vendor_name])negByRound[n.round][n.vendor_name]={};
+    negByRound[n.round][n.vendor_name][n.material_name]=n.negotiated_rate;
+  });
+
+  function effRate(vendorName,mat,origRate){
+    for(let r=maxRound;r>=1;r--){
+      const v=negByRound[r]?.[vendorName]?.[mat];
+      if(v!=null)return v;
+    }
+    return origRate;
+  }
+
+  const mats=[...new Set((qItems||[]).map(qi=>qi.material_name))];
+
+  // Grand totals using effective rates
+  const grandTotals=(quotes||[]).map(v=>{
     let grand=0;
-    const mSet=[...new Set((qItems||[]).map(qi=>qi.material_name))];
-    mSet.forEach(mat=>{
+    mats.forEach(mat=>{
       const sample=(qItems||[]).find(qi=>qi.material_name===mat);
       const qi=(qItems||[]).find(qi=>qi.material_name===mat&&qi.quote_id===v.id);
       const qty=qi?.qty_required||sample?.qty_required||0;
-      const rate=qi?.unit_rate||0;
+      const rate=effRate(v.vendor_name,mat,qi?.unit_rate||0);
       const gst=(qi?.gst_pct||0)/100;
       grand+=qty*rate*(1+gst);
     });
-    return {vi, grand, vendorId:v.id};
+    return {vendorId:v.id,vendorName:v.vendor_name,grand};
   });
-  // Sort by grand total to get L1/L2/L3
   const ranked=[...grandTotals].filter(x=>x.grand>0).sort((a,b)=>a.grand-b.grand);
   const l1Grand=ranked[0]?.grand||0;
   const posMap={};
-  ranked.forEach((r,i)=>{ posMap[r.vendorId]={pos:'L'+(i+1), grand:r.grand}; });
+  ranked.forEach((r,i)=>{posMap[r.vendorId]={pos:'L'+(i+1),grand:r.grand};});
+  const bgMap2={L1:'#16a34a',L2:'#d97706',L3:'#dc2626',L4:'#64748b'};
 
-  // Build header
-  let thead='<tr><th>#</th><th>Material</th><th class="c">UOM</th><th class="num">Qty</th>';
+  // Sub-columns per vendor: Orig | N1 | N2… | Total
+  // Total spans all sub-cols and always shows effective total
+  const nRounds=allRounds.length;
+  const subCols=1+nRounds+1; // Orig + each round + Total
+
+  // Header row 1: vendor name
+  let thead='<tr><th rowspan="2">#</th><th rowspan="2">Material</th><th rowspan="2" class="c">UOM</th><th rowspan="2" class="num">Qty</th>';
   (quotes||[]).forEach(v=>{
     const isRec=v.is_recommended;
-    const isBg=isRec?'background:#d1fae5;':'';
-    thead+=`<th class="num" style="${isBg}">${esc(v.vendor_name)}${isRec?' ★':''}<br>
-      <span style="font-size:10px;font-weight:400;">${esc(v.quote_ref||'')}${v.delivery_days?' · '+v.delivery_days+'d':''}</span></th>
-      <th class="num" style="${isBg}">GST%</th>
-      <th class="num" style="${isBg}">Total (₹)</th>`;
+    const bg=isRec?'background:#d1fae5;':'';
+    thead+=`<th colspan="${subCols}" class="num" style="${bg}border-bottom:2px solid #dde6f0;">
+      ${esc(v.vendor_name)}${isRec?' ★':''}
+      <br><span style="font-size:9px;font-weight:400;">${esc(v.quote_ref||'')}${v.delivery_days?' · '+v.delivery_days+'d':''}</span>
+    </th>`;
+  });
+  thead+='</tr>';
+  // Header row 2: sub-labels
+  thead+='<tr style="background:#f8fafc;font-size:9px;">';
+  (quotes||[]).forEach(()=>{
+    thead+='<th class="num" style="font-size:9px;">Orig (₹)</th>';
+    allRounds.forEach(r=>{
+      thead+=`<th class="num" style="font-size:9px;color:#2563eb;">N${r} (₹)</th>`;
+    });
+    thead+='<th class="num" style="font-size:9px;font-weight:700;color:#1e3a5f;background:#e8ecf2;">Total (₹)</th>';
   });
   thead+='</tr>';
 
   // Material rows
-  const mats=[...new Set((qItems||[]).map(qi=>qi.material_name))];
   let tbody='';
   mats.forEach((mat,idx)=>{
     const sample=(qItems||[]).find(qi=>qi.material_name===mat);
-    tbody+=`<tr><td>${idx+1}</td><td>${esc(mat)}</td><td class="c">${esc(sample?.uom||'')}</td><td class="num">${sample?.qty_required||0}</td>`;
+    const qty=sample?.qty_required||0;
+
+    // Effective rates across vendors for colour coding
+    const effRates=(quotes||[]).map(v=>{
+      const qi=(qItems||[]).find(qi=>qi.material_name===mat&&qi.quote_id===v.id);
+      return effRate(v.vendor_name,mat,qi?.unit_rate||0);
+    }).filter(r=>r>0);
+    const minEff=effRates.length?Math.min(...effRates):0;
+    const maxEff=effRates.length?Math.max(...effRates):0;
+    const hasVar=minEff!==maxEff&&effRates.length>1;
+
+    tbody+=`<tr><td>${idx+1}</td><td style="font-size:11px;">${esc(mat)}</td><td class="c">${esc(sample?.uom||'')}</td><td class="num">${qty}</td>`;
     (quotes||[]).forEach(v=>{
       const qi=(qItems||[]).find(qi=>qi.material_name===mat&&qi.quote_id===v.id);
-      const isRec=v.is_recommended;
-      const bg=isRec?'style="background:#d1fae5;font-weight:700;"':'';
-      const qty=qi?.qty_required||sample?.qty_required||0;
-      const rate=qi?.unit_rate||0;
+      const origRate=qi?.unit_rate||0;
       const gst=(qi?.gst_pct||0)/100;
-      const total=qty*rate*(1+gst);
-      tbody+=`<td class="num" ${bg}>${rate>0?('₹ '+fmtINR(rate)):'—'}</td>`;
-      tbody+=`<td class="num" ${bg}>${qi?.gst_pct!=null?(qi.gst_pct+'%'):'—'}</td>`;
-      tbody+=`<td class="num" ${bg}>${rate>0?fmtINRSym(total):'—'}</td>`;
+      const eff=effRate(v.vendor_name,mat,origRate);
+      const effTotal=qty*eff*(1+gst);
+
+      // Colour code by effective rate
+      let cellBg='';
+      if(hasVar&&eff>0){
+        if(eff===minEff)      cellBg='background:#d1fae5;';
+        else if(eff===maxEff) cellBg='background:#fee2e2;';
+        else                  cellBg='background:#fef3c7;';
+      }
+      // Variation from min badge (on orig cell)
+      let varBadge='';
+      if(hasVar&&origRate>0&&origRate!==minEff){
+        const diff=origRate-minEff;
+        const pct=((diff/minEff)*100).toFixed(1);
+        varBadge=`<br><span style="font-size:8px;color:#dc2626;">+₹${fmtINR(diff)} (+${pct}%)</span>`;
+      }
+      // Orig cell
+      tbody+=`<td class="num" style="${cellBg}padding:5px 4px;font-size:11px;">${origRate>0?('₹ '+fmtINR(origRate)):'—'}${varBadge}</td>`;
+      // Negotiated round cells
+      allRounds.forEach(r=>{
+        const negRate=negByRound[r]?.[v.vendor_name]?.[mat];
+        if(negRate!=null){
+          const saving=origRate-negRate;
+          const sColor=saving>0?'#16a34a':saving<0?'#dc2626':'#888';
+          const sStr=saving>0?`−₹${fmtINR(saving)}`:saving<0?`+₹${fmtINR(-saving)}`:'=';
+          tbody+=`<td class="num" style="background:#eff6ff;padding:5px 4px;font-size:11px;color:#1d4ed8;font-weight:600;">
+            ₹${fmtINR(negRate)}<br>
+            <span style="font-size:8px;color:${sColor};">${sStr}</span>
+          </td>`;
+        } else {
+          tbody+=`<td class="num" style="padding:5px 4px;font-size:10px;color:#bbb;">—</td>`;
+        }
+      });
+      // Total cell (effective)
+      tbody+=`<td class="num" style="${cellBg}padding:5px 4px;font-size:11px;font-weight:600;background:${hasVar&&eff===minEff?'#bbf7d0':hasVar&&eff===maxEff?'#fecaca':''}">${eff>0?fmtINRSym(effTotal):'—'}</td>`;
     });
     tbody+='</tr>';
   });
 
   // Grand Total row
-  tbody+='<tr style="background:#e6f4f1;font-weight:700;"><td colspan="4" style="padding:8px;">Grand Total (incl. GST)</td>';
+  tbody+=`<tr style="background:#e6f4f1;font-weight:700;"><td colspan="4" style="padding:8px;">Grand Total (incl. GST)</td>`;
   (quotes||[]).forEach(v=>{
     const gt=grandTotals.find(g=>g.vendorId===v.id);
-    tbody+=`<td colspan="3" class="num" style="padding:8px;">${gt&&gt.grand>0?fmtINRSym(gt.grand):'—'}</td>`;
+    tbody+=`<td colspan="${subCols}" class="num" style="padding:8px;font-size:13px;">${gt&&gt.grand>0?fmtINRSym(gt.grand):'—'}</td>`;
   });
   tbody+='</tr>';
 
-  // L1/L2/L3 Position row
-  const bgMap2={L1:'#16a34a',L2:'#d97706',L3:'#dc2626',L4:'#64748b'};
+  // Position
   tbody+='<tr><td colspan="4" style="padding:6px 8px;font-weight:700;background:#e8ecf2;color:#1e3a5f;">Position</td>';
   (quotes||[]).forEach(v=>{
-    const pos=posMap[v.id];
-    const label=pos?pos.pos:'—';
+    const pos=posMap[v.id];const label=pos?pos.pos:'—';
     const bg=bgMap2[label]||'#94a3b8';
-    tbody+=`<td colspan="3" class="num" style="padding:6px 8px;background:${bg};color:#fff;font-weight:700;font-size:14px;">${label}</td>`;
+    tbody+=`<td colspan="${subCols}" class="num" style="padding:6px 8px;background:${bg};color:#fff;font-weight:700;font-size:14px;">${label}</td>`;
   });
   tbody+='</tr>';
 
-  // % over L1 row
+  // Premium
   tbody+='<tr style="background:#f8fafc;font-size:11px;"><td colspan="4" style="padding:6px 8px;font-weight:600;color:#1e3a5f;">Premium over L1</td>';
   (quotes||[]).forEach(v=>{
     const pos=posMap[v.id];
     if(!pos||pos.pos==='L1'||!l1Grand){
-      tbody+=`<td colspan="3" class="num" style="padding:6px 8px;color:#16a34a;font-weight:600;">${pos?.pos==='L1'?'Base (L1)':'—'}</td>`;
+      tbody+=`<td colspan="${subCols}" class="num" style="padding:6px 8px;color:#16a34a;font-weight:600;">${pos?.pos==='L1'?'Base (L1)':'—'}</td>`;
     } else {
       const pct=((pos.grand-l1Grand)/l1Grand*100).toFixed(1);
-      tbody+=`<td colspan="3" class="num" style="padding:6px 8px;color:#dc2626;font-weight:600;">+${pct}%</td>`;
+      tbody+=`<td colspan="${subCols}" class="num" style="padding:6px 8px;color:#dc2626;font-weight:600;">+${pct}%</td>`;
     }
   });
   tbody+='</tr>';
 
-  // Amount difference over L1 row
+  // Difference over L1
   tbody+='<tr style="background:#f8fafc;font-size:11px;"><td colspan="4" style="padding:6px 8px;font-weight:600;color:#1e3a5f;">Difference over L1 (₹)</td>';
   (quotes||[]).forEach(v=>{
     const pos=posMap[v.id];
     if(!pos||pos.pos==='L1'||!l1Grand){
-      tbody+=`<td colspan="3" class="num" style="padding:6px 8px;color:#16a34a;font-weight:600;">${pos?.pos==='L1'?'Base (L1)':'—'}</td>`;
+      tbody+=`<td colspan="${subCols}" class="num" style="padding:6px 8px;color:#16a34a;font-weight:600;">${pos?.pos==='L1'?'Base (L1)':'—'}</td>`;
     } else {
       const diff=pos.grand-l1Grand;
-      tbody+=`<td colspan="3" class="num" style="padding:6px 8px;color:#dc2626;font-weight:600;">+${fmtINRSym(diff)}</td>`;
+      tbody+=`<td colspan="${subCols}" class="num" style="padding:6px 8px;color:#dc2626;font-weight:600;">+${fmtINRSym(diff)}</td>`;
     }
   });
   tbody+='</tr>';
 
-  // Per-vendor terms summary
+  // Vendor Terms
   let termsRows='';
   const hasTerms=(quotes||[]).some(v=>v.payment_terms||v.tech_specs);
   if(hasTerms){
-    termsRows+='<tr><td colspan="4" style="padding:6px 8px;font-weight:700;font-size:11px;background:#f8fafc;color:#1e3a5f;border-top:2px solid #dde6f0;">VENDOR TERMS</td>';
-    termsRows+=`<td colspan="${(quotes||[]).length*3}" style="background:#f8fafc;"></td></tr>`;
+    const totalSubCols=(quotes||[]).length*subCols;
+    termsRows+=`<tr><td colspan="4" style="padding:6px 8px;font-weight:700;font-size:11px;background:#f8fafc;color:#1e3a5f;border-top:2px solid #dde6f0;">VENDOR TERMS</td><td colspan="${totalSubCols}" style="background:#f8fafc;"></td></tr>`;
     (quotes||[]).forEach(v=>{
       if(v.payment_terms||v.tech_specs){
         termsRows+=`<tr style="font-size:11px;">
           <td colspan="4" style="padding:4px 8px;font-weight:600;color:var(--accent);">${esc(v.vendor_name)}</td>
-          <td colspan="${(quotes||[]).length*3}" style="padding:4px 8px;line-height:1.6;">
+          <td colspan="${totalSubCols}" style="padding:4px 8px;line-height:1.6;">
             ${v.payment_terms?'<strong>Payment Terms:</strong> '+esc(v.payment_terms)+'<br>':''}
             ${v.tech_specs?'<strong>Technical Specs:</strong> '+esc(v.tech_specs):''}
           </td></tr>`;
@@ -9473,15 +9635,133 @@ async function viewQC(qcNum) {
     });
   }
 
-  // Creator / Approver info — 40/60 two-column layout
-  const approvedCol = h.status==='Approved' ? `
+  // Negotiation history — net savings summary per round per vendor
+  let negHistSection='';
+  if(maxRound>0){
+    negHistSection=`<div style="margin-top:10px;padding:10px;background:#eff6ff;border-radius:6px;border:1px solid #bfdbfe;">
+      <div style="font-size:11px;font-weight:700;color:#1e3a5f;margin-bottom:8px;">
+        NEGOTIATION HISTORY (${maxRound} round${maxRound>1?'s':''})
+      </div>
+      ${allRounds.map(r=>{
+        const rNegs=(negs||[]).filter(n=>n.round===r);
+        const rTime=rNegs[0]?.negotiated_at?fmtDate(rNegs[0].negotiated_at):'';
+        const rBy=rNegs[0]?.negotiated_by||'';
+        // Group by vendor, compute net saving per vendor
+        const byVendor={};
+        rNegs.forEach(n=>{
+          if(!byVendor[n.vendor_name])byVendor[n.vendor_name]={netSaving:0,items:0};
+          const qi=(qItems||[]).find(qi=>{
+            const qv=(quotes||[]).find(v=>v.vendor_name===n.vendor_name&&v.id===qi.quote_id);
+            return qv&&qi.material_name===n.material_name;
+          });
+          const origRate=qi?.unit_rate||0;
+          const qty=qi?.qty_required||0;
+          const gst=(qi?.gst_pct||0)/100;
+          const origAmt=qty*origRate*(1+gst);
+          const negAmt=qty*n.negotiated_rate*(1+gst);
+          byVendor[n.vendor_name].netSaving+=(origAmt-negAmt);
+          byVendor[n.vendor_name].items++;
+        });
+        return `<div style="padding:8px;background:#fff;border-radius:4px;border:1px solid #bfdbfe;margin-bottom:6px;">
+          <div style="font-weight:600;font-size:12px;margin-bottom:6px;">
+            Round ${r} &nbsp;—&nbsp; ${esc(rBy)} &nbsp;·&nbsp; ${rTime}
+          </div>
+          <div style="display:flex;gap:12px;flex-wrap:wrap;">
+            ${Object.entries(byVendor).map(([vname,{netSaving,items}])=>{
+              const isSaving=netSaving>0;
+              const isIncrease=netSaving<0;
+              const color=isSaving?'#16a34a':isIncrease?'#dc2626':'#64748b';
+              const bg=isSaving?'#d1fae5':isIncrease?'#fee2e2':'#f1f5f9';
+              const label=isSaving?'Net Saving':isIncrease?'Net Increase':'No Change';
+              const amt=Math.abs(netSaving);
+              return `<div style="padding:6px 10px;background:${bg};border-radius:6px;border:1px solid ${color}30;">
+                <div style="font-size:10px;font-weight:700;color:${color};text-transform:uppercase;">${esc(vname)}</div>
+                <div style="font-size:13px;font-weight:700;color:${color};">${label}: ${fmtINRSym(amt)}</div>
+                <div style="font-size:10px;color:#888;">${items} item${items>1?'s':''} negotiated</div>
+              </div>`;
+            }).join('')}
+          </div>
+        </div>`;
+      }).join('')}
+    </div>`;
+  }
+
+  // PM Approval panel
+  const isApproval=perms.canApproveQC && h.status==='Pending Approval';
+  const vendorOptions=(quotes||[]).map(v=>
+    `<option value="${esc(v.vendor_name)}" data-code="${esc(v.vendor_code||'')}">${esc(v.vendor_name)}</option>`
+  ).join('');
+  const approvalSection=isApproval?`
+    <div class="card" style="background:#fffbeb;border-color:#fbbf24;margin-top:8px;">
+      <h3 style="font-size:13px;margin-bottom:8px;color:#92400e;">PM Approval — Confirm Approved Vendor</h3>
+      <div class="grid-2">
+        <div class="field">
+          <label class="req" style="color:var(--danger);">★ Approved Vendor (Mandatory)</label>
+          <select id="qc_view_recVendor" style="width:100%;border:2px solid var(--accent);"
+            onchange="this.style.borderColor=this.value?'var(--accent)':'#dc2626'">
+            <option value="">— Select Vendor to Approve —</option>${vendorOptions}
+          </select>
+        </div>
+        <div class="field"><label class="req">Approver Remarks</label>
+          <input id="qc_view_recRemarks" placeholder="Reason / conditions / notes">
+        </div>
+      </div>
+    </div>`:'';
+
+  // Negotiation entry panel
+  let negPanel='';
+  if(isApproval){
+    negPanel=`<div class="card" style="background:#f0f5fb;border-color:#93c5fd;margin-top:8px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+        <h3 style="font-size:13px;margin:0;color:#1e3a5f;">Negotiation — Round ${maxRound+1}</h3>
+        <span style="font-size:11px;color:var(--muted);">Enter revised rates (leave blank = no change)</span>
+      </div>
+      <div class="table-wrap"><table id="negTable">
+        <thead><tr><th>#</th><th>Material</th><th class="c">UOM</th><th class="num">Qty</th>
+          ${(quotes||[]).map(v=>`<th class="num">${esc(v.vendor_name)}<br>
+            <span style="font-size:9px;font-weight:400;">Orig / Last Neg → New</span></th>`).join('')}
+        </tr></thead><tbody>
+        ${mats.map((mat,idx)=>{
+          const sample=(qItems||[]).find(qi=>qi.material_name===mat);
+          let row=`<tr><td>${idx+1}</td><td style="font-size:11px;">${esc(mat)}</td>
+            <td class="c">${esc(sample?.uom||'')}</td>
+            <td class="num">${sample?.qty_required||0}</td>`;
+          (quotes||[]).forEach((v,vi)=>{
+            const qi=(qItems||[]).find(qi=>qi.material_name===mat&&qi.quote_id===v.id);
+            const orig=qi?.unit_rate||0;
+            const lastNeg=negByRound[maxRound]?.[v.vendor_name]?.[mat];
+            row+=`<td>
+              <div style="font-size:9px;color:var(--muted);">
+                Orig: ₹${fmtINR(orig)}${lastNeg!=null?' | Last: ₹'+fmtINR(lastNeg):''}
+              </div>
+              <input type="number" step="0.01" placeholder="New rate"
+                id="neg_${vi}_${idx}" value=""
+                style="width:110px;text-align:right;font-size:12px;"
+                data-vendor="${esc(v.vendor_name)}" data-mat="${esc(mat)}">
+            </td>`;
+          });
+          return row+'</tr>';
+        }).join('')}
+        </tbody></table>
+      </div>
+      <div class="actions-row" style="margin-top:8px;">
+        <button class="btn btn-secondary"
+          onclick="saveNegotiationRound('${esc(qcNum)}',${maxRound+1},${(quotes||[]).length},${mats.length})">
+          💬 Save Round ${maxRound+1}
+        </button>
+      </div>
+    </div>`;
+  }
+
+  // Creator/Approver
+  const approvedCol=h.status==='Approved'?`
     <div style="flex:0 0 60%;padding:10px 14px;border-left:1px solid #dde6f0;">
       <div style="font-size:9px;font-weight:700;color:#16a34a;text-transform:uppercase;letter-spacing:.5px;margin-bottom:2px;">Approved By</div>
       <div style="font-size:12px;font-weight:600;margin-bottom:6px;">${esc(h.approved_by||'—')}</div>
       <div style="font-size:9px;font-weight:700;color:#1e3a5f;text-transform:uppercase;letter-spacing:.5px;margin-bottom:2px;">Approved Vendor</div>
       <div style="font-size:13px;font-weight:700;color:#1e3a5f;margin-bottom:4px;">${esc(h.approved_vendor_name||h.recommended_vendor_name||'—')}</div>
       ${h.approver_remarks?`<div style="font-size:11px;color:#555;font-style:italic;">${esc(h.approver_remarks)}</div>`:''}
-    </div>` : `<div style="flex:0 0 60%;padding:10px 14px;border-left:1px solid #dde6f0;display:flex;align-items:center;justify-content:center;">
+    </div>`:`<div style="flex:0 0 60%;padding:10px 14px;border-left:1px solid #dde6f0;display:flex;align-items:center;justify-content:center;">
       <span style="color:#aaa;font-size:12px;">Pending PM approval</span>
     </div>`;
 
@@ -9497,36 +9777,16 @@ async function viewQC(qcNum) {
       ${approvedCol}
     </div>`;
 
-  // PM approval panel
-  const vendorOptions=(quotes||[]).map(v=>
-    `<option value="${esc(v.vendor_name)}" data-code="${esc(v.vendor_code||'')}">${esc(v.vendor_name)}</option>`
-  ).join('');
-  const isApproval=perms.canApproveQC && h.status==='Pending Approval';
-  const approvalSection=isApproval?`
-    <div class="card" style="background:#fffbeb;border-color:#fbbf24;margin-top:8px;">
-      <h3 style="font-size:13px;margin-bottom:8px;color:#92400e;">PM Approval — Confirm or Change Vendor</h3>
-      <div class="grid-2">
-        <div class="field">
-          <label class="req" style="color:var(--danger);">★ Approved Vendor (Mandatory)</label>
-          <select id="qc_view_recVendor" style="width:100%;border:2px solid var(--accent);"
-            onchange="this.style.borderColor=this.value?'var(--accent)':'#dc2626'">
-            <option value="">— Select Vendor to Approve —</option>${vendorOptions}
-          </select>
-        </div>
-        <div class="field"><label class="req">Approver Remarks</label>
-          <input id="qc_view_recRemarks" placeholder="Reason / conditions / notes">
-        </div>
-      </div>
-    </div>`:'';
-
   const statusBadge=`<span class="status ${h.status.toLowerCase().replace(/\s/g,'-')}" style="margin-left:8px;">${h.status}</span>`;
-  const canCreatePONow = (ROLE_PERMS[state.role]||{}).canCreatePO && h.status==='Approved';
+  const canCreatePONow=(ROLE_PERMS[state.role]||{}).canCreatePO&&h.status==='Approved';
+  const printBtn=`<button class="btn btn-ghost btn-sm" onclick="printQCPopup('${esc(qcNum)}')">🖨 Print</button>`;
   const actionBtns=isApproval
-    ?`<button class="btn btn-primary" onclick="confirmApproveQC('${esc(qcNum)}')">✓ Approve</button>
+    ?`${printBtn}
+      <button class="btn btn-primary" onclick="confirmApproveQC('${esc(qcNum)}')">✓ Approve</button>
       <button class="btn btn-danger" onclick="closeModal();rejectDoc('QC','${esc(qcNum)}')">✕ Reject</button>
       <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>`
     :`${canCreatePONow?`<button class="btn btn-primary" onclick="closeModal();newPOFromQC('${esc(qcNum)}')">Create PO</button>`:''}
-      <button class="btn btn-ghost btn-sm" onclick="closeModal();printQC('${esc(qcNum)}')">🖨 Print</button>
+      ${printBtn}
       <button class="btn btn-ghost" onclick="closeModal()">Close</button>`;
 
   openModal(`
@@ -9535,14 +9795,27 @@ async function viewQC(qcNum) {
       RFQ: <strong>${esc(h.rfq_number||'—')}</strong> &nbsp;|&nbsp; Date: ${fmtDate(h.qc_date)}
     </div>
     ${creatorSection}
-    ${approvalSection}
-    <div class="table-wrap" style="margin-top:10px;">
-      <table><thead>${thead}</thead><tbody>${tbody}${termsRows}</tbody></table>
+    <div class="table-wrap" style="margin-top:10px;overflow-x:auto;">
+      <table id="qcCompareTable"><thead>${thead}</thead><tbody>${tbody}${termsRows}</tbody></table>
     </div>
+    ${negHistSection}
+    ${approvalSection}
+    ${negPanel}
     ${h.remarks?`<div style="margin-top:8px;font-size:11px;color:var(--muted);padding:6px 8px;background:#f8fafc;border-radius:4px;">General Remarks: ${esc(h.remarks)}</div>`:''}
     <div class="actions-row">${actionBtns}</div>
+    <div id="qcPrintData" style="display:none;"
+      data-qc="${esc(qcNum)}"
+      data-rfq="${esc(h.rfq_number||'')}"
+      data-date="${fmtDate(h.qc_date)}"
+      data-prepared="${esc(h.prepared_by||'')}"
+      data-rec-vendor="${esc(h.recommended_vendor_name||'')}"
+      data-approved-vendor="${esc(h.approved_vendor_name||'')}"
+      data-status="${esc(h.status)}">
+    </div>
   `, 'large');
 }
+
+
 
 async function confirmApproveQC(qcNum) {
   const sel = document.getElementById('qc_view_recVendor');
@@ -10537,6 +10810,10 @@ async function newMIS() {
   document.getElementById('mis_issuedBy').value=state.userName;
   document.getElementById('mis_number').value='MIS/'+currentFY()+'/—— (auto)';
   ['mis_issuedTo','mis_remarks'].forEach(id=>{const e=document.getElementById(id);if(e)e.value='';});
+  document.getElementById('mis_issuedTo').readOnly=false;
+  mis_contractor_locked=false;
+  const misCClear=document.getElementById('mis_contractorCode');
+  if(misCClear) misCClear.value='';
   document.getElementById('misItemsBody').innerHTML=''; _misItemC=0;
   const locSel=document.getElementById('mis_location');
   locSel.innerHTML='<option value="">— Select Work Location —</option>'+
@@ -10599,6 +10876,12 @@ async function saveMIS() {
   const issuedTo=document.getElementById('mis_issuedTo').value.trim();
   if(!date){toast('Issue date required','error');return;}
   if(!issuedTo){toast('Issued to (Contractor) required','error');return;}
+  const misContractorCode=document.getElementById('mis_contractorCode')?.value?.trim();
+  if(!mis_contractor_locked||!misContractorCode){
+    toast('Contractor must be selected from the master — type and choose from dropdown','error');
+    document.getElementById('mis_issuedTo')?.focus();
+    return;
+  }
   const locSel=document.getElementById('mis_location');
   const locOpt=locSel?.options[locSel.selectedIndex];
   const items=[];
@@ -10777,13 +11060,14 @@ async function confirmRejectDoc(docType, docNum) {
 // Override switchMasterTab to include materials
 const _origSwitchMasterTab = typeof switchMasterTab==='function' ? switchMasterTab : null;
 function switchMasterTab(tab) {
-  ['vendors','activities','boq','service','materials'].forEach(t=>{
+  ['vendors','activities','boq','service','materials','contractors'].forEach(t=>{
     const el=document.getElementById('master-'+t); if(el) el.classList.toggle('hidden',t!==tab);
     const st=document.querySelector(`.sub-tab[data-mastertab="${t}"]`); if(st) st.classList.toggle('active',t===tab);
   });
   if(tab==='boq') populateBOQL1Dropdown();
   if(tab==='service') populateServiceParentDropdown();
   if(tab==='materials'){apiLoadMaterials().then(renderMaterialMaster);}
+  if(tab==='contractors'){renderContractorMaster();}
 }
 
 // applyRoleUI purchase logic is now merged into the main applyRoleUI function above
@@ -10871,7 +11155,24 @@ function makeSortable(tableOrId) {
 // ============================================================
 // PRINT FUNCTIONS — RFQ, QC, PO, GRN BILLING
 // ============================================================
-function openPrintOverlay(html) {
+function openPrintOverlay(content) {
+  // Extract any <style> blocks and inject them into <head> for print
+  const styleRegex = /<style>([\s\S]*?)<\/style>/gi;
+  let styleContent = '';
+  let bodyContent = content.replace(styleRegex, (match, css) => {
+    styleContent += css;
+    return '';
+  });
+  // Remove old injected print style if exists
+  const oldStyle = document.getElementById('qcPrintStyle');
+  if (oldStyle) oldStyle.remove();
+  if (styleContent) {
+    const styleEl = document.createElement('style');
+    styleEl.id = 'qcPrintStyle';
+    styleEl.textContent = styleContent;
+    document.head.appendChild(styleEl);
+  }
+
   let ov = document.getElementById('printOverlay');
   if (!ov) {
     ov = document.createElement('div');
@@ -10883,7 +11184,7 @@ function openPrintOverlay(html) {
       <div id="printOverlayContent"></div>`;
     document.body.appendChild(ov);
   }
-  document.getElementById('printOverlayContent').innerHTML = html;
+  document.getElementById('printOverlayContent').innerHTML = bodyContent;
   ov.classList.add('show');
 }
 function closePrintOverlay() {
@@ -11139,6 +11440,500 @@ async function newDirectPOFromMIR(mirNum) {
   toast('PO pre-filled from MIR ' + mirNum + ' — select preferred vendor and enter rates. Save PO to confirm.','info',5000);
   // Store mirNum on form — status updated ONLY after PO is saved successfully
   document.getElementById('poForm').dataset.directMirNum = mirNum;
+}
+
+// ============================================================
+// CONTRACTOR MASTER
+// ============================================================
+let mis_contractor_locked = false;
+
+function renderContractorMaster() {
+  const q = (document.getElementById('mc_search')?.value||'').toLowerCase();
+  let rows = state.masters.contractors||[];
+  if(q) rows = rows.filter(c =>
+    c['Contractor Name'].toLowerCase().includes(q) ||
+    (c['Trade']||'').toLowerCase().includes(q)
+  );
+  const isAdmin = ['Admin','Planning/ QS'].includes(state.role);
+  document.getElementById('mc_list').innerHTML = rows.map(c=>`
+    <tr>
+      <td class="mono">${esc(c['Contractor Code']||'—')}</td>
+      <td>${esc(c['Contractor Name'])}</td>
+      <td>${esc(c['Trade']||'—')}</td>
+      <td>${esc(c['GSTIN']||'—')}</td>
+      <td>${esc(c['Contact Person']||'—')}</td>
+      <td>${esc(c['Phone']||'—')}</td>
+      ${isAdmin ? `<td>
+        <button class="btn btn-ghost btn-sm" onclick="editContractor('${esc(c['Contractor Code'])}')">Edit</button>
+        <button class="btn btn-danger btn-sm" onclick="deleteContractor('${esc(c['Contractor Code'])}','${esc(c['Contractor Name']).replace(/'/g,"\'")}')">Delete</button>
+      </td>` : '<td></td>'}
+    </tr>`).join('')||'<tr><td colspan="7" class="center muted">No contractors.</td></tr>';
+}
+
+async function saveContractorMaster() {
+  if(!['Admin','Planning/ QS'].includes(state.role)){
+    toast('Only Admin or Planning/QS can add contractors','error'); return;
+  }
+  const name    = document.getElementById('mc_name')?.value?.trim();
+  const trade   = document.getElementById('mc_trade')?.value?.trim();
+  const gstin   = document.getElementById('mc_gstin')?.value?.trim();
+  const contact = document.getElementById('mc_contact')?.value?.trim();
+  const phone   = document.getElementById('mc_phone')?.value?.trim();
+  const address = document.getElementById('mc_address')?.value?.trim();
+  if(!name)    { toast('Contractor Name is required','error'); return; }
+  if(!trade)   { toast('Trade / Specialisation is required','error'); return; }
+  if(!gstin)   { toast('GSTIN is required','error'); return; }
+  if(!contact) { toast('Contact Person is required','error'); return; }
+  if(!phone)   { toast('Phone is required','error'); return; }
+  if(!address) { toast('Address is required','error'); return; }
+  // Duplicate check
+  const dup = (state.masters.contractors||[]).find(c =>
+    c['Contractor Name'].toLowerCase() === name.toLowerCase()
+  );
+  if(dup){ toast('Contractor "'+name+'" already exists ('+dup['Contractor Code']+')','error'); return; }
+
+  pbShow('Saving contractor…');
+  try {
+    // Generate code
+    const {data:last} = await sb.from('wo_contractors')
+      .select('contractor_code').order('contractor_code',{ascending:false}).limit(1);
+    const lastNum = last?.length ? parseInt((last[0].contractor_code||'CON000').replace('CON',''))||0 : 0;
+    const code = 'CON'+String(lastNum+1).padStart(3,'0');
+    const {error} = await sb.from('wo_contractors').insert({
+      contractor_code:  code,
+      contractor_name:  name,
+      trade,
+      gstin,
+      contact_person:   contact,
+      phone,
+      address,
+      bank_name:        document.getElementById('mc_bankName')?.value?.trim()||null,
+      branch:           document.getElementById('mc_branch')?.value?.trim()||null,
+      bank_account:     document.getElementById('mc_bank')?.value?.trim()||null,
+      ifsc:             document.getElementById('mc_ifsc')?.value?.trim()||null,
+      is_active:        true,
+    });
+    if(error) throw new Error(error.message);
+    flashSuccess('Contractor '+code+' added');
+    ['mc_name','mc_trade','mc_gstin','mc_contact','mc_phone','mc_address',
+     'mc_bankName','mc_branch','mc_bank','mc_ifsc'].forEach(id=>{
+      const e=document.getElementById(id); if(e) e.value='';
+    });
+    // Reload contractors into state
+    const {data:fresh} = await sb.from('wo_contractors').select('*').eq('is_active',true).order('contractor_name');
+    state.masters.contractors = (fresh||[]).map(r=>({
+      'Contractor Code': r.contractor_code,
+      'Contractor Name': r.contractor_name,
+      'Trade':           r.trade||'',
+      'GSTIN':           r.gstin||'',
+      'Contact Person':  r.contact_person||'',
+      'Phone':           r.phone||'',
+      'Address':         r.address||'',
+    }));
+    renderContractorMaster();
+  } catch(e){ toast('Error: '+e.message,'error'); }
+  finally{ pbDone(); }
+}
+
+// Contractor typeahead — used by WO vendor field and MIS Issued To
+function contractorTypeahead(inputId, resultsId, codeId) {
+  const q = (document.getElementById(inputId)?.value||'').toLowerCase();
+  const res = document.getElementById(resultsId);
+  if(!q||!res){ if(res) res.classList.remove('show'); return; }
+  const matches = (state.masters.contractors||[]).filter(c=>
+    c['Contractor Name'].toLowerCase().includes(q)||
+    (c['Trade']||'').toLowerCase().includes(q)
+  ).slice(0,12);
+  if(!matches.length){ res.classList.remove('show'); return; }
+  res.innerHTML = matches.map(c=>`
+    <div class="typeahead-item"
+      onclick="selectContractor('${inputId}','${resultsId}','${codeId}','${esc(c['Contractor Name']).replace(/'/g,"\'")}','${esc(c['Contractor Code'])}')">
+      <strong>${esc(c['Contractor Name'])}</strong>
+      <div class="muted">${esc(c['Trade']||'')} ${c['GSTIN']?' · GSTIN: '+esc(c['GSTIN']):''}</div>
+    </div>`).join('');
+  res.classList.add('show');
+}
+
+function selectContractor(inputId, resultsId, codeId, name, code) {
+  const input = document.getElementById(inputId);
+  if(input){ input.value = name; input.readOnly = true; }
+  const codeEl = document.getElementById(codeId);
+  if(codeEl) codeEl.value = code;
+  const res = document.getElementById(resultsId);
+  if(res) res.classList.remove('show');
+  // Lock the field
+  if(inputId==='wo_vendor'){
+    wo_vendor_locked = true;
+    lockMasterField('wo_vendor','wo_vendor_clear');
+  }
+  if(inputId==='mis_issuedTo'){
+    mis_contractor_locked = true;
+    const clearBtn = document.getElementById('mis_contractorClear');
+    if(clearBtn) clearBtn.style.display = '';
+    const inputEl = document.getElementById('mis_issuedTo');
+    if(inputEl) inputEl.readOnly = true;
+  }
+}
+
+function clearContractorField(inputId, codeId, resultsId) {
+  const input = document.getElementById(inputId);
+  if(input){ input.value=''; input.readOnly=false; input.focus(); }
+  const codeEl = document.getElementById(codeId);
+  if(codeEl) codeEl.value='';
+  const res = document.getElementById(resultsId);
+  if(res) res.classList.remove('show');
+  if(inputId==='mis_issuedTo') mis_contractor_locked=false;
+}
+
+async function editContractor(code) {
+  if(!['Admin','Planning/ QS'].includes(state.role)){
+    toast('Only Admin or Planning/QS can edit contractors','error'); return;
+  }
+  const c = (state.masters.contractors||[]).find(x=>x['Contractor Code']===code);
+  if(!c){ toast('Contractor not found','error'); return; }
+  // Fetch full record from DB for bank details
+  pbShow('Loading…');
+  const {data:full} = await sb.from('wo_contractors')
+    .select('*').eq('contractor_code',code).single();
+  pbDone();
+
+  openModal(`
+    <h3>Edit Contractor — ${esc(code)}</h3>
+    <div class="grid-3" style="gap:12px;">
+      <div class="field" style="grid-column:1/3;">
+        <label class="req">Contractor Name</label>
+        <input id="ec_name" value="${esc(full?.contractor_name||'')}">
+      </div>
+      <div class="field"><label class="req">Trade</label>
+        <input id="ec_trade" value="${esc(full?.trade||'')}">
+      </div>
+    </div>
+    <div class="grid-3" style="margin-top:12px;gap:12px;">
+      <div class="field"><label class="req">GSTIN</label>
+        <input id="ec_gstin" value="${esc(full?.gstin||'')}">
+      </div>
+      <div class="field"><label class="req">Contact Person</label>
+        <input id="ec_contact" value="${esc(full?.contact_person||'')}">
+      </div>
+      <div class="field"><label class="req">Phone</label>
+        <input id="ec_phone" value="${esc(full?.phone||'')}">
+      </div>
+    </div>
+    <div class="field" style="margin-top:12px;">
+      <label class="req">Address</label>
+      <textarea id="ec_address" rows="2">${esc(full?.address||'')}</textarea>
+    </div>
+    <div class="grid-4" style="margin-top:12px;gap:12px;">
+      <div class="field"><label>Bank Name</label>
+        <input id="ec_bankName" value="${esc(full?.bank_name||'')}">
+      </div>
+      <div class="field"><label>Branch</label>
+        <input id="ec_branch" value="${esc(full?.branch||'')}">
+      </div>
+      <div class="field"><label>Account No.</label>
+        <input id="ec_bank" value="${esc(full?.bank_account||'')}">
+      </div>
+      <div class="field"><label>IFSC</label>
+        <input id="ec_ifsc" value="${esc(full?.ifsc||'')}">
+      </div>
+    </div>
+    <div class="actions-row">
+      <button class="btn btn-primary" onclick="confirmEditContractor('${esc(code)}')">Save Changes</button>
+      <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+    </div>
+  `);
+}
+
+async function confirmEditContractor(code) {
+  const name    = document.getElementById('ec_name')?.value?.trim();
+  const trade   = document.getElementById('ec_trade')?.value?.trim();
+  const gstin   = document.getElementById('ec_gstin')?.value?.trim();
+  const contact = document.getElementById('ec_contact')?.value?.trim();
+  const phone   = document.getElementById('ec_phone')?.value?.trim();
+  const address = document.getElementById('ec_address')?.value?.trim();
+  if(!name)    { toast('Contractor Name is required','error'); return; }
+  if(!trade)   { toast('Trade is required','error'); return; }
+  if(!gstin)   { toast('GSTIN is required','error'); return; }
+  if(!contact) { toast('Contact Person is required','error'); return; }
+  if(!phone)   { toast('Phone is required','error'); return; }
+  if(!address) { toast('Address is required','error'); return; }
+
+  // Duplicate name check (excluding self)
+  const dup = (state.masters.contractors||[]).find(c=>
+    c['Contractor Name'].toLowerCase()===name.toLowerCase() && c['Contractor Code']!==code
+  );
+  if(dup){ toast('Contractor "'+name+'" already exists','error'); return; }
+
+  pbShow('Saving…');
+  const {error} = await sb.from('wo_contractors').update({
+    contractor_name: name,
+    trade,
+    gstin,
+    contact_person:  contact,
+    phone,
+    address,
+    bank_name:       document.getElementById('ec_bankName')?.value?.trim()||null,
+    branch:          document.getElementById('ec_branch')?.value?.trim()||null,
+    bank_account:    document.getElementById('ec_bank')?.value?.trim()||null,
+    ifsc:            document.getElementById('ec_ifsc')?.value?.trim()||null,
+  }).eq('contractor_code', code);
+  pbDone();
+  if(error){ toast('Error: '+error.message,'error'); return; }
+  closeModal();
+  flashSuccess('Contractor '+code+' updated');
+  // Refresh state
+  const {data:fresh} = await sb.from('wo_contractors').select('*').eq('is_active',true).order('contractor_name');
+  state.masters.contractors = (fresh||[]).map(r=>({
+    'Contractor Code': r.contractor_code,
+    'Contractor Name': r.contractor_name,
+    'Trade':           r.trade||'',
+    'GSTIN':           r.gstin||'',
+    'Contact Person':  r.contact_person||'',
+    'Phone':           r.phone||'',
+    'Address':         r.address||'',
+  }));
+  renderContractorMaster();
+}
+
+async function deleteContractor(code, name) {
+  if(!['Admin','Planning/ QS'].includes(state.role)){
+    toast('Only Admin or Planning/QS can delete contractors','error'); return;
+  }
+  openModal(`
+    <h3>Delete Contractor</h3>
+    <div style="margin:16px 0;font-size:14px;">
+      Are you sure you want to delete <strong>${esc(name)}</strong> (${esc(code)})?<br>
+      <span style="color:var(--danger);font-size:12px;margin-top:6px;display:block;">
+        This cannot be undone. Existing Work Orders referencing this contractor will not be affected.
+      </span>
+    </div>
+    <div class="actions-row">
+      <button class="btn btn-danger" onclick="confirmDeleteContractor('${esc(code)}','${esc(name).replace(/'/g,"\'")}')">Yes, Delete</button>
+      <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+    </div>
+  `);
+}
+
+async function confirmDeleteContractor(code, name) {
+  closeModal();
+  pbShow('Deleting…');
+  const {error} = await sb.from('wo_contractors')
+    .update({is_active: false})
+    .eq('contractor_code', code);
+  pbDone();
+  if(error){ toast('Error: '+error.message,'error'); return; }
+  flashSuccess('Contractor "'+name+'" deleted');
+  // Remove from state
+  state.masters.contractors = (state.masters.contractors||[])
+    .filter(c=>c['Contractor Code']!==code);
+  renderContractorMaster();
+}
+
+// ============================================================
+// NEGOTIATION FUNCTIONS
+// ============================================================
+async function saveNegotiationRound(qcNum, round, vendorCount, matCount) {
+  const rows=[];
+  for(let vi=0;vi<vendorCount;vi++){
+    for(let mi=0;mi<matCount;mi++){
+      const inp=document.getElementById(`neg_${vi}_${mi}`);
+      if(!inp) continue;
+      const rate=parseFloat(inp.value);
+      if(!isNaN(rate)&&rate>0){
+        rows.push({
+          qc_number:       qcNum,
+          round,
+          vendor_name:     inp.dataset.vendor,
+          material_name:   inp.dataset.mat,
+          negotiated_rate: rate,
+          negotiated_by:   state.userName,
+          negotiated_by_id:state.userId,
+          negotiated_at:   new Date().toISOString(),
+        });
+      }
+    }
+  }
+  if(!rows.length){
+    toast('Enter at least one negotiated rate','error'); return;
+  }
+  pbShow('Saving negotiation…');
+  const {error}=await sb.from('pu_qc_negotiations').insert(rows);
+  pbDone();
+  if(error){toast('Error: '+error.message,'error');return;}
+  flashSuccess('Round '+round+' saved — '+rows.length+' rate(s) updated');
+  closeModal();
+  // Reopen viewQC to show updated comparison
+  await viewQC(qcNum);
+}
+
+// ============================================================
+// QC PRINT — A4 Landscape
+// ============================================================
+async function printQCPopup(qcNum) {
+  const table = document.getElementById('qcCompareTable');
+  const meta  = document.getElementById('qcPrintData');
+  if(!table||!meta){ toast('Print data not ready','error'); return; }
+
+  const qc     = meta.dataset.qc||qcNum;
+  const rfq    = meta.dataset.rfq||'';
+  const date   = meta.dataset.date||'';
+  const prepBy = meta.dataset.prepared||'';
+  const recV   = meta.dataset.recVendor||'';
+  const appV   = meta.dataset.approvedVendor||'';
+  const status = meta.dataset.status||'';
+
+  // Capture actual rendered column widths
+  const firstRow = table.querySelector('tbody tr');
+  const colWidths = firstRow
+    ? Array.from(firstRow.cells).map(td=>td.getBoundingClientRect().width)
+    : [];
+  const totalWidth = colWidths.reduce((a,b)=>a+b,0)||1;
+  const colgroupHTML = colWidths.length
+    ? '<colgroup>'+colWidths.map(w=>`<col style="width:${((w/totalWidth)*100).toFixed(2)}%">`).join('')+'</colgroup>'
+    : '';
+
+  // Clone table — strip interactive elements
+  const tableClone = table.cloneNode(true);
+  tableClone.querySelectorAll('input,button,select').forEach(el=>el.remove());
+  tableClone.querySelectorAll('colgroup').forEach(el=>el.remove());
+  tableClone.insertAdjacentHTML('afterbegin', colgroupHTML);
+
+  const doc = `<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>QC ${esc(qc)}</title>
+<style>
+  @page { size:A4 landscape; margin:12mm 14mm; }
+  *  { box-sizing:border-box; margin:0; padding:0; }
+  body {
+    font-family:Arial,Helvetica,sans-serif;
+    font-size:8pt; color:#111;
+    -webkit-print-color-adjust:exact;
+    print-color-adjust:exact;
+  }
+
+  /* ── HEADER ── */
+  .ph {
+    display:flex; justify-content:space-between; align-items:flex-start;
+    border-bottom:2.5pt solid #1e3a5f; padding-bottom:7pt; margin-bottom:8pt;
+  }
+  .ph-left  { flex:0 0 46%; }
+  .ph-right { flex:0 0 52%; display:flex; flex-direction:column; align-items:flex-end; }
+  .co-name  { font-size:14pt; font-weight:700; color:#1e3a5f; letter-spacing:.3pt; }
+  .co-sub   { font-size:7.5pt; color:#444; margin-top:4pt; line-height:1.6; }
+  .doc-title{ font-size:18pt; font-weight:700; color:#1e3a5f; letter-spacing:1pt; margin-bottom:5pt; }
+  .mt { border-collapse:collapse; min-width:200pt; }
+  .mt td { padding:2.5pt 8pt; font-size:7.5pt; border:.4pt solid #ccc; white-space:nowrap; }
+  .mt .l  { font-weight:700; background:#e8ecf2; color:#1e3a5f; min-width:55pt; }
+
+  /* ── META ROW ── */
+  .mr { display:flex; gap:8pt; margin-bottom:8pt; }
+  .mb {
+    padding:4pt 10pt; background:#f0f5fb;
+    border-left:3pt solid #1e3a5f; border-radius:3pt;
+    font-size:8pt; line-height:1.5;
+  }
+  .ml { font-size:6pt; font-weight:700; color:#1e3a5f; text-transform:uppercase; letter-spacing:.5pt; margin-bottom:1pt; }
+  .mb.ap { background:#d1fae5; border-left-color:#16a34a; }
+  .mb.ap .ml { color:#16a34a; }
+
+  /* ── COMPARISON TABLE ── */
+  table {
+    width:100%; border-collapse:collapse;
+    font-size:6.5pt; table-layout:fixed;
+    border:.5pt solid #1e3a5f;
+  }
+  thead tr:first-child th {
+    background:#1e3a5f; color:#fff;
+    padding:4pt; font-size:7pt; font-weight:700;
+    text-align:center; vertical-align:middle;
+    border:.4pt solid #2d4f7c; line-height:1.3;
+  }
+  thead tr:nth-child(2) th {
+    background:#344f6e; color:#e8f0fe;
+    padding:3pt; font-size:6pt; font-weight:600;
+    text-align:right; border:.4pt solid #2d4f7c;
+  }
+  thead tr:nth-child(2) th:nth-child(-n+4){ text-align:left; }
+  td {
+    padding:3.5pt 4pt; border:.4pt solid #dde6f0;
+    vertical-align:middle; word-break:break-word; line-height:1.3;
+  }
+  th.num,td.num { text-align:right; }
+  th.c,  td.c   { text-align:center; }
+  tbody tr:nth-child(odd)  td { background:#fff; }
+  tbody tr:nth-child(even) td { background:#f4f7fb; }
+  span { font-size:5.5pt; }
+  thead { display:table-header-group; }
+  tr    { page-break-inside:avoid; }
+
+  /* Preserve all coloured cells */
+  [style*="background:#d1fae5"],[style*="background: #d1fae5"] { background:#d1fae5 !important; }
+  [style*="background:#fee2e2"],[style*="background: #fee2e2"] { background:#fee2e2 !important; }
+  [style*="background:#fef3c7"],[style*="background: #fef3c7"] { background:#fef3c7 !important; }
+  [style*="background:#eff6ff"],[style*="background: #eff6ff"] { background:#eff6ff !important; color:#1d4ed8; font-weight:600; }
+  [style*="background:#e6f4f1"],[style*="background: #e6f4f1"] { background:#e6f4f1 !important; font-weight:700; }
+  [style*="background:#e8ecf2"],[style*="background: #e8ecf2"] { background:#e8ecf2 !important; font-weight:700; color:#1e3a5f; }
+  [style*="background:#bbf7d0"],[style*="background: #bbf7d0"] { background:#bbf7d0 !important; font-weight:700; }
+  [style*="background:#fecaca"],[style*="background: #fecaca"] { background:#fecaca !important; }
+  [style*="background:#16a34a"],[style*="background: #16a34a"] { background:#16a34a !important; color:#fff !important; font-weight:700; }
+  [style*="background:#d97706"],[style*="background: #d97706"] { background:#d97706 !important; color:#fff !important; font-weight:700; }
+  [style*="background:#dc2626"],[style*="background: #dc2626"] { background:#dc2626 !important; color:#fff !important; font-weight:700; }
+  [style*="background:#94a3b8"],[style*="background: #94a3b8"] { background:#94a3b8 !important; color:#fff !important; font-weight:700; }
+  [style*="background:#f8fafc"],[style*="background: #f8fafc"] { background:#f8fafc !important; }
+  [style*="background:#344f6e"],[style*="background: #344f6e"] { background:#344f6e !important; color:#e8f0fe !important; }
+  [style*="background:#1e3a5f"],[style*="background: #1e3a5f"] { background:#1e3a5f !important; color:#fff !important; }
+
+  /* ── SIGNATURE ── */
+  .sf { margin-top:16pt; display:flex; justify-content:flex-end; }
+  .sb { width:110pt; border-top:.5pt solid #444; padding-top:4pt; font-size:7pt; text-align:center; color:#333; line-height:1.6; }
+</style>
+</head>
+<body>
+  <div class="ph">
+    <div class="ph-left">
+      <div class="co-name">URBAN EXCELLENCE LLP</div>
+      <div class="co-sub">
+        76/1 Windchimes, Muthsandra Main Road, Bengaluru – 560087<br>
+        GSTIN: 29AAHFU0117D1ZH &nbsp;|&nbsp; Project: Poetry of Earth, Phase 1
+      </div>
+    </div>
+    <div class="ph-right">
+      <div class="doc-title">QUOTE COMPARISON</div>
+      <table class="mt">
+        <tr><td class="l">QC No.</td><td>${esc(qc)}</td></tr>
+        <tr><td class="l">Date</td><td>${esc(date)}</td></tr>
+        <tr><td class="l">RFQ Ref</td><td>${esc(rfq)}</td></tr>
+        <tr><td class="l">Status</td><td>${esc(status)}</td></tr>
+      </table>
+    </div>
+  </div>
+  <div class="mr">
+    <div class="mb"><div class="ml">Prepared By</div><strong>${esc(prepBy)}</strong></div>
+    <div class="mb"><div class="ml">Recommended Vendor</div><strong>${esc(recV||'—')}</strong></div>
+    ${appV?`<div class="mb ap"><div class="ml">Approved Vendor</div><strong>${esc(appV)}</strong></div>`:''}
+  </div>
+  ${tableClone.outerHTML}
+  <div class="sf"><div class="sb">Authorised Signatory<br><strong>Urban Excellence LLP</strong></div></div>
+</body>
+</html>`;
+
+  // Use hidden iframe — the only fully reliable cross-browser print method
+  const iframe = document.createElement('iframe');
+  iframe.style.cssText = 'position:fixed;top:-9999px;left:-9999px;width:0;height:0;border:0;';
+  document.body.appendChild(iframe);
+  iframe.contentDocument.open();
+  iframe.contentDocument.write(doc);
+  iframe.contentDocument.close();
+  iframe.onload = () => {
+    setTimeout(() => {
+      iframe.contentWindow.focus();
+      iframe.contentWindow.print();
+      // Remove iframe after print dialog closes
+      setTimeout(() => { document.body.removeChild(iframe); }, 2000);
+    }, 500);
+  };
 }
 
 </script>
