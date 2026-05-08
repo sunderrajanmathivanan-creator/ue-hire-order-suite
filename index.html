@@ -374,6 +374,18 @@ th.sortable.desc::after { content:' ↓'; opacity:.9; }
   }
   .pdo-close, .pdo-print { display:none !important; visibility:hidden !important; }
 }
+
+/* Hide native increment/decrement spinner arrows on all number inputs (global).
+   Keyboard ↑/↓ still works; mobile numeric keypad still appears. */
+input[type="number"]::-webkit-inner-spin-button,
+input[type="number"]::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+input[type="number"] {
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
 </style>
 </head>
 <body>
@@ -11293,8 +11305,14 @@ async function confirmRejectDoc(docType, docNum) {
   const tableMap={MIR:'pu_mir',QC:'pu_quote_comparison',PO:'pu_po_orders',GRN:'pu_grn',POB:'pu_po_bills',MIS:'pu_mis'};
   const colMap={MIR:'mir_number',QC:'qc_number',PO:'po_number',GRN:'grn_number',POB:'bill_number',MIS:'mis_number'};
   const {error}=await sb.from(tableMap[docType]).update({status:'Rejected',rejection_reason:reason}).eq(colMap[docType],docNum);
-  if(!error) flashSuccess(docType+' '+docNum+' Rejected');
-  else toast(error.message,'error');
+  if(error){ toast(error.message,'error'); return; }
+  // Cascade rejection to MIR line items so item_status reflects reality everywhere
+  if (docType === 'MIR') {
+    const {error: itemErr} = await sb.from('pu_mir_items')
+      .update({item_status:'Rejected'}).eq('mir_number',docNum);
+    if (itemErr) console.warn('MIR item-status cascade failed:', itemErr.message);
+  }
+  flashSuccess(docType+' '+docNum+' Rejected');
   const reloadMap={MIR:loadMIRList,QC:loadQCList,PO:loadPOList,GRN:loadGRNList,POB:loadPOBList,MIS:loadMISList};
   if(reloadMap[docType]) reloadMap[docType]();
 }
@@ -12927,6 +12945,18 @@ async function loadTrackerA() {
       return;
     }
 
+    // Fetch line items for the MIRs in view (with WBS sub activity)
+    const mirNumsInView = mirs.map(function(m){ return m.mir_number; });
+    const itemsRes = await sb.from('pu_mir_items')
+      .select('mir_number,sno,material_name,uom,qty_required,wbs_sub_activity,item_status')
+      .in('mir_number', mirNumsInView).order('sno');
+    const mirItems = itemsRes.data || [];
+    const itemsByMir = {};
+    mirItems.forEach(function(it){
+      if (!itemsByMir[it.mir_number]) itemsByMir[it.mir_number] = [];
+      itemsByMir[it.mir_number].push(it);
+    });
+
     const rfqByMir = {}; rfqs.forEach(function(r){ if(r.mir_number){ if(!rfqByMir[r.mir_number]) rfqByMir[r.mir_number]=[]; rfqByMir[r.mir_number].push(r); } });
     const qcByRfq = {}; qcs.forEach(function(q){ if(q.rfq_number){ if(!qcByRfq[q.rfq_number]) qcByRfq[q.rfq_number]=[]; qcByRfq[q.rfq_number].push(q); } });
     const poByMir = {}; pos.forEach(function(p){ if(p.mir_number){ if(!poByMir[p.mir_number]) poByMir[p.mir_number]=[]; poByMir[p.mir_number].push(p); } });
@@ -12944,17 +12974,61 @@ async function loadTrackerA() {
       const allPOs = Array.from(allPOMap.values());
       const allGRNs = allPOs.flatMap(function(p){ return grnByPo[p.po_number] || []; });
 
-      const mirDone = mir.status !== 'Pending Approval' && mir.status !== 'Rejected';
-      const rfqDone = mirRFQs.length > 0;
-      const qcDone = mirQCs.some(function(q){ return q.status === 'Approved'; });
-      const poDone = allPOs.some(function(p){ return p.status !== 'Pending Approval' && p.status !== 'Rejected'; });
-      const poAppr = allPOs.some(function(p){ return ['Open','Partial Receipt','Fully Received'].indexOf(p.status) >= 0; });
-      const grnDone = allGRNs.some(function(g){ return g.status !== 'Pending Verification' && g.status !== 'Rejected'; });
-      const grnVerify = allGRNs.some(function(g){ return ['Verified','Partially Billed','Billed'].indexOf(g.status) >= 0; });
+      const mirRaised    = true; // we're iterating an existing MIR row
+      const mirRejected  = mir.status === 'Rejected';
+      const mirApproved  = mir.status !== 'Pending Approval' && mir.status !== 'Rejected';
+      const rfqRaised    = mirRFQs.length > 0;
+      const qcApproved   = mirQCs.some(function(q){ return q.status === 'Approved'; });
+      const qcAllRejected = rfqRaised && mirQCs.length > 0 && mirQCs.every(function(q){ return q.status === 'Rejected'; });
+      const poCreated    = allPOs.length > 0;
+      const poApproved   = allPOs.some(function(p){ return ['Open','Partial Receipt','Fully Received'].indexOf(p.status) >= 0; });
+      const poAllRejected = poCreated && allPOs.every(function(p){ return p.status === 'Rejected'; });
+      const grnReceived  = allGRNs.length > 0;
+      const grnVerified  = allGRNs.some(function(g){ return ['Verified','Partially Billed','Billed'].indexOf(g.status) >= 0; });
+      const grnAllRejected = grnReceived && allGRNs.every(function(g){ return g.status === 'Rejected'; });
+
+      // Direct-PO path: when a PO exists without any RFQ, the RFQ/QC steps were legitimately bypassed.
+      // In that case render them as grey "pending" (never active) so they don't read as the bottleneck.
+      const directPOPath = poCreated && !rfqRaised;
+
+      // Each milestone resolves to: 'done' if its own condition holds, else 'rejected' if a terminal
+      // negative outcome occurred at that step, else 'active' if it's the current bottleneck, else 'pending'.
+      // Once a step is rejected, all downstream steps stay 'pending' (chain is dead — no orange anywhere downstream).
+      const chainDead = mirRejected; // extended below as we walk the chain
+      const sMirRaised    = 'done'; // always done if rendered
+      const sMirApproved  = mirRejected ? 'rejected'
+                          : mirApproved ? 'done'
+                          : 'active';
+      const sRfqRaised    = mirRejected ? 'pending'
+                          : rfqRaised ? 'done'
+                          : directPOPath ? 'pending'
+                          : (mirApproved ? 'active' : 'pending');
+      const sQcApproved   = mirRejected ? 'pending'
+                          : qcApproved ? 'done'
+                          : qcAllRejected ? 'rejected'
+                          : directPOPath ? 'pending'
+                          : (rfqRaised ? 'active' : 'pending');
+      const sPoCreated    = mirRejected || qcAllRejected ? 'pending'
+                          : poCreated ? 'done'
+                          : (directPOPath || qcApproved ? 'active'
+                            : mirApproved && !rfqRaised ? 'active' // MIR approved, no RFQ yet, awaiting either path
+                            : 'pending');
+      const sPoApproved   = mirRejected || qcAllRejected ? 'pending'
+                          : poApproved ? 'done'
+                          : poAllRejected ? 'rejected'
+                          : (poCreated ? 'active' : 'pending');
+      const sGrnReceived  = mirRejected || qcAllRejected || poAllRejected ? 'pending'
+                          : grnReceived ? 'done'
+                          : (poApproved ? 'active' : 'pending');
+      const sGrnVerified  = mirRejected || qcAllRejected || poAllRejected ? 'pending'
+                          : grnVerified ? 'done'
+                          : grnAllRejected ? 'rejected'
+                          : (grnReceived ? 'active' : 'pending');
 
       let overallSt = 'In Progress';
-      if (mir.status === 'Rejected') overallSt = 'Rejected';
-      else if (grnVerify) overallSt = allGRNs.every(function(g){ return ['Verified','Billed','Partially Billed'].indexOf(g.status) >= 0; }) ? 'Completed' : 'In Progress';
+      if (mirRejected) overallSt = 'Rejected';
+      else if (qcAllRejected || poAllRejected || grnAllRejected) overallSt = 'Rejected';
+      else if (grnVerified) overallSt = allGRNs.every(function(g){ return ['Verified','Billed','Partially Billed'].indexOf(g.status) >= 0; }) ? 'Completed' : 'In Progress';
 
       if (statusFilter) {
         if (statusFilter==='completed' && overallSt!=='Completed') return;
@@ -12967,29 +13041,69 @@ async function loadTrackerA() {
 
       const stClass = overallSt==='Completed'?'completed':overallSt==='Rejected'?'rejected':'active';
       const isExpanded = _trkAExpanded.has(mir.mir_number);
-      const childCount = allPOs.length + allGRNs.length;
+      const thisItems = itemsByMir[mir.mir_number] || [];
+      const childCount = thisItems.length + allPOs.length + allGRNs.length;
 
       const milestones = [
-        dashMs(mirDone?'done':'active', 'MIR Raised', mir.mir_date),
-        dashMs(mirDone?'done':'pending', 'MIR Approved', mir.approved_at),
-        dashMs(rfqDone?'done':mirDone?'active':'pending', 'RFQ Raised', mirRFQs[0]?mirRFQs[0].rfq_date:null),
-        dashMs(qcDone?'done':rfqDone?'active':'pending', 'QC Approved', mirQCs.find(function(q){return q.status==='Approved';})?.approved_at),
-        dashMs(poDone?'done':qcDone?'active':'pending', 'PO Created', allPOs[0]?allPOs[0].po_date:null),
-        dashMs(poAppr?'done':poDone?'active':'pending', 'PO Approved', ''),
-        dashMs(grnDone?'done':poAppr?'active':'pending', 'GRN Received', allGRNs[0]?allGRNs[0].grn_date:null),
-        dashMs(grnVerify?'done':grnDone?'active':'pending', 'GRN Verified', allGRNs.find(function(g){return g.status==='Verified';})?.grn_date),
+        dashMs(sMirRaised,    'MIR Raised',    mir.mir_date),
+        dashMs(sMirApproved,  'MIR Approved',  mir.approved_at),
+        dashMs(sRfqRaised,    'RFQ Raised',    directPOPath ? '' : (mirRFQs[0] ? mirRFQs[0].rfq_date : null)),
+        dashMs(sQcApproved,   'QC Approved',   directPOPath ? '' : (mirQCs.find(function(q){return q.status==='Approved';})?.approved_at)),
+        dashMs(sPoCreated,    'PO Created',    allPOs[0] ? allPOs[0].po_date : null),
+        dashMs(sPoApproved,   'PO Approved',   ''),
+        dashMs(sGrnReceived,  'GRN Received',  allGRNs[0] ? allGRNs[0].grn_date : null),
+        dashMs(sGrnVerified,  'GRN Verified',  allGRNs.find(function(g){return g.status==='Verified';})?.grn_date),
       ];
+
+      const chevronParts = [];
+      if (thisItems.length) chevronParts.push(thisItems.length+' item'+(thisItems.length!==1?'s':''));
+      if (allPOs.length)    chevronParts.push(allPOs.length+' PO'+(allPOs.length!==1?'s':''));
+      if (allGRNs.length)   chevronParts.push(allGRNs.length+' GRN'+(allGRNs.length!==1?'s':''));
 
       html += '<tr class="parent-row" onclick="toggleTrkARow(\''+esc(mir.mir_number)+'\')">'+
         '<td class="mono" style="font-size:11px;">'+esc(mir.mir_number)+'</td>'+
         '<td style="font-size:11px;">'+esc(mir.purpose||'—')+'<br>'+
-          (childCount?'<span class="expand-btn">'+(isExpanded?'▼':'▶')+' '+allPOs.length+' PO'+(allPOs.length!==1?'s':'')+', '+allGRNs.length+' GRN'+(allGRNs.length!==1?'s':'')+'</span>':'')+
+          (childCount?'<span class="expand-btn">'+(isExpanded?'▼':'▶')+' '+chevronParts.join(' · ')+'</span>':'')+
         '</td>'+
         '<td>'+renderMilestoneRow(milestones)+'</td>'+
         '<td><span class="status '+stClass+'" style="font-size:10px;">'+overallSt+'</span></td>'+
       '</tr>';
 
       if (isExpanded) {
+        // Line items table — what the MIR was raised for
+        if (thisItems.length) {
+          let itemsTbl = '<div style="padding:6px 4px 8px 4px;">'+
+            '<div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;margin-bottom:4px;">MIR Line Items</div>'+
+            '<table style="width:100%;border-collapse:collapse;font-size:10.5px;background:#fafcff;border:1px solid #e3ebf5;">'+
+              '<thead><tr style="background:#eef3fa;">'+
+                '<th style="padding:5px 8px;text-align:left;width:40px;border-bottom:1px solid #d8e2ef;">#</th>'+
+                '<th style="padding:5px 8px;text-align:left;border-bottom:1px solid #d8e2ef;">Material</th>'+
+                '<th style="padding:5px 8px;text-align:left;width:60px;border-bottom:1px solid #d8e2ef;">UOM</th>'+
+                '<th style="padding:5px 8px;text-align:right;width:80px;border-bottom:1px solid #d8e2ef;">Qty</th>'+
+                '<th style="padding:5px 8px;text-align:left;border-bottom:1px solid #d8e2ef;">WBS Sub Activity</th>'+
+                '<th style="padding:5px 8px;text-align:left;width:110px;border-bottom:1px solid #d8e2ef;">Status</th>'+
+              '</tr></thead><tbody>';
+          thisItems.forEach(function(it){
+            // Display override: when MIR is rejected, force every item to Rejected regardless of stored status
+            // (handles existing rejected MIRs in DB whose item_status was never cascaded)
+            let itSt = mirRejected ? 'Rejected' : (it.item_status || 'Pending');
+            let itStCls;
+            if (itSt === 'Rejected')      itStCls = 'rejected';
+            else if (itSt === 'Received') itStCls = 'completed';
+            else                          itStCls = 'active';
+            itemsTbl += '<tr>'+
+              '<td style="padding:4px 8px;border-bottom:1px solid #eef2f8;color:var(--muted);">'+esc(it.sno||'')+'</td>'+
+              '<td style="padding:4px 8px;border-bottom:1px solid #eef2f8;">'+esc(it.material_name||'—')+'</td>'+
+              '<td style="padding:4px 8px;border-bottom:1px solid #eef2f8;">'+esc(it.uom||'')+'</td>'+
+              '<td style="padding:4px 8px;border-bottom:1px solid #eef2f8;text-align:right;" class="mono">'+(it.qty_required!=null?Number(it.qty_required).toLocaleString('en-IN'):'')+'</td>'+
+              '<td style="padding:4px 8px;border-bottom:1px solid #eef2f8;">'+esc(it.wbs_sub_activity||'—')+'</td>'+
+              '<td style="padding:4px 8px;border-bottom:1px solid #eef2f8;"><span class="status '+itStCls+'" style="font-size:9px;">'+esc(itSt)+'</span></td>'+
+            '</tr>';
+          });
+          itemsTbl += '</tbody></table></div>';
+          html += '<tr class="child-row"><td colspan="4" style="padding:0 12px;">'+itemsTbl+'</td></tr>';
+        }
+
         allPOs.forEach(function(po) {
           const poGRNs = grnByPo[po.po_number] || [];
           html += '<tr class="child-row">'+
