@@ -272,6 +272,73 @@ td input, td select { padding: 5px 6px; background: var(--input-bg); color: var(
   .pd-deductions-table tr.sub-hdr td { background: #1e3a5f !important; color: #fff !important; font-weight: 700 !important; }
   .pd-deductions-table tr.net-row td { background: #e1f5ee !important; color: #1a6b4a !important; font-weight: 700 !important; font-size: 9pt !important; }
 }
+
+/* ============================================================
+   DASHBOARD MODULE
+   ============================================================ */
+.dash-section { margin-bottom: 28px; }
+.dash-section-title { font-size: 13px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
+.dash-section-title::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+.dash-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px; }
+.dash-card { background: #fff; border: 1px solid var(--border); border-radius: 8px; padding: 16px; cursor: pointer; transition: all 0.15s; position: relative; overflow: hidden; }
+.dash-card:hover { border-color: var(--accent); box-shadow: 0 4px 12px rgba(13,148,136,0.12); transform: translateY(-1px); }
+.dash-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px; background: var(--card-color, var(--accent)); }
+.dash-card .dc-count { font-size: 32px; font-weight: 700; color: var(--card-color, var(--accent)); line-height: 1; margin-bottom: 4px; font-variant-numeric: tabular-nums; }
+.dash-card .dc-label { font-size: 12px; font-weight: 600; color: var(--text); margin-bottom: 2px; }
+.dash-card .dc-sub { font-size: 11px; color: var(--muted); }
+.dash-card.urgent { --card-color: #dc2626; }
+.dash-card.warn { --card-color: #d97706; }
+.dash-card.info { --card-color: #2563eb; }
+.dash-card.ok { --card-color: #16a34a; }
+.dash-card.muted-card { --card-color: #64748b; }
+.dash-card .dc-count.loading { font-size: 18px; color: var(--muted); }
+.tracker-wrap { overflow-x: auto; }
+.tracker-table { width: 100%; border-collapse: collapse; font-size: 11.5px; min-width: 900px; }
+.tracker-table th { background: #e8ecf2; padding: 8px 10px; text-align: left; font-weight: 700; color: #1e3a5f; font-size: 11px; text-transform: uppercase; letter-spacing: 0.3px; border-bottom: 2px solid #c3d0e0; white-space: nowrap; }
+.tracker-table td { padding: 7px 10px; border-bottom: 1px solid #eef2f8; vertical-align: middle; }
+.tracker-table tr:hover td { background: #f8fbff; }
+.tracker-table tr.parent-row { cursor: pointer; }
+.tracker-table tr.parent-row td { font-weight: 600; background: #f0f5fb; }
+.tracker-table tr.child-row td { background: #fff; padding-left: 24px; }
+.tracker-table tr.child-row td:first-child { padding-left: 32px; color: var(--muted); }
+.milestone-row { display: flex; align-items: center; gap: 0; }
+.ms { display: flex; flex-direction: column; align-items: center; position: relative; min-width: 68px; }
+.ms-dot { width: 14px; height: 14px; border-radius: 50%; flex-shrink: 0; z-index: 1; }
+.ms-dot.done { background: #16a34a; box-shadow: 0 0 0 2px #d1fae5; }
+.ms-dot.active { background: #d97706; box-shadow: 0 0 0 2px #fef3c7; animation: dashPulse 1.5s infinite; }
+.ms-dot.pending { background: #e2e8f0; border: 1.5px solid #cbd5e1; }
+.ms-dot.rejected { background: #dc2626; box-shadow: 0 0 0 2px #fee2e2; }
+.ms-label { font-size: 9px; color: var(--muted); text-align: center; margin-top: 3px; white-space: nowrap; max-width: 66px; overflow: hidden; text-overflow: ellipsis; }
+.ms-date { font-size: 9px; color: #64748b; text-align: center; margin-top: 1px; white-space: nowrap; }
+.ms-line { flex: 1; height: 2px; min-width: 12px; }
+.ms-line.done { background: #16a34a; }
+.ms-line.pending { background: #e2e8f0; border-top: 2px dashed #cbd5e1; height: 0; }
+@keyframes dashPulse { 0%,100%{opacity:1} 50%{opacity:0.5} }
+.activity-feed { display: flex; flex-direction: column; gap: 0; }
+.activity-item { display: flex; gap: 12px; align-items: flex-start; padding: 10px 0; border-bottom: 1px solid #f1f5f9; }
+.activity-item:last-child { border-bottom: none; }
+.ai-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; margin-top: 5px; }
+.ai-dot.created { background: #2563eb; }
+.ai-dot.approved { background: #16a34a; }
+.ai-dot.rejected { background: #dc2626; }
+.ai-dot.pending { background: #d97706; }
+.ai-dot.paid { background: #0d9488; }
+.ai-body { flex: 1; }
+.ai-title { font-size: 12.5px; color: var(--text); }
+.ai-title strong { color: var(--accent); }
+.ai-meta { font-size: 11px; color: var(--muted); margin-top: 2px; }
+.ai-time { font-size: 11px; color: var(--muted); white-space: nowrap; flex-shrink: 0; }
+.expand-btn { cursor: pointer; color: var(--accent); font-size: 11px; user-select: none; white-space: nowrap; }
+.expand-btn:hover { text-decoration: underline; }
+.dash-all-clear { text-align: center; padding: 24px; color: var(--muted); font-size: 13px; }
+.dash-all-clear .icon { font-size: 32px; margin-bottom: 8px; }
+.tracker-filters { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-bottom: 12px; }
+.tracker-filters select, .tracker-filters input[type="date"] { padding: 6px 10px; background: var(--input-bg); color: var(--text); border: 1px solid var(--border); border-radius: 4px; font-size: 12px; }
+.dash-sub-tabs { display: flex; gap: 4px; margin-bottom: 16px; border-bottom: 2px solid var(--border); }
+.dash-sub-tab { padding: 7px 14px; cursor: pointer; color: var(--muted); font-size: 12px; font-weight: 600; border-bottom: 2px solid transparent; transition: all 0.15s; }
+.dash-sub-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+.dash-sub-tab:hover { color: var(--text); }
+
 /* Progress bar */
 #progressBar { position:fixed; bottom:0; right:0; width:280px; background:#fff; border:1px solid var(--border); border-bottom:none; border-radius:8px 8px 0 0; padding:10px 14px 8px; box-shadow:0 -4px 16px rgba(30,58,95,0.12); z-index:3000; display:none; }
 #progressBar.show { display:block; }
@@ -377,7 +444,8 @@ th.sortable.desc::after { content:' ↓'; opacity:.9; }
 </div>
 
 <div class="tabs" id="mainTabs">
-  <div class="tab active" data-tab="ho">Hire Order</div>
+  <div class="tab active" data-tab="dashboard">🏠 Dashboard</div>
+  <div class="tab" data-tab="ho">Hire Order</div>
   <div class="tab" data-tab="wo">Work Order</div>
   <div class="tab" data-tab="payments">Payments</div>
   <div class="tab" data-tab="masters">Masters</div>
@@ -386,6 +454,101 @@ th.sortable.desc::after { content:' ↓'; opacity:.9; }
 </div>
 
 <div class="container">
+
+
+<!-- ==================== DASHBOARD ==================== -->
+<div class="module active" id="mod-dashboard">
+
+  <!-- SECTION 1: PENDING ACTIONS -->
+  <div class="dash-section" id="dash-pending-section">
+    <div class="dash-section-title">⚡ Pending Actions</div>
+    <div class="dash-cards" id="dash-cards-container">
+      <div style="color:var(--muted);font-size:13px;">Loading…</div>
+    </div>
+  </div>
+
+  <!-- SECTION 2: TRACKERS -->
+  <div class="dash-section">
+    <div class="dash-section-title">📍 Process Trackers</div>
+    <div class="dash-sub-tabs">
+      <div class="dash-sub-tab active" onclick="switchDashTracker('procurement')" id="dtt-procurement">Tracker A — MIR → GRN</div>
+      <div class="dash-sub-tab" onclick="switchDashTracker('billing')" id="dtt-billing">Tracker B — Billing → Payment</div>
+    </div>
+
+    <div id="dash-tracker-procurement">
+      <div class="tracker-filters">
+        <label style="font-size:12px;color:var(--muted);">From:</label>
+        <input type="date" id="trk_a_from" onchange="loadTrackerA()">
+        <label style="font-size:12px;color:var(--muted);">To:</label>
+        <input type="date" id="trk_a_to" onchange="loadTrackerA()">
+        <select id="trk_a_status" onchange="loadTrackerA()" style="min-width:140px;">
+          <option value="">All Statuses</option>
+          <option value="in_progress">In Progress</option>
+          <option value="completed">Completed</option>
+          <option value="stuck">Stuck</option>
+        </select>
+        <button class="btn btn-ghost btn-sm" onclick="loadTrackerA()">↻ Refresh</button>
+      </div>
+      <div class="card" style="padding:0;overflow:hidden;">
+        <div class="tracker-wrap">
+          <table class="tracker-table">
+            <thead><tr>
+              <th style="width:110px;">MIR #</th>
+              <th style="width:130px;">Purpose</th>
+              <th style="min-width:600px;">Milestones</th>
+              <th style="width:80px;">Status</th>
+            </tr></thead>
+            <tbody id="tracker_a_body">
+              <tr><td colspan="4" class="center muted" style="padding:24px;">Loading…</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <div id="dash-tracker-billing" style="display:none;">
+      <div class="tracker-filters">
+        <label style="font-size:12px;color:var(--muted);">From:</label>
+        <input type="date" id="trk_b_from" onchange="loadTrackerB()">
+        <label style="font-size:12px;color:var(--muted);">To:</label>
+        <input type="date" id="trk_b_to" onchange="loadTrackerB()">
+        <select id="trk_b_type" onchange="loadTrackerB()" style="min-width:160px;">
+          <option value="">All Types</option>
+          <option value="purchase">Purchase (GRN→Payment)</option>
+          <option value="ho">Hire Orders</option>
+          <option value="wo">Work Orders</option>
+        </select>
+        <button class="btn btn-ghost btn-sm" onclick="loadTrackerB()">↻ Refresh</button>
+      </div>
+      <div class="card" style="padding:0;overflow:hidden;">
+        <div class="tracker-wrap">
+          <table class="tracker-table">
+            <thead><tr>
+              <th style="width:120px;">Order #</th>
+              <th style="width:120px;">Vendor</th>
+              <th style="min-width:580px;">Milestones</th>
+              <th style="width:80px;">Status</th>
+            </tr></thead>
+            <tbody id="tracker_b_body">
+              <tr><td colspan="4" class="center muted" style="padding:24px;">Loading…</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SECTION 3: RECENT ACTIVITY -->
+  <div class="dash-section">
+    <div class="dash-section-title">🕐 Recent Activity <span style="font-weight:400;color:var(--muted);font-size:12px;text-transform:none;letter-spacing:0;">— last 30 days</span></div>
+    <div class="card" style="padding:16px;">
+      <div class="activity-feed" id="dash-activity-feed">
+        <div style="color:var(--muted);font-size:13px;">Loading…</div>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /mod-dashboard -->
 
 <!-- ==================== HIRE ORDER (container) ==================== -->
 <div class="module active" id="mod-ho">
@@ -605,10 +768,12 @@ th.sortable.desc::after { content:' ↓'; opacity:.9; }
           <th style="width:85px;" class="num">Cumulative</th>
           <th style="width:90px;" class="num">Unit Rate</th>
           <th style="width:100px;" class="num">Cert. Value</th>
+          <th style="width:160px;">WBS Sub Activity</th>
+          <th style="width:200px;">WBS Element</th>
         </tr></thead>
         <tbody id="hocItemsBody"></tbody>
         <tfoot>
-          <tr><td colspan="8" class="num"><strong>Gross Value Certified</strong></td><td class="num mono"><strong id="hoc_totalCertified" style="color:var(--accent);">0.00</strong></td></tr>
+          <tr><td colspan="10" class="num"><strong>Gross Value Certified</strong></td><td class="num mono"><strong id="hoc_totalCertified" style="color:var(--accent);">0.00</strong></td></tr>
         </tfoot>
       </table>
     </div>
@@ -1008,6 +1173,8 @@ th.sortable.desc::after { content:' ↓'; opacity:.9; }
           <th style="width:90px;" class="num" id="woc_thisPeriodHeader">This Period</th>
           <th style="width:80px;" class="num" id="woc_cumulativeHeader">Cumulative</th>
           <th style="width:90px;" class="num">Unit Rate</th><th style="width:100px;" class="num">Cert. Value</th>
+          <th style="width:160px;">WBS Sub Activity</th>
+          <th style="width:200px;">WBS Element</th>
         </tr></thead>
         <tbody id="wocItemsBody"></tbody>
         <tfoot><tr><td colspan="8" class="num"><strong>Gross Value Certified</strong></td>
@@ -1629,8 +1796,7 @@ th.sortable.desc::after { content:' ↓'; opacity:.9; }
   <div class="sub-tabs">
     <div class="sub-tab active" data-mastertab="vendors" onclick="switchMasterTab('vendors')">Vendors</div>
     <div class="sub-tab" data-mastertab="activities" onclick="switchMasterTab('activities')">Activity Master</div>
-    <div class="sub-tab" data-mastertab="boq" onclick="switchMasterTab('boq')">BOQ Items</div>
-    <div class="sub-tab" data-mastertab="service" onclick="switchMasterTab('service')">Service Utilization</div>
+    <div class="sub-tab" data-mastertab="wbs" onclick="switchMasterTab('wbs')">WBS Master</div>
     <div class="sub-tab" data-mastertab="materials" onclick="switchMasterTab('materials')">Material Master</div>
     <div class="sub-tab" data-mastertab="contractors" onclick="switchMasterTab('contractors')">Contractor Master</div>
   </div>
@@ -1693,75 +1859,76 @@ th.sortable.desc::after { content:' ↓'; opacity:.9; }
   </div>
 
   <!-- BOQ ITEMS -->
-  <div id="master-boq" class="hidden">
-    <div class="card" id="masterAddBoqCard">
-      <h3>Add BOQ Item</h3>
-      <div class="grid-4">
+  <!-- WBS MASTER -->
+  <div id="master-wbs" class="hidden">
+    <div class="card">
+      <h3>Add WBS Element</h3>
+      <div class="grid-4" style="gap:12px;">
         <div class="field">
-          <label class="req">Level</label>
-          <select id="mb_level" onchange="onBOQLevelChange()">
-            <option value="1">L1 — Major Head</option>
-            <option value="2" selected>L2 — Sub Item</option>
-          </select>
+          <label class="req">Block</label>
+          <input id="wbs_block" placeholder="e.g. A, B, C" list="wbs_block_list" autocomplete="off"
+            oninput="onWBSInput()">
+          <datalist id="wbs_block_list"></datalist>
         </div>
-        <div class="field" id="mb_parentField">
-          <label class="req">Parent L1</label>
-          <select id="mb_parentCode"><option value="">— Select L1 —</option></select>
+        <div class="field">
+          <label class="req">WBS Group</label>
+          <input id="wbs_group" placeholder="e.g. Electrical Works" list="wbs_group_list" autocomplete="off"
+            oninput="onWBSInput()">
+          <datalist id="wbs_group_list"></datalist>
         </div>
-        <div class="field"><label class="req">BOQ Item Name</label><input id="mb_name" placeholder="e.g. Earthwork Excavation"></div>
-        <div class="field"><label>Description</label><input id="mb_desc" placeholder="Optional details"></div>
+        <div class="field">
+          <label class="req">WBS Activity</label>
+          <input id="wbs_activity" placeholder="e.g. Building LT Works" list="wbs_activity_list" autocomplete="off"
+            oninput="onWBSInput()">
+          <datalist id="wbs_activity_list"></datalist>
+        </div>
+        <div class="field">
+          <label>WBS Sub Activity</label>
+          <input id="wbs_sub_activity" placeholder="e.g. Concealed Items" list="wbs_sub_activity_list" autocomplete="off"
+            oninput="onWBSInput()">
+          <datalist id="wbs_sub_activity_list"></datalist>
+        </div>
       </div>
-      <div class="grid-4" style="margin-top:12px;">
-        <div class="field" id="mb_budgetField">
-          <label>Budget Amount (₹)</label><input type="number" id="mb_budget" step="0.01" placeholder="0.00">
-          <small style="color:var(--muted);">Only for L2 items. L1 is auto-computed.</small>
+      <div class="grid-2" style="margin-top:12px;gap:12px;">
+        <div class="field">
+          <label>WBS Location</label>
+          <input id="wbs_location" placeholder="e.g. 1st Floor/Pour-01" list="wbs_location_list" autocomplete="off"
+            oninput="onWBSInput()">
+          <datalist id="wbs_location_list"></datalist>
+        </div>
+        <div class="field">
+          <label>WBS Element (auto-generated preview)</label>
+          <input id="wbs_element_preview" readonly style="opacity:.7;background:#f8fafc;font-size:11px;"
+            placeholder="Will be computed on save">
         </div>
       </div>
-      <div class="actions-row"><button class="btn btn-primary" onclick="saveMaster('boq')">+ Add BOQ Item</button></div>
+      <div class="actions-row" style="margin-top:12px;">
+        <button class="btn btn-primary" onclick="saveWBSMaster()">+ Add WBS Element</button>
+        <button class="btn btn-ghost" onclick="clearWBSForm()">Clear</button>
+      </div>
     </div>
     <div class="card">
-      <h3>BOQ Item List</h3>
-      <div class="table-wrap">
-        <table><thead><tr><th>Code</th><th>Level</th><th>Name</th><th>Description</th><th class="num">Budget Amount</th></tr></thead>
-        <tbody id="mb_list"><tr><td colspan="5" class="center muted">No BOQ items.</td></tr></tbody></table>
-      </div>
-    </div>
-  </div>
-
-  <!-- SERVICE UTILIZATION -->
-  <div id="master-service" class="hidden">
-    <div class="card" id="masterAddServiceCard">
-      <h3>Add Service Location</h3>
-      <div class="grid-4">
-        <div class="field">
-          <label class="req">Category</label>
-          <select id="ms_category">
-            <option value="Project">Project</option>
-            <option value="Building">Building</option>
-            <option value="Floor">Floor</option>
-            <option value="Unit">Unit</option>
-          </select>
-        </div>
-        <div class="field"><label class="req">Location Name</label><input id="ms_name" placeholder="e.g. Tower A, 1st Floor, A-101"></div>
-        <div class="field"><label>Parent (optional)</label>
-          <select id="ms_parentCode"><option value="">— None —</option></select>
-        </div>
-        <div class="field"><label>Description</label><input id="ms_desc" placeholder="Optional details"></div>
-      </div>
-      <div class="actions-row"><button class="btn btn-primary" onclick="saveMaster('service')">+ Add Location</button></div>
-    </div>
-    <div class="card">
-      <h3>Service Locations</h3>
-      <div class="row" style="margin-bottom:10px;">
-        <select id="ms_categoryFilter" style="padding:7px;background:var(--input-bg);color:var(--text);border:1px solid var(--border);border-radius:4px;" onchange="renderAllMasters()">
-          <option value="">All Categories</option>
-          <option value="Project">Project</option><option value="Building">Building</option>
-          <option value="Floor">Floor</option><option value="Unit">Unit</option>
+      <h3>WBS Elements</h3>
+      <div style="display:flex;gap:10px;margin-bottom:12px;flex-wrap:wrap;">
+        <input id="wbs_search" placeholder="Search WBS…" autocomplete="off"
+          style="padding:7px;background:var(--input-bg);color:var(--text);border:1px solid var(--border);border-radius:4px;width:260px;"
+          oninput="renderWBSMaster()">
+        <select id="wbs_filter_block" onchange="renderWBSMaster()"
+          style="padding:7px;background:var(--input-bg);color:var(--text);border:1px solid var(--border);border-radius:4px;">
+          <option value="">All Blocks</option>
+        </select>
+        <select id="wbs_filter_group" onchange="renderWBSMaster()"
+          style="padding:7px;background:var(--input-bg);color:var(--text);border:1px solid var(--border);border-radius:4px;">
+          <option value="">All Groups</option>
         </select>
       </div>
       <div class="table-wrap">
-        <table><thead><tr><th>Code</th><th>Category</th><th>Name</th><th>Parent</th><th>Description</th></tr></thead>
-        <tbody id="ms_list"><tr><td colspan="5" class="center muted">No locations.</td></tr></tbody></table>
+        <table><thead><tr>
+          <th>Code</th><th>Block</th><th>Group</th><th>Activity</th>
+          <th>Sub Activity</th><th>Location</th><th>WBS Element</th><th>Actions</th>
+        </tr></thead>
+        <tbody id="wbs_list"><tr><td colspan="8" class="center muted">No WBS elements added yet.</td></tr></tbody>
+        </table>
       </div>
     </div>
   </div>
@@ -1955,7 +2122,7 @@ th.sortable.desc::after { content:' ↓'; opacity:.9; }
         <h3 style="font-size:13px;margin-bottom:8px;color:var(--text);">Material Items Required</h3>
         <div class="table-wrap">
           <table>
-            <thead><tr><th>#</th><th>Material</th><th>UOM</th><th class="num">Qty Required</th><th>Specification</th><th>Remarks</th><th></th></tr></thead>
+            <thead><tr><th>#</th><th>Material</th><th>UOM</th><th class="num">Qty Required</th><th>Specification</th><th>WBS Sub Activity</th><th>Remarks</th><th></th></tr></thead>
             <tbody id="mirItemsBody"></tbody>
           </table>
         </div>
@@ -2495,6 +2662,7 @@ th.sortable.desc::after { content:' ↓'; opacity:.9; }
             <thead><tr>
               <th>#</th><th>Material</th><th>UOM</th>
               <th class="num">Stock Available</th><th class="num">Qty to Issue</th>
+              <th>WBS Element</th>
               <th class="num">Latest Rate</th><th class="num">Amount</th><th></th>
             </tr></thead>
             <tbody id="misItemsBody"></tbody>
@@ -2664,6 +2832,7 @@ const ROLE_PERMS = {
 // ── Purchase module state (defined early so initApp can call apiLoadMaterials) ──
 var puState = {
   materials: [],
+  wbsList: [],   // full WBS master list
   mirList: [], mirItemsMap: {},
   rfqList: [], rfqWithQC: new Set(), qcList: [],
   poList: [], grnList: [], pobList: [],
@@ -2728,7 +2897,10 @@ function mapHOCItem(r) {
     'Description': r.description, 'UOM': r.uom, 'HO Qty': r.ho_qty,
     'Prev Cumulative Qty': r.prev_cumulative_qty, 'This Period Qty': r.this_period_qty,
     'Cumulative Qty': r.cumulative_qty, 'Unit Rate': r.unit_rate,
-    'Cert Value': r.cert_value, 'S.No': r.sno
+    'Cert Value': r.cert_value, 'S.No': r.sno,
+    'WBS Sub Activity': r.wbs_sub_activity||null,
+    'WBS Element': r.wbs_element||null,
+    'WBS Code': r.wbs_code||null,
   };
 }
 function mapHOB(r) {
@@ -4611,14 +4783,15 @@ function switchPayTab(tab) {
 }
 
 function switchMasterTab(tab) {
-  ['vendors','activities','boq','service'].forEach(t => {
+  ['vendors','activities','wbs','materials','contractors','locations'].forEach(t => {
     const el = document.getElementById('master-' + t);
     if (el) el.classList.toggle('hidden', t !== tab);
     const stab = document.querySelector(`.sub-tab[data-mastertab="${t}"]`);
     if (stab) stab.classList.toggle('active', t === tab);
   });
-  if (tab === 'boq')     populateBOQL1Dropdown();
-  if (tab === 'service') populateServiceParentDropdown();
+  if (tab === 'wbs') { loadWBSMaster(); }
+  if (tab === 'materials') { apiLoadMaterials().then(renderMaterialMaster); }
+  if (tab === 'contractors') { renderContractorMaster(); }
 }
 
 // ============================================================
@@ -4651,7 +4824,7 @@ async function initApp() {
     renderAllMasters();
     // Ensure only HO Orders sub-tab visible on initial load
     _resetSubTabs();
-    switchHOTab('orders');
+    // Dashboard activated by onSignedIn override — no default sub-tab switch here
   } catch(e) {
     console.error('initApp error:', e);
   } finally {
@@ -4828,7 +5001,7 @@ async function editMaster(type, code) {
   if (!item) { toast('Item not found','error'); return; }
 
   // Switch to the right sub-tab
-  switchMasterTab(type === 'vendor' ? 'vendors' : type === 'activity' ? 'activities' : type === 'boq' ? 'boq' : 'locations');
+  switchMasterTab(type === 'vendor' ? 'vendors' : type === 'activity' ? 'activities' : 'wbs');
 
   if (type === 'vendor') {
     document.getElementById('mv_name').value    = item['Vendor Name']||'';
@@ -5707,7 +5880,10 @@ function getHOCFormData() {
     const prevQ  = num(tr.querySelector('.hoc_thisQty').dataset.prevqty);
     const thisQ  = num(tr.querySelector('.hoc_thisQty').value);
     const rate   = num(tr.querySelector('.hoc_thisQty').dataset.rate);
-    items.push({ sno: i+1, description: desc, uom, hoQty, prevCumulativeQty: prevQ, thisPeriodQty: thisQ, cumulativeQty: prevQ + thisQ, unitRate: rate, certValue: thisQ * rate });
+    const wbsSub = tr.querySelector('.hoc_wbs_sub')?.value?.trim()||null;
+    const wbsEl  = tr.querySelector('.hoc_wbs_el')?.value?.trim()||null;
+    const wbsCode= tr.querySelector('[id$="_code"][id*="WBSEl"]')?.value?.trim()||null;
+    items.push({ sno: i+1, description: desc, uom, hoQty, prevCumulativeQty: prevQ, thisPeriodQty: thisQ, cumulativeQty: prevQ + thisQ, unitRate: rate, certValue: thisQ * rate, wbs_sub_activity: wbsSub, wbs_element: wbsEl, wbs_code: wbsCode });
   });
   const gross = items.reduce((s,x) => s + x.certValue, 0);
   return {
@@ -5804,6 +5980,24 @@ async function reviseHOC(hocNum) {
       <td class="num mono hoc_cumQty">${fmtINR(prevQty + preQty)}</td>
       <td class="num mono">${fmtINR(it['Unit Rate'])}</td>
       <td class="num mono hoc_certVal">${fmtINR(preQty * num(it['Unit Rate']))}</td>
+      <td><div style="position:relative;">
+        <input class="hoc_wbs_sub" placeholder="WBS Sub Activity…" autocomplete="off"
+          value="${esc(it['WBS Sub Activity']||it.wbs_sub_activity||'')}"
+          style="width:100%;font-size:11px;"
+          oninput="wbsTypeahead(this.id,this.id+'_res',this.id+'_code','sub_activity')"
+          id="hocWBSSub_${i}" onblur="setTimeout(()=>document.getElementById('hocWBSSub_${i}_res')?.classList.remove('show'),200)">
+        <div class="typeahead-results" id="hocWBSSub_${i}_res" style="min-width:280px;position:absolute;top:100%;left:0;z-index:9999;box-shadow:0 4px 16px rgba(0,0,0,.15);"></div>
+        <input type="hidden" id="hocWBSSub_${i}_code">
+      </div></td>
+      <td><div style="position:relative;">
+        <input class="hoc_wbs_el" placeholder="WBS Element…" autocomplete="off"
+          value="${esc(it['WBS Element']||it.wbs_element||'')}"
+          style="width:100%;font-size:11px;"
+          oninput="wbsTypeahead(this.id,this.id+'_res',this.id+'_code','element')"
+          id="hocWBSEl_${i}" onblur="setTimeout(()=>document.getElementById('hocWBSEl_${i}_res')?.classList.remove('show'),200)">
+        <div class="typeahead-results" id="hocWBSEl_${i}_res" style="min-width:320px;position:absolute;top:100%;left:0;z-index:9999;box-shadow:0 4px 16px rgba(0,0,0,.15);"></div>
+        <input type="hidden" id="hocWBSEl_${i}_code">
+      </div></td>
     </tr>`;
   }).join('');
   recalcHOCTotals();
@@ -6791,6 +6985,26 @@ async function onWOCWOChange() {
       <td class="num mono woc_cumVal">${isPct ? prevVal.toFixed(2)+'%' : fmtINR(prevVal)}</td>
       <td class="num mono">${fmtINR(it['Unit Rate'])}</td>
       <td class="num mono woc_certVal">0.00</td>
+      <td><div style="position:relative;">
+        <input class="woc_wbs_sub" placeholder="WBS Sub Activity…" autocomplete="off"
+          value="${esc(it['WBS Sub Activity']||it.wbs_sub_activity||'')}"
+          style="width:100%;font-size:11px;"
+          id="wocWBSSub_${i}"
+          oninput="wbsTypeahead('wocWBSSub_${i}','wocWBSSub_${i}_res','wocWBSSub_${i}_code','sub_activity')"
+          onblur="setTimeout(()=>document.getElementById('wocWBSSub_${i}_res')?.classList.remove('show'),200)">
+        <div class="typeahead-results" id="wocWBSSub_${i}_res" style="min-width:280px;position:absolute;top:100%;left:0;z-index:9999;box-shadow:0 4px 16px rgba(0,0,0,.15);"></div>
+        <input type="hidden" id="wocWBSSub_${i}_code">
+      </div></td>
+      <td><div style="position:relative;">
+        <input class="woc_wbs_el" placeholder="WBS Element…" autocomplete="off"
+          value="${esc(it['WBS Element']||it.wbs_element||'')}"
+          style="width:100%;font-size:11px;"
+          id="wocWBSEl_${i}"
+          oninput="wbsTypeahead('wocWBSEl_${i}','wocWBSEl_${i}_res','wocWBSEl_${i}_code','element')"
+          onblur="setTimeout(()=>document.getElementById('wocWBSEl_${i}_res')?.classList.remove('show'),200)">
+        <div class="typeahead-results" id="wocWBSEl_${i}_res" style="min-width:320px;position:absolute;top:100%;left:0;z-index:9999;box-shadow:0 4px 16px rgba(0,0,0,.15);"></div>
+        <input type="hidden" id="wocWBSEl_${i}_code">
+      </div></td>
     </tr>`;
   }).join('');
 }
@@ -6844,12 +7058,16 @@ async function saveWOC_direct() {
     const rate   = num(inp?.dataset.rate);
     const hoQty  = num(inp?.dataset.hoqty);
     const certVal= isPct ? (hoQty*rate*thisVal/100) : thisVal*rate;
+    const wWbsSub  = tr.querySelector('.woc_wbs_sub')?.value?.trim()||null;
+    const wWbsEl   = tr.querySelector('.woc_wbs_el')?.value?.trim()||null;
+    const wWbsCode = tr.querySelector('[id$="_code"][id*="WBSEl"]')?.value?.trim()||null;
     items.push({
       sno:i+1, description:tr.cells[1].textContent.trim(), uom:tr.cells[2].textContent.trim(),
       woQty:hoQty, prevCumulativeQty:isPct?0:prev, thisPeriodQty:isPct?0:thisVal,
       cumulativeQty:isPct?0:(prev+thisVal), prevCumulativePct:isPct?prev:0,
       thisPeriodPct:isPct?thisVal:0, cumulativePct:isPct?(prev+thisVal):0,
-      unitRate:rate, certValue:certVal
+      unitRate:rate, certValue:certVal,
+      wbs_sub_activity:wWbsSub, wbs_element:wWbsEl, wbs_code:wWbsCode
     });
   });
   if (!hasQty) { toast('Enter quantity or % for at least one item','error'); return; }
@@ -8645,6 +8863,13 @@ function addMIRItem() {
     <td><input class="pu_uom" id="mirUom_${i}" style="width:70px;" placeholder="UOM"></td>
     <td><input type="number" class="num" id="mirQty_${i}" style="width:90px;" step="0.001" placeholder="0"></td>
     <td><input id="mirSpec_${i}" style="width:160px;" placeholder="Grade / spec"></td>
+    <td><div style="position:relative;width:160px;">
+      <input id="mirWBS_${i}" placeholder="Type WBS…" autocomplete="off" style="width:100%;"
+        oninput="wbsTypeahead('mirWBS_${i}','mirWBSRes_${i}','mirWBSCode_${i}','sub_activity')"
+        onblur="setTimeout(()=>document.getElementById('mirWBSRes_${i}')?.classList.remove('show'),200)">
+      <div class="typeahead-results" id="mirWBSRes_${i}" style="min-width:300px;position:absolute;top:100%;left:0;z-index:9999;box-shadow:0 4px 16px rgba(0,0,0,.15);"></div>
+      <input type="hidden" id="mirWBSCode_${i}">
+    </div></td>
     <td><input id="mirRmk_${i}" style="width:120px;" placeholder="Remarks"></td>
     <td><button class="btn btn-ghost btn-sm" onclick="document.getElementById('mirItem_${i}').remove()">✕</button></td>`;
   document.getElementById('mirItemsBody').appendChild(tr);
@@ -8656,6 +8881,8 @@ async function saveMIR() {
   const items = [];
   document.querySelectorAll('#mirItemsBody tr').forEach((tr,i) => {
     const mat = tr.querySelector('.pu_material')?.value?.trim();
+    const wbsSubAct = tr.querySelector('[id^="mirWBS_"]')?.value?.trim()||null;
+    const wbsCode   = tr.querySelector('[id^="mirWBSCode_"]')?.value?.trim()||null;
     const qty = parseFloat(tr.querySelector('input[type="number"]')?.value)||0;
     if (mat && qty > 0) items.push({
       sno: items.length+1, material_name: mat,
@@ -8683,8 +8910,10 @@ async function saveMIR() {
       status: 'Pending Approval',
     });
     if (error) throw new Error(error.message);
-    await sb.from('pu_mir_items').insert(items.map(it=>({
-      ...it, mir_number: mirNumber, item_status: 'Pending', rfq_number: null, po_number: null
+    await sb.from('pu_mir_items').insert(items.map((it,idx)=>({
+      ...it, mir_number: mirNumber, item_status: 'Pending', rfq_number: null, po_number: null,
+      wbs_sub_activity: document.querySelectorAll('[id^="mirWBS_"]')[idx]?.value?.trim()||null,
+      wbs_code: document.querySelectorAll('[id^="mirWBSCode_"]')[idx]?.value?.trim()||null,
     })));
     flashSuccess('MIR ' + mirNumber + ' submitted for PM approval');
     closeMIRForm(); loadMIRList();
@@ -10840,6 +11069,13 @@ async function addMISItem() {
     <td><input id="misUom_${i}" class="pu_uom" style="width:60px;" readonly></td>
     <td class="num" id="misBalance_${i}" style="font-weight:600;color:var(--accent);">—</td>
     <td><input type="number" id="misQty_${i}" class="num" style="width:90px;" step="0.001" oninput="recalcMISRow(${i})"></td>
+    <td style="min-width:160px;"><div style="position:relative;">
+      <input id="misWBS_${i}" placeholder="WBS Element…" autocomplete="off" style="width:100%;font-size:11px;"
+        oninput="wbsTypeahead('misWBS_${i}','misWBSRes_${i}','misWBSCode_${i}','element')"
+        onblur="setTimeout(()=>document.getElementById('misWBSRes_${i}')?.classList.remove('show'),200)">
+      <div class="typeahead-results" id="misWBSRes_${i}" style="min-width:320px;position:absolute;top:100%;left:0;z-index:9999;box-shadow:0 4px 16px rgba(0,0,0,.15);"></div>
+      <input type="hidden" id="misWBSCode_${i}">
+    </div></td>
     <td class="num" id="misRate_${i}">—</td>
     <td class="num" id="misAmt_${i}">—</td>
     <td><button class="btn btn-ghost btn-sm" onclick="this.closest('tr').remove()">✕</button></td>`;
@@ -10914,7 +11150,14 @@ async function saveMIS() {
       status:'Pending Approval',
     });
     if(error) throw new Error(error.message);
-    await sb.from('pu_mis_items').insert(items.map(it=>({...it,mis_number:misNumber})));
+    // Attach WBS from form to each item
+    const misWBSEls   = [...document.querySelectorAll('[id^="misWBS_"]')];
+    const misWBSCodes = [...document.querySelectorAll('[id^="misWBSCode_"]')];
+    await sb.from('pu_mis_items').insert(items.map((it,idx2)=>({
+      ...it, mis_number:misNumber,
+      wbs_element: misWBSEls[idx2]?.value?.trim()||null,
+      wbs_code:    misWBSCodes[idx2]?.value?.trim()||null,
+    })));
     flashSuccess('MIS '+misNumber+' saved — pending Site Manager approval');
     closeMISForm(); loadMISList(); loadStockBalance();
   } catch(e){toast('Error: '+e.message,'error');}
@@ -11060,18 +11303,7 @@ async function confirmRejectDoc(docType, docNum) {
 // EXTEND CORE FUNCTIONS FOR PURCHASE MODULE
 // ============================================================
 
-// Override switchMasterTab to include materials
-const _origSwitchMasterTab = typeof switchMasterTab==='function' ? switchMasterTab : null;
-function switchMasterTab(tab) {
-  ['vendors','activities','boq','service','materials','contractors'].forEach(t=>{
-    const el=document.getElementById('master-'+t); if(el) el.classList.toggle('hidden',t!==tab);
-    const st=document.querySelector(`.sub-tab[data-mastertab="${t}"]`); if(st) st.classList.toggle('active',t===tab);
-  });
-  if(tab==='boq') populateBOQL1Dropdown();
-  if(tab==='service') populateServiceParentDropdown();
-  if(tab==='materials'){apiLoadMaterials().then(renderMaterialMaster);}
-  if(tab==='contractors'){renderContractorMaster();}
-}
+// switchMasterTab is fully defined earlier — no override needed
 
 // applyRoleUI purchase logic is now merged into the main applyRoleUI function above
 
@@ -12118,6 +12350,959 @@ async function printQCPopup(qcNum) {
     }, 500);
   };
 }
+
+// ============================================================
+// WBS MASTER
+// ============================================================
+async function loadWBSMaster() {
+  const { data, error } = await sb.from('wbs_master')
+    .select('*').eq('is_active', true)
+    .order('block').order('wbs_group').order('wbs_activity')
+    .order('wbs_sub_activity').order('wbs_location');
+  if (!error) {
+    puState.wbsList = data || [];
+    renderWBSMaster();
+    refreshWBSDataLists();
+    refreshWBSFilterDropdowns();
+  }
+}
+
+function buildWBSElement(block, group, activity, subActivity, location) {
+  // Format: SubActivity/Location/Activity/Group/Block
+  const parts = [subActivity, location, activity, group, block].filter(Boolean);
+  return parts.join('/');
+}
+
+function onWBSInput() {
+  // Update preview element
+  const block      = document.getElementById('wbs_block')?.value?.trim()||'';
+  const group      = document.getElementById('wbs_group')?.value?.trim()||'';
+  const activity   = document.getElementById('wbs_activity')?.value?.trim()||'';
+  const subAct     = document.getElementById('wbs_sub_activity')?.value?.trim()||'';
+  const location   = document.getElementById('wbs_location')?.value?.trim()||'';
+  const element    = buildWBSElement(block, group, activity, subAct, location);
+  const prev       = document.getElementById('wbs_element_preview');
+  if (prev) prev.value = element || '—';
+  // Update cascading datalists
+  refreshWBSDataLists(block, group, activity, subAct);
+}
+
+function refreshWBSDataLists(selBlock='', selGroup='', selActivity='', selSubAct='') {
+  const data = puState.wbsList || [];
+  function unique(arr) { return [...new Set(arr.filter(Boolean))].sort(); }
+
+  // Block list — always all blocks
+  const blocks = unique(data.map(w => w.block));
+  const blkDl  = document.getElementById('wbs_block_list');
+  if (blkDl) blkDl.innerHTML = blocks.map(b=>`<option value="${esc(b)}">`).join('');
+
+  // Group list — filtered by block if selected
+  const groups = unique(data.filter(w => !selBlock || w.block===selBlock).map(w=>w.wbs_group));
+  const grpDl  = document.getElementById('wbs_group_list');
+  if (grpDl) grpDl.innerHTML = groups.map(g=>`<option value="${esc(g)}">`).join('');
+
+  // Activity list — filtered by block+group
+  const acts = unique(data.filter(w =>
+    (!selBlock  || w.block===selBlock) &&
+    (!selGroup  || w.wbs_group===selGroup)
+  ).map(w=>w.wbs_activity));
+  const actDl = document.getElementById('wbs_activity_list');
+  if (actDl) actDl.innerHTML = acts.map(a=>`<option value="${esc(a)}">`).join('');
+
+  // Sub Activity — filtered by block+group+activity
+  const subs = unique(data.filter(w =>
+    (!selBlock    || w.block===selBlock) &&
+    (!selGroup    || w.wbs_group===selGroup) &&
+    (!selActivity || w.wbs_activity===selActivity)
+  ).map(w=>w.wbs_sub_activity).filter(Boolean));
+  const subDl = document.getElementById('wbs_sub_activity_list');
+  if (subDl) subDl.innerHTML = subs.map(s=>`<option value="${esc(s)}">`).join('');
+
+  // Location — filtered by block+group+activity+subActivity
+  const locs = unique(data.filter(w =>
+    (!selBlock    || w.block===selBlock) &&
+    (!selGroup    || w.wbs_group===selGroup) &&
+    (!selActivity || w.wbs_activity===selActivity) &&
+    (!selSubAct   || w.wbs_sub_activity===selSubAct)
+  ).map(w=>w.wbs_location).filter(Boolean));
+  const locDl = document.getElementById('wbs_location_list');
+  if (locDl) locDl.innerHTML = locs.map(l=>`<option value="${esc(l)}">`).join('');
+}
+
+function refreshWBSFilterDropdowns() {
+  const data = puState.wbsList||[];
+  const blocks = [...new Set(data.map(w=>w.block).filter(Boolean))].sort();
+  const groups = [...new Set(data.map(w=>w.wbs_group).filter(Boolean))].sort();
+  const bSel   = document.getElementById('wbs_filter_block');
+  const gSel   = document.getElementById('wbs_filter_group');
+  if (bSel) {
+    const cur = bSel.value;
+    bSel.innerHTML = '<option value="">All Blocks</option>'+blocks.map(b=>`<option value="${esc(b)}" ${b===cur?'selected':''}>${esc(b)}</option>`).join('');
+  }
+  if (gSel) {
+    const cur = gSel.value;
+    gSel.innerHTML = '<option value="">All Groups</option>'+groups.map(g=>`<option value="${esc(g)}" ${g===cur?'selected':''}>${esc(g)}</option>`).join('');
+  }
+}
+
+function renderWBSMaster() {
+  const q        = (document.getElementById('wbs_search')?.value||'').toLowerCase();
+  const fBlock   = document.getElementById('wbs_filter_block')?.value||'';
+  const fGroup   = document.getElementById('wbs_filter_group')?.value||'';
+  const isAdmin  = ['Admin','Planning/ QS'].includes(state.role);
+  let rows       = puState.wbsList||[];
+  if (fBlock) rows = rows.filter(w => w.block===fBlock);
+  if (fGroup) rows = rows.filter(w => w.wbs_group===fGroup);
+  if (q) rows = rows.filter(w =>
+    (w.wbs_element||'').toLowerCase().includes(q) ||
+    (w.wbs_activity||'').toLowerCase().includes(q) ||
+    (w.wbs_sub_activity||'').toLowerCase().includes(q) ||
+    (w.wbs_location||'').toLowerCase().includes(q)
+  );
+  const tbody = document.getElementById('wbs_list');
+  if (!tbody) return;
+  tbody.innerHTML = rows.map(w=>`
+    <tr>
+      <td class="mono" style="font-size:10px;">${esc(w.wbs_code||'—')}</td>
+      <td><strong>${esc(w.block||'—')}</strong></td>
+      <td>${esc(w.wbs_group||'—')}</td>
+      <td>${esc(w.wbs_activity||'—')}</td>
+      <td>${esc(w.wbs_sub_activity||'—')}</td>
+      <td style="font-size:11px;">${esc(w.wbs_location||'—')}</td>
+      <td style="font-size:10px;color:var(--muted);max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"
+          title="${esc(w.wbs_element||'')}">${esc(w.wbs_element||'—')}</td>
+      ${isAdmin?`<td>
+        <button class="btn btn-ghost btn-sm" onclick="editWBS('${esc(w.wbs_code)}')">Edit</button>
+        <button class="btn btn-danger btn-sm" onclick="deleteWBS('${esc(w.wbs_code)}','${esc((w.wbs_element||w.wbs_activity||'').replace(/'/g,"\'"))}')">Delete</button>
+      </td>`:'<td></td>'}
+    </tr>`).join('')||'<tr><td colspan="8" class="center muted">No WBS elements found.</td></tr>';
+}
+
+async function saveWBSMaster() {
+  if (!['Admin','Planning/ QS'].includes(state.role)) {
+    toast('Only Admin or Planning/QS can add WBS elements','error'); return;
+  }
+  const block    = document.getElementById('wbs_block')?.value?.trim();
+  const group    = document.getElementById('wbs_group')?.value?.trim();
+  const activity = document.getElementById('wbs_activity')?.value?.trim();
+  const subAct   = document.getElementById('wbs_sub_activity')?.value?.trim()||null;
+  const location = document.getElementById('wbs_location')?.value?.trim()||null;
+  if (!block)    { toast('Block is required','error'); return; }
+  if (!group)    { toast('WBS Group is required','error'); return; }
+  if (!activity) { toast('WBS Activity is required','error'); return; }
+  const element = buildWBSElement(block, group, activity, subAct, location);
+  // Duplicate check
+  const dup = (puState.wbsList||[]).find(w =>
+    w.block===block && w.wbs_group===group && w.wbs_activity===activity &&
+    (w.wbs_sub_activity||null)===(subAct||null) &&
+    (w.wbs_location||null)===(location||null)
+  );
+  if (dup) { toast('This WBS element already exists: '+dup.wbs_code,'error'); return; }
+  pbShow('Saving WBS…');
+  try {
+    // Generate code
+    const {data:last} = await sb.from('wbs_master')
+      .select('wbs_code').order('wbs_code',{ascending:false}).limit(1);
+    const lastNum = last?.length ? parseInt((last[0].wbs_code||'WBS0000').replace('WBS',''))||0 : 0;
+    const code    = 'WBS'+String(lastNum+1).padStart(4,'0');
+    const {error} = await sb.from('wbs_master').insert({
+      wbs_code: code, block, wbs_group: group, wbs_activity: activity,
+      wbs_sub_activity: subAct, wbs_location: location,
+      wbs_element: element, is_active: true
+    });
+    if (error) throw new Error(error.message);
+    flashSuccess('WBS element '+code+' added');
+    clearWBSForm();
+    await loadWBSMaster();
+  } catch(e){ toast('Error: '+e.message,'error'); }
+  finally{ pbDone(); }
+}
+
+function clearWBSForm() {
+  ['wbs_block','wbs_group','wbs_activity','wbs_sub_activity','wbs_location','wbs_element_preview'].forEach(id=>{
+    const el=document.getElementById(id); if(el) el.value='';
+  });
+}
+
+async function editWBS(code) {
+  if (!['Admin','Planning/ QS'].includes(state.role)) {
+    toast('Only Admin or Planning/QS can edit WBS','error'); return;
+  }
+  const w = (puState.wbsList||[]).find(x=>x.wbs_code===code);
+  if (!w) { toast('WBS not found','error'); return; }
+  openModal(`
+    <h3 style="margin-bottom:12px;">Edit WBS — ${esc(code)}</h3>
+    <div class="grid-2" style="gap:12px;">
+      <div class="field"><label class="req">Block</label>
+        <input id="ew_block" value="${esc(w.block||'')}"></div>
+      <div class="field"><label class="req">WBS Group</label>
+        <input id="ew_group" value="${esc(w.wbs_group||'')}"></div>
+      <div class="field"><label class="req">WBS Activity</label>
+        <input id="ew_activity" value="${esc(w.wbs_activity||'')}"></div>
+      <div class="field"><label>WBS Sub Activity</label>
+        <input id="ew_sub_activity" value="${esc(w.wbs_sub_activity||'')}"></div>
+      <div class="field"><label>WBS Location</label>
+        <input id="ew_location" value="${esc(w.wbs_location||'')}"></div>
+    </div>
+    <div class="actions-row">
+      <button class="btn btn-primary" onclick="confirmEditWBS('${esc(code)}')">Save Changes</button>
+      <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+    </div>
+  `);
+}
+
+async function confirmEditWBS(code) {
+  const block    = document.getElementById('ew_block')?.value?.trim();
+  const group    = document.getElementById('ew_group')?.value?.trim();
+  const activity = document.getElementById('ew_activity')?.value?.trim();
+  const subAct   = document.getElementById('ew_sub_activity')?.value?.trim()||null;
+  const location = document.getElementById('ew_location')?.value?.trim()||null;
+  if (!block||!group||!activity) { toast('Block, Group and Activity are required','error'); return; }
+  const element  = buildWBSElement(block, group, activity, subAct, location);
+  pbShow('Saving…');
+  const {error}  = await sb.from('wbs_master').update({
+    block, wbs_group:group, wbs_activity:activity,
+    wbs_sub_activity:subAct, wbs_location:location, wbs_element:element
+  }).eq('wbs_code',code);
+  pbDone();
+  if(error){ toast('Error: '+error.message,'error'); return; }
+  closeModal();
+  flashSuccess('WBS '+code+' updated');
+  await loadWBSMaster();
+}
+
+async function deleteWBS(code, label) {
+  openModal(`
+    <h3>Delete WBS Element</h3>
+    <div style="margin:16px 0;font-size:14px;">
+      Delete <strong>${esc(code)}</strong>: ${esc(label)}?<br>
+      <span style="color:var(--danger);font-size:12px;">Existing transactions tagged to this WBS will not be affected.</span>
+    </div>
+    <div class="actions-row">
+      <button class="btn btn-danger" onclick="confirmDeleteWBS('${esc(code)}')">Yes, Delete</button>
+      <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+    </div>
+  `);
+}
+
+async function confirmDeleteWBS(code) {
+  closeModal();
+  pbShow('Deleting…');
+  const {error} = await sb.from('wbs_master').update({is_active:false}).eq('wbs_code',code);
+  pbDone();
+  if(error){ toast('Error: '+error.message,'error'); return; }
+  flashSuccess('WBS '+code+' deleted');
+  puState.wbsList = (puState.wbsList||[]).filter(w=>w.wbs_code!==code);
+  renderWBSMaster();
+  refreshWBSFilterDropdowns();
+}
+
+// Generic WBS typeahead for use in MIR, MIS, HOC, WOC forms
+function wbsTypeahead(inputId, resultsId, codeId, level='element') {
+  const q = (document.getElementById(inputId)?.value||'').toLowerCase();
+  const res = document.getElementById(resultsId);
+  if (!q||!res) { if(res) res.classList.remove('show'); return; }
+  const data = puState.wbsList||[];
+  let matches = [];
+  if (level==='sub_activity') {
+    const seen = new Set();
+    matches = data.filter(w=>{
+      const val = w.wbs_sub_activity||'';
+      if (!val.toLowerCase().includes(q)) return false;
+      if (seen.has(val)) return false;
+      seen.add(val); return true;
+    }).slice(0,12);
+  } else {
+    matches = data.filter(w=>(w.wbs_element||'').toLowerCase().includes(q)||
+      (w.wbs_activity||'').toLowerCase().includes(q)||
+      (w.wbs_sub_activity||'').toLowerCase().includes(q)
+    ).slice(0,12);
+  }
+  if (!matches.length) { res.classList.remove('show'); return; }
+  res.innerHTML = matches.map(w=>{
+    const display = level==='sub_activity' ? (w.wbs_sub_activity||'—') : (w.wbs_element||'—');
+    const code    = level==='sub_activity' ? (w.wbs_sub_activity||'') : w.wbs_code;
+    return `<div class="typeahead-item"
+      onclick="selectWBS('${inputId}','${resultsId}','${codeId}','${esc(display).replace(/'/g,"\'")}','${esc(code).replace(/'/g,"\'")}')">
+      <strong>${esc(display)}</strong>
+      ${level!=='sub_activity'?`<div class="muted" style="font-size:10px;">${esc(w.block||'')} · ${esc(w.wbs_group||'')} · ${esc(w.wbs_activity||'')}</div>`:''}
+    </div>`;
+  }).join('');
+  res.classList.add('show');
+}
+
+function selectWBS(inputId, resultsId, codeId, display, code) {
+  const inp = document.getElementById(inputId);
+  if (inp) { inp.value = display; inp.readOnly = true; }
+  const cEl = document.getElementById(codeId);
+  if (cEl) cEl.value = code;
+  const res = document.getElementById(resultsId);
+  if (res) res.classList.remove('show');
+}
+
+function clearWBSField(inputId, codeId, resultsId) {
+  const inp = document.getElementById(inputId);
+  if (inp) { inp.value=''; inp.readOnly=false; inp.focus(); }
+  const cEl = document.getElementById(codeId);
+  if (cEl) cEl.value='';
+  const res = document.getElementById(resultsId);
+  if (res) res.classList.remove('show');
+}
+
+
+
+// ============================================================
+// DASHBOARD MODULE
+// ============================================================
+document.querySelectorAll('.tabs .tab').forEach(t => {
+  if (t.dataset.tab === 'dashboard') {
+    t.addEventListener('click', () => {
+      document.querySelectorAll('.tabs .tab').forEach(x => x.classList.remove('active'));
+      t.classList.add('active');
+      document.querySelectorAll('.module').forEach(m => m.classList.remove('active'));
+      document.getElementById('mod-dashboard').classList.add('active');
+      loadDashboard();
+    });
+  }
+});
+
+function applyRoleTabVisibility() {
+  const r = state.role;
+  const tabRules = {
+    'ho':       ['Procurement','Planning/ QS','Project Manager','Site Manager','Admin'],
+    'wo':       ['Procurement','Planning/ QS','Project Manager','Site Manager','Admin'],
+    'payments': ['Planning/ QS','Project Manager','Admin'],
+    'masters':  ['Planning/ QS','Admin'],
+    'purchase': ['Procurement','Store Executive','Site Manager','Planning/ QS','Project Manager','Admin'],
+    'users':    ['Admin'],
+  };
+  Object.entries(tabRules).forEach(([tab, roles]) => {
+    const el = document.querySelector('.tabs .tab[data-tab="'+tab+'"]');
+    if (el) el.style.display = roles.includes(r) ? '' : 'none';
+  });
+  applyPurchaseSubTabVisibility();
+}
+
+function applyPurchaseSubTabVisibility() {
+  const r = state.role;
+  const puTabRules = {
+    'mir':   ['Site Manager','Procurement','Project Manager','Admin'],
+    'rfq':   ['Procurement','Project Manager','Admin'],
+    'po':    ['Procurement','Project Manager','Planning/ QS','Admin'],
+    'grn':   ['Store Executive','Site Manager','Project Manager','Admin'],
+    'pob':   ['Planning/ QS','Project Manager','Admin'],
+    'mis':   ['Store Executive','Site Manager','Project Manager','Admin'],
+    'stock': ['Store Executive','Site Manager','Planning/ QS','Project Manager','Admin'],
+  };
+  Object.entries(puTabRules).forEach(([tab, roles]) => {
+    const el = document.querySelector('.sub-tab[data-putab="'+tab+'"]');
+    if (el) el.style.display = roles.includes(r) ? '' : 'none';
+  });
+}
+
+async function loadDashboard() {
+  await Promise.all([
+    loadDashPendingCards(),
+    loadTrackerA(),
+    loadTrackerB(),
+    loadActivityFeed(),
+  ]);
+}
+
+const DASH_CARD_DEFS = {
+  'Site Manager': [
+    { id:'sm_mir',    label:'MIRs to Approve',   sub:'Material indents waiting',   cls:'urgent', nav:function(){navDash('purchase','mir','Pending Approval');},
+      query: function(){return sb.from('pu_mir').select('mir_number',{count:'exact',head:true}).eq('status','Pending Approval');} },
+    { id:'sm_grn',    label:'GRNs to Verify',    sub:'Receipts needing sign-off',  cls:'warn',   nav:function(){navDash('purchase','grn','Pending Verification');},
+      query: function(){return sb.from('pu_grn').select('grn_number',{count:'exact',head:true}).eq('status','Pending Verification');} },
+    { id:'sm_hoc',    label:'HOC to Review',     sub:'Certifications pending',     cls:'info',   nav:function(){navDash('ho','cert','Pending Approval');},
+      query: function(){return sb.from('ho_certifications').select('hoc_number',{count:'exact',head:true}).eq('status','Pending Approval');} },
+    { id:'sm_woc',    label:'WOC to Review',     sub:'WO Certifications pending',  cls:'info',   nav:function(){navDash('wo','cert','Pending Approval');},
+      query: function(){return sb.from('wo_certifications').select('woc_number',{count:'exact',head:true}).eq('status','Pending Approval');} },
+    { id:'sm_mis',    label:'MIS to Approve',    sub:'Material issues pending',    cls:'warn',   nav:function(){navDash('purchase','mis','Pending Approval');},
+      query: function(){return sb.from('pu_mis').select('mis_number',{count:'exact',head:true}).eq('status','Pending Approval');} },
+  ],
+  'Procurement': [
+    { id:'pr_ho',     label:'HOs Pending',       sub:'Hire orders to submit',      cls:'info',   nav:function(){navDash('ho','orders','Pending Approval');},
+      query: function(){return sb.from('ho_orders').select('ho_number',{count:'exact',head:true}).eq('status','Pending Approval');} },
+    { id:'pr_wo',     label:'WOs Pending',       sub:'Work orders to submit',      cls:'info',   nav:function(){navDash('wo','orders','Pending Approval');},
+      query: function(){return sb.from('wo_orders').select('wo_number',{count:'exact',head:true}).eq('status','Pending Approval');} },
+    { id:'pr_rfq',    label:'RFQs Open',         sub:'No QC raised yet',           cls:'warn',   nav:function(){navDash('purchase','rfq','');},
+      query: async function(){ const {data}=await sb.from('pu_rfq').select('rfq_number').eq('status','Open'); const qcRes=await sb.from('pu_quote_comparison').select('rfq_number'); const withQC=new Set((qcRes.data||[]).map(q=>q.rfq_number)); return {count:(data||[]).filter(r=>!withQC.has(r.rfq_number)).length,error:null}; } },
+    { id:'pr_po_corr',label:'POs for Correction',sub:'Returned for revision',      cls:'urgent', nav:function(){navDash('purchase','po','Rejected');},
+      query: function(){return sb.from('pu_po_orders').select('po_number',{count:'exact',head:true}).in('status',['Rejected','Rejected - Correction']);} },
+  ],
+  'Store Executive': [
+    { id:'se_grn',    label:'Open POs for GRN',  sub:'Receipts to record',         cls:'warn',   nav:function(){navDash('purchase','grn','');},
+      query: function(){return sb.from('pu_po_orders').select('po_number',{count:'exact',head:true}).in('status',['Open','Partial Receipt']);} },
+    { id:'se_mis',    label:'MIS Pending',       sub:'Issues awaiting approval',   cls:'info',   nav:function(){navDash('purchase','mis','Pending Approval');},
+      query: function(){return sb.from('pu_mis').select('mis_number',{count:'exact',head:true}).eq('status','Pending Approval');} },
+  ],
+  'Planning/ QS': [
+    { id:'qs_hob',    label:'HOBs Pending',      sub:'HO bills to approve',        cls:'urgent', nav:function(){navDash('ho','billing','Pending Approval');},
+      query: function(){return sb.from('ho_bills').select('bill_number',{count:'exact',head:true}).eq('status','Pending Approval');} },
+    { id:'qs_wob',    label:'WOBs Pending',      sub:'WO bills to approve',        cls:'urgent', nav:function(){navDash('wo','billing','Pending Approval');},
+      query: function(){return sb.from('wo_bills').select('bill_number',{count:'exact',head:true}).eq('status','Pending Approval');} },
+    { id:'qs_pob',    label:'POBs Pending',      sub:'GRN bills to create',        cls:'warn',   nav:function(){navDash('purchase','pob','Pending Approval');},
+      query: function(){return sb.from('pu_po_bills').select('bill_number',{count:'exact',head:true}).eq('status','Pending Approval');} },
+    { id:'qs_pay',    label:'Payments to Confirm',sub:'Outstanding releases',      cls:'info',   nav:function(){navDash('payments','confirm','');},
+      query: async function(){ const r=await sb.from('ho_prr').select('prr_number',{count:'exact',head:true}).in('status',['Unpaid','Partial']); return r; } },
+  ],
+  'Project Manager': [
+    { id:'pm_ho',     label:'HOs to Approve',    sub:'Hire orders pending',        cls:'urgent', nav:function(){navDash('ho','orders','Pending Approval');},
+      query: function(){return sb.from('ho_orders').select('ho_number',{count:'exact',head:true}).eq('status','Pending Approval');} },
+    { id:'pm_wo',     label:'WOs to Approve',    sub:'Work orders pending',        cls:'urgent', nav:function(){navDash('wo','orders','Pending Approval');},
+      query: function(){return sb.from('wo_orders').select('wo_number',{count:'exact',head:true}).eq('status','Pending Approval');} },
+    { id:'pm_hoc',    label:'HOC to Approve',    sub:'Certifications pending',     cls:'warn',   nav:function(){navDash('ho','cert','Pending Approval');},
+      query: function(){return sb.from('ho_certifications').select('hoc_number',{count:'exact',head:true}).eq('status','Pending Approval');} },
+    { id:'pm_woc',    label:'WOC to Approve',    sub:'WO certifications',          cls:'warn',   nav:function(){navDash('wo','cert','Pending Approval');},
+      query: function(){return sb.from('wo_certifications').select('woc_number',{count:'exact',head:true}).eq('status','Pending Approval');} },
+    { id:'pm_hob',    label:'HOB to Approve',    sub:'HO bills pending',           cls:'warn',   nav:function(){navDash('ho','billing','Pending Approval');},
+      query: function(){return sb.from('ho_bills').select('bill_number',{count:'exact',head:true}).eq('status','Pending Approval');} },
+    { id:'pm_wob',    label:'WOB to Approve',    sub:'WO RA bills pending',        cls:'warn',   nav:function(){navDash('wo','billing','Pending Approval');},
+      query: function(){return sb.from('wo_bills').select('bill_number',{count:'exact',head:true}).eq('status','Pending Approval');} },
+    { id:'pm_qc',     label:'QCs to Approve',    sub:'Quote comparisons',          cls:'info',   nav:function(){navDash('purchase','rfq','');},
+      query: function(){return sb.from('pu_quote_comparison').select('qc_number',{count:'exact',head:true}).eq('status','Pending Approval');} },
+    { id:'pm_po',     label:'POs to Approve',    sub:'Purchase orders',            cls:'info',   nav:function(){navDash('purchase','po','Pending Approval');},
+      query: function(){return sb.from('pu_po_orders').select('po_number',{count:'exact',head:true}).eq('status','Pending Approval');} },
+    { id:'pm_mir',    label:'MIRs to Approve',   sub:'Material indents',           cls:'info',   nav:function(){navDash('purchase','mir','Pending Approval');},
+      query: function(){return sb.from('pu_mir').select('mir_number',{count:'exact',head:true}).eq('status','Pending Approval');} },
+    { id:'pm_pob',    label:'POBs to Approve',   sub:'GRN bills',                  cls:'info',   nav:function(){navDash('purchase','pob','Pending Approval');},
+      query: function(){return sb.from('pu_po_bills').select('bill_number',{count:'exact',head:true}).eq('status','Pending Approval');} },
+    { id:'pm_mis',    label:'MIS to Approve',    sub:'Material issues',            cls:'info',   nav:function(){navDash('purchase','mis','Pending Approval');},
+      query: function(){return sb.from('pu_mis').select('mis_number',{count:'exact',head:true}).eq('status','Pending Approval');} },
+  ],
+};
+DASH_CARD_DEFS['Admin'] = DASH_CARD_DEFS['Project Manager'].slice();
+
+async function loadDashPendingCards() {
+  const role = state.role;
+  const defs = DASH_CARD_DEFS[role] || [];
+  const container = document.getElementById('dash-cards-container');
+  if (!container) return;
+  if (!defs.length) {
+    container.innerHTML = '<div class="dash-all-clear"><div class="icon">✅</div>No pending actions for your role.</div>';
+    return;
+  }
+  container.innerHTML = defs.map(function(d, idx) {
+    return '<div class="dash-card '+d.cls+'" id="dcard-'+d.id+'" data-idx="'+idx+'">'+
+      '<div class="dc-count loading">…</div>'+
+      '<div class="dc-label">'+esc(d.label)+'</div>'+
+      '<div class="dc-sub">'+esc(d.sub)+'</div>'+
+    '</div>';
+  }).join('');
+  // Attach click handlers
+  container.querySelectorAll('.dash-card').forEach(function(card) {
+    const idx = parseInt(card.dataset.idx);
+    card.addEventListener('click', function() {
+      if (defs[idx] && defs[idx].nav) defs[idx].nav();
+    });
+  });
+  // Run queries in parallel
+  defs.forEach(async function(d) {
+    try {
+      const result = await d.query();
+      const cnt = result.count != null ? result.count : (Array.isArray(result.data) ? result.data.length : 0);
+      const el = document.getElementById('dcard-'+d.id);
+      if (!el) return;
+      const countEl = el.querySelector('.dc-count');
+      if (countEl) {
+        countEl.className = 'dc-count';
+        countEl.textContent = cnt;
+      }
+      if (cnt === 0) { el.style.opacity = '0.5'; el.style.cursor = 'default'; }
+    } catch(e) { console.warn('Card query error:', d.id, e); }
+  });
+}
+
+function navDash(mainTab, subTab, statusFilter) {
+  const mainTabEl = document.querySelector('.tabs .tab[data-tab="'+mainTab+'"]');
+  if (mainTabEl) mainTabEl.click();
+  setTimeout(function() {
+    if (mainTab === 'ho') {
+      if (subTab) switchHOTab(subTab);
+      if (statusFilter) {
+        const sf = document.getElementById('hoStatusFilter');
+        if (sf && subTab==='orders') { sf.value = statusFilter; renderHOList(); }
+        const hocSf = document.getElementById('hocStatusFilter');
+        if (hocSf && subTab==='cert') { hocSf.value = statusFilter; renderHOCList(); }
+        const hobSf = document.getElementById('hobStatusFilter');
+        if (hobSf && subTab==='billing') { hobSf.value = statusFilter; renderHOBList(); }
+      }
+    } else if (mainTab === 'wo') {
+      if (subTab) switchWOTab(subTab);
+      if (statusFilter) {
+        const sf = document.getElementById('woStatusFilter');
+        if (sf && subTab==='orders') { sf.value = statusFilter; renderWOList(); }
+        const wocSf = document.getElementById('wocStatusFilter');
+        if (wocSf && subTab==='cert') { wocSf.value = statusFilter; renderWOCList(); }
+        const wobSf = document.getElementById('wobStatusFilter');
+        if (wobSf && subTab==='billing') { wobSf.value = statusFilter; renderWOBList(); }
+      }
+    } else if (mainTab === 'purchase') {
+      if (subTab) switchPUTab(subTab);
+      if (statusFilter) {
+        const filterMap = { mir:'mirStatusFilter', grn:'grnStatusFilter', po:'poStatusFilter', pob:'pobStatusFilter' };
+        const filterId = filterMap[subTab];
+        if (filterId) { const sf = document.getElementById(filterId); if (sf) sf.value = statusFilter; }
+        const renderMap = { mir: typeof renderMIRList !== 'undefined' ? renderMIRList : null,
+                            grn: typeof renderGRNList !== 'undefined' ? renderGRNList : null,
+                            po:  typeof renderPOList  !== 'undefined' ? renderPOList  : null,
+                            pob: typeof renderPOBList !== 'undefined' ? renderPOBList : null };
+        if (renderMap[subTab]) renderMap[subTab]();
+      }
+    } else if (mainTab === 'payments') {
+      if (subTab) switchPayTab(subTab);
+    }
+  }, 200);
+}
+
+function dashMs(state_val, label, date) {
+  const cls = state_val === 'done' ? 'done' : state_val === 'active' ? 'active' : state_val === 'rejected' ? 'rejected' : 'pending';
+  const lineClass = state_val === 'done' ? 'done' : 'pending';
+  return { cls: cls, lineClass: lineClass, label: label, date: date };
+}
+
+function renderMilestoneRow(milestones) {
+  let html = '<div class="milestone-row">';
+  milestones.forEach(function(m, i) {
+    html += '<div class="ms"><div class="ms-dot '+m.cls+'"></div>'+
+      '<div class="ms-label">'+esc(m.label)+'</div>'+
+      '<div class="ms-date">'+(m.date ? fmtDateShort(m.date) : '')+'</div></div>';
+    if (i < milestones.length - 1) {
+      html += '<div class="ms-line '+m.lineClass+'"></div>';
+    }
+  });
+  html += '</div>';
+  return html;
+}
+
+function fmtDateShort(d) {
+  if (!d) return '';
+  try {
+    const p = String(d).slice(0,10).split('-');
+    const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    return p[2] + '-' + months[parseInt(p[1])-1];
+  } catch (e) { return d; }
+}
+
+function trackerDateRange(fromId, toId) {
+  const toDate = new Date();
+  const fromDate = new Date();
+  fromDate.setDate(fromDate.getDate() - 30);
+  const fromEl = document.getElementById(fromId);
+  const toEl = document.getElementById(toId);
+  if (fromEl && !fromEl.value) fromEl.value = fromDate.toISOString().slice(0,10);
+  if (toEl && !toEl.value) toEl.value = toDate.toISOString().slice(0,10);
+  return { from: (fromEl ? fromEl.value : fromDate.toISOString().slice(0,10)), to: (toEl ? toEl.value : toDate.toISOString().slice(0,10)) };
+}
+
+let _trkAExpanded = new Set();
+
+async function loadTrackerA() {
+  const tbody = document.getElementById('tracker_a_body');
+  if (!tbody) return;
+  tbody.innerHTML = '<tr><td colspan="4" class="center muted" style="padding:20px;">Loading…</td></tr>';
+  const range = trackerDateRange('trk_a_from', 'trk_a_to');
+  const from = range.from;
+  const statusFilter = document.getElementById('trk_a_status') ? document.getElementById('trk_a_status').value : '';
+
+  try {
+    const results = await Promise.all([
+      sb.from('pu_mir').select('mir_number,mir_date,purpose,status,approved_by,approved_at')
+        .or('mir_date.gte.'+from+',status.not.in.(Closed,Rejected)').order('mir_date',{ascending:false}),
+      sb.from('pu_rfq').select('rfq_number,rfq_date,mir_number,status'),
+      sb.from('pu_quote_comparison').select('qc_number,qc_date,rfq_number,status,approved_at'),
+      sb.from('pu_po_orders').select('po_number,po_date,qc_number,mir_number,status,grand_total'),
+      sb.from('pu_grn').select('grn_number,grn_date,po_number,status,verified_by'),
+    ]);
+    const mirs = results[0].data || [];
+    const rfqs = results[1].data || [];
+    const qcs  = results[2].data || [];
+    const pos  = results[3].data || [];
+    const grns = results[4].data || [];
+
+    if (!mirs.length) {
+      tbody.innerHTML = '<tr><td colspan="4" class="center muted" style="padding:20px;">No MIRs found in range.</td></tr>';
+      return;
+    }
+
+    const rfqByMir = {}; rfqs.forEach(function(r){ if(r.mir_number){ if(!rfqByMir[r.mir_number]) rfqByMir[r.mir_number]=[]; rfqByMir[r.mir_number].push(r); } });
+    const qcByRfq = {}; qcs.forEach(function(q){ if(q.rfq_number){ if(!qcByRfq[q.rfq_number]) qcByRfq[q.rfq_number]=[]; qcByRfq[q.rfq_number].push(q); } });
+    const poByMir = {}; pos.forEach(function(p){ if(p.mir_number){ if(!poByMir[p.mir_number]) poByMir[p.mir_number]=[]; poByMir[p.mir_number].push(p); } });
+    const poByQc = {}; pos.forEach(function(p){ if(p.qc_number){ if(!poByQc[p.qc_number]) poByQc[p.qc_number]=[]; poByQc[p.qc_number].push(p); } });
+    const grnByPo = {}; grns.forEach(function(g){ if(!grnByPo[g.po_number]) grnByPo[g.po_number]=[]; grnByPo[g.po_number].push(g); });
+
+    let html = '';
+    mirs.forEach(function(mir) {
+      const mirRFQs = rfqByMir[mir.mir_number] || [];
+      const mirPOs = poByMir[mir.mir_number] || [];
+      const mirQCs = mirRFQs.flatMap(function(r){ return qcByRfq[r.rfq_number] || []; });
+      const qcPOs = mirQCs.flatMap(function(q){ return poByQc[q.qc_number] || []; });
+      const allPOMap = new Map();
+      mirPOs.concat(qcPOs).forEach(function(p){ allPOMap.set(p.po_number, p); });
+      const allPOs = Array.from(allPOMap.values());
+      const allGRNs = allPOs.flatMap(function(p){ return grnByPo[p.po_number] || []; });
+
+      const mirDone = mir.status !== 'Pending Approval' && mir.status !== 'Rejected';
+      const rfqDone = mirRFQs.length > 0;
+      const qcDone = mirQCs.some(function(q){ return q.status === 'Approved'; });
+      const poDone = allPOs.some(function(p){ return p.status !== 'Pending Approval' && p.status !== 'Rejected'; });
+      const poAppr = allPOs.some(function(p){ return ['Open','Partial Receipt','Fully Received'].indexOf(p.status) >= 0; });
+      const grnDone = allGRNs.some(function(g){ return g.status !== 'Pending Verification' && g.status !== 'Rejected'; });
+      const grnVerify = allGRNs.some(function(g){ return ['Verified','Partially Billed','Billed'].indexOf(g.status) >= 0; });
+
+      let overallSt = 'In Progress';
+      if (mir.status === 'Rejected') overallSt = 'Rejected';
+      else if (grnVerify) overallSt = allGRNs.every(function(g){ return ['Verified','Billed','Partially Billed'].indexOf(g.status) >= 0; }) ? 'Completed' : 'In Progress';
+
+      if (statusFilter) {
+        if (statusFilter==='completed' && overallSt!=='Completed') return;
+        if (statusFilter==='in_progress' && overallSt!=='In Progress') return;
+        if (statusFilter==='stuck') {
+          const ageDays = (new Date()-new Date(mir.mir_date))/(1000*60*60*24);
+          if (overallSt === 'Completed' || ageDays < 3) return;
+        }
+      }
+
+      const stClass = overallSt==='Completed'?'completed':overallSt==='Rejected'?'rejected':'active';
+      const isExpanded = _trkAExpanded.has(mir.mir_number);
+      const childCount = allPOs.length + allGRNs.length;
+
+      const milestones = [
+        dashMs(mirDone?'done':'active', 'MIR Raised', mir.mir_date),
+        dashMs(mirDone?'done':'pending', 'MIR Approved', mir.approved_at),
+        dashMs(rfqDone?'done':mirDone?'active':'pending', 'RFQ Raised', mirRFQs[0]?mirRFQs[0].rfq_date:null),
+        dashMs(qcDone?'done':rfqDone?'active':'pending', 'QC Approved', mirQCs.find(function(q){return q.status==='Approved';})?.approved_at),
+        dashMs(poDone?'done':qcDone?'active':'pending', 'PO Created', allPOs[0]?allPOs[0].po_date:null),
+        dashMs(poAppr?'done':poDone?'active':'pending', 'PO Approved', ''),
+        dashMs(grnDone?'done':poAppr?'active':'pending', 'GRN Received', allGRNs[0]?allGRNs[0].grn_date:null),
+        dashMs(grnVerify?'done':grnDone?'active':'pending', 'GRN Verified', allGRNs.find(function(g){return g.status==='Verified';})?.grn_date),
+      ];
+
+      html += '<tr class="parent-row" onclick="toggleTrkARow(\''+esc(mir.mir_number)+'\')">'+
+        '<td class="mono" style="font-size:11px;">'+esc(mir.mir_number)+'</td>'+
+        '<td style="font-size:11px;">'+esc(mir.purpose||'—')+'<br>'+
+          (childCount?'<span class="expand-btn">'+(isExpanded?'▼':'▶')+' '+allPOs.length+' PO'+(allPOs.length!==1?'s':'')+', '+allGRNs.length+' GRN'+(allGRNs.length!==1?'s':'')+'</span>':'')+
+        '</td>'+
+        '<td>'+renderMilestoneRow(milestones)+'</td>'+
+        '<td><span class="status '+stClass+'" style="font-size:10px;">'+overallSt+'</span></td>'+
+      '</tr>';
+
+      if (isExpanded) {
+        allPOs.forEach(function(po) {
+          const poGRNs = grnByPo[po.po_number] || [];
+          html += '<tr class="child-row">'+
+            '<td class="mono" style="font-size:10px;color:var(--accent);">'+esc(po.po_number)+'</td>'+
+            '<td style="font-size:10px;">'+esc(po.status)+'<br><span class="muted">'+fmtINRSym(po.grand_total)+'</span></td>'+
+            '<td colspan="2">'+
+              (poGRNs.length ? poGRNs.map(function(g) {
+                return '<div style="display:flex;align-items:center;gap:8px;margin:2px 0;">'+
+                  '<span class="mono" style="font-size:10px;color:var(--muted);min-width:80px;">'+esc(g.grn_number)+'</span>'+
+                  renderMilestoneRow([
+                    dashMs('done','GRN Created',g.grn_date),
+                    dashMs(['Verified','Billed'].indexOf(g.status)>=0?'done':g.status==='Rejected'?'rejected':'active','Verified',g.status==='Verified'?g.grn_date:'')
+                  ])+
+                  '<span class="status '+(g.status==='Verified'?'approved':g.status==='Rejected'?'rejected':'pending-approval')+'" style="font-size:9px;">'+g.status+'</span>'+
+                '</div>';
+              }).join('') : '<span class="muted" style="font-size:10px;">No GRNs yet</span>')+
+            '</td>'+
+          '</tr>';
+        });
+      }
+    });
+
+    tbody.innerHTML = html || '<tr><td colspan="4" class="center muted" style="padding:20px;">No records match filter.</td></tr>';
+  } catch(e) {
+    console.error('Tracker A error:', e);
+    tbody.innerHTML = '<tr><td colspan="4" class="center warn-text" style="padding:20px;">Error loading tracker: '+esc(e.message)+'</td></tr>';
+  }
+}
+
+function toggleTrkARow(mirNum) {
+  if (_trkAExpanded.has(mirNum)) _trkAExpanded.delete(mirNum);
+  else _trkAExpanded.add(mirNum);
+  loadTrackerA();
+}
+
+let _trkBExpanded = new Set();
+
+async function loadTrackerB() {
+  const tbody = document.getElementById('tracker_b_body');
+  if (!tbody) return;
+  tbody.innerHTML = '<tr><td colspan="4" class="center muted" style="padding:20px;">Loading…</td></tr>';
+  const range = trackerDateRange('trk_b_from', 'trk_b_to');
+  const typeFilter = document.getElementById('trk_b_type') ? document.getElementById('trk_b_type').value : '';
+
+  try {
+    const promises = [];
+    if (!typeFilter || typeFilter === 'purchase') promises.push(loadTrackerBPurchase(range.from));
+    if (!typeFilter || typeFilter === 'ho') promises.push(loadTrackerBHO(range.from));
+    if (!typeFilter || typeFilter === 'wo') promises.push(loadTrackerBWO(range.from));
+    const sections = await Promise.all(promises);
+    const html = sections.join('');
+    tbody.innerHTML = html || '<tr><td colspan="4" class="center muted" style="padding:20px;">No records found.</td></tr>';
+  } catch(e) {
+    tbody.innerHTML = '<tr><td colspan="4" class="center warn-text" style="padding:20px;">Error: '+esc(e.message)+'</td></tr>';
+  }
+}
+
+async function loadTrackerBPurchase(from) {
+  const results = await Promise.all([
+    sb.from('pu_po_bills').select('bill_number,bill_date,po_number,vendor_name,status,net_payable,grn_numbers')
+      .or('bill_date.gte.'+from+',status.not.in.(Paid)').order('bill_date',{ascending:false}).limit(30),
+    sb.from('ho_prr_items').select('bill_number,paid_amount,status,prr_number').eq('bill_type','POB'),
+  ]);
+  const pobs = results[0].data || [];
+  const prrMap = {};
+  (results[1].data||[]).forEach(function(it) {
+    if (!prrMap[it.bill_number]) prrMap[it.bill_number] = {paid:0,status:'',prr:it.prr_number};
+    prrMap[it.bill_number].paid += num(it.paid_amount);
+    prrMap[it.bill_number].status = it.status;
+  });
+
+  let html = '';
+  pobs.forEach(function(b) {
+    const prr = prrMap[b.bill_number] || null;
+    const prrRaised = !!prr;
+    const paid = prr ? prr.paid : 0;
+    const milestones = [
+      dashMs('done','GRN Billed',b.bill_date),
+      dashMs(b.status==='Pending Approval'?'active':b.status==='Rejected'?'rejected':'done','Bill Approved',b.status!=='Pending Approval'&&b.status!=='Rejected'?b.bill_date:null),
+      dashMs(prrRaised?'done':['Unpaid','Partial'].indexOf(b.status)>=0?'active':'pending','PRR Raised',null),
+      dashMs(paid>0?'done':prrRaised?'active':'pending','Payment Received',null),
+    ];
+    const overallSt = paid>=num(b.net_payable)-0.01?'Paid':prrRaised?'PRR Raised':b.status==='Pending Approval'?'Pending Approval':'Unpaid';
+    const stClass = overallSt==='Paid'?'paid':overallSt==='Pending Approval'?'pending-approval':'unpaid';
+    html += '<tr class="parent-row">'+
+      '<td><div class="mono" style="font-size:11px;">'+esc(b.bill_number)+'</div>'+
+        '<div style="font-size:10px;color:var(--muted);">'+esc(b.po_number)+'</div></td>'+
+      '<td style="font-size:11px;">'+esc(b.vendor_name)+'</td>'+
+      '<td>'+renderMilestoneRow(milestones)+'</td>'+
+      '<td><span class="status '+stClass+'" style="font-size:10px;">'+overallSt+'</span>'+
+        '<div style="font-size:10px;color:var(--muted);margin-top:2px;">'+fmtINRSym(b.net_payable)+'</div></td>'+
+    '</tr>';
+  });
+  return html;
+}
+
+async function loadTrackerBHO(from) {
+  const results = await Promise.all([
+    sb.from('ho_orders').select('ho_number,ho_date,vendor_name,status,total_amount')
+      .or('ho_date.gte.'+from+',status.not.in.(Completed,Cancelled,Short-Closed)').order('ho_date',{ascending:false}).limit(25),
+    sb.from('ho_certifications').select('hoc_number,hoc_date,ho_number,status'),
+    sb.from('ho_bills').select('bill_number,bill_date,ho_number,hoc_number,status,net_payable'),
+    sb.from('ho_prr_items').select('bill_number,paid_amount,status'),
+  ]);
+  const hos = results[0].data || [];
+  const hocs = results[1].data || [];
+  const hobs = results[2].data || [];
+  const paidMap = {};
+  (results[3].data||[]).forEach(function(it) { paidMap[it.bill_number]=(paidMap[it.bill_number]||0)+num(it.paid_amount); });
+
+  let html = '';
+  hos.forEach(function(ho) {
+    const myHOCs = hocs.filter(function(c){ return c.ho_number===ho.ho_number; });
+    const myHOBs = hobs.filter(function(b){ return b.ho_number===ho.ho_number; });
+    const isExpanded = _trkBExpanded.has(ho.ho_number);
+    const childCount = myHOCs.length;
+    const anyBilled = myHOBs.some(function(b){ return ['Unpaid','Partial','Paid'].indexOf(b.status)>=0; });
+    const anyPaid = myHOBs.some(function(b){ const paid=paidMap[b.bill_number]||0; return paid>=num(b.net_payable)-0.01; });
+    const overallSt = anyPaid?'Payment Received':anyBilled?'Bill Raised':myHOCs.length?'Certified':ho.status==='Pending Approval'?'Pending Approval':'Active';
+    const stClass = anyPaid?'paid':anyBilled?'billed':myHOCs.length?'partial':'open';
+    const milestones = [
+      dashMs(ho.status!=='Pending Approval'&&ho.status!=='Rejected'?'done':'active','HO Approved',ho.ho_date),
+      dashMs(myHOCs.length?'done':['Open','Active'].indexOf(ho.status)>=0?'active':'pending','Certified',myHOCs[0]?myHOCs[0].hoc_date:null),
+      dashMs(anyBilled?'done':myHOCs.length?'active':'pending','Bill Raised',myHOBs[0]?myHOBs[0].bill_date:null),
+      dashMs(anyPaid?'done':anyBilled?'active':'pending','Payment',null),
+    ];
+    html += '<tr class="parent-row" onclick="toggleTrkBRow(\''+esc(ho.ho_number)+'\')">'+
+      '<td><div class="mono" style="font-size:11px;">'+esc(ho.ho_number)+'</div>'+
+        (childCount?'<span class="expand-btn">'+(isExpanded?'▼':'▶')+' '+childCount+' cert'+(childCount!==1?'s':'')+'</span>':'')+
+      '</td>'+
+      '<td style="font-size:11px;">'+esc(ho.vendor_name)+'<br><span class="muted" style="font-size:10px;">'+fmtINRSym(ho.total_amount)+'</span></td>'+
+      '<td>'+renderMilestoneRow(milestones)+'</td>'+
+      '<td><span class="status '+stClass+'" style="font-size:10px;">'+overallSt+'</span></td>'+
+    '</tr>';
+    if (isExpanded) {
+      myHOCs.forEach(function(hoc) {
+        const hob = myHOBs.find(function(b){ return b.hoc_number===hoc.hoc_number; });
+        const paid = hob ? (paidMap[hob.bill_number]||0) : 0;
+        const isFullyPaid = hob && paid >= num(hob.net_payable)-0.01;
+        html += '<tr class="child-row">'+
+          '<td class="mono" style="font-size:10px;">'+esc(hoc.hoc_number)+'</td>'+
+          '<td style="font-size:10px;">'+esc(hoc.status)+'</td>'+
+          '<td colspan="2">'+renderMilestoneRow([
+            dashMs('done','Cert Created',hoc.hoc_date),
+            dashMs(['Unbilled','Billed'].indexOf(hoc.status)>=0?'done':hoc.status==='Rejected'?'rejected':hoc.status==='Pending Approval'?'active':'pending','Cert Approved',null),
+            dashMs(hob?'done':hoc.status==='Unbilled'?'active':'pending','Bill Raised',hob?hob.bill_date:null),
+            dashMs(isFullyPaid?'done':hob&&paid>0?'active':'pending','Payment',null),
+          ])+'</td>'+
+        '</tr>';
+      });
+    }
+  });
+  return html;
+}
+
+async function loadTrackerBWO(from) {
+  const results = await Promise.all([
+    sb.from('wo_orders').select('wo_number,wo_date,vendor_name,status,total_amount')
+      .or('wo_date.gte.'+from+',status.not.in.(Completed,Cancelled,Short-Closed,Terminated)').order('wo_date',{ascending:false}).limit(25),
+    sb.from('wo_certifications').select('woc_number,woc_date,wo_number,status'),
+    sb.from('wo_bills').select('bill_number,bill_date,wo_number,woc_number,status,net_payable'),
+    sb.from('ho_prr_items').select('bill_number,paid_amount,status').eq('bill_type','WOB'),
+  ]);
+  const wos = results[0].data || [];
+  const wocs = results[1].data || [];
+  const wobs = results[2].data || [];
+  const paidMap = {};
+  (results[3].data||[]).forEach(function(it) { paidMap[it.bill_number]=(paidMap[it.bill_number]||0)+num(it.paid_amount); });
+
+  let html = '';
+  wos.forEach(function(wo) {
+    const myWOCs = wocs.filter(function(c){ return c.wo_number===wo.wo_number; });
+    const myWOBs = wobs.filter(function(b){ return b.wo_number===wo.wo_number; });
+    const isExpanded = _trkBExpanded.has(wo.wo_number);
+    const anyBilled = myWOBs.some(function(b){ return ['Unpaid','Partial','Paid'].indexOf(b.status)>=0; });
+    const anyPaid = myWOBs.some(function(b){ const paid=paidMap[b.bill_number]||0; return paid>=num(b.net_payable)-0.01; });
+    const overallSt = anyPaid?'Payment Received':anyBilled?'Bill Raised':myWOCs.length?'Certified':wo.status==='Pending Approval'?'Pending Approval':'Active';
+    const stClass = anyPaid?'paid':anyBilled?'billed':myWOCs.length?'partial':'open';
+    const milestones = [
+      dashMs(wo.status!=='Pending Approval'&&wo.status!=='Rejected'?'done':'active','WO Approved',wo.wo_date),
+      dashMs(myWOCs.length?'done':['Open','Active'].indexOf(wo.status)>=0?'active':'pending','Certified',myWOCs[0]?myWOCs[0].woc_date:null),
+      dashMs(anyBilled?'done':myWOCs.length?'active':'pending','RA Bill',myWOBs[0]?myWOBs[0].bill_date:null),
+      dashMs(anyPaid?'done':anyBilled?'active':'pending','Payment',null),
+    ];
+    html += '<tr class="parent-row" onclick="toggleTrkBRow(\''+esc(wo.wo_number)+'\')">'+
+      '<td><div class="mono" style="font-size:11px;">'+esc(wo.wo_number)+'</div>'+
+        (myWOCs.length?'<span class="expand-btn">'+(isExpanded?'▼':'▶')+' '+myWOCs.length+' cert'+(myWOCs.length!==1?'s':'')+'</span>':'')+
+      '</td>'+
+      '<td style="font-size:11px;">'+esc(wo.vendor_name)+'<br><span class="muted" style="font-size:10px;">'+fmtINRSym(wo.total_amount)+'</span></td>'+
+      '<td>'+renderMilestoneRow(milestones)+'</td>'+
+      '<td><span class="status '+stClass+'" style="font-size:10px;">'+overallSt+'</span></td>'+
+    '</tr>';
+    if (isExpanded) {
+      myWOCs.forEach(function(woc) {
+        const wob = myWOBs.find(function(b){ return b.woc_number===woc.woc_number; });
+        const paid = wob ? (paidMap[wob.bill_number]||0) : 0;
+        const isFullyPaid = wob && paid >= num(wob.net_payable)-0.01;
+        html += '<tr class="child-row">'+
+          '<td class="mono" style="font-size:10px;">'+esc(woc.woc_number)+'</td>'+
+          '<td style="font-size:10px;">'+esc(woc.status)+'</td>'+
+          '<td colspan="2">'+renderMilestoneRow([
+            dashMs('done','Cert Created',woc.woc_date),
+            dashMs(['Unbilled','Billed'].indexOf(woc.status)>=0?'done':woc.status==='Rejected'?'rejected':woc.status==='Pending Approval'?'active':'pending','Cert Approved',null),
+            dashMs(wob?'done':woc.status==='Unbilled'?'active':'pending','RA Bill',wob?wob.bill_date:null),
+            dashMs(isFullyPaid?'done':wob&&paid>0?'active':'pending','Payment',null),
+          ])+'</td>'+
+        '</tr>';
+      });
+    }
+  });
+  return html;
+}
+
+function toggleTrkBRow(id) {
+  if (_trkBExpanded.has(id)) _trkBExpanded.delete(id);
+  else _trkBExpanded.add(id);
+  loadTrackerB();
+}
+
+function switchDashTracker(tab) {
+  document.getElementById('dash-tracker-procurement').style.display = tab==='procurement' ? '' : 'none';
+  document.getElementById('dash-tracker-billing').style.display = tab==='billing' ? '' : 'none';
+  document.getElementById('dtt-procurement').classList.toggle('active', tab==='procurement');
+  document.getElementById('dtt-billing').classList.toggle('active', tab==='billing');
+  if (tab==='billing') loadTrackerB(); else loadTrackerA();
+}
+
+async function loadActivityFeed() {
+  const el = document.getElementById('dash-activity-feed');
+  if (!el) return;
+  const from = new Date(); from.setDate(from.getDate()-30);
+  const fromISO = from.toISOString().slice(0,10);
+
+  try {
+    const queries = [
+      sb.from('pu_mir').select('mir_number,mir_date,status,raised_by').gte('mir_date',fromISO).order('mir_date',{ascending:false}).limit(8),
+      sb.from('pu_rfq').select('rfq_number,rfq_date,status,raised_by').gte('rfq_date',fromISO).order('rfq_date',{ascending:false}).limit(6),
+      sb.from('pu_quote_comparison').select('qc_number,qc_date,status,prepared_by').gte('qc_date',fromISO).order('qc_date',{ascending:false}).limit(6),
+      sb.from('pu_po_orders').select('po_number,po_date,status,prepared_by,vendor_name').gte('po_date',fromISO).order('po_date',{ascending:false}).limit(8),
+      sb.from('pu_grn').select('grn_number,grn_date,status,received_by,po_number').gte('grn_date',fromISO).order('grn_date',{ascending:false}).limit(8),
+      sb.from('pu_po_bills').select('bill_number,bill_date,status,prepared_by,vendor_name').gte('bill_date',fromISO).order('bill_date',{ascending:false}).limit(6),
+      sb.from('pu_mis').select('mis_number,issue_date,status,issued_by,issued_to').gte('issue_date',fromISO).order('issue_date',{ascending:false}).limit(6),
+      sb.from('ho_orders').select('ho_number,ho_date,status,created_by_name,vendor_name').gte('ho_date',fromISO).order('ho_date',{ascending:false}).limit(6),
+      sb.from('ho_certifications').select('hoc_number,hoc_date,status,certified_by,ho_number').gte('hoc_date',fromISO).order('hoc_date',{ascending:false}).limit(6),
+      sb.from('ho_bills').select('bill_number,bill_date,status,prepared_by,vendor_name').gte('bill_date',fromISO).order('bill_date',{ascending:false}).limit(6),
+      sb.from('wo_orders').select('wo_number,wo_date,status,created_by_name,vendor_name').gte('wo_date',fromISO).order('wo_date',{ascending:false}).limit(6),
+      sb.from('ho_payments').select('payment_id,payment_date,amount_paid,vendor,entered_by').gte('payment_date',fromISO).order('payment_date',{ascending:false}).limit(6),
+    ];
+    const results = await Promise.all(queries);
+    const data = results.map(function(r){ return r.data||[]; });
+
+    const events = [];
+    const push = function(date, dotCls, title, sub) { events.push({date: date||'2000-01-01', dotCls: dotCls, title: title, sub: sub}); };
+
+    data[0].forEach(function(m){ push(m.mir_date, m.status==='Approved'?'approved':m.status==='Rejected'?'rejected':'pending', 'MIR <strong>'+m.mir_number+'</strong> '+m.status, 'Raised by '+(m.raised_by||'—')); });
+    data[1].forEach(function(r){ push(r.rfq_date, 'created', 'RFQ <strong>'+r.rfq_number+'</strong> raised', 'By '+(r.raised_by||'—')); });
+    data[2].forEach(function(q){ push(q.qc_date, q.status==='Approved'?'approved':q.status==='Rejected'?'rejected':'pending', 'Quote Comparison <strong>'+q.qc_number+'</strong> — '+q.status, 'By '+(q.prepared_by||'—')); });
+    data[3].forEach(function(p){ push(p.po_date, p.status==='Open'?'approved':p.status==='Rejected'?'rejected':'pending', 'Purchase Order <strong>'+p.po_number+'</strong> — '+p.status, 'Vendor: '+(p.vendor_name||'—')+' | By: '+(p.prepared_by||'—')); });
+    data[4].forEach(function(g){ push(g.grn_date, g.status==='Verified'?'approved':'created', 'GRN <strong>'+g.grn_number+'</strong> '+g.status, 'Against '+g.po_number+' | By '+(g.received_by||'—')); });
+    data[5].forEach(function(b){ push(b.bill_date, b.status==='Unpaid'?'approved':b.status==='Rejected'?'rejected':'pending', 'PO Bill <strong>'+b.bill_number+'</strong> — '+b.status, 'Vendor: '+(b.vendor_name||'—')); });
+    data[6].forEach(function(m){ push(m.issue_date, m.status==='Approved'?'approved':'pending', 'Material Issue <strong>'+m.mis_number+'</strong> — '+m.status, 'To: '+(m.issued_to||'—')); });
+    data[7].forEach(function(h){ push(h.ho_date, h.status==='Open'?'approved':h.status==='Rejected'?'rejected':'pending', 'Hire Order <strong>'+h.ho_number+'</strong> — '+h.status, 'Vendor: '+(h.vendor_name||'—')); });
+    data[8].forEach(function(c){ push(c.hoc_date, c.status==='Unbilled'?'approved':c.status==='Rejected'?'rejected':'pending', 'HO Certification <strong>'+c.hoc_number+'</strong> — '+c.status, 'HO: '+c.ho_number+' | By '+(c.certified_by||'—')); });
+    data[9].forEach(function(b){ push(b.bill_date, b.status==='Unpaid'?'approved':b.status==='Rejected'?'rejected':'pending', 'HO Bill <strong>'+b.bill_number+'</strong> — '+b.status, 'Vendor: '+(b.vendor_name||'—')); });
+    data[10].forEach(function(w){ push(w.wo_date, w.status==='Open'?'approved':w.status==='Rejected'?'rejected':'pending', 'Work Order <strong>'+w.wo_number+'</strong> — '+w.status, 'Vendor: '+(w.vendor_name||'—')); });
+    data[11].forEach(function(p){ push(p.payment_date, 'paid', 'Payment <strong>'+p.payment_id+'</strong> — ₹'+fmtINR(p.amount_paid), 'Vendor: '+(p.vendor||'—')+' | By '+(p.entered_by||'—')); });
+
+    events.sort(function(a,b) { return new Date(b.date)-new Date(a.date); });
+
+    if (!events.length) {
+      el.innerHTML = '<div class="dash-all-clear"><div class="icon">📭</div>No activity in the last 30 days.</div>';
+      return;
+    }
+
+    el.innerHTML = events.slice(0,40).map(function(e) {
+      return '<div class="activity-item">'+
+        '<div class="ai-dot '+e.dotCls+'"></div>'+
+        '<div class="ai-body">'+
+          '<div class="ai-title">'+e.title+'</div>'+
+          '<div class="ai-meta">'+esc(e.sub)+'</div>'+
+        '</div>'+
+        '<div class="ai-time">'+fmtDateShort(e.date)+'</div>'+
+      '</div>';
+    }).join('');
+  } catch(err) {
+    console.error('Activity feed error:', err);
+    el.innerHTML = '<div class="muted" style="font-size:13px;">Could not load activity feed.</div>';
+  }
+}
+
+// Hook into onSignedIn
+const _origOnSignedIn_dash = onSignedIn;
+onSignedIn = async function(user) {
+  await _origOnSignedIn_dash(user);
+  applyRoleTabVisibility();
+  const dashTab = document.querySelector('.tabs .tab[data-tab="dashboard"]');
+  const hoTab = document.querySelector('.tabs .tab[data-tab="ho"]');
+  if (dashTab) {
+    if (hoTab) hoTab.classList.remove('active');
+    dashTab.classList.add('active');
+    document.querySelectorAll('.module').forEach(function(m){ m.classList.remove('active'); });
+    document.getElementById('mod-dashboard').classList.add('active');
+    loadDashboard();
+  }
+};
+
+// Auto-refresh every 60 seconds
+setInterval(function() {
+  const dashMod = document.getElementById('mod-dashboard');
+  if (dashMod && dashMod.classList.contains('active')) {
+    loadDashPendingCards();
+  }
+}, 60000);
 
 </script>
 </body>
