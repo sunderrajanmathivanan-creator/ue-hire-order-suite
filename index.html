@@ -11481,10 +11481,42 @@ async function printPO(poNum) {
     <tbody>${rows}</tbody>
   </table>
 
-  <!-- BOTTOM: TOTALS + EMPTY SPACE -->
-  <div class="bottom-row">
-    <div class="bottom-left"></div>
-    <div class="bottom-right">
+  <!-- FOOTER SECTION — matches reference PDF layout -->
+  <table style="width:100%;border-collapse:collapse;margin-top:6pt;border:.5pt solid #bbb;">
+    <!-- Row 1: Payment Terms | Contact Person -->
+    <tr>
+      <td style="width:40%;padding:6pt 8pt;border:.5pt solid #bbb;vertical-align:top;">
+        <div class="footer-hdr">Payment Terms</div>
+        <div class="footer-val" style="margin-top:3pt;">${esc(h.payment_terms||'—')}</div>
+      </td>
+      <td style="width:60%;padding:6pt 8pt;border:.5pt solid #bbb;vertical-align:top;">
+        <div class="footer-hdr">Contact Person</div>
+        <div class="footer-val" style="margin-top:3pt;">${esc(h.contact_person||'Mr.Niteesh (7996631552) & Mr.Raghavendra (9901374170)')}</div>
+      </td>
+    </tr>
+    <!-- Row 2: Comments (left) | Totals (right) -->
+    <tr>
+      <td style="width:40%;padding:6pt 8pt;border:.5pt solid #bbb;vertical-align:top;">
+        <div class="footer-hdr">Transportation</div>
+        <div class="footer-val" style="margin-top:3pt;">${esc(h.transport||'—')}</div>
+      </td>
+      <td style="width:60%;padding:6pt 8pt;border:.5pt solid #bbb;vertical-align:top;">
+        <div class="footer-hdr">Prepared By</div>
+        <div class="footer-val" style="margin-top:3pt;">${esc(h.prepared_by||'—')}</div>
+      </td>
+    </tr>
+    <!-- Row 3: Comments full width -->
+    ${h.remarks?`<tr>
+      <td colspan="2" style="padding:6pt 8pt;border:.5pt solid #bbb;vertical-align:top;">
+        <div class="footer-hdr">Comments / Special Instructions</div>
+        <div class="footer-val" style="margin-top:3pt;">${esc(h.remarks)}</div>
+      </td>
+    </tr>`:''}
+  </table>
+
+  <!-- TOTALS BLOCK — right aligned -->
+  <div style="display:flex;justify-content:flex-end;margin-top:8pt;">
+    <div style="width:220pt;">
       <table class="totals">
         ${totalsHTML}
       </table>
@@ -11492,28 +11524,8 @@ async function printPO(poNum) {
     </div>
   </div>
 
-  <!-- FOOTER ROW — 4 equal columns -->
-  <div class="footer-row">
-    <div class="footer-box" style="flex:0 0 25%;max-width:25%;">
-      <div class="footer-hdr">Payment Terms</div>
-      <div class="footer-val">${esc(h.payment_terms||'—')}</div>
-    </div>
-    <div class="footer-box" style="flex:0 0 25%;max-width:25%;">
-      <div class="footer-hdr">Contact Person</div>
-      <div class="footer-val">${esc(h.contact_person||'Mr.Niteesh (7996631552) & Mr.Raghavendra (9901374170)')}</div>
-    </div>
-    <div class="footer-box" style="flex:0 0 25%;max-width:25%;">
-      <div class="footer-hdr">Transportation</div>
-      <div class="footer-val">${esc(h.transport||'—')}</div>
-    </div>
-    <div class="footer-box" style="flex:0 0 25%;max-width:25%;">
-      <div class="footer-hdr">Comments / Special Instructions</div>
-      <div class="footer-val">${h.remarks?esc(h.remarks):'—'}</div>
-    </div>
-  </div>
-
-  <!-- SIGNATURE ROW — separate row below footer fields -->
-  <div style="display:flex;justify-content:flex-end;margin-top:20pt;">
+  <!-- SIGNATURE -->
+  <div style="display:flex;justify-content:flex-end;margin-top:24pt;">
     <div class="sign-line">For URBAN EXCELLENCE LLP<br><br><br>Authorised Signatory</div>
   </div>
 
