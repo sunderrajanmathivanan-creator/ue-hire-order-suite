@@ -9897,9 +9897,12 @@ async function newPO() {
   document.getElementById('po_date').value=today();
   document.getElementById('po_number').value='PO/'+currentFY()+'/—— (auto)';
   document.getElementById('po_preparedBy').value=state.userName;
-  ['po_qcRef','po_mirRef','po_remarks','po_vendor','po_vendorCode','po_vendorGSTIN','po_vendorAddress','po_contactPerson','po_paymentTerms'].forEach(id=>{
+  ['po_qcRef','po_mirRef','po_remarks','po_vendor','po_vendorCode','po_vendorGSTIN','po_vendorAddress','po_paymentTerms'].forEach(id=>{
     const e=document.getElementById(id); if(e) e.value='';
   });
+  // Pre-fill contact person with default site contacts (editable)
+  const cpEl=document.getElementById('po_contactPerson');
+  if(cpEl) cpEl.value='Mr.Niteesh (7996631552) & Mr.Raghavendra (9901374170)';
   // Pre-fill delivery address with site address (editable)
   const daEl=document.getElementById('po_deliveryAddr');
   if(daEl) daEl.value='Poetry of Earth, Sy.no.199, Varthur-Sarjapur Road, Opposite to Vinayaka Theatre, Varthur, Bengaluru-560087, Karnataka.';
@@ -11306,60 +11309,230 @@ async function printQC(qcNum) {
 }
 
 async function printPO(poNum) {
-  pbShow('Building print…');
+  pbShow('Loading PO…');
   const [{data:h},{data:items}] = await Promise.all([
     sb.from('pu_po_orders').select('*').eq('po_number',poNum).single(),
     sb.from('pu_po_items').select('*').eq('po_number',poNum).order('sno'),
   ]);
   pbDone();
-  if (!h) { toast('PO not found','error'); return; }
-  const fmtI = n => (n||0).toLocaleString('en-IN',{minimumFractionDigits:2,maximumFractionDigits:2});
-  const rows = (items||[]).map((it,i) => `<tr>
-    <td class="c">${it.sno||i+1}</td><td>${esc(it.material_name)}</td><td class="c">${esc(it.uom)}</td>
-    <td class="r">${fmtI(it.qty)}</td><td class="r">₹ ${fmtI(it.unit_rate)}</td>
-    <td class="c">${it.cgst_pct||0}%</td><td class="c">${it.sgst_pct||0}%</td><td class="c">${it.igst_pct||0}%</td>
-    <td class="r">₹ ${fmtI(it.total_amount)}</td>
-  </tr>`).join('');
-  const totals = `<tr><td>Basic Value</td><td>₹ ${fmtI(h.basic_value)}</td></tr>
-    <tr><td>CGST</td><td>₹ ${fmtI(h.cgst_amount)}</td></tr>
-    <tr><td>SGST</td><td>₹ ${fmtI(h.sgst_amount)}</td></tr>
-    ${h.igst_amount>0?`<tr><td>IGST</td><td>₹ ${fmtI(h.igst_amount)}</td></tr>`:''}
-    ${h.round_off?`<tr><td>Round Off</td><td>₹ ${fmtI(h.round_off)}</td></tr>`:''}
-    <tr class="grand"><td>GRAND TOTAL</td><td>₹ ${fmtI(h.grand_total)}</td></tr>`;
-  openPrintOverlay(`${printStyles()}
-  <div class="pd-top">
-    <div><div class="co-name">${CO_NAME}</div><div class="co-detail">${CO_ADDR}<br>GSTIN: ${CO_GSTIN}</div></div>
-    <div><div class="doc-title">PURCHASE ORDER</div>
-      <table class="doc-meta"><tr><td>PO No.</td><td>${esc(poNum)}</td></tr>
-      <tr><td>Date</td><td>${fmtDate(h.po_date)}</td></tr>
-      ${h.qc_number?`<tr><td>QC Ref</td><td>${esc(h.qc_number)}</td></tr>`:''}
-      <tr><td>Project</td><td>${esc(h.project||'PoE, Ph-01')}</td></tr>
+  if(!h){ toast('PO not found','error'); return; }
+
+  const fi = n => (n||0).toLocaleString('en-IN',{minimumFractionDigits:2,maximumFractionDigits:2});
+
+  // Determine GST mode — check if any item has line-level GST
+  const hasLineGST = (items||[]).some(it=>it.cgst_pct||it.sgst_pct||it.igst_pct);
+
+  // Line items
+  const rows = (items||[]).map((it,i)=>`
+    <tr>
+      <td class="c">${it.sno||i+1}</td>
+      <td>${esc(it.material_name)}</td>
+      <td class="c">${esc(it.uom)}</td>
+      <td class="r">${fi(it.qty)}</td>
+      <td class="r">₹ ${fi(it.unit_rate)}</td>
+      <td class="r">₹ ${fi(it.total_amount||it.qty*it.unit_rate)}</td>
+      <td>${esc(it.remarks||'')}</td>
+    </tr>`).join('');
+
+  // Totals block
+  const cgstPct  = h.cgst_pct||((h.cgst_amount&&h.basic_value)?(h.cgst_amount/h.basic_value*100).toFixed(0):'');
+  const sgstPct  = h.sgst_pct||cgstPct;
+  const totalsHTML = `
+    <tr><td>Sub Total</td><td class="r">₹ ${fi(h.basic_value)}</td></tr>
+    ${h.cgst_amount>0?`<tr><td>CGST${cgstPct?' ('+cgstPct+'%)':''}</td><td class="r">₹ ${fi(h.cgst_amount)}</td></tr>`:''}
+    ${h.sgst_amount>0?`<tr><td>SGST${sgstPct?' ('+sgstPct+'%)':''}</td><td class="r">₹ ${fi(h.sgst_amount)}</td></tr>`:''}
+    ${h.igst_amount>0?`<tr><td>IGST</td><td class="r">₹ ${fi(h.igst_amount)}</td></tr>`:''}
+    ${h.round_off?`<tr><td>Round Off</td><td class="r">₹ ${fi(h.round_off)}</td></tr>`:''}
+    <tr class="gtrow"><td>TOTAL</td><td class="r">₹ ${fi(h.grand_total)}</td></tr>`;
+
+  // Amount in words helper
+  function amtWords(n){
+    const a=['','One','Two','Three','Four','Five','Six','Seven','Eight','Nine','Ten',
+      'Eleven','Twelve','Thirteen','Fourteen','Fifteen','Sixteen','Seventeen','Eighteen','Nineteen'];
+    const b=['','','Twenty','Thirty','Forty','Fifty','Sixty','Seventy','Eighty','Ninety'];
+    if(n===0) return 'Zero';
+    function words(num){
+      if(num<20) return a[num];
+      if(num<100) return b[Math.floor(num/10)]+(num%10?' '+a[num%10]:'');
+      if(num<1000) return a[Math.floor(num/100)]+' Hundred'+(num%100?' '+words(num%100):'');
+      if(num<100000) return words(Math.floor(num/1000))+' Thousand'+(num%1000?' '+words(num%1000):'');
+      if(num<10000000) return words(Math.floor(num/100000))+' Lakh'+(num%100000?' '+words(num%100000):'');
+      return words(Math.floor(num/10000000))+' Crore'+(num%10000000?' '+words(num%10000000):'');
+    }
+    const rupees=Math.floor(n);
+    const paise=Math.round((n-rupees)*100);
+    return 'Rupees '+words(rupees)+' Only'+(paise>0?' and '+words(paise)+' Paise':'');
+  }
+
+  const doc = `<!DOCTYPE html>
+<html><head>
+<meta charset="UTF-8">
+<title>Purchase Order — ${esc(poNum)}</title>
+<style>
+  @page { size:A4 portrait; margin:15mm 15mm 20mm 15mm; }
+  * { box-sizing:border-box; margin:0; padding:0; }
+  body {
+    font-family:Arial,Helvetica,sans-serif; font-size:9pt; color:#111;
+    -webkit-print-color-adjust:exact; print-color-adjust:exact;
+  }
+
+  /* ── TITLE ROW ── */
+  .title-row { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:10pt; }
+  .doc-title { font-size:20pt; font-weight:700; color:#1e3a5f; letter-spacing:1pt; }
+  .mt { border-collapse:collapse; }
+  .mt td { padding:2.5pt 8pt; font-size:8.5pt; border:.4pt solid #bbb; }
+  .mt .l { font-weight:700; background:#e8ecf2; color:#1e3a5f; min-width:45pt; }
+
+  /* ── ADDRESS BOXES ── */
+  .addr-row { display:flex; gap:6pt; margin-bottom:10pt; }
+  .addr-box { flex:1; border:.5pt solid #bbb; border-radius:2pt; padding:7pt; }
+  .addr-hdr { font-size:7pt; font-weight:700; text-transform:uppercase; color:#1e3a5f;
+              border-bottom:.5pt solid #dde; margin-bottom:5pt; padding-bottom:3pt; letter-spacing:.5pt; }
+  .addr-body { font-size:8.5pt; line-height:1.7; }
+  .addr-body strong { font-size:9pt; }
+
+  /* ── LINE ITEMS TABLE ── */
+  table.items { width:100%; border-collapse:collapse; margin-bottom:8pt; }
+  table.items thead tr { background:#1e3a5f; }
+  table.items th { color:#fff; padding:5pt 6pt; font-size:8pt; font-weight:700; text-align:left; border:.4pt solid #2d4f7c; }
+  table.items th.c, table.items td.c { text-align:center; }
+  table.items th.r, table.items td.r { text-align:right; }
+  table.items td { padding:5pt 6pt; font-size:8.5pt; border-bottom:.4pt solid #eee; vertical-align:top; }
+  table.items tr:nth-child(even) td { background:#f8fafc; }
+
+  /* ── TOTALS ── */
+  .bottom-row { display:flex; gap:10pt; margin-bottom:10pt; }
+  .bottom-left { flex:1; }
+  .bottom-right { flex:0 0 200pt; }
+  table.totals { width:100%; border-collapse:collapse; }
+  table.totals td { padding:4pt 8pt; font-size:8.5pt; border:.4pt solid #ccc; }
+  table.totals td:first-child { font-weight:600; background:#f0f5fb; color:#1e3a5f; }
+  table.totals td:last-child { text-align:right; }
+  table.totals tr.gtrow td { font-weight:700; background:#1e3a5f; color:#fff; font-size:10pt; }
+  .words { font-size:7.5pt; color:#555; font-style:italic; margin-top:4pt; padding:3pt 0; border-top:.4pt solid #ddd; }
+
+  /* ── FOOTER ── */
+  .footer-row { display:flex; gap:10pt; margin-top:10pt; border-top:.5pt solid #ccc; padding-top:8pt; }
+  .footer-box { flex:1; }
+  .footer-hdr { font-size:7pt; font-weight:700; text-transform:uppercase; color:#1e3a5f;
+                letter-spacing:.5pt; margin-bottom:4pt; }
+  .footer-val { font-size:8.5pt; line-height:1.6; }
+  .sign-area { text-align:right; min-width:110pt; }
+  .sign-line { border-top:.5pt solid #444; padding-top:4pt; font-size:8pt;
+               color:#333; line-height:1.7; margin-top:24pt; }
+
+  /* page break */
+  thead { display:table-header-group; }
+  tr    { page-break-inside:avoid; }
+</style>
+</head>
+<body>
+
+  <!-- TITLE ROW (no company name — on letterhead) -->
+  <div class="title-row">
+    <div></div>
+    <div style="text-align:right;">
+      <div class="doc-title">PURCHASE ORDER</div>
+      <table class="mt" style="margin-top:6pt;margin-left:auto;">
+        <tr><td class="l">DATE</td><td>${fmtDate(h.po_date)}</td></tr>
+        <tr><td class="l">PO #</td><td><strong>${esc(poNum)}</strong></td></tr>
+        ${h.project?`<tr><td class="l">Project</td><td>${esc(h.project)}</td></tr>`:''}
       </table>
     </div>
   </div>
+
+  <!-- ADDRESS ROW -->
   <div class="addr-row">
-    <div class="addr-box"><div class="addr-hdr">Vendor</div><div class="addr-body">
-      <strong>${esc(h.vendor_name)}</strong><br>
-      ${h.vendor_address?esc(h.vendor_address).split('\n').join('<br>'):''}
-      ${h.vendor_gstin?'<br>GSTIN: <strong>'+esc(h.vendor_gstin)+'</strong>':''}
-    </div></div>
-    <div class="addr-box"><div class="addr-hdr">Bill To</div><div class="addr-body">
-      <strong>${CO_NAME}</strong><br>${CO_ADDR}<br>GSTIN: ${CO_GSTIN}
-    </div></div>
-    <div class="addr-box"><div class="addr-hdr">Deliver To</div><div class="addr-body">${SITE_ADDR}</div></div>
+    <div class="addr-box">
+      <div class="addr-hdr">Vendor</div>
+      <div class="addr-body">
+        <strong>${esc(h.vendor_name)}</strong><br>
+        ${h.vendor_address?esc(h.vendor_address).split('\n').join('<br>'):''}
+        ${h.vendor_gstin?'<br>GSTIN: <strong>'+esc(h.vendor_gstin)+'</strong>':''}
+      </div>
+    </div>
+    <div class="addr-box">
+      <div class="addr-hdr">Bill To</div>
+      <div class="addr-body">
+        <strong>URBAN EXCELLENCE LLP</strong><br>
+        76/1, Windchimes, Muthsandra Main Road, Bengaluru – 560087<br>
+        GSTIN: 29AAHFU0117D1ZH
+      </div>
+    </div>
+    <div class="addr-box">
+      <div class="addr-hdr">Ship To / Delivery Address</div>
+      <div class="addr-body">
+        ${h.delivery_address?esc(h.delivery_address).split('\n').join('<br>'):'Poetry of Earth, Sy.No.199, Varthur–Sarjapur Road, Opposite Vinayaka Theatre, Varthur, Bengaluru – 560087'}
+      </div>
+    </div>
   </div>
-  <table class="items"><thead><tr>
-    <th class="c">#</th><th>Material</th><th class="c">UOM</th><th class="r">Qty</th>
-    <th class="r">Rate</th><th class="c">CGST%</th><th class="c">SGST%</th><th class="c">IGST%</th>
-    <th class="r">Total (₹)</th>
-  </tr></thead><tbody>${rows}</tbody></table>
-  <div style="display:flex;justify-content:flex-end;"><table class="totals">${totals}</table></div>
+
+  <!-- LINE ITEMS -->
+  <table class="items">
+    <thead><tr>
+      <th class="c" style="width:28pt">ITEM #</th>
+      <th>DESCRIPTION</th>
+      <th class="c" style="width:38pt">UOM</th>
+      <th class="r" style="width:45pt">QTY</th>
+      <th class="r" style="width:58pt">UNIT PRICE</th>
+      <th class="r" style="width:70pt">TOTAL (₹)</th>
+      <th style="width:70pt">REMARKS</th>
+    </tr></thead>
+    <tbody>${rows}</tbody>
+  </table>
+
+  <!-- BOTTOM: TOTALS + EMPTY SPACE -->
+  <div class="bottom-row">
+    <div class="bottom-left"></div>
+    <div class="bottom-right">
+      <table class="totals">
+        ${totalsHTML}
+      </table>
+      <div class="words">${amtWords(h.grand_total||0)}</div>
+    </div>
+  </div>
+
+  <!-- FOOTER ROW — 4 equal columns -->
   <div class="footer-row">
-    <div class="footer-box"><div class="footer-hdr">Payment Terms</div>${esc(h.payment_terms||'—')}</div>
-    <div class="footer-box"><div class="footer-hdr">Transportation</div>${esc(h.transport||'—')}</div>
-    ${h.remarks?`<div class="footer-box"><div class="footer-hdr">Remarks</div>${esc(h.remarks)}</div>`:''}
-    <div style="text-align:right;"><div class="sign-box">Authorised Signatory<br>${CO_NAME}</div></div>
-  </div>`);
+    <div class="footer-box" style="flex:0 0 25%;max-width:25%;">
+      <div class="footer-hdr">Payment Terms</div>
+      <div class="footer-val">${esc(h.payment_terms||'—')}</div>
+    </div>
+    <div class="footer-box" style="flex:0 0 25%;max-width:25%;">
+      <div class="footer-hdr">Contact Person</div>
+      <div class="footer-val">${esc(h.contact_person||'Mr.Niteesh (7996631552) & Mr.Raghavendra (9901374170)')}</div>
+    </div>
+    <div class="footer-box" style="flex:0 0 25%;max-width:25%;">
+      <div class="footer-hdr">Transportation</div>
+      <div class="footer-val">${esc(h.transport||'—')}</div>
+    </div>
+    <div class="footer-box" style="flex:0 0 25%;max-width:25%;">
+      <div class="footer-hdr">Comments / Special Instructions</div>
+      <div class="footer-val">${h.remarks?esc(h.remarks):'—'}</div>
+    </div>
+  </div>
+
+  <!-- SIGNATURE ROW — separate row below footer fields -->
+  <div style="display:flex;justify-content:flex-end;margin-top:20pt;">
+    <div class="sign-line">For URBAN EXCELLENCE LLP<br><br><br>Authorised Signatory</div>
+  </div>
+
+</body></html>`;
+
+  // Print via hidden iframe
+  const iframe = document.createElement('iframe');
+  iframe.style.cssText = 'position:fixed;top:-9999px;left:-9999px;width:0;height:0;border:0;';
+  document.body.appendChild(iframe);
+  iframe.contentDocument.open();
+  iframe.contentDocument.write(doc);
+  iframe.contentDocument.close();
+  iframe.onload = () => {
+    setTimeout(() => {
+      iframe.contentWindow.focus();
+      iframe.contentWindow.print();
+      setTimeout(() => { document.body.removeChild(iframe); }, 2000);
+    }, 500);
+  };
 }
 
 async function printPOB(billNum) {
