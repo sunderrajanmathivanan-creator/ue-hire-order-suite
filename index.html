@@ -2159,6 +2159,7 @@ input[type="number"] {
           <option value="RFQ Raised">RFQ Raised</option>
           <option value="PO Raised">PO Raised</option>
           <option value="Closed">Closed</option>
+          <option value="Cancelled">Cancelled</option>
         </select>
       </div>
       <div class="table-wrap">
@@ -2400,6 +2401,7 @@ input[type="number"] {
           <option value="Closed">Closed</option>
           <option value="Rejected">Rejected</option>
           <option value="Cancelled">Cancelled</option>
+          <option value="Short-Closed">Short-Closed</option>
         </select>
       </div>
       <div class="table-wrap">
@@ -2820,6 +2822,7 @@ const ROLE_PERMS = {
                        canCreateARR: true, canShortCloseHO: true, canShortCloseWO: true,
                        canApproveBill: true, canCreateHRR: true, canCreateRRR: true,
                        canApproveMIR: true, canApproveQC: true, canApprovePO: true,
+                       canCancelPO: true, canShortClosePO: true,
                        canApprovePOB: true },
   'Site Manager':    { canCreateHOC: true, canCreateWOC: true,
                        canCreateMIR: true,
@@ -2837,6 +2840,7 @@ const ROLE_PERMS = {
                        canCreatePO: true, canCreateRFQ: true, canCreateQC: true,
                        canCreateMIR: true, canApproveMIR: true, canApproveQC: true,
                        canApprovePO: true, canCreateGRN: true, canApproveGRN: true,
+                       canCancelPO: true, canShortClosePO: true,
                        canCreatePOB: true, canApprovePOB: true,
                        canCreateMIS: true, canApproveMIS: true, canManageMasters: true }
 };
@@ -9885,7 +9889,7 @@ async function viewQC(qcNum) {
       </div>
       ${allRounds.map(r=>{
         const rNegs=(negs||[]).filter(n=>n.round===r);
-        const rTime=rNegs[0]?.negotiated_at?fmtDate(rNegs[0].negotiated_at):'';
+        const rTime=rNegs[0]?.negotiated_at?(()=>{const dt=new Date(rNegs[0].negotiated_at);if(isNaN(dt))return '';const months=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];const ist=new Date(dt.getTime()+(5.5*60*60*1000));const dd=String(ist.getUTCDate()).padStart(2,'0');const mm=months[ist.getUTCMonth()];const yyyy=ist.getUTCFullYear();let h=ist.getUTCHours();const m=String(ist.getUTCMinutes()).padStart(2,'0');const ap=h>=12?'PM':'AM';h=h%12||12;return `${dd}-${mm}-${yyyy} ${h}:${m} ${ap}`;})():'';
         const rBy=rNegs[0]?.negotiated_by||'';
         // Group by vendor, compute net saving per vendor
         const byVendor={};
@@ -10450,13 +10454,34 @@ async function approvePO(poNum) {
 
 async function viewPO(poNum) {
   pbShow('Loading…');
-  const [{data:h},{data:items}]=await Promise.all([
+  const [{data:h},{data:items},{data:grnsForPO}]=await Promise.all([
     sb.from('pu_po_orders').select('*').eq('po_number',poNum).single(),
     sb.from('pu_po_items').select('*').eq('po_number',poNum).order('sno'),
+    sb.from('pu_grn').select('grn_number,status').eq('po_number',poNum),
   ]);
   pbDone();
   if(!h){toast('PO not found','error');return;}
+  // Eligibility for Cancel / Short Close
+  const grnCount=(grnsForPO||[]).length;
+  const perms=ROLE_PERMS[state.role]||{};
+  const isCancelable    = perms.canCancelPO     && h.status==='Open'            && grnCount===0;
+  const isShortClosable = perms.canShortClosePO && h.status==='Partial Receipt' && grnCount>=1;
+  // Build closure-info banner if PO is already terminated
+  const closureBanner = (h.status==='Cancelled' || h.status==='Short-Closed') ? `
+    <div style="margin-bottom:10px;padding:10px;background:#fef2f2;border:1px solid #fca5a5;border-radius:6px;">
+      <div style="font-size:11px;font-weight:700;color:#991b1b;text-transform:uppercase;margin-bottom:4px;">${esc(h.status)}</div>
+      <div style="font-size:12px;color:#1f2937;">
+        ${h.closed_by?'<strong>By:</strong> '+esc(h.closed_by)+' &nbsp;·&nbsp; ':''}
+        ${h.closed_at?'<strong>On:</strong> '+esc(new Date(h.closed_at).toLocaleString('en-IN',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit',hour12:true}))+'<br>':''}
+        ${h.close_reason?'<strong>Reason:</strong> '+esc(h.close_reason):''}
+      </div>
+    </div>` : '';
+  // Build action buttons
+  let closeActions='';
+  if(isCancelable)    closeActions+=`<button class="btn btn-danger" onclick="cancelPO('${esc(h.po_number)}')">Cancel PO</button> `;
+  if(isShortClosable) closeActions+=`<button class="btn btn-danger" onclick="shortClosePO('${esc(h.po_number)}')">Short Close</button> `;
   openModal(`<h3>PO — ${esc(h.po_number)}</h3>
+    ${closureBanner}
     <div class="grid-3" style="margin-bottom:10px;">
       <div><label class="muted" style="font-size:11px;">VENDOR</label><div><strong>${esc(h.vendor_name)}</strong></div></div>
       <div><label class="muted" style="font-size:11px;">DATE</label><div>${fmtDate(h.po_date)}</div></div>
@@ -10470,10 +10495,170 @@ async function viewPO(poNum) {
       <thead><tr><th>#</th><th>Material</th><th>UOM</th><th class="num">Qty</th><th class="num">Rate</th><th class="num">Base Amt</th><th class="num">Total (incl.GST)</th></tr></thead>
       <tbody>${(items||[]).map(it=>`<tr><td>${it.sno}</td><td>${esc(it.material_name)}</td><td>${esc(it.uom)}</td><td class="num">${it.qty}</td><td class="num">${fmtINR(it.unit_rate)}</td><td class="num">${fmtINR(it.base_amount)}</td><td class="num">${fmtINR(it.total_amount)}</td></tr>`).join('')}</tbody>
     </table></div>
-    <div class="actions-row"><button class="btn btn-ghost" onclick="closeModal()">Close</button></div>`);
+    <div class="actions-row">${closeActions}<button class="btn btn-ghost" onclick="closeModal()">Close</button></div>`);
 }
 
 async function printPOById() { toast('PO print module coming soon','info'); }
+
+// ── Shared helper: recompute MIR header status & item statuses after PO termination ──
+// Called after a PO is Cancelled or Short-Closed. Walks the MIR's POs and items,
+// flips MIR.status to 'Cancelled' if every PO is Cancelled and no other procurement is active.
+// For Cancel: resets covered MIR items from 'PO Raised' back to 'Approved' so they can be re-procured.
+// For Short-Close: leaves MIR items as-is (PO did receive material — items are effectively partially fulfilled).
+async function _rollupMIRAfterPOTermination(mirNum, terminatedPONum, action /* 'cancel' | 'short-close' */) {
+  if (!mirNum) return;
+  // 1. Reset items if cancelled — only items tied to this specific PO
+  if (action === 'cancel') {
+    // Reset items that were marked PO Raised under this PO back to Approved (re-procurement allowed).
+    // Use po_number match; fallback handles direct-PO items where po_number was stamped on the item.
+    await sb.from('pu_mir_items')
+      .update({ item_status: 'Approved', po_number: null })
+      .eq('mir_number', mirNum)
+      .eq('po_number', terminatedPONum)
+      .eq('item_status', 'PO Raised');
+  }
+  // 2. Recompute MIR header status from scratch based on remaining state
+  const [{data:allPOs}, {data:allItems}] = await Promise.all([
+    sb.from('pu_po_orders').select('po_number,status').eq('mir_number', mirNum),
+    sb.from('pu_mir_items').select('item_status').eq('mir_number', mirNum),
+  ]);
+  // If no POs at all under this MIR (e.g. the only PO was just cancelled and items reset), don't override —
+  // the recomputed item-level status below will set it correctly.
+  const pos = allPOs || [];
+  const items = allItems || [];
+  if (!items.length) return;
+  // Terminal-cancelled MIR: every PO is Cancelled AND no item is in active procurement
+  const allPOsCancelled = pos.length > 0 && pos.every(p => p.status === 'Cancelled');
+  const anyItemActive = items.some(it => ['RFQ Raised','PO Raised','Received'].includes(it.item_status));
+  if (allPOsCancelled && !anyItemActive) {
+    await sb.from('pu_mir').update({ status: 'Cancelled' }).eq('mir_number', mirNum);
+    return;
+  }
+  // Otherwise recompute from item statuses (mirror of the existing rollup pattern at lines 9342, 10433)
+  const allReceived = items.every(it => it.item_status === 'Received' || it.item_status === 'Closed');
+  const allPORaised = items.every(it => ['PO Raised','Received','Closed'].includes(it.item_status));
+  const anyPORaised = items.some(it => ['PO Raised','Received'].includes(it.item_status));
+  const allRFQ      = items.every(it => ['RFQ Raised','PO Raised','Received','Closed'].includes(it.item_status));
+  const anyRFQ      = items.some(it => it.item_status === 'RFQ Raised');
+  const newSt = allReceived ? 'Closed'
+              : allPORaised ? 'PO Raised'
+              : anyPORaised ? 'Partial RFQ'
+              : allRFQ      ? 'RFQ Raised'
+              : anyRFQ      ? 'Partial RFQ'
+              : 'Approved';
+  await sb.from('pu_mir').update({ status: newSt }).eq('mir_number', mirNum);
+}
+
+// ── PO Cancel / Short-Close (PM + Admin only) ──
+async function cancelPO(poNum) {
+  if(!hasPerm('canCancelPO')){toast('Not permitted','error');return;}
+  // Re-validate: zero GRNs and status Open
+  const [{data:h},{data:grns}]=await Promise.all([
+    sb.from('pu_po_orders').select('status').eq('po_number',poNum).single(),
+    sb.from('pu_grn').select('grn_number').eq('po_number',poNum),
+  ]);
+  if(!h){toast('PO not found','error');return;}
+  if(h.status!=='Open'){toast('Only Open POs can be cancelled (current: '+h.status+')','error');return;}
+  if((grns||[]).length>0){toast('Cannot cancel — GRN(s) already raised against this PO. Use Short Close instead.','error');return;}
+  closeModal();
+  setTimeout(()=>{
+    openModal(`<h3>Cancel PO — ${esc(poNum)}</h3>
+      <p class="muted" style="font-size:12px;margin-bottom:8px;">This action is permanent. The PO will not be available for GRN.</p>
+      <div class="field"><label class="req">Reason (mandatory)</label>
+        <textarea id="poActionReason" rows="3" style="width:100%;" placeholder="Why is this PO being cancelled?"></textarea>
+      </div>
+      <div class="actions-row">
+        <button class="btn btn-danger" onclick="confirmCancelPO('${esc(poNum)}')">Confirm Cancel</button>
+        <button class="btn btn-ghost" onclick="closeModal()">Back</button>
+      </div>`);
+  },120);
+}
+
+async function confirmCancelPO(poNum) {
+  const reason=(document.getElementById('poActionReason')?.value||'').trim();
+  if(!reason){toast('Reason is mandatory','error');return;}
+  // Race-guard: re-check just before update
+  const {data:grns}=await sb.from('pu_grn').select('grn_number').eq('po_number',poNum);
+  if((grns||[]).length>0){toast('Cannot cancel — GRN already exists for this PO','error');closeModal();return;}
+  pbShow('Cancelling PO…');
+  // Capture MIR number BEFORE update so we can roll up after
+  const {data:poHdr}=await sb.from('pu_po_orders').select('mir_number,qc_number').eq('po_number',poNum).single();
+  const {error}=await sb.from('pu_po_orders').update({
+    status:'Cancelled',
+    closed_by:state.userName, closed_by_id:state.userId,
+    closed_at:new Date().toISOString(), close_reason:reason
+  }).eq('po_number',poNum).eq('status','Open');
+  if(error){pbDone();toast('Update failed: '+error.message,'error');return;}
+  // Resolve MIR number — direct field, or trace via QC → RFQ → MIR
+  let mirNum = poHdr?.mir_number || null;
+  if (!mirNum && poHdr?.qc_number) {
+    const {data:qcH} = await sb.from('pu_quote_comparison').select('rfq_number').eq('qc_number',poHdr.qc_number).maybeSingle();
+    if (qcH?.rfq_number) {
+      const {data:rfqH} = await sb.from('pu_rfq').select('mir_number').eq('rfq_number',qcH.rfq_number).maybeSingle();
+      mirNum = rfqH?.mir_number || null;
+    }
+  }
+  if (mirNum) await _rollupMIRAfterPOTermination(mirNum, poNum, 'cancel');
+  pbDone();
+  closeModal();
+  flashSuccess('PO '+poNum+' Cancelled');
+  loadPOList();
+}
+
+async function shortClosePO(poNum) {
+  if(!hasPerm('canShortClosePO')){toast('Not permitted','error');return;}
+  // Re-validate: at least one GRN and status Partial Receipt
+  const [{data:h},{data:grns}]=await Promise.all([
+    sb.from('pu_po_orders').select('status').eq('po_number',poNum).single(),
+    sb.from('pu_grn').select('grn_number').eq('po_number',poNum),
+  ]);
+  if(!h){toast('PO not found','error');return;}
+  if(h.status!=='Partial Receipt'){toast('Short Close allowed only for Partial Receipt POs (current: '+h.status+')','error');return;}
+  if((grns||[]).length<1){toast('Short Close needs at least one GRN entry','error');return;}
+  closeModal();
+  setTimeout(()=>{
+    openModal(`<h3>Short Close PO — ${esc(poNum)}</h3>
+      <p class="muted" style="font-size:12px;margin-bottom:8px;">This action is permanent. Remaining quantities will be closed and the PO will not be available for further GRN.</p>
+      <div class="field"><label class="req">Reason (mandatory)</label>
+        <textarea id="poActionReason" rows="3" style="width:100%;" placeholder="Why is this PO being short-closed?"></textarea>
+      </div>
+      <div class="actions-row">
+        <button class="btn btn-danger" onclick="confirmShortClosePO('${esc(poNum)}')">Confirm Short Close</button>
+        <button class="btn btn-ghost" onclick="closeModal()">Back</button>
+      </div>`);
+  },120);
+}
+
+async function confirmShortClosePO(poNum) {
+  const reason=(document.getElementById('poActionReason')?.value||'').trim();
+  if(!reason){toast('Reason is mandatory','error');return;}
+  // Race-guard: re-check just before update
+  const {data:grns}=await sb.from('pu_grn').select('grn_number').eq('po_number',poNum);
+  if((grns||[]).length<1){toast('Short Close needs at least one GRN entry','error');closeModal();return;}
+  pbShow('Short-closing PO…');
+  // Capture MIR number BEFORE update for rollup
+  const {data:poHdr}=await sb.from('pu_po_orders').select('mir_number,qc_number').eq('po_number',poNum).single();
+  const {error}=await sb.from('pu_po_orders').update({
+    status:'Short-Closed',
+    closed_by:state.userName, closed_by_id:state.userId,
+    closed_at:new Date().toISOString(), close_reason:reason
+  }).eq('po_number',poNum).eq('status','Partial Receipt');
+  if(error){pbDone();toast('Update failed: '+error.message,'error');return;}
+  // Resolve MIR number — direct field, or trace via QC → RFQ → MIR
+  let mirNum = poHdr?.mir_number || null;
+  if (!mirNum && poHdr?.qc_number) {
+    const {data:qcH} = await sb.from('pu_quote_comparison').select('rfq_number').eq('qc_number',poHdr.qc_number).maybeSingle();
+    if (qcH?.rfq_number) {
+      const {data:rfqH} = await sb.from('pu_rfq').select('mir_number').eq('rfq_number',qcH.rfq_number).maybeSingle();
+      mirNum = rfqH?.mir_number || null;
+    }
+  }
+  if (mirNum) await _rollupMIRAfterPOTermination(mirNum, poNum, 'short-close');
+  pbDone();
+  closeModal();
+  flashSuccess('PO '+poNum+' Short-Closed');
+  loadPOList();
+}
 
 // ============================================================
 // GRN — GOODS RECEIPT NOTE
@@ -12981,8 +13166,12 @@ async function loadTrackerA() {
       const qcApproved   = mirQCs.some(function(q){ return q.status === 'Approved'; });
       const qcAllRejected = rfqRaised && mirQCs.length > 0 && mirQCs.every(function(q){ return q.status === 'Rejected'; });
       const poCreated    = allPOs.length > 0;
-      const poApproved   = allPOs.some(function(p){ return ['Open','Partial Receipt','Fully Received'].indexOf(p.status) >= 0; });
-      const poAllRejected = poCreated && allPOs.every(function(p){ return p.status === 'Rejected'; });
+      // Short-Closed counts as "approved" (its partial GRNs are real); Cancelled does not.
+      const poApproved   = allPOs.some(function(p){ return ['Open','Partial Receipt','Fully Received','Short-Closed'].indexOf(p.status) >= 0; });
+      const poAllRejected  = poCreated && allPOs.every(function(p){ return p.status === 'Rejected'; });
+      const poAllCancelled = poCreated && allPOs.every(function(p){ return p.status === 'Cancelled'; });
+      // poAllClosed = every PO has reached a terminal state (Cancelled, Short-Closed, Fully Received)
+      const poAllClosed    = poCreated && allPOs.every(function(p){ return ['Cancelled','Short-Closed','Fully Received'].indexOf(p.status) >= 0; });
       const grnReceived  = allGRNs.length > 0;
       const grnVerified  = allGRNs.some(function(g){ return ['Verified','Partially Billed','Billed'].indexOf(g.status) >= 0; });
       const grnAllRejected = grnReceived && allGRNs.every(function(g){ return g.status === 'Rejected'; });
@@ -13014,13 +13203,14 @@ async function loadTrackerA() {
                             : mirApproved && !rfqRaised ? 'active' // MIR approved, no RFQ yet, awaiting either path
                             : 'pending');
       const sPoApproved   = mirRejected || qcAllRejected ? 'pending'
+                          : poAllCancelled ? 'rejected'
                           : poApproved ? 'done'
                           : poAllRejected ? 'rejected'
                           : (poCreated ? 'active' : 'pending');
-      const sGrnReceived  = mirRejected || qcAllRejected || poAllRejected ? 'pending'
+      const sGrnReceived  = mirRejected || qcAllRejected || poAllRejected || poAllCancelled ? 'pending'
                           : grnReceived ? 'done'
                           : (poApproved ? 'active' : 'pending');
-      const sGrnVerified  = mirRejected || qcAllRejected || poAllRejected ? 'pending'
+      const sGrnVerified  = mirRejected || qcAllRejected || poAllRejected || poAllCancelled ? 'pending'
                           : grnVerified ? 'done'
                           : grnAllRejected ? 'rejected'
                           : (grnReceived ? 'active' : 'pending');
@@ -13028,6 +13218,8 @@ async function loadTrackerA() {
       let overallSt = 'In Progress';
       if (mirRejected) overallSt = 'Rejected';
       else if (qcAllRejected || poAllRejected || grnAllRejected) overallSt = 'Rejected';
+      else if (poAllCancelled) overallSt = 'Cancelled';
+      else if (poAllClosed && (grnVerified ? allGRNs.every(function(g){ return ['Verified','Billed','Partially Billed'].indexOf(g.status) >= 0; }) : true)) overallSt = 'Completed';
       else if (grnVerified) overallSt = allGRNs.every(function(g){ return ['Verified','Billed','Partially Billed'].indexOf(g.status) >= 0; }) ? 'Completed' : 'In Progress';
 
       if (statusFilter) {
@@ -13039,7 +13231,7 @@ async function loadTrackerA() {
         }
       }
 
-      const stClass = overallSt==='Completed'?'completed':overallSt==='Rejected'?'rejected':'active';
+      const stClass = overallSt==='Completed'?'completed':(overallSt==='Rejected'||overallSt==='Cancelled')?'rejected':'active';
       const isExpanded = _trkAExpanded.has(mir.mir_number);
       const thisItems = itemsByMir[mir.mir_number] || [];
       const childCount = thisItems.length + allPOs.length + allGRNs.length;
