@@ -3,11 +3,11 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>UE-Procurement Suite — Urban Excellence LLP</title>
+<title>Penguin-Procurement Suite — Urban Excellence LLP · Poetry of Earth</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
 /* ============================================================
-   UE-Procurement Suite — Screen Styles (Light / Soft Blue-Grey)
+   Penguin-Procurement Suite — Screen Styles (Light / Soft Blue-Grey)
    ============================================================ */
 * { box-sizing: border-box; margin: 0; padding: 0; }
 :root {
@@ -332,6 +332,36 @@ td input, td select { padding: 5px 6px; background: var(--input-bg); color: var(
 .expand-btn:hover { text-decoration: underline; }
 .dash-all-clear { text-align: center; padding: 24px; color: var(--muted); font-size: 13px; }
 .dash-all-clear .icon { font-size: 32px; margin-bottom: 8px; }
+
+/* ── Day-card activity matrix ── */
+.dash-day-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(440px, 1fr)); gap: 12px; }
+.dash-day-card { border: 1px solid var(--border); border-radius: 8px; background: #fff; padding: 0; cursor: pointer; transition: transform 0.12s ease, box-shadow 0.12s ease, border-color 0.12s ease; display: flex; flex-direction: column; }
+.dash-day-card:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.08); border-color: var(--accent); }
+.dash-day-card.is-empty { opacity: 0.45; cursor: default; }
+.dash-day-card.is-empty:hover { transform: none; box-shadow: none; border-color: var(--border); }
+.dash-day-card.is-today { border-color: var(--accent); border-width: 2px; box-shadow: 0 0 0 2px rgba(13,148,136,0.08); }
+.ddc-head { display: flex; align-items: baseline; justify-content: space-between; padding: 10px 14px; border-bottom: 1px solid #f1f5f9; background: #fafbfc; border-radius: 8px 8px 0 0; }
+.ddc-head .day-label { font-size: 11px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; }
+.ddc-head .day-label .day-date { color: var(--text); margin-left: 6px; }
+.ddc-head .day-count { font-size: 11px; color: var(--muted); }
+.ddc-head .day-count strong { color: var(--accent); font-size: 13px; margin-right: 3px; }
+.ddc-body { display: grid; grid-template-columns: 1fr 1fr; gap: 0 18px; padding: 10px 14px; }
+.ddc-row { display: grid; grid-template-columns: 18px 56px 1fr auto; align-items: center; gap: 6px; padding: 3px 0; font-size: 11.5px; }
+.ddc-row .icon { font-size: 13px; line-height: 1; }
+.ddc-row .label { color: var(--muted); font-weight: 500; }
+.ddc-row .count { color: var(--text); font-weight: 600; text-align: left; }
+.ddc-row .amt { color: var(--accent); font-weight: 600; font-size: 11px; white-space: nowrap; }
+.ddc-row.zero .icon { opacity: 0.3; }
+.ddc-row.zero .label { color: #cbd5e1; }
+.ddc-row.zero .count { color: #cbd5e1; font-weight: 400; }
+.ddc-foot { padding: 8px 14px 10px; border-top: 1px solid #f1f5f9; font-size: 11px; color: var(--muted); }
+.ddc-foot strong { color: var(--text); font-weight: 600; }
+.ddc-foot .ddc-amt { color: var(--accent); font-weight: 700; }
+.ddc-empty-msg { padding: 16px 14px; text-align: center; font-size: 12px; color: var(--muted); font-style: italic; }
+@media (max-width: 480px) {
+  .dash-day-grid { grid-template-columns: 1fr; }
+  .ddc-body { grid-template-columns: 1fr; gap: 0; }
+}
 .tracker-filters { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-bottom: 12px; }
 .tracker-filters select, .tracker-filters input[type="date"] { padding: 6px 10px; background: var(--input-bg); color: var(--text); border: 1px solid var(--border); border-radius: 4px; font-size: 12px; }
 .dash-sub-tabs { display: flex; gap: 4px; margin-bottom: 16px; border-bottom: 2px solid var(--border); }
@@ -395,7 +425,7 @@ input[type="number"] {
   <div class="card" style="margin:0;">
     <!-- LOGIN PANEL -->
     <div id="authPanel-login">
-      <h2>UE-Procurement Suite</h2>
+      <h2>🐧 Penguin-Procurement Suite</h2>
       <div class="sub">Urban Excellence LLP · Poetry of Earth</div>
       <input type="email" id="authEmail" placeholder="Email address" autocomplete="email"
              onkeydown="if(event.key==='Enter')document.getElementById('authPass').focus()">
@@ -449,7 +479,7 @@ input[type="number"] {
 <!-- MAIN APP -->
 <div id="app" class="hidden">
 <div class="topbar">
-  <h1>UE-Procurement Suite <span>· Urban Excellence LLP</span></h1>
+  <h1>🐧 Penguin-Procurement Suite <span>· Urban Excellence LLP <span style="opacity:0.6;">›</span> Poetry of Earth</span></h1>
   <div class="user">Signed in as <strong id="currentUser">—</strong> (<span id="currentRole" style="color:var(--accent);"></span>)
     <button class="logout" onclick="doLogout()">Logout</button>
   </div>
@@ -10509,10 +10539,11 @@ async function _rollupMIRAfterPOTermination(mirNum, terminatedPONum, action /* '
   if (!mirNum) return;
   // 1. Reset items if cancelled — only items tied to this specific PO
   if (action === 'cancel') {
-    // Reset items that were marked PO Raised under this PO back to Approved (re-procurement allowed).
+    // Reset items that were marked PO Raised under this PO back to 'Pending' so they can be re-procured.
+    // ('Approved' is a MIR-header status, not a valid item_status — items use Pending/RFQ Raised/PO Raised/Received/Rejected.)
     // Use po_number match; fallback handles direct-PO items where po_number was stamped on the item.
     await sb.from('pu_mir_items')
-      .update({ item_status: 'Approved', po_number: null })
+      .update({ item_status: 'Pending', po_number: null, rfq_number: null })
       .eq('mir_number', mirNum)
       .eq('po_number', terminatedPONum)
       .eq('item_status', 'PO Raised');
@@ -13526,64 +13557,224 @@ function switchDashTracker(tab) {
 async function loadActivityFeed() {
   const el = document.getElementById('dash-activity-feed');
   if (!el) return;
-  const from = new Date(); from.setDate(from.getDate()-30);
+  const todayD = new Date(); todayD.setHours(0,0,0,0);
+  const from = new Date(todayD); from.setDate(from.getDate()-29); // 30-day window inclusive
   const fromISO = from.toISOString().slice(0,10);
+  const todayISO = todayD.toISOString().slice(0,10);
 
   try {
     const queries = [
-      sb.from('pu_mir').select('mir_number,mir_date,status,raised_by').gte('mir_date',fromISO).order('mir_date',{ascending:false}).limit(8),
-      sb.from('pu_rfq').select('rfq_number,rfq_date,status,raised_by').gte('rfq_date',fromISO).order('rfq_date',{ascending:false}).limit(6),
-      sb.from('pu_quote_comparison').select('qc_number,qc_date,status,prepared_by').gte('qc_date',fromISO).order('qc_date',{ascending:false}).limit(6),
-      sb.from('pu_po_orders').select('po_number,po_date,status,prepared_by,vendor_name').gte('po_date',fromISO).order('po_date',{ascending:false}).limit(8),
-      sb.from('pu_grn').select('grn_number,grn_date,status,received_by,po_number').gte('grn_date',fromISO).order('grn_date',{ascending:false}).limit(8),
-      sb.from('pu_po_bills').select('bill_number,bill_date,status,prepared_by,vendor_name').gte('bill_date',fromISO).order('bill_date',{ascending:false}).limit(6),
-      sb.from('pu_mis').select('mis_number,issue_date,status,issued_by,issued_to').gte('issue_date',fromISO).order('issue_date',{ascending:false}).limit(6),
-      sb.from('ho_orders').select('ho_number,ho_date,status,created_by_name,vendor_name').gte('ho_date',fromISO).order('ho_date',{ascending:false}).limit(6),
-      sb.from('ho_certifications').select('hoc_number,hoc_date,status,certified_by,ho_number').gte('hoc_date',fromISO).order('hoc_date',{ascending:false}).limit(6),
-      sb.from('ho_bills').select('bill_number,bill_date,status,prepared_by,vendor_name').gte('bill_date',fromISO).order('bill_date',{ascending:false}).limit(6),
-      sb.from('wo_orders').select('wo_number,wo_date,status,created_by_name,vendor_name').gte('wo_date',fromISO).order('wo_date',{ascending:false}).limit(6),
-      sb.from('ho_payments').select('payment_id,payment_date,amount_paid,vendor,entered_by').gte('payment_date',fromISO).order('payment_date',{ascending:false}).limit(6),
+      sb.from('pu_mir').select('mir_number,mir_date,status,raised_by').gte('mir_date',fromISO),
+      sb.from('pu_rfq').select('rfq_number,rfq_date,status,raised_by').gte('rfq_date',fromISO),
+      sb.from('pu_quote_comparison').select('qc_number,qc_date,status,prepared_by').gte('qc_date',fromISO),
+      sb.from('pu_po_orders').select('po_number,po_date,status,prepared_by,vendor_name,grand_total').gte('po_date',fromISO),
+      sb.from('pu_grn').select('grn_number,grn_date,status,received_by,po_number').gte('grn_date',fromISO),
+      sb.from('pu_po_bills').select('bill_number,bill_date,status,prepared_by,vendor_name,net_payable').gte('bill_date',fromISO),
+      sb.from('pu_mis').select('mis_number,issue_date,status,issued_by,issued_to').gte('issue_date',fromISO),
+      sb.from('ho_orders').select('ho_number,ho_date,status,created_by_name,vendor_name').gte('ho_date',fromISO),
+      sb.from('ho_certifications').select('hoc_number,hoc_date,status,certified_by,ho_number').gte('hoc_date',fromISO),
+      sb.from('ho_bills').select('bill_number,bill_date,status,prepared_by,vendor_name,net_payable').gte('bill_date',fromISO),
+      sb.from('wo_orders').select('wo_number,wo_date,status,created_by_name,vendor_name').gte('wo_date',fromISO),
+      sb.from('wo_certifications').select('woc_number,woc_date,status,certified_by,wo_number').gte('woc_date',fromISO),
+      sb.from('wo_bills').select('bill_number,bill_date,status,prepared_by,vendor_name,net_payable').gte('bill_date',fromISO),
+      sb.from('ho_payments').select('payment_id,payment_date,amount_paid,vendor,entered_by').gte('payment_date',fromISO),
     ];
     const results = await Promise.all(queries);
     const data = results.map(function(r){ return r.data||[]; });
 
+    // Build a flat event list (used both for day grouping and for the day-detail modal)
     const events = [];
-    const push = function(date, dotCls, title, sub) { events.push({date: date||'2000-01-01', dotCls: dotCls, title: title, sub: sub}); };
+    const push = function(date, dotCls, title, sub, amount) {
+      events.push({ date: date||'2000-01-01', dotCls: dotCls, title: title, sub: sub, amount: amount||0 });
+    };
+    data[0].forEach(function(m){ push(m.mir_date, m.status==='Approved'?'approved':m.status==='Rejected'?'rejected':'pending', 'MIR <strong>'+m.mir_number+'</strong> '+m.status, 'Raised by '+(m.raised_by||'—'), 0); });
+    data[1].forEach(function(r){ push(r.rfq_date, 'created', 'RFQ <strong>'+r.rfq_number+'</strong> raised', 'By '+(r.raised_by||'—'), 0); });
+    data[2].forEach(function(q){ push(q.qc_date, q.status==='Approved'?'approved':q.status==='Rejected'?'rejected':'pending', 'Quote Comparison <strong>'+q.qc_number+'</strong> — '+q.status, 'By '+(q.prepared_by||'—'), 0); });
+    data[3].forEach(function(p){ push(p.po_date, p.status==='Open'?'approved':p.status==='Rejected'?'rejected':'pending', 'Purchase Order <strong>'+p.po_number+'</strong> — '+p.status, 'Vendor: '+(p.vendor_name||'—')+' | By: '+(p.prepared_by||'—'), num(p.grand_total)); });
+    data[4].forEach(function(g){ push(g.grn_date, g.status==='Verified'?'approved':'created', 'GRN <strong>'+g.grn_number+'</strong> '+g.status, 'Against '+g.po_number+' | By '+(g.received_by||'—'), 0); });
+    data[5].forEach(function(b){ push(b.bill_date, b.status==='Unpaid'?'approved':b.status==='Rejected'?'rejected':'pending', 'PO Bill <strong>'+b.bill_number+'</strong> — '+b.status, 'Vendor: '+(b.vendor_name||'—'), num(b.net_payable)); });
+    data[6].forEach(function(m){ push(m.issue_date, m.status==='Approved'?'approved':'pending', 'Material Issue <strong>'+m.mis_number+'</strong> — '+m.status, 'To: '+(m.issued_to||'—'), 0); });
+    data[7].forEach(function(h){ push(h.ho_date, h.status==='Open'?'approved':h.status==='Rejected'?'rejected':'pending', 'Hire Order <strong>'+h.ho_number+'</strong> — '+h.status, 'Vendor: '+(h.vendor_name||'—'), 0); });
+    data[8].forEach(function(c){ push(c.hoc_date, c.status==='Unbilled'?'approved':c.status==='Rejected'?'rejected':'pending', 'HO Certification <strong>'+c.hoc_number+'</strong> — '+c.status, 'HO: '+c.ho_number+' | By '+(c.certified_by||'—'), 0); });
+    data[9].forEach(function(b){ push(b.bill_date, b.status==='Unpaid'?'approved':b.status==='Rejected'?'rejected':'pending', 'HO Bill <strong>'+b.bill_number+'</strong> — '+b.status, 'Vendor: '+(b.vendor_name||'—'), num(b.net_payable)); });
+    data[10].forEach(function(w){ push(w.wo_date, w.status==='Open'?'approved':w.status==='Rejected'?'rejected':'pending', 'Work Order <strong>'+w.wo_number+'</strong> — '+w.status, 'Vendor: '+(w.vendor_name||'—'), 0); });
+    data[11].forEach(function(c){ push(c.woc_date, c.status==='Unbilled'?'approved':c.status==='Rejected'?'rejected':'pending', 'WO Certification <strong>'+c.woc_number+'</strong> — '+c.status, 'WO: '+c.wo_number+' | By '+(c.certified_by||'—'), 0); });
+    data[12].forEach(function(b){ push(b.bill_date, b.status==='Unpaid'?'approved':b.status==='Rejected'?'rejected':'pending', 'WO Bill <strong>'+b.bill_number+'</strong> — '+b.status, 'Vendor: '+(b.vendor_name||'—'), num(b.net_payable)); });
+    data[13].forEach(function(p){ push(p.payment_date, 'paid', 'Payment <strong>'+p.payment_id+'</strong> — ₹'+fmtINR(p.amount_paid), 'Vendor: '+(p.vendor||'—')+' | By '+(p.entered_by||'—'), num(p.amount_paid)); });
 
-    data[0].forEach(function(m){ push(m.mir_date, m.status==='Approved'?'approved':m.status==='Rejected'?'rejected':'pending', 'MIR <strong>'+m.mir_number+'</strong> '+m.status, 'Raised by '+(m.raised_by||'—')); });
-    data[1].forEach(function(r){ push(r.rfq_date, 'created', 'RFQ <strong>'+r.rfq_number+'</strong> raised', 'By '+(r.raised_by||'—')); });
-    data[2].forEach(function(q){ push(q.qc_date, q.status==='Approved'?'approved':q.status==='Rejected'?'rejected':'pending', 'Quote Comparison <strong>'+q.qc_number+'</strong> — '+q.status, 'By '+(q.prepared_by||'—')); });
-    data[3].forEach(function(p){ push(p.po_date, p.status==='Open'?'approved':p.status==='Rejected'?'rejected':'pending', 'Purchase Order <strong>'+p.po_number+'</strong> — '+p.status, 'Vendor: '+(p.vendor_name||'—')+' | By: '+(p.prepared_by||'—')); });
-    data[4].forEach(function(g){ push(g.grn_date, g.status==='Verified'?'approved':'created', 'GRN <strong>'+g.grn_number+'</strong> '+g.status, 'Against '+g.po_number+' | By '+(g.received_by||'—')); });
-    data[5].forEach(function(b){ push(b.bill_date, b.status==='Unpaid'?'approved':b.status==='Rejected'?'rejected':'pending', 'PO Bill <strong>'+b.bill_number+'</strong> — '+b.status, 'Vendor: '+(b.vendor_name||'—')); });
-    data[6].forEach(function(m){ push(m.issue_date, m.status==='Approved'?'approved':'pending', 'Material Issue <strong>'+m.mis_number+'</strong> — '+m.status, 'To: '+(m.issued_to||'—')); });
-    data[7].forEach(function(h){ push(h.ho_date, h.status==='Open'?'approved':h.status==='Rejected'?'rejected':'pending', 'Hire Order <strong>'+h.ho_number+'</strong> — '+h.status, 'Vendor: '+(h.vendor_name||'—')); });
-    data[8].forEach(function(c){ push(c.hoc_date, c.status==='Unbilled'?'approved':c.status==='Rejected'?'rejected':'pending', 'HO Certification <strong>'+c.hoc_number+'</strong> — '+c.status, 'HO: '+c.ho_number+' | By '+(c.certified_by||'—')); });
-    data[9].forEach(function(b){ push(b.bill_date, b.status==='Unpaid'?'approved':b.status==='Rejected'?'rejected':'pending', 'HO Bill <strong>'+b.bill_number+'</strong> — '+b.status, 'Vendor: '+(b.vendor_name||'—')); });
-    data[10].forEach(function(w){ push(w.wo_date, w.status==='Open'?'approved':w.status==='Rejected'?'rejected':'pending', 'Work Order <strong>'+w.wo_number+'</strong> — '+w.status, 'Vendor: '+(w.vendor_name||'—')); });
-    data[11].forEach(function(p){ push(p.payment_date, 'paid', 'Payment <strong>'+p.payment_id+'</strong> — ₹'+fmtINR(p.amount_paid), 'Vendor: '+(p.vendor||'—')+' | By '+(p.entered_by||'—')); });
+    // Stash full event list on the element so the day-detail modal can read it without a refetch
+    el._dayEvents = events;
 
-    events.sort(function(a,b) { return new Date(b.date)-new Date(a.date); });
+    // Group raw rows by date (YYYY-MM-DD), keyed for matrix counts and largest-event lookup
+    // Each day buckets: { mir, rfq, qc, po, grn, pob, mis, ho, hoc, hob, wo, woc, wob, pay } counts + amounts
+    function dayKey(d){ return String(d||'').slice(0,10); }
+    const buckets = {};
+    function bucket(d){
+      const k = dayKey(d);
+      if (!buckets[k]) buckets[k] = {
+        mir:{n:0}, rfq:{n:0}, qc:{n:0}, po:{n:0,amt:0}, grn:{n:0}, pob:{n:0,amt:0}, mis:{n:0},
+        ho:{n:0}, hoc:{n:0}, hob:{n:0,amt:0}, wo:{n:0}, woc:{n:0}, wob:{n:0,amt:0}, pay:{n:0,amt:0},
+        actors:{}, top:null
+      };
+      return buckets[k];
+    }
+    function trackTop(b, num, amt, label, actor){
+      // Track the largest-by-money event; fallback handled later
+      if (amt > 0 && (!b.top || amt > b.top.amt)) b.top = { num: num, amt: amt, label: label, actor: actor };
+      if (actor) b.actors[actor] = (b.actors[actor]||0)+1;
+    }
+    data[0].forEach(function(m){ const b=bucket(m.mir_date); b.mir.n++; trackTop(b,m.mir_number,0,'MIR',m.raised_by); });
+    data[1].forEach(function(r){ const b=bucket(r.rfq_date); b.rfq.n++; trackTop(b,r.rfq_number,0,'RFQ',r.raised_by); });
+    data[2].forEach(function(q){ const b=bucket(q.qc_date); b.qc.n++; trackTop(b,q.qc_number,0,'QC',q.prepared_by); });
+    data[3].forEach(function(p){ const b=bucket(p.po_date); b.po.n++; b.po.amt+=num(p.grand_total); trackTop(b,p.po_number,num(p.grand_total),'PO',p.prepared_by); });
+    data[4].forEach(function(g){ const b=bucket(g.grn_date); b.grn.n++; trackTop(b,g.grn_number,0,'GRN',g.received_by); });
+    data[5].forEach(function(b2){ const b=bucket(b2.bill_date); b.pob.n++; b.pob.amt+=num(b2.net_payable); trackTop(b,b2.bill_number,num(b2.net_payable),'PO Bill',b2.prepared_by); });
+    data[6].forEach(function(m){ const b=bucket(m.issue_date); b.mis.n++; trackTop(b,m.mis_number,0,'MIS',m.issued_by); });
+    data[7].forEach(function(h){ const b=bucket(h.ho_date); b.ho.n++; trackTop(b,h.ho_number,0,'HO',h.created_by_name); });
+    data[8].forEach(function(c){ const b=bucket(c.hoc_date); b.hoc.n++; trackTop(b,c.hoc_number,0,'HOC',c.certified_by); });
+    data[9].forEach(function(b2){ const b=bucket(b2.bill_date); b.hob.n++; b.hob.amt+=num(b2.net_payable); trackTop(b,b2.bill_number,num(b2.net_payable),'HO Bill',b2.prepared_by); });
+    data[10].forEach(function(w){ const b=bucket(w.wo_date); b.wo.n++; trackTop(b,w.wo_number,0,'WO',w.created_by_name); });
+    data[11].forEach(function(c){ const b=bucket(c.woc_date); b.woc.n++; trackTop(b,c.woc_number,0,'WOC',c.certified_by); });
+    data[12].forEach(function(b2){ const b=bucket(b2.bill_date); b.wob.n++; b.wob.amt+=num(b2.net_payable); trackTop(b,b2.bill_number,num(b2.net_payable),'WO Bill',b2.prepared_by); });
+    data[13].forEach(function(p){ const b=bucket(p.payment_date); b.pay.n++; b.pay.amt+=num(p.amount_paid); trackTop(b,p.payment_id,num(p.amount_paid),'Payment',p.entered_by); });
 
-    if (!events.length) {
+    // Build a 30-day calendar (latest day first, including today). Empty days get faint placeholder cards.
+    const days = [];
+    for (let i = 0; i < 30; i++) {
+      const d = new Date(todayD); d.setDate(d.getDate()-i);
+      days.push(d.toISOString().slice(0,10));
+    }
+
+    // Helpers
+    const DOW = ['SUN','MON','TUE','WED','THU','FRI','SAT'];
+    const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    function fmtDayLabel(iso){
+      const d = new Date(iso+'T00:00:00');
+      return DOW[d.getDay()]+' · '+String(d.getDate()).padStart(2,'0')+' '+MONTHS[d.getMonth()];
+    }
+    function fmtMoneyShort(amt){
+      if (!amt) return '';
+      if (amt >= 1e7) return '₹'+(amt/1e7).toFixed(2)+'Cr';
+      if (amt >= 1e5) return '₹'+(amt/1e5).toFixed(2)+'L';
+      if (amt >= 1e3) return '₹'+(amt/1e3).toFixed(1)+'K';
+      return '₹'+Math.round(amt);
+    }
+
+    // 14 event types in 7+7 split — order must match the column grouping
+    const COL_LEFT = [
+      {k:'mir', icon:'📋', label:'MIR'},
+      {k:'rfq', icon:'📨', label:'RFQ'},
+      {k:'qc',  icon:'📊', label:'QC'},
+      {k:'po',  icon:'📦', label:'PO',     hasAmt:true},
+      {k:'grn', icon:'📥', label:'GRN'},
+      {k:'pob', icon:'🧾', label:'PO Bill', hasAmt:true},
+      {k:'mis', icon:'📤', label:'MIS'},
+    ];
+    const COL_RIGHT = [
+      {k:'ho',  icon:'🛠️', label:'HO'},
+      {k:'hoc', icon:'📜', label:'HOC'},
+      {k:'hob', icon:'🧾', label:'HO Bill', hasAmt:true},
+      {k:'wo',  icon:'🔧', label:'WO'},
+      {k:'woc', icon:'📜', label:'WOC'},
+      {k:'wob', icon:'🧾', label:'WO Bill', hasAmt:true},
+      {k:'pay', icon:'💰', label:'Pay',     hasAmt:true},
+    ];
+
+    function renderRow(b, def){
+      const cell = b ? b[def.k] : null;
+      const n = cell ? cell.n : 0;
+      const amt = (def.hasAmt && cell) ? cell.amt : 0;
+      const cls = n === 0 ? 'ddc-row zero' : 'ddc-row';
+      const countTxt = n === 0 ? '—' : String(n);
+      const amtTxt = (n > 0 && def.hasAmt && amt > 0) ? '<span class="amt">'+fmtMoneyShort(amt)+'</span>' : '<span class="amt"></span>';
+      return '<div class="'+cls+'"><span class="icon">'+def.icon+'</span><span class="label">'+def.label+'</span><span class="count">'+countTxt+'</span>'+amtTxt+'</div>';
+    }
+
+    function renderCard(iso){
+      const b = buckets[iso];
+      const total = b ? (b.mir.n+b.rfq.n+b.qc.n+b.po.n+b.grn.n+b.pob.n+b.mis.n+b.ho.n+b.hoc.n+b.hob.n+b.wo.n+b.woc.n+b.wob.n+b.pay.n) : 0;
+      const isEmpty = total === 0;
+      const isToday = iso === todayISO;
+      const cardCls = 'dash-day-card'+(isEmpty?' is-empty':'')+(isToday?' is-today':'');
+      const head = '<div class="ddc-head">'+
+        '<span class="day-label">'+fmtDayLabel(iso)+(isToday?' <span class="day-date" style="color:var(--accent);font-weight:700;">· TODAY</span>':'')+'</span>'+
+        (isEmpty
+          ? '<span class="day-count">no activity</span>'
+          : '<span class="day-count"><strong>'+total+'</strong>event'+(total!==1?'s':'')+'</span>')+
+      '</div>';
+      if (isEmpty) {
+        // Faint placeholder — show grid of dashes for visual continuity
+        const lefts = COL_LEFT.map(function(d){ return renderRow(null,d); }).join('');
+        const rights = COL_RIGHT.map(function(d){ return renderRow(null,d); }).join('');
+        return '<div class="'+cardCls+'" data-iso="'+iso+'">'+head+
+          '<div class="ddc-body"><div>'+lefts+'</div><div>'+rights+'</div></div>'+
+          '<div class="ddc-empty-msg">— no activity —</div>'+
+        '</div>';
+      }
+      const lefts = COL_LEFT.map(function(d){ return renderRow(b,d); }).join('');
+      const rights = COL_RIGHT.map(function(d){ return renderRow(b,d); }).join('');
+      // Context line: largest by money, fallback to largest by count + actor
+      let footer = '';
+      if (b.top && b.top.amt > 0) {
+        footer = 'Largest: '+b.top.label+' <strong>'+esc(b.top.num)+'</strong> · <span class="ddc-amt">'+fmtMoneyShort(b.top.amt)+'</span>';
+      } else {
+        // Fallback — largest count event type
+        const counts = [
+          {k:'mir',label:'MIRs raised',n:b.mir.n},{k:'rfq',label:'RFQs raised',n:b.rfq.n},
+          {k:'qc',label:'QCs',n:b.qc.n},{k:'po',label:'POs',n:b.po.n},{k:'grn',label:'GRNs',n:b.grn.n},
+          {k:'pob',label:'PO Bills',n:b.pob.n},{k:'mis',label:'MISs',n:b.mis.n},
+          {k:'ho',label:'HOs',n:b.ho.n},{k:'hoc',label:'HOCs',n:b.hoc.n},{k:'hob',label:'HO Bills',n:b.hob.n},
+          {k:'wo',label:'WOs',n:b.wo.n},{k:'woc',label:'WOCs',n:b.woc.n},{k:'wob',label:'WO Bills',n:b.wob.n},
+          {k:'pay',label:'Payments',n:b.pay.n}
+        ];
+        counts.sort(function(a,c){ return c.n - a.n; });
+        const winner = counts[0];
+        const topActor = Object.keys(b.actors).sort(function(a,c){ return b.actors[c]-b.actors[a]; })[0]||'';
+        footer = 'Most: <strong>'+winner.n+' '+winner.label+'</strong>'+(topActor?' by '+esc(topActor):'');
+      }
+      return '<div class="'+cardCls+'" data-iso="'+iso+'" onclick="openDayDetail(\''+iso+'\')">'+head+
+        '<div class="ddc-body"><div>'+lefts+'</div><div>'+rights+'</div></div>'+
+        '<div class="ddc-foot">'+footer+'</div>'+
+      '</div>';
+    }
+
+    if (events.length === 0) {
       el.innerHTML = '<div class="dash-all-clear"><div class="icon">📭</div>No activity in the last 30 days.</div>';
       return;
     }
-
-    el.innerHTML = events.slice(0,40).map(function(e) {
-      return '<div class="activity-item">'+
-        '<div class="ai-dot '+e.dotCls+'"></div>'+
-        '<div class="ai-body">'+
-          '<div class="ai-title">'+e.title+'</div>'+
-          '<div class="ai-meta">'+esc(e.sub)+'</div>'+
-        '</div>'+
-        '<div class="ai-time">'+fmtDateShort(e.date)+'</div>'+
-      '</div>';
-    }).join('');
+    el.innerHTML = '<div class="dash-day-grid">'+days.map(renderCard).join('')+'</div>';
   } catch(err) {
     console.error('Activity feed error:', err);
     el.innerHTML = '<div class="muted" style="font-size:13px;">Could not load activity feed.</div>';
   }
+}
+
+// Open the day-detail modal — uses events stashed on the feed element by loadActivityFeed
+function openDayDetail(iso) {
+  const el = document.getElementById('dash-activity-feed');
+  const allEvents = (el && el._dayEvents) || [];
+  const dayEvents = allEvents.filter(function(e){ return String(e.date).slice(0,10) === iso; });
+  dayEvents.sort(function(a,b){ return (a.title||'').localeCompare(b.title||''); });
+  const d = new Date(iso+'T00:00:00');
+  const DOW = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+  const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const heading = DOW[d.getDay()]+', '+String(d.getDate()).padStart(2,'0')+' '+MONTHS[d.getMonth()]+' '+d.getFullYear();
+  if (!dayEvents.length) {
+    openModal('<h3>'+heading+'</h3><div class="dash-all-clear"><div class="icon">📭</div>No activity recorded on this day.</div><div class="actions-row"><button class="btn btn-ghost" onclick="closeModal()">Close</button></div>');
+    return;
+  }
+  const rows = dayEvents.map(function(e){
+    return '<div class="activity-item">'+
+      '<div class="ai-dot '+e.dotCls+'"></div>'+
+      '<div class="ai-body">'+
+        '<div class="ai-title">'+e.title+'</div>'+
+        '<div class="ai-meta">'+esc(e.sub||'')+'</div>'+
+      '</div>'+
+    '</div>';
+  }).join('');
+  openModal('<h3>'+heading+' <span style="color:var(--muted);font-weight:400;font-size:13px;">· '+dayEvents.length+' event'+(dayEvents.length!==1?'s':'')+'</span></h3>'+
+    '<div style="max-height:60vh;overflow-y:auto;padding-right:4px;">'+rows+'</div>'+
+    '<div class="actions-row"><button class="btn btn-ghost" onclick="closeModal()">Close</button></div>');
 }
 
 // Hook into onSignedIn
