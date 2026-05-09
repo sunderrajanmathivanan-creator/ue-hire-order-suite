@@ -11580,7 +11580,7 @@ async function printPO(poNum) {
       <td class="c">${esc(it.uom)}</td>
       <td class="r">${fi(it.qty)}</td>
       <td class="r">₹ ${fi(it.unit_rate)}</td>
-      <td class="r">₹ ${fi(it.total_amount||it.qty*it.unit_rate)}</td>
+      <td class="r">₹ ${fi(it.base_amount||it.qty*it.unit_rate)}</td>
       <td>${esc(it.remarks||'')}</td>
     </tr>`).join('');
 
@@ -11728,7 +11728,7 @@ async function printPO(poNum) {
       <th class="c" style="width:38pt">UOM</th>
       <th class="r" style="width:45pt">QTY</th>
       <th class="r" style="width:58pt">UNIT PRICE</th>
-      <th class="r" style="width:70pt">TOTAL (₹)</th>
+      <th class="r" style="width:70pt">SUB-TOTAL (₹)</th>
       <th style="width:70pt">REMARKS</th>
     </tr></thead>
     <tbody>${rows}</tbody>
