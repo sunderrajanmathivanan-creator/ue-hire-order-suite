@@ -5042,13 +5042,14 @@ async function _oldLoadMasters_disabled() {
 function renderAllMasters() {
   const m = state.masters;
   const isAdmin = state.role === 'Admin';
-  const canAdd  = ['Admin', 'Planning/ QS'].includes(state.role);
+  const canAdd  = isAdmin;
   // Safe innerHTML setter — skips missing elements so startup doesn't crash
   const setHTML = (id, html) => {
     const el = document.getElementById(id);
     if (el) el.innerHTML = html;
   };
-  ['masterAddVendorCard','masterAddActivityCard','masterAddBoqCard','masterAddServiceCard'].forEach(id => {
+  ['masterAddVendorCard','masterAddActivityCard','masterAddBoqCard','masterAddServiceCard',
+   'masterAddMaterialCard','masterAddContractorCard'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.style.display = canAdd ? '' : 'none';
   });
@@ -5160,6 +5161,7 @@ function onBOQLevelChange() {
 }
 
 async function deleteMaster(type, code, name) {
+  if (state.role !== 'Admin') { toast('Only Admin can delete masters','error'); return; }
   if (!confirm('Delete "' + name + '"? This cannot be undone.')) return;
   pbShow('Deleting\u2026');
   try {
@@ -5177,6 +5179,7 @@ async function deleteMaster(type, code, name) {
 }
 
 async function editMaster(type, code) {
+  if (state.role !== 'Admin') { toast('Only Admin can edit masters','error'); return; }
   // Load the item and pre-fill the add form for editing
   const m = state.masters;
   let item;
@@ -5226,7 +5229,7 @@ async function editMaster(type, code) {
 }
 
 async function saveMaster(type) {
-  if (!['Admin', 'Planning/ QS'].includes(state.role)) { toast('Only Admin or Planning/QS can add master entries','error'); return; }
+  if (state.role !== 'Admin') { toast('Only Admin can add master entries','error'); return; }
   let row;
   if (type === 'vendor') {
     const name = document.getElementById('mv_name').value.trim();
@@ -9052,8 +9055,8 @@ function renderMaterialMaster() {
 }
 
 async function saveMaterialMaster() {
-  if (!hasPerm('canManageMasters') && state.role !== 'Admin') {
-    toast('Only Planning/QS or Admin can add materials','error'); return;
+  if (state.role !== 'Admin') {
+    toast('Only Admin can add materials','error'); return;
   }
   const name = document.getElementById('mm_name').value.trim();
   const uom  = document.getElementById('mm_uom').value.trim();
@@ -12572,7 +12575,7 @@ function renderContractorMaster() {
     c['Contractor Name'].toLowerCase().includes(q) ||
     (c['Trade']||'').toLowerCase().includes(q)
   );
-  const isAdmin = ['Admin','Planning/ QS'].includes(state.role);
+  const isAdmin = state.role === 'Admin';
   document.getElementById('mc_list').innerHTML = rows.map(c=>`
     <tr>
       <td class="mono">${esc(c['Contractor Code']||'—')}</td>
@@ -12589,8 +12592,8 @@ function renderContractorMaster() {
 }
 
 async function saveContractorMaster() {
-  if(!['Admin','Planning/ QS'].includes(state.role)){
-    toast('Only Admin or Planning/QS can add contractors','error'); return;
+  if(state.role !== 'Admin'){
+    toast('Only Admin can add contractors','error'); return;
   }
   const name    = document.getElementById('mc_name')?.value?.trim();
   const trade   = document.getElementById('mc_trade')?.value?.trim();
@@ -12706,8 +12709,8 @@ function clearContractorField(inputId, codeId, resultsId) {
 }
 
 async function editContractor(code) {
-  if(!['Admin','Planning/ QS'].includes(state.role)){
-    toast('Only Admin or Planning/QS can edit contractors','error'); return;
+  if(state.role !== 'Admin'){
+    toast('Only Admin can edit contractors','error'); return;
   }
   const c = (state.masters.contractors||[]).find(x=>x['Contractor Code']===code);
   if(!c){ toast('Contractor not found','error'); return; }
@@ -12816,8 +12819,8 @@ async function confirmEditContractor(code) {
 }
 
 async function deleteContractor(code, name) {
-  if(!['Admin','Planning/ QS'].includes(state.role)){
-    toast('Only Admin or Planning/QS can delete contractors','error'); return;
+  if(state.role !== 'Admin'){
+    toast('Only Admin can delete contractors','error'); return;
   }
   openModal(`
     <h3>Delete Contractor</h3>
@@ -13434,6 +13437,17 @@ const LOCQ_DEFAULTS = [
 
 // --- Sub-tab switching ---------------------------------------------------
 function switchWBSTab(tab) {
+  // Role gate: only Admin sees the 5 creation sub-tabs.
+  // Everyone else (Planning/QS, Procurement, Site Engineer, etc.) sees only WBS Elements.
+  const isWBSAdmin = state.role === 'Admin';
+  const adminOnly = ['acts','lvls','blocks','locq','gen'];
+  adminOnly.forEach(t => {
+    const stab = document.querySelector(`.sub-tab[data-wbstab="${t}"]`);
+    if (stab) stab.style.display = isWBSAdmin ? '' : 'none';
+  });
+  // Force non-Admin requests to land on 'elems'
+  if (!isWBSAdmin) tab = 'elems';
+
   ['acts','lvls','blocks','locq','gen','elems'].forEach(t => {
     const el = document.getElementById('wbs-tab-' + t);
     if (el) el.classList.toggle('hidden', t !== tab);
@@ -13473,6 +13487,11 @@ async function loadWBSAll() {
   renderWBSBlocks();
   refreshActivityGranularityChips();
   refreshActivityGroupDatalists();
+
+  // Role-aware default sub-tab: Admin opens to Activity Hierarchy,
+  // everyone else lands on WBS Elements (the only one they'll see anyway).
+  const defaultTab = state.role === 'Admin' ? 'acts' : 'elems';
+  switchWBSTab(defaultTab);
 }
 
 // =====================================================================
