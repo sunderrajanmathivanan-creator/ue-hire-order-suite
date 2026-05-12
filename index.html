@@ -5041,8 +5041,10 @@ async function _oldLoadMasters_disabled() {
 
 function renderAllMasters() {
   const m = state.masters;
+  // isAdmin gates edit/delete buttons. canAdd gates the Add cards.
+  // Planning/QS can create new master entries but cannot edit/delete.
   const isAdmin = state.role === 'Admin';
-  const canAdd  = isAdmin;
+  const canAdd  = isAdmin || state.role === 'Planning/ QS';
   // Safe innerHTML setter — skips missing elements so startup doesn't crash
   const setHTML = (id, html) => {
     const el = document.getElementById(id);
@@ -5229,7 +5231,7 @@ async function editMaster(type, code) {
 }
 
 async function saveMaster(type) {
-  if (state.role !== 'Admin') { toast('Only Admin can add master entries','error'); return; }
+  if (!['Admin','Planning/ QS'].includes(state.role)) { toast('Only Admin or Planning/QS can add master entries','error'); return; }
   let row;
   if (type === 'vendor') {
     const name = document.getElementById('mv_name').value.trim();
@@ -9055,8 +9057,8 @@ function renderMaterialMaster() {
 }
 
 async function saveMaterialMaster() {
-  if (state.role !== 'Admin') {
-    toast('Only Admin can add materials','error'); return;
+  if (!['Admin','Planning/ QS'].includes(state.role)) {
+    toast('Only Admin or Planning/QS can add materials','error'); return;
   }
   const name = document.getElementById('mm_name').value.trim();
   const uom  = document.getElementById('mm_uom').value.trim();
@@ -12592,8 +12594,8 @@ function renderContractorMaster() {
 }
 
 async function saveContractorMaster() {
-  if(state.role !== 'Admin'){
-    toast('Only Admin can add contractors','error'); return;
+  if(!['Admin','Planning/ QS'].includes(state.role)){
+    toast('Only Admin or Planning/QS can add contractors','error'); return;
   }
   const name    = document.getElementById('mc_name')?.value?.trim();
   const trade   = document.getElementById('mc_trade')?.value?.trim();
