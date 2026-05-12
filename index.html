@@ -523,12 +523,6 @@ input[type="number"] {
         <input type="date" id="trk_a_from" onchange="loadTrackerA()">
         <label style="font-size:12px;color:var(--muted);">To:</label>
         <input type="date" id="trk_a_to" onchange="loadTrackerA()">
-        <select id="trk_a_status" onchange="loadTrackerA()" style="min-width:140px;">
-          <option value="">All Statuses</option>
-          <option value="in_progress">In Progress</option>
-          <option value="completed">Completed</option>
-          <option value="stuck">Stuck</option>
-        </select>
         <button class="btn btn-ghost btn-sm" onclick="loadTrackerA()">↻ Refresh</button>
       </div>
       <div class="card" style="padding:0;overflow:hidden;">
@@ -576,16 +570,6 @@ input[type="number"] {
             </tbody>
           </table>
         </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- SECTION 3: RECENT ACTIVITY -->
-  <div class="dash-section">
-    <div class="dash-section-title">🕐 Recent Activity <span style="font-weight:400;color:var(--muted);font-size:12px;text-transform:none;letter-spacing:0;">— last 16 days</span></div>
-    <div class="card" style="padding:16px;">
-      <div class="activity-feed" id="dash-activity-feed">
-        <div style="color:var(--muted);font-size:13px;">Loading…</div>
       </div>
     </div>
   </div>
@@ -642,17 +626,6 @@ input[type="number"] {
       <div class="field" style="grid-column:1/3;">
         <label class="req">Scope / Description</label>
         <input id="ho_scope" placeholder="Brief description of hire scope">
-      </div>
-      <div class="field typeahead">
-        <label>Location</label>
-        <div style="display:flex;gap:4px;align-items:center;">
-          <input id="ho_location" placeholder="Type to search location…" autocomplete="off"
-            oninput="ho_location_locked=false;locationTypeahead('ho_location','ho_locationResults')"
-            style="flex:1;">
-          <button type="button" class="btn btn-ghost btn-sm" id="ho_location_clear"
-            style="display:none;padding:5px 8px;flex-shrink:0;" onclick="clearMasterField('ho_location',null,'ho_locationResults','ho_location_clear')">✕</button>
-        </div>
-        <div class="typeahead-results" id="ho_locationResults"></div>
       </div>
       <div class="field">
         <label class="req">Project</label>
@@ -929,13 +902,13 @@ input[type="number"] {
 
     <!-- Billing items (carried from certification) -->
     <h3 style="margin-top:18px;">Bill Items (from Certification)</h3>
-    <p style="color:var(--muted);font-size:12px;margin-bottom:8px;">Service location is mandatory for each line item.</p>
+    <p style="color:var(--muted);font-size:12px;margin-bottom:8px;">WBS Sub Activity is mandatory for each line item.</p>
     <div class="table-wrap">
       <table>
         <thead><tr>
           <th>#</th><th>Description</th><th>UOM</th>
           <th class="num">Qty</th><th class="num">Rate</th><th class="num">Amount</th>
-          <th style="min-width:160px;">Service Location <span style="color:var(--danger);">*</span></th>
+          <th style="min-width:200px;">WBS Sub Activity <span style="color:var(--danger);">*</span></th>
         </tr></thead>
         <tbody id="hob_itemsBody"></tbody>
         <tfoot><tr><td colspan="5" class="num"><strong>Gross Amount</strong></td>
@@ -1302,13 +1275,13 @@ input[type="number"] {
     </div>
 
     <h3 style="margin-top:18px;">Bill Items (from Certification)</h3>
-    <p style="color:var(--muted);font-size:12px;margin-bottom:8px;">Service location is mandatory for each line item.</p>
+    <p style="color:var(--muted);font-size:12px;margin-bottom:8px;">WBS Sub Activity is mandatory for each line item.</p>
     <div class="table-wrap">
       <table>
         <thead><tr>
           <th>#</th><th>Description</th><th>UOM</th>
           <th class="num">Qty / %</th><th class="num">Rate</th><th class="num">Amount</th>
-          <th style="min-width:160px;">Service Location <span style="color:var(--danger);">*</span></th>
+          <th style="min-width:200px;">WBS Sub Activity <span style="color:var(--danger);">*</span></th>
         </tr></thead>
         <tbody id="wob_itemsBody"></tbody>
         <tfoot><tr><td colspan="5" class="num"><strong>Gross Amount</strong></td>
@@ -1903,77 +1876,236 @@ input[type="number"] {
   <!-- BOQ ITEMS -->
   <!-- WBS MASTER -->
   <div id="master-wbs" class="hidden">
-    <div class="card">
-      <h3>Add WBS Element</h3>
-      <div class="grid-4" style="gap:12px;">
-        <div class="field">
-          <label class="req">Block</label>
-          <input id="wbs_block" placeholder="e.g. A, B, C" list="wbs_block_list" autocomplete="off"
-            oninput="onWBSInput()">
-          <datalist id="wbs_block_list"></datalist>
+    <!-- WBS sub-sub-tabs -->
+    <div class="sub-tabs" style="margin-bottom:14px;">
+      <div class="sub-tab active" data-wbstab="acts"   onclick="switchWBSTab('acts')">Activity Hierarchy</div>
+      <div class="sub-tab"        data-wbstab="lvls"   onclick="switchWBSTab('lvls')">Levels</div>
+      <div class="sub-tab"        data-wbstab="blocks" onclick="switchWBSTab('blocks')">Blocks</div>
+      <div class="sub-tab"        data-wbstab="locq"   onclick="switchWBSTab('locq')">Location Types &amp; Instances</div>
+      <div class="sub-tab"        data-wbstab="gen"    onclick="switchWBSTab('gen')">Generate WBS Elements</div>
+      <div class="sub-tab"        data-wbstab="elems"  onclick="switchWBSTab('elems')">WBS Elements</div>
+    </div>
+
+    <!-- ============== TAB 1: ACTIVITY HIERARCHY ============== -->
+    <div id="wbs-tab-acts">
+      <div class="card">
+        <h3>Add Sub-Activity</h3>
+        <div class="grid-3" style="gap:12px;">
+          <div class="field">
+            <label class="req">WBS Group</label>
+            <input id="wam_group" placeholder="e.g. Core and Shell Construction" list="wam_group_list" autocomplete="off">
+            <datalist id="wam_group_list"></datalist>
+          </div>
+          <div class="field">
+            <label class="req">WBS Activity</label>
+            <input id="wam_activity" placeholder="e.g. RCC" list="wam_activity_list" autocomplete="off">
+            <datalist id="wam_activity_list"></datalist>
+          </div>
+          <div class="field">
+            <label class="req">WBS Sub Activity</label>
+            <input id="wam_sub_activity" placeholder="e.g. Concrete Pour">
+          </div>
         </div>
-        <div class="field">
-          <label class="req">WBS Group</label>
-          <input id="wbs_group" placeholder="e.g. Electrical Works" list="wbs_group_list" autocomplete="off"
-            oninput="onWBSInput()">
-          <datalist id="wbs_group_list"></datalist>
+        <div class="field" style="margin-top:12px;">
+          <label>Granularity (where this sub-activity is tracked — pick one or more)</label>
+          <div id="wam_granularity_chips" class="chip-multi"
+               style="min-height:48px;border:1px solid var(--border);border-radius:4px;padding:6px;display:flex;flex-wrap:wrap;gap:6px;background:var(--input-bg);"></div>
+          <div class="muted" style="font-size:11px;margin-top:4px;">
+            E.g. "Concrete Pour" → Pour. "Internal Plumbing" → Apartment + Plumbing Shaft. Leave empty = generator will offer all types.
+          </div>
         </div>
-        <div class="field">
-          <label class="req">WBS Activity</label>
-          <input id="wbs_activity" placeholder="e.g. Building LT Works" list="wbs_activity_list" autocomplete="off"
-            oninput="onWBSInput()">
-          <datalist id="wbs_activity_list"></datalist>
-        </div>
-        <div class="field">
-          <label>WBS Sub Activity</label>
-          <input id="wbs_sub_activity" placeholder="e.g. Concealed Items" list="wbs_sub_activity_list" autocomplete="off"
-            oninput="onWBSInput()">
-          <datalist id="wbs_sub_activity_list"></datalist>
+        <div class="actions-row" style="margin-top:12px;">
+          <button class="btn btn-primary" onclick="saveWBSActivity()">+ Add Sub-Activity</button>
+          <button class="btn btn-ghost" onclick="clearWBSActivityForm()">Clear</button>
         </div>
       </div>
-      <div class="grid-2" style="margin-top:12px;gap:12px;">
-        <div class="field">
-          <label>WBS Location</label>
-          <input id="wbs_location" placeholder="e.g. 1st Floor/Pour-01" list="wbs_location_list" autocomplete="off"
-            oninput="onWBSInput()">
-          <datalist id="wbs_location_list"></datalist>
+      <div class="card">
+        <h3>Sub-Activities</h3>
+        <div style="display:flex;gap:10px;margin-bottom:10px;flex-wrap:wrap;">
+          <input id="wam_search" placeholder="Search…" autocomplete="off" oninput="renderWBSActivities()"
+            style="padding:7px;background:var(--input-bg);color:var(--text);border:1px solid var(--border);border-radius:4px;width:260px;">
+          <select id="wam_filter_group" onchange="renderWBSActivities()"
+            style="padding:7px;background:var(--input-bg);color:var(--text);border:1px solid var(--border);border-radius:4px;">
+            <option value="">All Groups</option>
+          </select>
         </div>
-        <div class="field">
-          <label>WBS Element (auto-generated preview)</label>
-          <input id="wbs_element_preview" readonly style="opacity:.7;background:#f8fafc;font-size:11px;"
-            placeholder="Will be computed on save">
+        <div class="table-wrap">
+          <table><thead><tr>
+            <th>Group</th><th>Activity</th><th>Sub Activity</th><th>Granularity</th><th style="width:160px;">Actions</th>
+          </tr></thead>
+          <tbody id="wam_list"><tr><td colspan="5" class="center muted">No sub-activities yet.</td></tr></tbody>
+          </table>
         </div>
-      </div>
-      <div class="actions-row" style="margin-top:12px;">
-        <button class="btn btn-primary" onclick="saveWBSMaster()">+ Add WBS Element</button>
-        <button class="btn btn-ghost" onclick="clearWBSForm()">Clear</button>
       </div>
     </div>
-    <div class="card">
-      <h3>WBS Elements</h3>
-      <div style="display:flex;gap:10px;margin-bottom:12px;flex-wrap:wrap;">
-        <input id="wbs_search" placeholder="Search WBS…" autocomplete="off"
-          style="padding:7px;background:var(--input-bg);color:var(--text);border:1px solid var(--border);border-radius:4px;width:260px;"
-          oninput="renderWBSMaster()">
-        <select id="wbs_filter_block" onchange="renderWBSMaster()"
-          style="padding:7px;background:var(--input-bg);color:var(--text);border:1px solid var(--border);border-radius:4px;">
-          <option value="">All Blocks</option>
-        </select>
-        <select id="wbs_filter_group" onchange="renderWBSMaster()"
-          style="padding:7px;background:var(--input-bg);color:var(--text);border:1px solid var(--border);border-radius:4px;">
-          <option value="">All Groups</option>
-        </select>
+
+    <!-- ============== TAB 2: LEVELS ============== -->
+    <div id="wbs-tab-lvls" class="hidden">
+      <div class="card">
+        <h3>Add Level</h3>
+        <div class="grid-4" style="gap:12px;">
+          <div class="field">
+            <label class="req">Level Code</label>
+            <input id="wlm_code" placeholder="e.g. 1F, B2, GF, PODIUM">
+          </div>
+          <div class="field">
+            <label class="req">Level Name</label>
+            <input id="wlm_name" placeholder="e.g. 1st Floor, Basement 2">
+          </div>
+          <div class="field">
+            <label class="req">Order (sort key)</label>
+            <input id="wlm_order" type="number" placeholder="-2, -1, 0, 1, 2..." step="1">
+          </div>
+          <div class="field">
+            <label>Kind</label>
+            <select id="wlm_kind">
+              <option value="floor">Floor</option>
+              <option value="basement">Basement</option>
+              <option value="special">Special (Podium/Terrace/Refuge)</option>
+            </select>
+          </div>
+        </div>
+        <div class="actions-row" style="margin-top:12px;">
+          <button class="btn btn-primary" onclick="saveWBSLevel()">+ Add Level</button>
+          <button class="btn btn-ghost"   onclick="bulkAddFloors()">Bulk Add Floors (1F–N)</button>
+          <button class="btn btn-ghost"   onclick="clearWBSLevelForm()">Clear</button>
+        </div>
       </div>
-      <div class="table-wrap">
-        <table><thead><tr>
-          <th>Code</th><th>Block</th><th>Group</th><th>Activity</th>
-          <th>Sub Activity</th><th>Location</th><th>WBS Element</th><th>Actions</th>
-        </tr></thead>
-        <tbody id="wbs_list"><tr><td colspan="8" class="center muted">No WBS elements added yet.</td></tr></tbody>
-        </table>
+      <div class="card">
+        <h3>Levels</h3>
+        <div class="table-wrap">
+          <table><thead><tr>
+            <th>Code</th><th>Name</th><th>Order</th><th>Kind</th><th style="width:160px;">Actions</th>
+          </tr></thead>
+          <tbody id="wlm_list"><tr><td colspan="5" class="center muted">No levels yet.</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============== TAB 3: BLOCKS ============== -->
+    <div id="wbs-tab-blocks" class="hidden">
+      <div class="card">
+        <h3>Add Block</h3>
+        <div class="grid-2" style="gap:12px;align-items:end;">
+          <div class="field">
+            <label class="req">Block Name</label>
+            <input id="wbm_name" placeholder="e.g. Block-A, Tower-1, Temp. Works">
+          </div>
+          <div class="actions-row">
+            <button class="btn btn-primary" onclick="saveWBSBlock()">+ Add Block</button>
+            <button class="btn btn-ghost"   onclick="document.getElementById('wbm_name').value=''">Clear</button>
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <h3>Blocks</h3>
+        <div class="table-wrap">
+          <table><thead><tr>
+            <th>Block Name</th><th>WBS Elements</th><th style="width:160px;">Actions</th>
+          </tr></thead>
+          <tbody id="wbm_list"><tr><td colspan="3" class="center muted">No blocks yet.</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============== TAB 4: LOCATION TYPES & INSTANCES (Questionnaire) ============== -->
+    <div id="wbs-tab-locq" class="hidden">
+      <div class="card">
+        <h3>Location Types &amp; Instances</h3>
+        <div class="muted" style="font-size:12px;margin-bottom:14px;">
+          Tell the system what's inside each block. Enter counts, then name each instance. Saved instances apply to all blocks.
+        </div>
+        <div id="locq_container"></div>
+        <div class="actions-row" style="margin-top:18px;border-top:1px solid var(--border);padding-top:14px;">
+          <button class="btn btn-primary" onclick="saveLocationQuestionnaire()">💾 Save All</button>
+          <button class="btn btn-ghost"   onclick="addCustomLocationRow()">+ Add Custom Location Type</button>
+          <button class="btn btn-ghost"   onclick="renderLocationQuestionnaire()">↻ Reset to Defaults</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============== TAB 5: GENERATE WBS ELEMENTS ============== -->
+    <div id="wbs-tab-gen" class="hidden">
+      <div class="card">
+        <h3>Generate WBS Elements</h3>
+        <div class="grid-2" style="gap:14px;">
+          <div class="field">
+            <label class="req">Sub-Activity</label>
+            <select id="gen_subact" onchange="onGenSubActChange()"
+              style="padding:7px;background:var(--input-bg);color:var(--text);border:1px solid var(--border);border-radius:4px;width:100%;">
+              <option value="">— select sub-activity —</option>
+            </select>
+            <div id="gen_subact_info" class="muted" style="font-size:11px;margin-top:6px;"></div>
+          </div>
+          <div class="field">
+            <label class="req">Blocks (multi-select)</label>
+            <div id="gen_blocks_chips" class="chip-multi"
+                 style="min-height:60px;border:1px solid var(--border);border-radius:4px;padding:6px;display:flex;flex-wrap:wrap;gap:6px;background:var(--input-bg);"></div>
+            <div style="margin-top:6px;display:flex;gap:6px;">
+              <button class="btn btn-ghost btn-sm" onclick="genSelectAllBlocks(true)">Select All</button>
+              <button class="btn btn-ghost btn-sm" onclick="genSelectAllBlocks(false)">Clear</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="field" id="gen_levels_wrap" style="margin-top:14px;">
+          <label>Levels (multi-select)</label>
+          <div id="gen_levels_chips" class="chip-multi"
+               style="min-height:60px;border:1px solid var(--border);border-radius:4px;padding:6px;display:flex;flex-wrap:wrap;gap:6px;background:var(--input-bg);"></div>
+          <div style="margin-top:6px;display:flex;gap:6px;flex-wrap:wrap;">
+            <button class="btn btn-ghost btn-sm" onclick="genSelectAllLevels(true)">Select All</button>
+            <button class="btn btn-ghost btn-sm" onclick="genSelectAllLevels(false)">Clear</button>
+            <button class="btn btn-ghost btn-sm" onclick="genSelectLevelKind('floor')">All Floors</button>
+            <button class="btn btn-ghost btn-sm" onclick="genSelectLevelKind('basement')">All Basements</button>
+          </div>
+        </div>
+
+        <div id="gen_instance_panels" style="margin-top:14px;"></div>
+
+        <div class="card" style="margin-top:14px;background:var(--input-bg);">
+          <h3 style="margin:0 0 10px 0;">Preview</h3>
+          <div id="gen_preview_summary" style="font-size:13px;margin-bottom:8px;">Pick a sub-activity to start.</div>
+          <div id="gen_preview_list" style="font-family:monospace;font-size:11px;max-height:240px;overflow:auto;background:var(--bg);border:1px solid var(--border);padding:8px;border-radius:4px;"></div>
+        </div>
+
+        <div class="actions-row" style="margin-top:14px;">
+          <button class="btn btn-primary" onclick="generateWBSElements()">⚡ Generate WBS Elements</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============== TAB 6: WBS ELEMENTS LIST (read-only) ============== -->
+    <div id="wbs-tab-elems" class="hidden">
+      <div class="card">
+        <h3>WBS Elements</h3>
+        <div style="display:flex;gap:10px;margin-bottom:12px;flex-wrap:wrap;">
+          <input id="wbs_search" placeholder="Search WBS…" autocomplete="off"
+            style="padding:7px;background:var(--input-bg);color:var(--text);border:1px solid var(--border);border-radius:4px;width:260px;"
+            oninput="renderWBSMaster()">
+          <select id="wbs_filter_block" onchange="renderWBSMaster()"
+            style="padding:7px;background:var(--input-bg);color:var(--text);border:1px solid var(--border);border-radius:4px;">
+            <option value="">All Blocks</option>
+          </select>
+          <select id="wbs_filter_group" onchange="renderWBSMaster()"
+            style="padding:7px;background:var(--input-bg);color:var(--text);border:1px solid var(--border);border-radius:4px;">
+            <option value="">All Groups</option>
+          </select>
+          <div class="muted" style="align-self:center;font-size:11px;" id="wbs_count_label"></div>
+        </div>
+        <div class="table-wrap">
+          <table><thead><tr>
+            <th>Code</th><th>Block</th><th>Group</th><th>Activity</th>
+            <th>Sub Activity</th><th>Location</th><th>WBS Element</th><th>Actions</th>
+          </tr></thead>
+          <tbody id="wbs_list"><tr><td colspan="8" class="center muted">No WBS elements yet. Use the Generate tab.</td></tr></tbody>
+          </table>
+        </div>
       </div>
     </div>
   </div>
+
 
   <!-- MATERIAL MASTER -->
   <div id="master-materials" class="hidden">
@@ -2154,11 +2286,8 @@ input[type="number"] {
           <select id="mir_project"><option value="PoE, Ph-01">PoE, Ph-01</option><option value="PoE, Ph-02">PoE, Ph-02</option></select>
         </div>
       </div>
-      <div class="grid-2" style="margin-top:12px;">
+      <div style="margin-top:12px;">
         <div class="field"><label>Purpose / Work Front</label><input id="mir_purpose" placeholder="e.g. Foundation raft slab, Tower A"></div>
-        <div class="field"><label>Service Location</label>
-          <select id="mir_location"><option value="">— Select Location —</option></select>
-        </div>
       </div>
       <div style="margin-top:16px;">
         <h3 style="font-size:13px;margin-bottom:8px;color:var(--text);">Material Items Required</h3>
@@ -2509,6 +2638,7 @@ input[type="number"] {
           <option value="Billed">Billed</option>
           <option value="Rejected">Rejected</option>
         </select>
+        <button class="btn btn-ghost" onclick="downloadGRNList()" title="Download filtered GRNs + all line items as CSV">📥 Download CSV</button>
       </div>
       <div class="table-wrap">
         <table>
@@ -2551,7 +2681,13 @@ input[type="number"] {
       </div>
       <!-- Step 2: Select GRNs -->
       <div class="card" id="pob_grnCard" style="display:none;background:#f8fafc;border-color:#dde6f0;margin-top:8px;">
-        <h3 style="font-size:13px;">Step 2 — Select Verified GRNs to Bill</h3>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+          <h3 style="font-size:13px;margin:0;">Step 2 — Select Verified GRNs to Bill</h3>
+          <div style="display:flex;gap:6px;">
+            <button type="button" class="btn btn-ghost btn-sm" onclick="pobSelectAllGRNs(true)">Select All</button>
+            <button type="button" class="btn btn-ghost btn-sm" onclick="pobSelectAllGRNs(false)">Clear All</button>
+          </div>
+        </div>
         <div id="pob_grnCheckList"></div>
         <div style="margin-top:8px;font-size:12px;color:var(--muted);">Selected GRNs: <span id="pob_selectedGRNs">None</span></div>
       </div>
@@ -2563,19 +2699,9 @@ input[type="number"] {
           <div class="field"><label class="req">Vendor Invoice No.</label><input id="pob_vendorInvNo"></div>
           <div class="field"><label class="req">Vendor Invoice Date</label><input type="date" id="pob_vendorInvDate"></div>
         </div>
-        <div class="grid-4" style="margin-top:12px;">
+        <div class="grid-3" style="margin-top:12px;">
           <div class="field"><label>Credit Period (days)</label><input type="number" id="pob_creditPeriod" value="30" oninput="calcPOBPayDue()"></div>
           <div class="field"><label>Invoice Pay Due</label><input type="date" id="pob_invPayDue" readonly style="opacity:.6;"></div>
-          <div class="field"><label>BOQ Item</label>
-            <div class="typeahead">
-              <div style="display:flex;gap:6px;">
-                <input id="pob_boqItem" placeholder="Type to search BOQ…" oninput="boqTypeahead('pob_boqItem','pob_boqResults','pob_boqCode')" autocomplete="off" style="flex:1;">
-                <button id="pob_boq_clear" class="btn btn-ghost btn-sm" style="display:none;" onclick="clearMasterField('pob_boqItem','pob_boqCode','pob_boqResults','pob_boq_clear')">✕</button>
-              </div>
-              <div class="typeahead-results" id="pob_boqResults"></div>
-              <input type="hidden" id="pob_boqCode">
-            </div>
-          </div>
           <div class="field"><label>TDS %</label><input type="number" id="pob_tdsPct" value="2" step="0.01" oninput="recalcPOBTotals()"></div>
         </div>
         <!-- Bill Line Items -->
@@ -2586,7 +2712,7 @@ input[type="number"] {
               <thead><tr>
                 <th>#</th><th>GRN</th><th>Material</th><th>UOM</th>
                 <th class="num">Qty</th><th class="num">Rate</th><th class="num">Base Amt</th>
-                <th>Service Location</th>
+                <th>WBS Sub Activity <span style="color:var(--danger);">*</span></th>
               </tr></thead>
               <tbody id="pob_itemsBody"></tbody>
             </table>
@@ -2692,10 +2818,7 @@ input[type="number"] {
         </div>
         <div class="field"><label>Issued By</label><input id="mis_issuedBy" readonly style="opacity:.6;"></div>
       </div>
-      <div class="grid-2" style="margin-top:12px;">
-        <div class="field"><label class="req">Work Location</label>
-          <select id="mis_location"><option value="">— Select Service Location —</option></select>
-        </div>
+      <div style="margin-top:12px;">
         <div class="field"><label>Remarks</label><input id="mis_remarks" placeholder="Optional"></div>
       </div>
       <!-- MIS Items -->
@@ -2706,7 +2829,7 @@ input[type="number"] {
             <thead><tr>
               <th>#</th><th>Material</th><th>UOM</th>
               <th class="num">Stock Available</th><th class="num">Qty to Issue</th>
-              <th>WBS Element</th>
+              <th>WBS Element <span style="color:var(--danger);">*</span></th>
               <th class="num">Latest Rate</th><th class="num">Amount</th><th></th>
             </tr></thead>
             <tbody id="misItemsBody"></tbody>
@@ -2727,11 +2850,11 @@ input[type="number"] {
       <div class="table-wrap">
         <table>
           <thead><tr>
-            <th>MIS Number</th><th>Date</th><th>Issued To</th><th>Work Location</th>
+            <th>MIS Number</th><th>Date</th><th>Issued To</th>
             <th>Issued By</th><th class="num">Items</th><th class="num">Total Value</th>
             <th>Status</th><th>Actions</th>
           </tr></thead>
-          <tbody id="mis_listBody"><tr><td colspan="9" class="center muted">Loading…</td></tr></tbody>
+          <tbody id="mis_listBody"><tr><td colspan="8" class="center muted">Loading…</td></tr></tbody>
         </table>
       </div>
     </div>
@@ -2878,7 +3001,16 @@ const ROLE_PERMS = {
 // ── Purchase module state (defined early so initApp can call apiLoadMaterials) ──
 var puState = {
   materials: [],
-  wbsList: [],   // full WBS master list
+  wbsList: [],   // full WBS master list (generated rows in wbs_master table)
+  // ---- WBS redesign state ----
+  wbsActivities: [],    // wbs_activity_master rows
+  wbsLevels:     [],    // wbs_level_master rows
+  wbsBlocks:     [],    // wbs_block_master rows
+  wbsLocTypes:   [],    // wbs_location_type_master rows
+  wbsLocInstances: [],  // wbs_location_instance_master rows
+  // generator selection state
+  genSel: { subActId:null, blocks:new Set(), levels:new Set(), instances:new Set() },
+  // ----
   mirList: [], mirItemsMap: {},
   rfqList: [], rfqWithQC: new Set(), qcList: [],
   poList: [], grnList: [], pobList: [],
@@ -3422,7 +3554,8 @@ async function apiSaveHOC(data) {
     const items = (data.items||[]).filter(it => it.thisPeriodQty > 0).map(it => ({
       hoc_number: data.hocNumber, sno: it.sno, description: it.description, uom: it.uom||null,
       ho_qty: it.hoQty, prev_cumulative_qty: it.prevCumulativeQty, this_period_qty: it.thisPeriodQty,
-      cumulative_qty: it.cumulativeQty, unit_rate: it.unitRate, cert_value: it.certValue
+      cumulative_qty: it.cumulativeQty, unit_rate: it.unitRate, cert_value: it.certValue,
+      wbs_sub_activity: it.wbs_sub_activity||null, wbs_element: it.wbs_element||null, wbs_code: it.wbs_code||null
     }));
     if (items.length) {
       const { error: cite } = await sb.from('ho_certification_items').insert(items);
@@ -3538,7 +3671,7 @@ async function apiSaveHOB(data) {
       await sb.from('ho_bill_items').insert(data.items.map(it => ({
         bill_number: data.billNumber, sno: it.sno, description: it.description,
         uom: it.uom||null, this_period_qty: it.thisPeriodQty, unit_rate: it.unitRate, amount: it.amount,
-        service_location_code: it.serviceLocationCode||null, service_location_name: it.serviceLocationName||null
+        wbs_sub_activity: it.wbs_sub_activity||null, wbs_code: it.wbs_code||null
       })));
     }
     if ((data.extraLines||[]).length) {
@@ -4174,7 +4307,8 @@ async function apiSaveWOC(data) {
         wo_qty: it.woQty, prev_cumulative_qty: it.prevCumulativeQty||0,
         this_period_qty: it.thisPeriodQty||0, cumulative_qty: it.cumulativeQty||0,
         prev_cumulative_pct: it.prevCumulativePct||0, this_period_pct: it.thisPeriodPct||0,
-        cumulative_pct: it.cumulativePct||0, unit_rate: it.unitRate, cert_value: it.certValue
+        cumulative_pct: it.cumulativePct||0, unit_rate: it.unitRate, cert_value: it.certValue,
+        wbs_sub_activity: it.wbs_sub_activity||null, wbs_element: it.wbs_element||null, wbs_code: it.wbs_code||null
       })));
     }
     _cacheBust('wocList','unbilledWOCs','woList');
@@ -4245,7 +4379,7 @@ async function apiGetWOBDetails(billNumber) {
   if (h.error) return { ok: false, error: h.error.message };
   const mapItem = r => ({ 'Description': r.description, 'UOM': r.uom,
     'This Period Qty': r.this_period_qty, 'Unit Rate': r.unit_rate, 'Amount': r.amount,
-    'Service Location Code': r.service_location_code, 'Service Location Name': r.service_location_name, 'S.No': r.sno });
+    'WBS Sub Activity': r.wbs_sub_activity, 'WBS Code': r.wbs_code, 'S.No': r.sno });
   const mapExtra = r => ({ 'Description': r.description, 'Type': r.line_type, 'Timing': r.timing, 'Amount': r.amount, 'S.No': r.sno });
   return { ok: true, header: mapWOB(h.data), items: (items.data||[]).map(mapItem), extraLines: (extra.data||[]).map(mapExtra) };
 }
@@ -4287,8 +4421,8 @@ async function apiSaveWOB(data) {
       await sb.from('wo_bill_items').insert(data.items.map(it => ({
         bill_number: data.billNumber, sno: it.sno, description: it.description,
         uom: it.uom||null, this_period_qty: it.thisPeriodQty, unit_rate: it.unitRate,
-        amount: it.amount, service_location_code: it.serviceLocationCode||null,
-        service_location_name: it.serviceLocationName||null
+        amount: it.amount, wbs_sub_activity: it.wbs_sub_activity||null,
+        wbs_code: it.wbs_code||null
       })));
     }
     if ((data.extraLines||[]).length) {
@@ -4797,7 +4931,7 @@ function switchHOTab(tab) {
     if (stab) stab.classList.toggle('active', t === tab);
   });
   if (tab === 'orders')  loadHOList();
-  if (tab === 'cert')    loadHOCList();
+  if (tab === 'cert')    { loadHOCList(); if (!(puState.wbsList||[]).length) loadWBSMaster(); }
   if (tab === 'billing') loadHOBList();
 }
 
@@ -4809,7 +4943,7 @@ function switchWOTab(tab) {
     if (stab) stab.classList.toggle('active', t === tab);
   });
   if (tab === 'orders')  loadWOList();
-  if (tab === 'cert')    loadWOCList();
+  if (tab === 'cert')    { loadWOCList(); if (!(puState.wbsList||[]).length) loadWBSMaster(); }
   if (tab === 'billing') loadWOBList();
 }
 
@@ -4835,7 +4969,7 @@ function switchMasterTab(tab) {
     const stab = document.querySelector(`.sub-tab[data-mastertab="${t}"]`);
     if (stab) stab.classList.toggle('active', t === tab);
   });
-  if (tab === 'wbs') { loadWBSMaster(); }
+  if (tab === 'wbs') { loadWBSAll(); }
   if (tab === 'materials') { apiLoadMaterials().then(renderMaterialMaster); }
   if (tab === 'contractors') { renderContractorMaster(); }
 }
@@ -4865,7 +4999,8 @@ async function initApp() {
     await apiLoadMaterials();   // load material master for Purchase module typeaheads
     await Promise.all([
       loadHOList().catch(e  => console.error('HOList:', e)),
-      loadWOList().catch(e  => console.error('WOList:', e))
+      loadWOList().catch(e  => console.error('WOList:', e)),
+      loadWBSMaster().catch(e => console.error('WBSMaster:', e))  // populate puState.wbsList for MIS/MIR/HOC/WOC typeaheads
     ]);
     renderAllMasters();
     // Ensure only HO Orders sub-tab visible on initial load
@@ -4908,13 +5043,18 @@ function renderAllMasters() {
   const m = state.masters;
   const isAdmin = state.role === 'Admin';
   const canAdd  = ['Admin', 'Planning/ QS'].includes(state.role);
+  // Safe innerHTML setter — skips missing elements so startup doesn't crash
+  const setHTML = (id, html) => {
+    const el = document.getElementById(id);
+    if (el) el.innerHTML = html;
+  };
   ['masterAddVendorCard','masterAddActivityCard','masterAddBoqCard','masterAddServiceCard'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.style.display = canAdd ? '' : 'none';
   });
 
   // Vendors
-  document.getElementById('mv_list').innerHTML = (m.vendors||[]).map(v =>
+  setHTML('mv_list', (m.vendors||[]).map(v =>
     `<tr>
       <td class="mono" style="color:var(--accent);">${esc(v['Vendor Code']||'')}</td>
       <td>${esc(v['Vendor Name'])}</td><td>${esc(v['Trade']||'')}</td>
@@ -4922,10 +5062,10 @@ function renderAllMasters() {
       ${isAdmin ? `<td class="center">
         <button class="btn btn-ghost btn-sm" onclick="editMaster('vendor','${esc(v['Vendor Code']||'')}')">Edit</button>
         <button class="btn btn-danger btn-sm" onclick="deleteMaster('vendor','${esc(v['Vendor Code']||'')}','${esc(v['Vendor Name'])}')">Delete</button></td>` : ''}
-    </tr>`).join('') || `<tr><td colspan="${isAdmin?7:6}" class="center muted">No vendors.</td></tr>`;
+    </tr>`).join('') || `<tr><td colspan="${isAdmin?7:6}" class="center muted">No vendors.</td></tr>`);
 
   // Activities
-  document.getElementById('ma_list').innerHTML = (m.activities||[]).map(a =>
+  setHTML('ma_list', (m.activities||[]).map(a =>
     `<tr>
       <td class="mono" style="color:var(--accent);">${esc(a['Activity Code']||'')}</td>
       <td>${esc(a['Activity Description'])}</td><td>${esc(a['UOM'])}</td>
@@ -4933,7 +5073,7 @@ function renderAllMasters() {
       ${isAdmin ? `<td class="center">
         <button class="btn btn-ghost btn-sm" onclick="editMaster('activity','${esc(a['Activity Code']||'')}')">Edit</button>
         <button class="btn btn-danger btn-sm" onclick="deleteMaster('activity','${esc(a['Activity Code']||'')}','${esc(a['Activity Description'])}')">Delete</button></td>` : ''}
-    </tr>`).join('') || `<tr><td colspan="${isAdmin?6:5}" class="center muted">No activities.</td></tr>`;
+    </tr>`).join('') || `<tr><td colspan="${isAdmin?6:5}" class="center muted">No activities.</td></tr>`);
 
   // BOQ — two-level grouped display
   const l1Items = (m.boqItems||[]).filter(b => b['Level'] === 1);
@@ -4974,12 +5114,12 @@ function renderAllMasters() {
         <button class="btn btn-danger btn-sm" onclick="deleteMaster('boq','${esc(b['BOQ Code'])}','${esc(b['BOQ Name'])}')">Delete</button></td>` : ''}
     </tr>`;
   });
-  document.getElementById('mb_list').innerHTML = boqHtml || `<tr><td colspan="${isAdmin?6:5}" class="center muted">No BOQ items.</td></tr>`;
+  setHTML('mb_list', boqHtml || `<tr><td colspan="${isAdmin?6:5}" class="center muted">No BOQ items.</td></tr>`);
 
   // Service Locations
   const catFilter = document.getElementById('ms_categoryFilter')?.value || '';
   const svcItems  = catFilter ? (m.serviceLocations||[]).filter(l => l['Category'] === catFilter) : (m.serviceLocations||[]);
-  document.getElementById('ms_list').innerHTML = svcItems.map(l =>
+  setHTML('ms_list', svcItems.map(l =>
     `<tr>
       <td class="mono" style="color:var(--accent);">${esc(l['Location Code']||'')}</td>
       <td><span style="font-size:11px;padding:2px 7px;border-radius:8px;background:var(--panel-2);color:var(--muted);">${esc(l['Category'])}</span></td>
@@ -4989,7 +5129,7 @@ function renderAllMasters() {
       ${isAdmin ? `<td class="center">
         <button class="btn btn-ghost btn-sm" onclick="editMaster('service','${esc(l['Location Code']||'')}')">Edit</button>
         <button class="btn btn-danger btn-sm" onclick="deleteMaster('service','${esc(l['Location Code']||'')}','${esc(l['Location Name'])}')">Delete</button></td>` : ''}
-    </tr>`).join('') || `<tr><td colspan="${isAdmin?6:5}" class="center muted">No service locations.</td></tr>`;
+    </tr>`).join('') || `<tr><td colspan="${isAdmin?6:5}" class="center muted">No service locations.</td></tr>`);
 }
 
 function populateBOQL1Dropdown() {
@@ -5156,17 +5296,165 @@ async function saveMaster(type) {
 // ============================================================
 // TYPEAHEADS
 // ============================================================
+
+// ---------- Fuzzy matching helpers ----------
+// Tokenize a query: split on whitespace, lowercase, filter empties
+function _fuzzyTokens(q) {
+  return (q||'').toLowerCase().split(/\s+/).filter(Boolean);
+}
+
+// Is a token "numeric-ish"? (digits and/or short codes like '5F', '001', '2501', 'B2')
+// If yes, only do exact substring (no fuzzy). Prevents '001' matching '005'.
+function _isNumericToken(tok) {
+  return /^[0-9bf-]{1,5}$/i.test(tok) || /\d/.test(tok) && tok.length <= 4;
+}
+
+// Levenshtein distance — capped early once distance exceeds maxDist (perf).
+function _editDistance(a, b, maxDist) {
+  if (a === b) return 0;
+  const la = a.length, lb = b.length;
+  if (Math.abs(la - lb) > maxDist) return maxDist + 1;
+  // Single row DP
+  let prev = new Array(lb + 1);
+  let curr = new Array(lb + 1);
+  for (let j = 0; j <= lb; j++) prev[j] = j;
+  for (let i = 1; i <= la; i++) {
+    curr[0] = i;
+    let rowMin = curr[0];
+    for (let j = 1; j <= lb; j++) {
+      const cost = a.charCodeAt(i - 1) === b.charCodeAt(j - 1) ? 0 : 1;
+      curr[j] = Math.min(curr[j - 1] + 1, prev[j] + 1, prev[j - 1] + cost);
+      if (curr[j] < rowMin) rowMin = curr[j];
+    }
+    if (rowMin > maxDist) return maxDist + 1; // early-out
+    [prev, curr] = [curr, prev];
+  }
+  return prev[lb];
+}
+
+// Does the haystack (already lowercased) satisfy ALL tokens?
+// For each token, accept if any of:
+//   (a) exact substring of haystack
+//   (b) token is prefix of any word in haystack (tokens >= 3 chars)
+//   (c) token within 1 edit of any word in haystack (tokens >= 5 chars, non-numeric)
+//   (d) token within 2 edits of any word in haystack (tokens >= 7 chars, non-numeric)
+function _fuzzyMatch(haystackLower, tokens, words /* optional pre-split words */) {
+  if (!tokens.length) return false;
+  const w = words || haystackLower.split(/[\s\/|·,\-]+/).filter(Boolean);
+  for (const t of tokens) {
+    if (haystackLower.includes(t)) continue;                        // (a)
+    const isNum = _isNumericToken(t);
+    if (isNum) return false;                                        // numbers must match exactly
+    let matched = false;
+    if (t.length >= 3) {
+      for (const word of w) {
+        if (word.startsWith(t)) { matched = true; break; }          // (b)
+      }
+    }
+    if (!matched && t.length >= 5) {
+      const maxDist = t.length >= 7 ? 2 : 1;
+      for (const word of w) {
+        // Only fuzzy-compare words of similar length (perf + accuracy)
+        if (Math.abs(word.length - t.length) > maxDist) continue;
+        if (_editDistance(t, word, maxDist) <= maxDist) { matched = true; break; }
+      }
+    }
+    if (!matched) return false;
+  }
+  return true;
+}
+
+// Shared dropdown positioner — body-portals the result div and anchors it
+// flush below the input so it visually looks like a native dropdown
+// (no gap, same width as input, no separate "popup" appearance).
+let _activeTypeaheadEl = null;
+function _anchorDropdown(inp, res) {
+  if (!inp || !res) return;
+  // Hide any other currently-anchored dropdown
+  if (_activeTypeaheadEl && _activeTypeaheadEl !== res) {
+    _activeTypeaheadEl.classList.remove('show');
+    _activeTypeaheadEl.style.display = 'none';
+  }
+  // Move to body once (so parent overflow can't clip)
+  if (res.parentNode !== document.body) {
+    document.body.appendChild(res);
+  }
+  const rect = inp.getBoundingClientRect();
+  const vh = window.innerHeight;
+  const spaceBelow = vh - rect.bottom;
+  const dropdownMaxH = Math.min(320, Math.max(140, spaceBelow - 8));
+  // Anchor flush below input — looks like the input "extended downward"
+  res.style.position     = 'fixed';
+  res.style.top          = rect.bottom + 'px';         // no gap — touches input bottom
+  res.style.left         = rect.left + 'px';
+  res.style.width        = rect.width + 'px';          // same width as input
+  res.style.right        = 'auto';
+  res.style.maxHeight    = dropdownMaxH + 'px';
+  res.style.overflowY    = 'auto';
+  res.style.overflowX    = 'hidden';
+  res.style.zIndex       = '99999';
+  res.style.boxShadow    = '0 6px 14px rgba(0,0,0,.12)';
+  res.style.background   = '#fff';
+  // Merge top border with input bottom: thin border + no top radius
+  res.style.border       = '1px solid #cbd5e1';
+  res.style.borderTop    = '1px solid #e2e8f0';
+  res.style.borderRadius = '0 0 4px 4px';
+  res.style.display      = 'block';
+  res.style.fontSize     = '12.5px';
+  res.classList.add('show');
+  _activeTypeaheadEl = res;
+  // Track which input this dropdown is anchored to (for scroll reposition)
+  res.dataset.anchorInputId = inp.id;
+}
+
+// Reposition on scroll/resize so dropdown stays glued to input
+function _repositionActiveDropdown() {
+  if (!_activeTypeaheadEl || !_activeTypeaheadEl.classList.contains('show')) return;
+  const inpId = _activeTypeaheadEl.dataset.anchorInputId;
+  if (!inpId) return;
+  const inp = document.getElementById(inpId);
+  if (!inp) return;
+  const rect = inp.getBoundingClientRect();
+  // If input is scrolled off-screen, hide the dropdown
+  if (rect.bottom < 0 || rect.top > window.innerHeight) {
+    _activeTypeaheadEl.style.display = 'none';
+    _activeTypeaheadEl.classList.remove('show');
+    return;
+  }
+  _activeTypeaheadEl.style.top   = rect.bottom + 'px';
+  _activeTypeaheadEl.style.left  = rect.left + 'px';
+  _activeTypeaheadEl.style.width = rect.width + 'px';
+}
+window.addEventListener('scroll', _repositionActiveDropdown, true);
+window.addEventListener('resize', _repositionActiveDropdown);
+
+// Click-outside-to-close
+document.addEventListener('mousedown', (e) => {
+  if (!_activeTypeaheadEl) return;
+  const inpId = _activeTypeaheadEl.dataset.anchorInputId;
+  const inp = inpId ? document.getElementById(inpId) : null;
+  if (_activeTypeaheadEl.contains(e.target)) return;
+  if (inp && inp.contains(e.target)) return;
+  _activeTypeaheadEl.classList.remove('show');
+  _activeTypeaheadEl.style.display = 'none';
+}, true);
+
 function vendorTypeahead(inputId, resultsId, codeId) {
-  const q = document.getElementById(inputId).value.toLowerCase();
+  const inp = document.getElementById(inputId);
+  const q = inp.value.toLowerCase();
   const res = document.getElementById(resultsId);
-  if (!q) { res.classList.remove('show'); return; }
-  const matches = (state.masters.vendors||[]).filter(v => v['Vendor Name'].toLowerCase().includes(q)).slice(0,8);
-  if (!matches.length) { res.classList.remove('show'); return; }
+  if (!q) { res.classList.remove('show'); res.style.display='none'; return; }
+  const tokens = _fuzzyTokens(q);
+  const matches = (state.masters.vendors||[]).filter(v => {
+    const hay = ((v['Vendor Name']||'')+'|'+(v['Trade']||'')+'|'+(v['GSTIN']||'')).toLowerCase();
+    return _fuzzyMatch(hay, tokens);
+  }).slice(0,12);
+  if (!matches.length) { res.classList.remove('show'); res.style.display='none'; return; }
   res.innerHTML = matches.map(v => `<div class="typeahead-item" onclick="selectVendor('${inputId}','${resultsId}','${codeId}','${esc(v['Vendor Name'])}','${esc(v['Vendor Code']||'')}')">
     <div>${esc(v['Vendor Name'])}</div>
     <div class="muted">${esc(v['Trade']||'')}${v['GSTIN'] ? ' · '+v['GSTIN'] : ''}</div>
   </div>`).join('');
-  res.classList.add('show');
+  _anchorDropdown(inp, res);
 }
 
 // Master-field lock flags
@@ -5196,7 +5484,8 @@ function lockMasterField(inputId, clearBtnId) {
 function selectVendor(inputId, resultsId, codeId, name, code) {
   document.getElementById(inputId).value = name;
   if (codeId) document.getElementById(codeId).value = code;
-  document.getElementById(resultsId).classList.remove('show');
+  const r = document.getElementById(resultsId);
+  if (r) { r.classList.remove('show'); r.style.display='none'; }
   if (inputId === 'ho_vendor') { ho_vendor_locked = true; lockMasterField('ho_vendor','ho_vendor_clear'); }
   // Auto-fill vendor details for PO form
   if (inputId === 'po_vendor') {
@@ -5218,20 +5507,26 @@ function selectVendor(inputId, resultsId, codeId, name, code) {
 
 function locationTypeahead(inputId, resultsId) {
   if (ho_location_locked && inputId === 'ho_location') return;
-  const q = document.getElementById(inputId).value.toLowerCase();
+  const inp = document.getElementById(inputId);
+  const q = inp.value.toLowerCase();
   const res = document.getElementById(resultsId);
-  if (!q) { res.classList.remove('show'); return; }
-  const matches = (state.masters.locations||[]).filter(l => l['Location Name'].toLowerCase().includes(q)).slice(0,6);
-  if (!matches.length) { res.classList.remove('show'); return; }
+  if (!q) { res.classList.remove('show'); res.style.display='none'; return; }
+  const tokens = _fuzzyTokens(q);
+  const matches = (state.masters.locations||[]).filter(l => {
+    const hay = ((l['Location Name']||'')+'|'+(l['Block']||'')+'|'+(l['Category']||'')).toLowerCase();
+    return _fuzzyMatch(hay, tokens);
+  }).slice(0,10);
+  if (!matches.length) { res.classList.remove('show'); res.style.display='none'; return; }
   res.innerHTML = matches.map(l => `<div class="typeahead-item" onclick="selectLocation('${inputId}','${resultsId}','${esc(l['Location Name'])}')">
     ${esc(l['Location Name'])}${l['Block'] ? ' <span class="muted">\u00b7 '+esc(l['Block'])+'</span>' : ''}
   </div>`).join('');
-  res.classList.add('show');
+  _anchorDropdown(inp, res);
 }
 
 function selectLocation(inputId, resultsId, name) {
   document.getElementById(inputId).value = name;
-  document.getElementById(resultsId).classList.remove('show');
+  const r = document.getElementById(resultsId);
+  if (r) { r.classList.remove('show'); r.style.display='none'; }
   if (inputId === 'ho_location') { ho_location_locked = true; lockMasterField('ho_location','ho_location_clear'); }
 }
 
@@ -5247,39 +5542,51 @@ function calcInvPayDue() {
 function boqTypeahead(inputId, resultsId, codeId) {
   if (hob_boq_locked && inputId === 'hob_boqItem') return;
   if (wob_boq_locked && inputId === 'wob_boqItem') return;
-  const q   = document.getElementById(inputId).value.toLowerCase();
+  const inp = document.getElementById(inputId);
+  const q   = inp.value.toLowerCase();
   const res = document.getElementById(resultsId);
-  if (!q) { res.classList.remove('show'); return; }
+  if (!q) { res.classList.remove('show'); res.style.display='none'; return; }
+  const tokens = _fuzzyTokens(q);
   // Only show L2 items (selectable) — L1 are grouping heads only
-  const matches = (state.masters.boqItems||[]).filter(b => (b['Level']!==1) && b['BOQ Name'].toLowerCase().includes(q)).slice(0,8);
-  if (!matches.length) { res.classList.remove('show'); return; }
+  const matches = (state.masters.boqItems||[]).filter(b => {
+    if (b['Level']===1) return false;
+    const hay = ((b['BOQ Name']||'')+'|'+(b['BOQ Code']||'')+'|'+(b['Description']||'')).toLowerCase();
+    return _fuzzyMatch(hay, tokens);
+  }).slice(0,12);
+  if (!matches.length) { res.classList.remove('show'); res.style.display='none'; return; }
   res.innerHTML = matches.map(b => `<div class="typeahead-item" onclick="selectBOQ('${inputId}','${resultsId}','${codeId}','${esc(b['BOQ Name'])}','${esc(b['BOQ Code']||'')}')">
     <div>${esc(b['BOQ Name'])}</div>
     <div class="muted">${esc(b['BOQ Code']||'')}${b['Budget Amount'] ? ' &middot; Budget: \u20b9'+fmtINR(b['Budget Amount']) : ''}</div>
   </div>`).join('');
-  res.classList.add('show');
+  _anchorDropdown(inp, res);
 }
 
 function selectBOQ(inputId, resultsId, codeId, name, code) {
   document.getElementById(inputId).value = name;
   if (codeId) document.getElementById(codeId).value = code;
-  document.getElementById(resultsId).classList.remove('show');
+  const r = document.getElementById(resultsId);
+  if (r) { r.classList.remove('show'); r.style.display='none'; }
   if (inputId === 'hob_boqItem') { hob_boq_locked = true; lockMasterField('hob_boqItem','hob_boq_clear'); }
   if (inputId === 'wob_boqItem') { wob_boq_locked = true; lockMasterField('wob_boqItem','wob_boq_clear'); }
 }
 
 function activityTypeahead(inputId, resultsId, rateId, uomId, rowIdx, orderType) {
-  const q = document.getElementById(inputId).value.toLowerCase();
+  const inp = document.getElementById(inputId);
+  const q = inp.value.toLowerCase();
   const res = document.getElementById(resultsId);
-  if (!q) { res.classList.remove('show'); return; }
-  const matches = (state.masters.activities||[]).filter(a => a['Activity Description'].toLowerCase().includes(q)).slice(0,8);
-  if (!matches.length) { res.classList.remove('show'); return; }
+  if (!q) { res.classList.remove('show'); res.style.display='none'; return; }
+  const tokens = _fuzzyTokens(q);
+  const matches = (state.masters.activities||[]).filter(a => {
+    const hay = ((a['Activity Description']||'')+'|'+(a['Category']||'')+'|'+(a['UOM']||'')).toLowerCase();
+    return _fuzzyMatch(hay, tokens);
+  }).slice(0,12);
+  if (!matches.length) { res.classList.remove('show'); res.style.display='none'; return; }
   const selectFn = orderType === 'WO' ? 'selectWOActivity' : 'selectActivity';
   res.innerHTML = matches.map(a => `<div class="typeahead-item" onclick="${selectFn}(${rowIdx},'${esc(a['Activity Description'])}','${esc(a['UOM']||'')}',${num(a['Default Rate']||0)})">
     <div>${esc(a['Activity Description'])}</div>
     <div class="muted">${esc(a['UOM']||'')} \u00b7 \u20b9${fmtINR(a['Default Rate']||0)}</div>
   </div>`).join('');
-  res.classList.add('show');
+  _anchorDropdown(inp, res);
 }
 
 
@@ -5441,7 +5748,6 @@ async function newHO() {
   document.getElementById('ho_vendor').value = '';
   document.getElementById('ho_vendorCode').value = '';
   document.getElementById('ho_scope').value = '';
-  document.getElementById('ho_location').value = '';
   document.getElementById('ho_startDate').value = '';
   document.getElementById('ho_endDate').value = '';
   document.getElementById('ho_gstPct').value = '18';
@@ -5551,7 +5857,6 @@ function getHOFormData() {
     vendor:     document.getElementById('ho_vendor').value,
     vendorCode: document.getElementById('ho_vendorCode').value,
     scope:      document.getElementById('ho_scope').value,
-    location:   document.getElementById('ho_location').value,
     startDate:  document.getElementById('ho_startDate').value,
     endDate:    document.getElementById('ho_endDate').value,
     gstPct, grossAmount: gross, gstAmount: gstAmt, totalAmount: total,
@@ -5656,8 +5961,6 @@ async function reviseHO(hoNum) {
   document.getElementById('ho_vendor').value   = h['Vendor Name'] || '';
   document.getElementById('ho_vendorCode').value = h['Vendor Code'] || '';
   if (h['Vendor Name']) { ho_vendor_locked = true; lockMasterField('ho_vendor','ho_vendor_clear'); }
-  document.getElementById('ho_location').value = h['Location'] || '';
-  if (h['Location']) { ho_location_locked = true; lockMasterField('ho_location','ho_location_clear'); }
   document.getElementById('ho_project').value   = h['Project'] || 'PoE, Ph-01';
   document.getElementById('ho_startDate').value = h['Start Date'] || '';
   document.getElementById('ho_endDate').value   = h['End Date'] || '';
@@ -5743,7 +6046,6 @@ async function viewHO(hoNum) {
       <div><b>Vendor:</b> ${esc(h['Vendor Name'])}</div>
       <div><b>Status:</b> <span class="status ${(h['Status']||'').toLowerCase().replace(' ','-')}">${esc(h['Status'])}</span></div>
       <div><b>Scope:</b> ${esc(h['Scope']||'—')}</div>
-      <div><b>Location:</b> ${esc(h['Location']||'—')}</div>
       <div><b>GST:</b> ${h['GST %']}%</div>
     </div>
     <div class="table-wrap"><table>
@@ -6209,29 +6511,28 @@ async function onHOBHOCChange() {
   const hoRes = await apiGetHODetails(hoNum);
   if (hoRes.ok) document.getElementById('hob_gstPct').value = hoRes.header['GST %'] || 18;
 
-  // Get last HOB service locations for pre-fill
-  const {data:lastBill} = await sb.from('ho_bills').select('bill_number').eq('ho_number',hoNum).neq('status','Rejected').order('created_at',{ascending:false}).limit(1);
-  const lastBillNum = lastBill?.[0]?.bill_number;
-  const prevLocMap = {};
-  if (lastBillNum) {
-    const {data:prevItems} = await sb.from('ho_bill_items').select('description,service_location_code,service_location_name').eq('bill_number',lastBillNum);
-    (prevItems||[]).forEach(it => { prevLocMap[it.description] = { code:it.service_location_code, name:it.service_location_name }; });
-  }
+  if (!(puState.wbsList||[]).length) await loadWBSMaster();
 
   let gross = 0;
   document.getElementById('hob_itemsBody').innerHTML = items.map((it, i) => {
     const amt = num(it['This Period Qty']) * num(it['Unit Rate']);
     gross += amt;
-    const prevLoc = prevLocMap[it['Description']]||null;
-    const locOptions = getServiceLocationOptions(prevLoc?.code||'');
+    const wbsSub = it['WBS Sub Activity']||it.wbs_sub_activity||'';
+    const wbsCode = it['WBS Code']||it.wbs_code||'';
     return `<tr>
       <td class="center">${i+1}</td><td>${esc(it['Description'])}</td><td class="center">${esc(it['UOM'])}</td>
       <td class="num mono">${fmtINR(it['This Period Qty'])}</td>
       <td class="num mono">${fmtINR(it['Unit Rate'])}</td>
       <td class="num mono">${fmtINR(amt)}</td>
-      <td><select class="hob_svcLoc" style="width:100%;font-size:12px;" required>
-        <option value="">— Select Location —</option>${locOptions}
-      </select></td>
+      <td><div style="position:relative;">
+        <input class="hob_wbsSub" id="hobWBS_${i}" placeholder="Type WBS…" autocomplete="off" style="width:100%;font-size:12px;"
+          value="${esc(wbsSub)}"
+          onfocus="wbsTypeahead('hobWBS_${i}','hobWBSRes_${i}','hobWBSCode_${i}','sub_activity')"
+          oninput="wbsTypeahead('hobWBS_${i}','hobWBSRes_${i}','hobWBSCode_${i}','sub_activity')"
+          onblur="setTimeout(()=>document.getElementById('hobWBSRes_${i}')?.classList.remove('show'),200)">
+        <div class="typeahead-results" id="hobWBSRes_${i}" style="min-width:320px;position:absolute;top:100%;left:0;z-index:9999;box-shadow:0 4px 16px rgba(0,0,0,.15);"></div>
+        <input type="hidden" id="hobWBSCode_${i}" value="${esc(wbsCode)}">
+      </div></td>
     </tr>`;
   }).join('');
   document.getElementById('hob_grossAmt').textContent = fmtINR(gross);
@@ -6324,11 +6625,11 @@ function getHOBFormData() {
   const vendor = optText[2] || '';
 
   const items = [];
-  let missingLoc = false;
+  let missingWBS = false;
   document.querySelectorAll('#hob_itemsBody tr').forEach((tr,i) => {
-    const locSel = tr.querySelector('.hob_svcLoc');
-    if (locSel && !locSel.value) missingLoc = true;
-    const locOpt = locSel?.options[locSel.selectedIndex];
+    const wbsInp = tr.querySelector('.hob_wbsSub');
+    const wbsCodeInp = tr.querySelector('[id^="hobWBSCode_"]');
+    if (wbsInp && !wbsInp.value?.trim()) missingWBS = true;
     items.push({
       sno: i+1,
       description: tr.cells[1].textContent.trim(),
@@ -6336,8 +6637,8 @@ function getHOBFormData() {
       thisPeriodQty: num(tr.cells[3].textContent),
       unitRate:    num(tr.cells[4].textContent),
       amount:      num(tr.cells[5].textContent),
-      serviceLocationCode: locSel?.value||null,
-      serviceLocationName: locOpt?.dataset.name||locOpt?.textContent||null
+      wbs_sub_activity: wbsInp?.value?.trim()||null,
+      wbs_code:         wbsCodeInp?.value?.trim()||null
     });
   });
 
@@ -6387,7 +6688,7 @@ function getHOBFormData() {
     netPayable: net, status: 'Pending Approval',
     preparedBy: state.userName,
     remarks:    document.getElementById('hob_remarks').value,
-    items, extraLines, missingLoc
+    items, extraLines, missingWBS
   };
 }
 
@@ -6398,7 +6699,7 @@ async function saveHOB_direct() {
   if (!data.vendorInvDate) { toast('Vendor Invoice Date is mandatory','error'); return; }
   if (!data.items.length) { toast('No items loaded — select a certification first','error'); return; }
   if (!data.boqItem || !hob_boq_locked) { toast('BOQ Item is mandatory — select from the master list','error'); return; }
-  if (data.missingLoc) { toast('Service location is mandatory for all line items','error'); return; }
+  if (data.missingWBS) { toast('WBS Sub Activity is mandatory for all line items','error'); return; }
   if (data.netPayable <= 0) { toast('Net Payable is zero or negative. Reduce deductions before saving.','error'); return; }
 
   const isRevision = document.getElementById('hobForm').dataset.revising;
@@ -7311,31 +7612,30 @@ async function onWOBWOCChange() {
     document.getElementById('wob_mobAdvRecovery').value = mobAdvOS > 0 ? mobAdvOS.toFixed(2) : '0';
   }
 
-  // Get last bill's service locations for pre-fill
-  const { data: prevBillItems } = await sb.from('wo_bill_items')
-    .select('description, service_location_code, service_location_name')
-    .eq('bill_number', (await sb.from('wo_bills').select('bill_number').eq('wo_number', woNum).neq('status','Rejected').order('created_at',{ascending:false}).limit(1)).data?.[0]?.bill_number||'__none__');
-  const prevLocMap = {};
-  (prevBillItems||[]).forEach(it => { prevLocMap[it.description] = { code: it.service_location_code, name: it.service_location_name }; });
+  if (!(puState.wbsList||[]).length) await loadWBSMaster();
 
   let gross = 0;
   const retentionPct = num(document.getElementById('wob_retentionPct').value)||5;
   document.getElementById('wob_itemsBody').innerHTML = items.map((it,i) => {
     const amt = num(it['Cert Value']);
     gross += amt;
-    const prevLoc = prevLocMap[it['Description']||''];
-    const locOptions = (state.masters.serviceLocations||[]).map(l =>
-      `<option value="${esc(l['Location Code'])}" data-name="${esc(l['Location Name'])}" ${prevLoc?.code===l['Location Code']?'selected':''}>[${esc(l['Category'])}] ${esc(l['Location Name'])}</option>`
-    ).join('');
     const thisPeriodLabel = it['This Period Pct']>0 ? it['This Period Pct'].toFixed(2)+'%' : fmtINR(it['This Period Qty']);
+    const wbsSub = it['WBS Sub Activity']||it.wbs_sub_activity||'';
+    const wbsCode = it['WBS Code']||it.wbs_code||'';
     return `<tr>
       <td class="center">${i+1}</td><td>${esc(it['Description'])}</td><td class="center">${esc(it['UOM'])}</td>
       <td class="num mono">${thisPeriodLabel}</td>
       <td class="num mono">${fmtINR(it['Unit Rate'])}</td>
       <td class="num mono">${fmtINR(amt)}</td>
-      <td><select class="wob_svcLoc" style="width:100%;font-size:12px;" required>
-        <option value="">— Select Location —</option>${locOptions}
-      </select></td>
+      <td><div style="position:relative;">
+        <input class="wob_wbsSub" id="wobWBS_${i}" placeholder="Type WBS…" autocomplete="off" style="width:100%;font-size:12px;"
+          value="${esc(wbsSub)}"
+          onfocus="wbsTypeahead('wobWBS_${i}','wobWBSRes_${i}','wobWBSCode_${i}','sub_activity')"
+          oninput="wbsTypeahead('wobWBS_${i}','wobWBSRes_${i}','wobWBSCode_${i}','sub_activity')"
+          onblur="setTimeout(()=>document.getElementById('wobWBSRes_${i}')?.classList.remove('show'),200)">
+        <div class="typeahead-results" id="wobWBSRes_${i}" style="min-width:320px;position:absolute;top:100%;left:0;z-index:9999;box-shadow:0 4px 16px rgba(0,0,0,.15);"></div>
+        <input type="hidden" id="wobWBSCode_${i}" value="${esc(wbsCode)}">
+      </div></td>
     </tr>`;
   }).join('');
   document.getElementById('wob_grossAmt').textContent = fmtINR(gross);
@@ -7401,21 +7701,22 @@ async function saveWOB_direct() {
   if (!document.getElementById('wob_vendorInvDate').value) { toast('Vendor Invoice Date is mandatory','error'); return; }
   if (!document.getElementById('wob_boqItem').value||!wob_boq_locked) { toast('BOQ Item is mandatory — select from master','error'); return; }
 
-  // Validate all items have service location
+  // Validate all items have WBS Sub Activity
   const items = [];
-  let missingLoc = false;
+  let missingWBS = false;
   document.querySelectorAll('#wob_itemsBody tr').forEach((tr,i) => {
-    const locSel = tr.querySelector('.wob_svcLoc');
-    if (!locSel?.value) { missingLoc = true; return; }
-    const locOpt = locSel.options[locSel.selectedIndex];
+    const wbsInp = tr.querySelector('.wob_wbsSub');
+    const wbsCodeInp = tr.querySelector('[id^="wobWBSCode_"]');
+    if (!wbsInp?.value?.trim()) { missingWBS = true; return; }
     items.push({
       sno:i+1, description:tr.cells[1].textContent.trim(), uom:tr.cells[2].textContent.trim(),
       thisPeriodQty:num(tr.cells[3].textContent)||0, unitRate:num(tr.cells[4].textContent),
       amount:num(tr.cells[5].textContent),
-      serviceLocationCode:locSel.value, serviceLocationName:locOpt?.dataset.name||locOpt?.textContent||''
+      wbs_sub_activity:wbsInp.value.trim(),
+      wbs_code:wbsCodeInp?.value?.trim()||null
     });
   });
-  if (missingLoc) { toast('Service location is mandatory for all line items','error'); return; }
+  if (missingWBS) { toast('WBS Sub Activity is mandatory for all line items','error'); return; }
 
   const extraLines=[];
   document.querySelectorAll('#wob_extraBody tr').forEach((tr,i)=>{
@@ -8312,7 +8613,7 @@ function renderPrintWOB(d) {
     <td class="r">${fmtINR(it['This Period Qty'])}</td>
     <td class="r">₹\u202f${fmtINR(it['Unit Rate'])}</td>
     <td class="r">₹\u202f${fmtINR(it['Amount'])}</td>
-    <td style="font-size:10pt;">${esc(it['Service Location Name']||'—')}</td>
+    <td style="font-size:10pt;">${esc(it['WBS Sub Activity']||it.wbs_sub_activity||'—')}</td>
   </tr>`).join('');
   return `<div class="pd-so-top">
     <div class="pd-co-block"><div class="pd-co-name">Urban Excellence LLP</div>
@@ -8326,7 +8627,7 @@ function renderPrintWOB(d) {
   <table class="pd-items"><thead><tr>
     <th class="c">#</th><th class="desc">Description</th><th class="c">UOM</th>
     <th class="r">Qty/%</th><th class="r">Rate</th><th class="r">Amount</th>
-    <th>Service Location</th>
+    <th>WBS Sub Activity</th>
   </tr></thead><tbody>${itemsHTML}</tbody></table>
   ${extras.length?`<table class="pd-items" style="margin-top:8px;"><thead><tr><th>Additional/Deduction</th><th>Type</th><th>Timing</th><th class="r">Amount</th></tr></thead>
   <tbody>${extras.map(e=>`<tr><td>${esc(e['Description']||'')}</td><td>${esc(e['Type'])}</td><td>${esc(e['Timing'])}</td><td class="r">${e['Type']==='Addition'?'+':'-'}₹\u202f${fmtINR(e['Amount'])}</td></tr>`).join('')}</tbody></table>`:''}
@@ -8707,12 +9008,12 @@ function switchPUTab(tab) {
     const stab = document.querySelector(`.sub-tab[data-putab="${t}"]`);
     if (stab) stab.classList.toggle('active', t === tab);
   });
-  if (tab === 'mir')   loadMIRList();
+  if (tab === 'mir')   { loadMIRList(); if (!(puState.wbsList||[]).length) loadWBSMaster(); }
   if (tab === 'rfq')   { loadRFQList(); loadQCList(); }
   if (tab === 'po')    loadPOList();
   if (tab === 'grn')   loadGRNList();
   if (tab === 'pob')   loadPOBList();
-  if (tab === 'mis')   { loadMISList(); }
+  if (tab === 'mis')   { loadMISList(); if (!(puState.wbsList||[]).length) loadWBSMaster(); }
   if (tab === 'stock') loadStockBalance();
 }
 
@@ -8789,28 +9090,30 @@ async function saveMaterialMaster() {
 }
 
 function materialTypeahead(inputId, resultsId) {
-  const q = (document.getElementById(inputId)?.value||'').toLowerCase();
+  const inp = document.getElementById(inputId);
+  const q = (inp?.value||'').toLowerCase();
   const res = document.getElementById(resultsId);
   if (!q || !res) return;
-  const matches = puState.materials.filter(m =>
-    m.material_name.toLowerCase().includes(q) ||
-    (m.sub_category||'').toLowerCase().includes(q)
-  ).slice(0, 12);
-  if (!matches.length) { res.classList.remove('show'); return; }
+  const tokens = _fuzzyTokens(q);
+  const matches = puState.materials.filter(m => {
+    const hay = ((m.material_name||'')+'|'+(m.category||'')+'|'+(m.sub_category||'')+'|'+(m.uom||'')).toLowerCase();
+    return _fuzzyMatch(hay, tokens);
+  }).slice(0, 15);
+  if (!matches.length) { res.classList.remove('show'); res.style.display='none'; return; }
   res.innerHTML = matches.map(m =>
     `<div class="typeahead-item" onclick="selectMaterialItem('${inputId}','${resultsId}','${esc(m.material_name).replace(/'/g,"\\'")}','${esc(m.uom).replace(/'/g,"\\'")}')">
       <strong>${esc(m.material_name)}</strong>
       <div class="muted">${esc(m.category||'')}${m.sub_category?' · '+esc(m.sub_category):''} · ${esc(m.uom)}</div>
     </div>`
   ).join('');
-  res.classList.add('show');
+  _anchorDropdown(inp, res);
 }
 
 function selectMaterialItem(inputId, resultsId, name, uom) {
   const input = document.getElementById(inputId);
   if (input) input.value = name;
   const res = document.getElementById(resultsId);
-  if (res) res.classList.remove('show');
+  if (res) { res.classList.remove('show'); res.style.display='none'; }
   const row = document.getElementById(inputId)?.closest('tr');
   if (row) {
     const uomEl = row.querySelector('.pu_uom');
@@ -8881,11 +9184,6 @@ async function newMIR() {
   ['mir_purpose','mir_remarks'].forEach(id => { const e=document.getElementById(id); if(e) e.value=''; });
   document.getElementById('mirItemsBody').innerHTML = '';
   _mirItemC = 0;
-  const locSel = document.getElementById('mir_location');
-  locSel.innerHTML = '<option value="">— Select —</option>' +
-    (state.masters.serviceLocations||[]).map(l =>
-      `<option value="${esc(l['Location Code'])}" data-name="${esc(l['Location Name'])}">${esc(l['Location Name'])} (${esc(l['Category'])})</option>`
-    ).join('');
   addMIRItem();
   window.scrollTo(0,0);
 }
@@ -8911,6 +9209,7 @@ function addMIRItem() {
     <td><input id="mirSpec_${i}" style="width:160px;" placeholder="Grade / spec"></td>
     <td><div style="position:relative;width:160px;">
       <input id="mirWBS_${i}" placeholder="Type WBS…" autocomplete="off" style="width:100%;"
+        onfocus="wbsTypeahead('mirWBS_${i}','mirWBSRes_${i}','mirWBSCode_${i}','sub_activity')"
         oninput="wbsTypeahead('mirWBS_${i}','mirWBSRes_${i}','mirWBSCode_${i}','sub_activity')"
         onblur="setTimeout(()=>document.getElementById('mirWBSRes_${i}')?.classList.remove('show'),200)">
       <div class="typeahead-results" id="mirWBSRes_${i}" style="min-width:300px;position:absolute;top:100%;left:0;z-index:9999;box-shadow:0 4px 16px rgba(0,0,0,.15);"></div>
@@ -8942,15 +9241,11 @@ async function saveMIR() {
   pbShow('Saving MIR…');
   try {
     const mirNumber = await nextPUDocNumber('MIR');
-    const locSel = document.getElementById('mir_location');
-    const locOpt = locSel.options[locSel.selectedIndex];
     const { error } = await sb.from('pu_mir').insert({
       mir_number: mirNumber, mir_date: date,
       required_by_date: document.getElementById('mir_requiredBy').value||null,
       project: document.getElementById('mir_project').value,
       purpose: document.getElementById('mir_purpose').value.trim()||null,
-      location_code: locSel.value||null,
-      location_name: locOpt?.dataset?.name||null,
       raised_by: state.userName, raised_by_id: state.userId,
       remarks: document.getElementById('mir_remarks').value.trim()||null,
       status: 'Pending Approval',
@@ -10145,14 +10440,10 @@ function renderPOList() {
   let rows=puState.poList;
   if(q) rows=rows.filter(p=>p.po_number.toLowerCase().includes(q)||p.vendor_name.toLowerCase().includes(q));
   if(sf) rows=rows.filter(p=>p.status===sf);
-  const perms=ROLE_PERMS[state.role]||{};
   document.getElementById('po_listBody').innerHTML=rows.map(p=>{
     const stCls=p.status.toLowerCase().replace(/[\s/]+/g,'-');
-    let acts=`<button class="btn btn-ghost btn-sm" onclick="viewPO('${esc(p.po_number)}')">View</button>
+    const acts=`<button class="btn btn-ghost btn-sm" onclick="viewPO('${esc(p.po_number)}')">View</button>
               <button class="btn btn-ghost btn-sm" onclick="printPO('${esc(p.po_number)}')">🖨</button>`;
-    if(perms.canApprovePO && p.status==='Pending Approval')
-      acts+=` <button class="btn btn-primary btn-sm" onclick="approvePO('${esc(p.po_number)}')">Approve</button>
-              <button class="btn btn-danger btn-sm" onclick="rejectDoc('PO','${esc(p.po_number)}')">Reject</button>`;
     return `<tr>
       <td class="mono">${esc(p.po_number)}</td><td>${fmtDate(p.po_date)}</td>
       <td>${esc(p.vendor_name)}</td><td class="mono">${esc(p.qc_number||'—')}</td>
@@ -10487,16 +10778,52 @@ async function viewPO(poNum) {
   const [{data:h},{data:items},{data:grnsForPO}]=await Promise.all([
     sb.from('pu_po_orders').select('*').eq('po_number',poNum).single(),
     sb.from('pu_po_items').select('*').eq('po_number',poNum).order('sno'),
-    sb.from('pu_grn').select('grn_number,status').eq('po_number',poNum),
+    sb.from('pu_grn').select('grn_number,grn_date,status').eq('po_number',poNum),
   ]);
   pbDone();
   if(!h){toast('PO not found','error');return;}
-  // Eligibility for Cancel / Short Close
-  const grnCount=(grnsForPO||[]).length;
-  const perms=ROLE_PERMS[state.role]||{};
-  const isCancelable    = perms.canCancelPO     && h.status==='Open'            && grnCount===0;
-  const isShortClosable = perms.canShortClosePO && h.status==='Partial Receipt' && grnCount>=1;
-  // Build closure-info banner if PO is already terminated
+
+  // Build received-qty map per material, summing across all non-rejected GRNs
+  // Also collect per-GRN breakdown (qty, GRN no, date) for footnote
+  const activeGRNs = (grnsForPO||[]).filter(g => g.status !== 'Rejected');
+  const grnDateMap = {};
+  activeGRNs.forEach(g => { grnDateMap[g.grn_number] = g.grn_date; });
+  const receivedMap = {};      // material_name -> total received qty
+  const breakdownMap = {};     // material_name -> [{grn_number, grn_date, qty}, ...]
+  if (activeGRNs.length) {
+    const {data:grnItems} = await sb.from('pu_grn_items')
+      .select('material_name,this_grn_qty,grn_number')
+      .in('grn_number', activeGRNs.map(g => g.grn_number));
+    (grnItems||[]).forEach(it => {
+      const mat = it.material_name;
+      const qty = num(it.this_grn_qty);
+      receivedMap[mat] = (receivedMap[mat]||0) + qty;
+      if (!breakdownMap[mat]) breakdownMap[mat] = [];
+      breakdownMap[mat].push({ grn_number: it.grn_number, grn_date: grnDateMap[it.grn_number], qty });
+    });
+  }
+
+  // Eligibility for Cancel / Short Close / Approve / Reject
+  const grnCount = activeGRNs.length;
+  const perms = ROLE_PERMS[state.role]||{};
+  const isCancelable    = perms.canCancelPO     && h.status==='Open'             && grnCount===0;
+  const isShortClosable = perms.canShortClosePO && h.status==='Partial Receipt'  && grnCount>=1;
+  const isApprovable    = perms.canApprovePO    && h.status==='Pending Approval';
+
+  // Approval banner (top of modal) for Pending Approval POs
+  const approvalBanner = isApprovable ? `
+    <div style="margin-bottom:12px;padding:12px;background:#fffbeb;border:1px solid #fde68a;border-radius:6px;display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;">
+      <div>
+        <div style="font-size:11px;font-weight:700;color:#92400e;text-transform:uppercase;margin-bottom:2px;">Pending Your Approval</div>
+        <div style="font-size:12px;color:#1f2937;">Review the line items and totals below before approving.</div>
+      </div>
+      <div style="display:flex;gap:6px;flex-shrink:0;">
+        <button class="btn btn-primary" onclick="closeModal();approvePO('${esc(h.po_number)}')">✓ Approve PO</button>
+        <button class="btn btn-danger" onclick="closeModal();rejectDoc('PO','${esc(h.po_number)}')">✕ Reject</button>
+      </div>
+    </div>` : '';
+
+  // Closure-info banner if PO is already terminated
   const closureBanner = (h.status==='Cancelled' || h.status==='Short-Closed') ? `
     <div style="margin-bottom:10px;padding:10px;background:#fef2f2;border:1px solid #fca5a5;border-radius:6px;">
       <div style="font-size:11px;font-weight:700;color:#991b1b;text-transform:uppercase;margin-bottom:4px;">${esc(h.status)}</div>
@@ -10506,11 +10833,39 @@ async function viewPO(poNum) {
         ${h.close_reason?'<strong>Reason:</strong> '+esc(h.close_reason):''}
       </div>
     </div>` : '';
-  // Build action buttons
+
+  // Line items with received/pending columns + per-GRN footnote
+  const itemsHTML = (items||[]).map(it => {
+    const ordered = num(it.qty);
+    const received = receivedMap[it.material_name] || 0;
+    const pending = Math.max(0, ordered - received);
+    const pendingStyle = pending === 0
+      ? 'color:#15803d;font-weight:600;'
+      : (received > 0 ? 'color:#b45309;font-weight:600;' : 'color:#64748b;');
+    const breakdown = breakdownMap[it.material_name] || [];
+    const footnote = breakdown.length ? `<div style="font-size:10px;color:var(--muted);margin-top:3px;line-height:1.45;">
+      ${breakdown.map(b => `${fmtINR(b.qty)} ${esc(it.uom||'')} via <span class="mono">${esc(b.grn_number)}</span>${b.grn_date?' on '+fmtDate(b.grn_date):''}`).join(' · ')}
+    </div>` : '';
+    return `<tr>
+      <td>${it.sno}</td>
+      <td>${esc(it.material_name)}${footnote}</td>
+      <td>${esc(it.uom)}</td>
+      <td class="num mono">${fmtINR(ordered)}</td>
+      <td class="num mono" style="color:#15803d;">${fmtINR(received)}</td>
+      <td class="num mono" style="${pendingStyle}">${pending===0?'✓ '+fmtINR(0):fmtINR(pending)}</td>
+      <td class="num">${fmtINR(it.unit_rate)}</td>
+      <td class="num">${fmtINR(it.base_amount)}</td>
+      <td class="num">${fmtINR(it.total_amount)}</td>
+    </tr>`;
+  }).join('');
+
+  // Lifecycle action buttons (cancel / short-close) at the bottom
   let closeActions='';
   if(isCancelable)    closeActions+=`<button class="btn btn-danger" onclick="cancelPO('${esc(h.po_number)}')">Cancel PO</button> `;
   if(isShortClosable) closeActions+=`<button class="btn btn-danger" onclick="shortClosePO('${esc(h.po_number)}')">Short Close</button> `;
+
   openModal(`<h3>PO — ${esc(h.po_number)}</h3>
+    ${approvalBanner}
     ${closureBanner}
     <div class="grid-3" style="margin-bottom:10px;">
       <div><label class="muted" style="font-size:11px;">VENDOR</label><div><strong>${esc(h.vendor_name)}</strong></div></div>
@@ -10522,8 +10877,12 @@ async function viewPO(poNum) {
       <div><label class="muted" style="font-size:11px;">GRAND TOTAL</label><div style="font-weight:700;color:var(--accent);">${fmtINRSym(h.grand_total)}</div></div>
     </div>
     <div class="table-wrap"><table>
-      <thead><tr><th>#</th><th>Material</th><th>UOM</th><th class="num">Qty</th><th class="num">Rate</th><th class="num">Base Amt</th><th class="num">Total (incl.GST)</th></tr></thead>
-      <tbody>${(items||[]).map(it=>`<tr><td>${it.sno}</td><td>${esc(it.material_name)}</td><td>${esc(it.uom)}</td><td class="num">${it.qty}</td><td class="num">${fmtINR(it.unit_rate)}</td><td class="num">${fmtINR(it.base_amount)}</td><td class="num">${fmtINR(it.total_amount)}</td></tr>`).join('')}</tbody>
+      <thead><tr>
+        <th>#</th><th>Material</th><th>UOM</th>
+        <th class="num">Ordered</th><th class="num">Received</th><th class="num">Pending</th>
+        <th class="num">Rate</th><th class="num">Base Amt</th><th class="num">Total (incl.GST)</th>
+      </tr></thead>
+      <tbody>${itemsHTML}</tbody>
     </table></div>
     <div class="actions-row">${closeActions}<button class="btn btn-ghost" onclick="closeModal()">Close</button></div>`);
 }
@@ -10722,6 +11081,101 @@ function renderGRNList() {
       <td><span class="status ${stCls}">${st}</span></td><td>${acts}</td></tr>`;
   }).join('')||'<tr><td colspan="9" class="center muted">No GRNs.</td></tr>';
   setTimeout(() => { const t=document.getElementById('grn_listBody')?.closest('table'); if(t) makeSortable(t); }, 50);
+}
+
+// ─── GRN CSV Download ────────────────────────────────────────────
+// Downloads all currently-filtered GRNs with full line item details.
+// One row per line item, with GRN header columns repeated on each row
+// (denormalized) so users can filter/pivot in Excel directly.
+async function downloadGRNList() {
+  // Determine which GRNs to export — apply same search/status filter as table
+  const q  = (document.getElementById('grnSearch')?.value||'').toLowerCase();
+  const sf = document.getElementById('grnStatusFilter')?.value||'';
+  let grns = puState.grnList || [];
+  if (q)  grns = grns.filter(g => (g.grn_number||'').toLowerCase().includes(q) ||
+                                   (g.vendor_name||'').toLowerCase().includes(q) ||
+                                   (g.po_number||'').toLowerCase().includes(q));
+  if (sf) grns = grns.filter(g => g.status === sf);
+  if (!grns.length) { toast('No GRNs to download (check filters)', 'info'); return; }
+
+  pbShow(`Fetching items for ${grns.length} GRN(s)…`);
+  try {
+    // Fetch all line items in one query
+    const grnNums = grns.map(g => g.grn_number);
+    const { data: items, error } = await sb.from('pu_grn_items')
+      .select('*').in('grn_number', grnNums).order('grn_number').order('sno');
+    if (error) throw new Error(error.message);
+
+    // Index items by grn_number for fast lookup
+    const itemsByGRN = {};
+    (items||[]).forEach(it => {
+      (itemsByGRN[it.grn_number] = itemsByGRN[it.grn_number] || []).push(it);
+    });
+
+    // CSV column order — header fields, then item fields
+    // (Field names match the actual pu_grn / pu_grn_items schema.)
+    const cols = [
+      // GRN header
+      'GRN Number','GRN Date','PO Number','Vendor Name',
+      'Vehicle/Challan','Invoice No','Invoice Date',
+      'Received By','Verified By','Status','Created At','GRN Remarks',
+      // Line item
+      'Line #','Material Name','UOM',
+      'PO Qty','Prev Received Qty','This GRN Qty','Total Received Qty','Balance Qty',
+      'Unit Rate (₹)','Base Amount (₹)','Item Remarks'
+    ];
+
+    const rows = [cols];
+    grns.forEach(g => {
+      const its = itemsByGRN[g.grn_number] || [];
+      if (!its.length) {
+        rows.push([
+          g.grn_number||'', g.grn_date||'', g.po_number||'', g.vendor_name||'',
+          g.vehicle_challan||'', g.invoice_no||'', g.invoice_date||'',
+          g.received_by||'', g.verified_by||'', g.status||'',
+          g.created_at||'', g.remarks||'',
+          '','','',  '','','','','',  '','',''
+        ]);
+      } else {
+        its.forEach(it => {
+          rows.push([
+            g.grn_number||'', g.grn_date||'', g.po_number||'', g.vendor_name||'',
+            g.vehicle_challan||'', g.invoice_no||'', g.invoice_date||'',
+            g.received_by||'', g.verified_by||'', g.status||'',
+            g.created_at||'', g.remarks||'',
+            it.sno||'', it.material_name||'', it.uom||'',
+            num(it.po_qty)||0, num(it.prev_received_qty)||0, num(it.this_grn_qty)||0,
+            num(it.total_received_qty)||0, num(it.balance_qty)||0,
+            num(it.unit_rate)||0, num(it.base_amount)||0,
+            it.remarks||''
+          ]);
+        });
+      }
+    });
+
+    // CSV encode — escape commas, quotes, newlines per RFC 4180
+    const csvEscape = (val) => {
+      if (val === null || val === undefined) return '';
+      const s = String(val);
+      if (/[",\n\r]/.test(s)) return '"' + s.replace(/"/g,'""') + '"';
+      return s;
+    };
+    const csv = rows.map(r => r.map(csvEscape).join(',')).join('\r\n');
+
+    // Excel-compatible BOM so UTF-8 chars (₹, ° etc) render correctly
+    const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement('a');
+    const ts   = new Date().toISOString().slice(0,10);
+    a.href = url;
+    a.download = `GRN_Export_${ts}_${grns.length}grns_${(items||[]).length}items.csv`;
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(() => { document.body.removeChild(a); URL.revokeObjectURL(url); }, 100);
+    flashSuccess(`Downloaded ${grns.length} GRNs · ${(items||[]).length} line items`);
+  } catch(e) {
+    toast('Download error: ' + e.message, 'error');
+  } finally { pbDone(); }
 }
 
 async function newGRN() {
@@ -10972,10 +11426,6 @@ async function newPOB() {
   document.getElementById('pob_itemsBody').innerHTML='';
   document.getElementById('pob_extraBody').innerHTML='';
   document.getElementById('pob_selectedGRNs').textContent='None';
-  document.getElementById('pob_boqItem').value='';
-  document.getElementById('pob_boqCode').value='';
-  document.getElementById('pob_boq_clear').style.display='none';
-  document.getElementById('pob_boqItem').readOnly=false;
   _pobExtraCount=0; _pobSelectedGRNs=[]; _pobLineItems=[]; _pobGSTInfo={};
   // Load POs with unverified/partial GRNs
   const {data:pos}=await sb.from('pu_po_orders').select('po_number,vendor_name,grand_total')
@@ -11011,9 +11461,9 @@ async function onPOBGRNSelect() {
   document.getElementById('pob_selectedGRNs').textContent=_pobSelectedGRNs.length?_pobSelectedGRNs.join(', '):'None';
   if(!_pobSelectedGRNs.length){document.getElementById('pob_billDetails').style.display='none';return;}
   document.getElementById('pob_billDetails').style.display='';
+  if (!(puState.wbsList||[]).length) loadWBSMaster();
   const {data:grnItems}=await sb.from('pu_grn_items').select('*').in('grn_number',_pobSelectedGRNs).order('grn_number,sno');
   _pobLineItems=grnItems||[];
-  const locOpts=getServiceLocationOptions();
   let grossAmt=0;
   document.getElementById('pob_itemsBody').innerHTML=_pobLineItems.map((it,i)=>{
     grossAmt+=num(it.base_amount);
@@ -11023,15 +11473,25 @@ async function onPOBGRNSelect() {
       <td class="num">${fmtINR(it.this_grn_qty)}</td>
       <td class="num">${fmtINR(it.unit_rate)}</td>
       <td class="num">${fmtINR(it.base_amount)}</td>
-      <td><select class="pob_svcLoc" style="width:160px;">
-        <option value="">— Select —</option>${locOpts}
-      </select></td>
+      <td><div style="position:relative;width:200px;">
+        <input class="pob_wbsSub" id="pobWBS_${i}" placeholder="Type WBS…" autocomplete="off" style="width:100%;"
+          onfocus="wbsTypeahead('pobWBS_${i}','pobWBSRes_${i}','pobWBSCode_${i}','sub_activity')"
+          oninput="wbsTypeahead('pobWBS_${i}','pobWBSRes_${i}','pobWBSCode_${i}','sub_activity')"
+          onblur="setTimeout(()=>document.getElementById('pobWBSRes_${i}')?.classList.remove('show'),200)">
+        <div class="typeahead-results" id="pobWBSRes_${i}" style="min-width:320px;position:absolute;top:100%;left:0;z-index:9999;box-shadow:0 4px 16px rgba(0,0,0,.15);"></div>
+        <input type="hidden" id="pobWBSCode_${i}">
+      </div></td>
     </tr>`;
   }).join('')||'<tr><td colspan="8" class="center muted">No items</td></tr>';
   document.getElementById('pob_s_gross').textContent=fmtINR(grossAmt);
   const gstPct=_pobGSTInfo.cgst+_pobGSTInfo.sgst+_pobGSTInfo.igst;
   document.getElementById('pob_s_gstLabel').textContent='GST ('+gstPct+'%)';
   recalcPOBTotals();
+}
+
+function pobSelectAllGRNs(state) {
+  document.querySelectorAll('.pob_grnChk').forEach(c => { c.checked = !!state; });
+  onPOBGRNSelect();
 }
 
 function getServiceLocationOptions() {
@@ -11104,8 +11564,8 @@ async function savePOB() {
   if(!invNo){toast('Vendor Invoice No. required','error');return;}
   if(!invDate){toast('Invoice Date required','error');return;}
   if(!_pobSelectedGRNs.length){toast('Select at least one GRN','error');return;}
-  const locSels=document.querySelectorAll('.pob_svcLoc');
-  for(let el of locSels){if(!el.value){toast('Service location required for all items','error');return;}}
+  const wbsSubs=document.querySelectorAll('.pob_wbsSub');
+  for(let el of wbsSubs){if(!el.value?.trim()){toast('WBS Sub Activity required for all bill line items','error');el.focus();return;}}
   const f=document.getElementById('pobForm');
   const gross=parseFloat(f.dataset.gross||0);
   const invoice=parseFloat(f.dataset.invoice||0);
@@ -11120,8 +11580,6 @@ async function savePOB() {
       vendor_inv_no:invNo, vendor_inv_date:invDate,
       credit_period:num(document.getElementById('pob_creditPeriod').value)||30,
       inv_pay_due:document.getElementById('pob_invPayDue').value||null,
-      boq_item:document.getElementById('pob_boqItem').value||null,
-      boq_item_code:document.getElementById('pob_boqCode').value||null,
       grn_numbers:_pobSelectedGRNs.join(', '),
       gross_amount:gross,
       cgst_pct:_pobGSTInfo.cgst||0, sgst_pct:_pobGSTInfo.sgst||0, igst_pct:_pobGSTInfo.igst||0,
@@ -11138,15 +11596,15 @@ async function savePOB() {
       status:'Pending Approval',
     });
     if(error) throw new Error(error.message);
-    const locSelArr=[...locSels];
-    await sb.from('pu_po_bill_items').insert(_pobLineItems.map((it,i)=>{
-      const locSel=locSelArr[i]; const locOpt=locSel?.options[locSel.selectedIndex];
-      return {bill_number:billNumber,sno:i+1,grn_number:it.grn_number,
-        material_name:it.material_name,uom:it.uom,qty:it.this_grn_qty,
-        unit_rate:it.unit_rate,base_amount:it.base_amount,
-        service_location_code:locSel?.value||null,
-        service_location_name:locOpt?.dataset?.name||locOpt?.textContent?.trim()||null};
-    }));
+    const wbsSubArr=[...wbsSubs];
+    const wbsCodeArr=[...document.querySelectorAll('[id^="pobWBSCode_"]')];
+    await sb.from('pu_po_bill_items').insert(_pobLineItems.map((it,i)=>({
+      bill_number:billNumber,sno:i+1,grn_number:it.grn_number,
+      material_name:it.material_name,uom:it.uom,qty:it.this_grn_qty,
+      unit_rate:it.unit_rate,base_amount:it.base_amount,
+      wbs_sub_activity:wbsSubArr[i]?.value?.trim()||null,
+      wbs_code:wbsCodeArr[i]?.value?.trim()||null
+    })));
     const extraLines=[];
     document.querySelectorAll('#pob_extraBody tr').forEach((tr,i)=>{
       const cells=tr.cells;
@@ -11231,13 +11689,13 @@ function renderMISList() {
               <button class="btn btn-danger btn-sm" onclick="rejectDoc('MIS','${esc(m.mis_number)}')">Reject</button>`;
     return `<tr>
       <td class="mono">${esc(m.mis_number)}</td><td>${fmtDate(m.issue_date)}</td>
-      <td>${esc(m.issued_to)}</td><td>${esc(m.location_name||'—')}</td>
+      <td>${esc(m.issued_to)}</td>
       <td>${esc(m.issued_by||'—')}</td>
       <td class="num">${its.length}</td>
       <td class="num">${fmtINR(totalVal)}</td>
       <td><span class="status ${stCls}">${m.status||'Pending Approval'}</span></td>
       <td>${acts}</td></tr>`;
-  }).join('')||'<tr><td colspan="9" class="center muted">No material issues.</td></tr>';
+  }).join('')||'<tr><td colspan="8" class="center muted">No material issues.</td></tr>';
   setTimeout(() => { const t=document.getElementById('mis_listBody')?.closest('table'); if(t) makeSortable(t); }, 50);
 }
 
@@ -11275,11 +11733,6 @@ async function newMIS() {
   const misCClear=document.getElementById('mis_contractorCode');
   if(misCClear) misCClear.value='';
   document.getElementById('misItemsBody').innerHTML=''; _misItemC=0;
-  const locSel=document.getElementById('mis_location');
-  locSel.innerHTML='<option value="">— Select Work Location —</option>'+
-    (state.masters.serviceLocations||[]).map(l=>
-      `<option value="${esc(l['Location Code'])}" data-name="${esc(l['Location Name'])}">${esc(l['Location Name'])} (${esc(l['Category'])})</option>`
-    ).join('');
   await addMISItem();
   window.scrollTo(0,0);
 }
@@ -11299,6 +11752,7 @@ async function addMISItem() {
     <td><input type="number" id="misQty_${i}" class="num" style="width:90px;" step="0.001" oninput="recalcMISRow(${i})"></td>
     <td style="min-width:160px;"><div style="position:relative;">
       <input id="misWBS_${i}" placeholder="WBS Element…" autocomplete="off" style="width:100%;font-size:11px;"
+        onfocus="wbsTypeahead('misWBS_${i}','misWBSRes_${i}','misWBSCode_${i}','element')"
         oninput="wbsTypeahead('misWBS_${i}','misWBSRes_${i}','misWBSCode_${i}','element')"
         onblur="setTimeout(()=>document.getElementById('misWBSRes_${i}')?.classList.remove('show'),200)">
       <div class="typeahead-results" id="misWBSRes_${i}" style="min-width:320px;position:absolute;top:100%;left:0;z-index:9999;box-shadow:0 4px 16px rgba(0,0,0,.15);"></div>
@@ -11352,6 +11806,23 @@ async function saveMIS() {
   const locSel=document.getElementById('mis_location');
   const locOpt=locSel?.options[locSel.selectedIndex];
   const items=[];
+  const wbsEls = [...document.querySelectorAll('[id^="misWBS_"]')];
+  const trsAll = [...document.querySelectorAll('#misItemsBody tr')];
+  // Check WBS Element mandatory for every populated line
+  for (let i=0; i<trsAll.length; i++) {
+    const tr = trsAll[i];
+    const sel = tr.querySelector('select');
+    const mat = sel?.value;
+    const qty = parseFloat(tr.querySelector('input[type="number"]')?.value)||0;
+    if (mat && qty > 0) {
+      const wbsVal = wbsEls[i]?.value?.trim();
+      if (!wbsVal) {
+        toast('WBS Element required for all material lines','error');
+        wbsEls[i]?.focus();
+        return;
+      }
+    }
+  }
   document.querySelectorAll('#misItemsBody tr').forEach((tr,i)=>{
     const sel=tr.querySelector('select');
     if(!sel) return;
@@ -11371,8 +11842,6 @@ async function saveMIS() {
     const misNumber=await nextPUMISNumber();
     const {error}=await sb.from('pu_mis').insert({
       mis_number:misNumber, issue_date:date, issued_to:issuedTo,
-      location_code:locSel?.value||null,
-      location_name:locOpt?.dataset?.name||locOpt?.textContent?.trim()||null,
       issued_by:state.userName, issued_by_id:state.userId,
       remarks:document.getElementById('mis_remarks').value||null,
       status:'Pending Approval',
@@ -12186,21 +12655,23 @@ async function saveContractorMaster() {
 
 // Contractor typeahead — used by WO vendor field and MIS Issued To
 function contractorTypeahead(inputId, resultsId, codeId) {
-  const q = (document.getElementById(inputId)?.value||'').toLowerCase();
+  const inp = document.getElementById(inputId);
+  const q = (inp?.value||'').toLowerCase();
   const res = document.getElementById(resultsId);
-  if(!q||!res){ if(res) res.classList.remove('show'); return; }
-  const matches = (state.masters.contractors||[]).filter(c=>
-    c['Contractor Name'].toLowerCase().includes(q)||
-    (c['Trade']||'').toLowerCase().includes(q)
-  ).slice(0,12);
-  if(!matches.length){ res.classList.remove('show'); return; }
+  if(!q||!res){ if(res) { res.classList.remove('show'); res.style.display='none'; } return; }
+  const tokens = _fuzzyTokens(q);
+  const matches = (state.masters.contractors||[]).filter(c => {
+    const hay = ((c['Contractor Name']||'')+'|'+(c['Trade']||'')+'|'+(c['GSTIN']||'')).toLowerCase();
+    return _fuzzyMatch(hay, tokens);
+  }).slice(0,15);
+  if(!matches.length){ res.classList.remove('show'); res.style.display='none'; return; }
   res.innerHTML = matches.map(c=>`
     <div class="typeahead-item"
       onclick="selectContractor('${inputId}','${resultsId}','${codeId}','${esc(c['Contractor Name']).replace(/'/g,"\'")}','${esc(c['Contractor Code'])}')">
       <strong>${esc(c['Contractor Name'])}</strong>
       <div class="muted">${esc(c['Trade']||'')} ${c['GSTIN']?' · GSTIN: '+esc(c['GSTIN']):''}</div>
     </div>`).join('');
-  res.classList.add('show');
+  _anchorDropdown(inp, res);
 }
 
 function selectContractor(inputId, resultsId, codeId, name, code) {
@@ -12209,7 +12680,7 @@ function selectContractor(inputId, resultsId, codeId, name, code) {
   const codeEl = document.getElementById(codeId);
   if(codeEl) codeEl.value = code;
   const res = document.getElementById(resultsId);
-  if(res) res.classList.remove('show');
+  if(res) { res.classList.remove('show'); res.style.display='none'; }
   // Lock the field
   if(inputId==='wo_vendor'){
     wo_vendor_locked = true;
@@ -12589,16 +13060,32 @@ async function printQCPopup(qcNum) {
 // WBS MASTER
 // ============================================================
 async function loadWBSMaster() {
-  const { data, error } = await sb.from('wbs_master')
-    .select('*').eq('is_active', true)
-    .order('block').order('wbs_group').order('wbs_activity')
-    .order('wbs_sub_activity').order('wbs_location');
-  if (!error) {
-    puState.wbsList = data || [];
-    renderWBSMaster();
-    refreshWBSDataLists();
-    refreshWBSFilterDropdowns();
+  // Paginate to bypass Supabase's default 1000-row limit.
+  // Pull in 1000-row chunks until we have everything.
+  const PAGE = 1000;
+  let from = 0;
+  const all = [];
+  while (true) {
+    const { data, error } = await sb.from('wbs_master')
+      .select('*').eq('is_active', true)
+      .order('block').order('wbs_group').order('wbs_activity')
+      .order('wbs_sub_activity').order('wbs_location')
+      .range(from, from + PAGE - 1);
+    if (error) {
+      console.error('loadWBSMaster error:', error);
+      toast('WBS load error: '+error.message,'error');
+      break;
+    }
+    if (!data || !data.length) break;
+    all.push(...data);
+    if (data.length < PAGE) break; // last page
+    from += PAGE;
+    if (from > 100000) break; // safety cap — shouldn't ever happen
   }
+  puState.wbsList = all;
+  renderWBSMaster();
+  refreshWBSDataLists();
+  refreshWBSFilterDropdowns();
 }
 
 function buildWBSElement(block, group, activity, subActivity, location) {
@@ -12683,19 +13170,32 @@ function renderWBSMaster() {
   const q        = (document.getElementById('wbs_search')?.value||'').toLowerCase();
   const fBlock   = document.getElementById('wbs_filter_block')?.value||'';
   const fGroup   = document.getElementById('wbs_filter_group')?.value||'';
-  const isAdmin  = ['Admin','Planning/ QS'].includes(state.role);
+  const isAdmin  = state.role === 'Admin';
   let rows       = puState.wbsList||[];
   if (fBlock) rows = rows.filter(w => w.block===fBlock);
   if (fGroup) rows = rows.filter(w => w.wbs_group===fGroup);
-  if (q) rows = rows.filter(w =>
-    (w.wbs_element||'').toLowerCase().includes(q) ||
-    (w.wbs_activity||'').toLowerCase().includes(q) ||
-    (w.wbs_sub_activity||'').toLowerCase().includes(q) ||
-    (w.wbs_location||'').toLowerCase().includes(q)
-  );
+  if (q) {
+    const tokens = _fuzzyTokens(q);
+    rows = rows.filter(w => {
+      const hay = ((w.wbs_element||'')+'|'+(w.wbs_activity||'')+'|'+(w.wbs_sub_activity||'')+'|'+(w.block||'')+'|'+(w.wbs_location||'')+'|'+(w.wbs_group||'')).toLowerCase();
+      return _fuzzyMatch(hay, tokens);
+    });
+  }
+  // Show count
+  const totalCount = (puState.wbsList||[]).length;
+  const filteredCount = rows.length;
+  const lbl = document.getElementById('wbs_count_label');
+  if (lbl) {
+    lbl.textContent = (q || fBlock || fGroup)
+      ? `${filteredCount.toLocaleString()} of ${totalCount.toLocaleString()} elements`
+      : `${totalCount.toLocaleString()} elements`;
+  }
+  // Cap rendered rows for DOM perf (use search/filter to narrow further)
+  const RENDER_CAP = 500;
+  const trimmed = rows.length > RENDER_CAP ? rows.slice(0, RENDER_CAP) : rows;
   const tbody = document.getElementById('wbs_list');
   if (!tbody) return;
-  tbody.innerHTML = rows.map(w=>`
+  let html = trimmed.map(w=>`
     <tr>
       <td class="mono" style="font-size:10px;">${esc(w.wbs_code||'—')}</td>
       <td><strong>${esc(w.block||'—')}</strong></td>
@@ -12709,12 +13209,18 @@ function renderWBSMaster() {
         <button class="btn btn-ghost btn-sm" onclick="editWBS('${esc(w.wbs_code)}')">Edit</button>
         <button class="btn btn-danger btn-sm" onclick="deleteWBS('${esc(w.wbs_code)}','${esc((w.wbs_element||w.wbs_activity||'').replace(/'/g,"\'"))}')">Delete</button>
       </td>`:'<td></td>'}
-    </tr>`).join('')||'<tr><td colspan="8" class="center muted">No WBS elements found.</td></tr>';
+    </tr>`).join('');
+  if (rows.length > RENDER_CAP) {
+    html += `<tr><td colspan="8" class="center muted" style="padding:14px;font-size:12px;">
+      Showing first ${RENDER_CAP.toLocaleString()} of ${rows.length.toLocaleString()} rows — use Search or filters to narrow down. All elements remain available for selection in MIS/MIR/HOC/WOC typeaheads.
+    </td></tr>`;
+  }
+  tbody.innerHTML = html || '<tr><td colspan="8" class="center muted">No WBS elements found.</td></tr>';
 }
 
 async function saveWBSMaster() {
-  if (!['Admin','Planning/ QS'].includes(state.role)) {
-    toast('Only Admin or Planning/QS can add WBS elements','error'); return;
+  if (state.role !== 'Admin') {
+    toast('Only Admin can add WBS elements','error'); return;
   }
   const block    = document.getElementById('wbs_block')?.value?.trim();
   const group    = document.getElementById('wbs_group')?.value?.trim();
@@ -12759,8 +13265,8 @@ function clearWBSForm() {
 }
 
 async function editWBS(code) {
-  if (!['Admin','Planning/ QS'].includes(state.role)) {
-    toast('Only Admin or Planning/QS can edit WBS','error'); return;
+  if (state.role !== 'Admin') {
+    toast('Only Admin can edit WBS','error'); return;
   }
   const w = (puState.wbsList||[]).find(x=>x.wbs_code===code);
   if (!w) { toast('WBS not found','error'); return; }
@@ -12835,25 +13341,39 @@ async function confirmDeleteWBS(code) {
 function wbsTypeahead(inputId, resultsId, codeId, level='element') {
   const q = (document.getElementById(inputId)?.value||'').toLowerCase();
   const res = document.getElementById(resultsId);
-  if (!q||!res) { if(res) res.classList.remove('show'); return; }
+  const inp = document.getElementById(inputId);
+  if (!res) return;
   const data = puState.wbsList||[];
+  const CAP = 20;
+  const tokens = q ? _fuzzyTokens(q) : [];
   let matches = [];
+  let totalCount = 0;
   if (level==='sub_activity') {
     const seen = new Set();
-    matches = data.filter(w=>{
-      const val = w.wbs_sub_activity||'';
-      if (!val.toLowerCase().includes(q)) return false;
+    const all = data.filter(w=>{
+      const val = (w.wbs_sub_activity||'').toLowerCase();
+      if (!val) return false;
       if (seen.has(val)) return false;
+      if (q && !_fuzzyMatch(val, tokens)) return false;
       seen.add(val); return true;
-    }).slice(0,12);
+    });
+    totalCount = all.length;
+    matches = all.slice(0, CAP);
   } else {
-    matches = data.filter(w=>(w.wbs_element||'').toLowerCase().includes(q)||
-      (w.wbs_activity||'').toLowerCase().includes(q)||
-      (w.wbs_sub_activity||'').toLowerCase().includes(q)
-    ).slice(0,12);
+    const all = data.filter(w => {
+      if (!q) return true;
+      const hay = ((w.wbs_element||'')+'|'+(w.wbs_activity||'')+'|'+(w.wbs_sub_activity||'')+'|'+(w.block||'')+'|'+(w.wbs_location||'')+'|'+(w.wbs_group||'')).toLowerCase();
+      return _fuzzyMatch(hay, tokens);
+    });
+    totalCount = all.length;
+    matches = all.slice(0, CAP);
   }
-  if (!matches.length) { res.classList.remove('show'); return; }
-  res.innerHTML = matches.map(w=>{
+  if (!matches.length) { res.classList.remove('show'); res.style.display='none'; return; }
+  const hint = totalCount > CAP
+    ? `<div class="typeahead-item" style="background:var(--input-bg);font-size:11px;cursor:default;" onclick="event.stopPropagation()">
+         <span class="muted">Showing ${matches.length} of ${totalCount} ${q?'matches — type more to narrow down':'options — type to filter'}</span>
+       </div>` : '';
+  res.innerHTML = hint + matches.map(w=>{
     const display = level==='sub_activity' ? (w.wbs_sub_activity||'—') : (w.wbs_element||'—');
     const code    = level==='sub_activity' ? (w.wbs_sub_activity||'') : w.wbs_code;
     return `<div class="typeahead-item"
@@ -12862,7 +13382,9 @@ function wbsTypeahead(inputId, resultsId, codeId, level='element') {
       ${level!=='sub_activity'?`<div class="muted" style="font-size:10px;">${esc(w.block||'')} · ${esc(w.wbs_group||'')} · ${esc(w.wbs_activity||'')}</div>`:''}
     </div>`;
   }).join('');
-  res.classList.add('show');
+
+  // Use shared anchor helper — body-portals + positions flush below input
+  _anchorDropdown(inp, res);
 }
 
 function selectWBS(inputId, resultsId, codeId, display, code) {
@@ -12882,6 +13404,1114 @@ function clearWBSField(inputId, codeId, resultsId) {
   const res = document.getElementById(resultsId);
   if (res) res.classList.remove('show');
 }
+
+
+// ====================================================================
+// WBS REDESIGN MODULE v16 (field-engineer-friendly)
+//   Tabs: Activity Hierarchy / Levels / Blocks / Location Q&A / Generate / Elements
+//   - Multi-granularity per sub-activity (text[] in DB)
+//   - Explicit Block master
+//   - Questionnaire-driven Location Types & Instances
+//   - Generator offers instance panels for EVERY granularity type of the sub-act
+// ====================================================================
+
+const WBS_ADMIN_ROLES = ['Admin'];
+const wbsIsAdmin = () => WBS_ADMIN_ROLES.includes(state.role);
+
+// Default questionnaire structure: which types to show, in what order, with defaults
+const LOCQ_DEFAULTS = [
+  { type_code:'APT',        type_name:'Apartments',          scope:'per_floor', label_format:'{level}-{instance}', count_label:'How many apartments per floor?',          default_count:4, default_labels:['001','002','003','004'], placeholder:'001' },
+  { type_code:'POUR',       type_name:'Pours',               scope:'per_floor', label_format:'{level}-{instance}', count_label:'How many pours per floor?',               default_count:2, default_labels:['Pour-1','Pour-2'],         placeholder:'Pour-1' },
+  { type_code:'STAIR',      type_name:'Staircases',          scope:'per_floor', label_format:'{level}-{instance}', count_label:'How many staircases per floor?',          default_count:2, default_labels:['Stair-1','Stair-2'],       placeholder:'Stair-1' },
+  { type_code:'ELEV',       type_name:'Elevators',           scope:'vertical',  label_format:'{instance}',         count_label:'How many elevators per block?',           default_count:3, default_labels:['Elevator-1','Elevator-2','Service Elevator'], placeholder:'Elevator-1' },
+  { type_code:'SHAFT_PLB',  type_name:'Plumbing Shafts',     scope:'vertical',  label_format:'{instance}',         count_label:'How many plumbing shafts per block?',     default_count:2, default_labels:['Plumbing Shaft-1','Plumbing Shaft-2'], placeholder:'Plumbing Shaft-1' },
+  { type_code:'SHAFT_ELE',  type_name:'Electrical Shafts',   scope:'vertical',  label_format:'{instance}',         count_label:'How many electrical shafts per block?',   default_count:2, default_labels:['Electrical Shaft-1','Electrical Shaft-2'], placeholder:'Electrical Shaft-1' },
+  { type_code:'SHAFT_COM',  type_name:'Communication Shafts',scope:'vertical',  label_format:'{instance}',         count_label:'How many communication shafts per block?',default_count:1, default_labels:['Communication Shaft-1'],  placeholder:'Communication Shaft-1' },
+  { type_code:'SHAFT_FIRE', type_name:'Fire Shafts',         scope:'vertical',  label_format:'{instance}',         count_label:'How many fire shafts per block?',         default_count:1, default_labels:['Fire Shaft-1'],            placeholder:'Fire Shaft-1' },
+  { type_code:'OTS',        type_name:'Open-to-Sky Areas',   scope:'vertical',  label_format:'{instance}',         count_label:'How many OTS areas per block?',           default_count:2, default_labels:['OTS-North','OTS-South'],  placeholder:'OTS-North' },
+  { type_code:'EXT',        type_name:'External Faces',      scope:'vertical',  label_format:'{instance}',         count_label:'How many external faces per block?',      default_count:4, default_labels:['Face-North','Face-South','Face-East','Face-West'], placeholder:'Face-North' },
+];
+
+// --- Sub-tab switching ---------------------------------------------------
+function switchWBSTab(tab) {
+  ['acts','lvls','blocks','locq','gen','elems'].forEach(t => {
+    const el = document.getElementById('wbs-tab-' + t);
+    if (el) el.classList.toggle('hidden', t !== tab);
+    const stab = document.querySelector(`.sub-tab[data-wbstab="${t}"]`);
+    if (stab) stab.classList.toggle('active', t === tab);
+  });
+  if (tab === 'acts')   renderWBSActivities();
+  if (tab === 'lvls')   renderWBSLevels();
+  if (tab === 'blocks') renderWBSBlocks();
+  if (tab === 'locq')   renderLocationQuestionnaire();
+  if (tab === 'gen')    refreshGenerator();
+  if (tab === 'elems')  renderWBSMaster();
+}
+
+// --- Master loader (called when WBS tab opens) ---------------------------
+async function loadWBSAll() {
+  pbShow('Loading WBS…');
+  try {
+    const [acts, lvls, blocks, types, insts] = await Promise.all([
+      sb.from('wbs_activity_master').select('*').eq('is_active',true)
+        .order('wbs_group').order('wbs_activity').order('wbs_sub_activity'),
+      sb.from('wbs_level_master').select('*').eq('is_active',true).order('level_order'),
+      sb.from('wbs_block_master').select('*').eq('is_active',true).order('display_order').order('block_name'),
+      sb.from('wbs_location_type_master').select('*').eq('is_active',true).order('display_order').order('type_code'),
+      sb.from('wbs_location_instance_master').select('*').eq('is_active',true).order('type_code').order('display_order').order('instance_label'),
+    ]);
+    puState.wbsActivities    = acts.data    || [];
+    puState.wbsLevels        = lvls.data    || [];
+    puState.wbsBlocks        = blocks.data  || [];
+    puState.wbsLocTypes      = types.data   || [];
+    puState.wbsLocInstances  = insts.data   || [];
+  } catch(e) { toast('WBS masters load error: '+e.message,'error'); }
+  finally { pbDone(); }
+  await loadWBSMaster();
+  renderWBSActivities();
+  renderWBSLevels();
+  renderWBSBlocks();
+  refreshActivityGranularityChips();
+  refreshActivityGroupDatalists();
+}
+
+// =====================================================================
+// TAB 1 — ACTIVITY HIERARCHY (multi-granularity chips)
+// =====================================================================
+function refreshActivityGranularityChips() {
+  const wrap = document.getElementById('wam_granularity_chips'); if (!wrap) return;
+  wrap.dataset.selected = JSON.stringify([]);
+  wrap.innerHTML = (puState.wbsLocTypes||[]).map(t =>
+    `<span class="chip" data-val="${esc(t.type_code)}" onclick="toggleGranularityChip(this)"
+       style="cursor:pointer;padding:5px 10px;border:1px solid var(--border);border-radius:14px;font-size:11px;background:var(--bg);user-select:none;">
+       ${esc(t.type_name)}
+     </span>`
+  ).join('') || '<span class="muted" style="font-size:11px;">No location types yet. Create them in the Location Types &amp; Instances tab first.</span>';
+}
+
+function toggleGranularityChip(el) {
+  const wrap = document.getElementById('wam_granularity_chips');
+  const sel = JSON.parse(wrap.dataset.selected||'[]');
+  const v = el.dataset.val;
+  const ix = sel.indexOf(v);
+  if (ix>=0) { sel.splice(ix,1); el.style.background='var(--bg)'; el.style.color=''; }
+  else       { sel.push(v);      el.style.background='var(--primary)'; el.style.color='#fff'; }
+  wrap.dataset.selected = JSON.stringify(sel);
+}
+
+function setGranularityChips(codes) {
+  const wrap = document.getElementById('wam_granularity_chips'); if (!wrap) return;
+  wrap.dataset.selected = JSON.stringify(codes||[]);
+  wrap.querySelectorAll('.chip').forEach(c => {
+    const isOn = (codes||[]).includes(c.dataset.val);
+    c.style.background = isOn ? 'var(--primary)' : 'var(--bg)';
+    c.style.color      = isOn ? '#fff' : '';
+  });
+}
+
+function refreshActivityGroupDatalists() {
+  const acts = puState.wbsActivities||[];
+  const groups = [...new Set(acts.map(a=>a.wbs_group).filter(Boolean))].sort();
+  const activities = [...new Set(acts.map(a=>a.wbs_activity).filter(Boolean))].sort();
+  const gDl = document.getElementById('wam_group_list');
+  const aDl = document.getElementById('wam_activity_list');
+  if (gDl) gDl.innerHTML = groups.map(g=>`<option value="${esc(g)}">`).join('');
+  if (aDl) aDl.innerHTML = activities.map(a=>`<option value="${esc(a)}">`).join('');
+  const f = document.getElementById('wam_filter_group');
+  if (f) {
+    const cur = f.value;
+    f.innerHTML = '<option value="">All Groups</option>' +
+      groups.map(g=>`<option value="${esc(g)}" ${g===cur?'selected':''}>${esc(g)}</option>`).join('');
+  }
+}
+
+function renderWBSActivities() {
+  const tbody = document.getElementById('wam_list'); if (!tbody) return;
+  const q  = (document.getElementById('wam_search')?.value||'').toLowerCase();
+  const fG = document.getElementById('wam_filter_group')?.value||'';
+  let rows = puState.wbsActivities||[];
+  if (fG) rows = rows.filter(r=>r.wbs_group===fG);
+  if (q)  rows = rows.filter(r =>
+    (r.wbs_group||'').toLowerCase().includes(q) ||
+    (r.wbs_activity||'').toLowerCase().includes(q) ||
+    (r.wbs_sub_activity||'').toLowerCase().includes(q)
+  );
+  if (!rows.length) { tbody.innerHTML='<tr><td colspan="5" class="center muted">No sub-activities.</td></tr>'; return; }
+  const admin = wbsIsAdmin();
+  const typeName = (code) => (puState.wbsLocTypes||[]).find(t=>t.type_code===code)?.type_name || code;
+  tbody.innerHTML = rows.map(r => {
+    const gCodes = Array.isArray(r.granularity_type_code) ? r.granularity_type_code : [];
+    const gPills = gCodes.length
+      ? gCodes.map(c=>`<span style="display:inline-block;background:var(--input-bg);border:1px solid var(--border);border-radius:10px;padding:1px 8px;margin:1px;font-size:10px;">${esc(typeName(c))}</span>`).join('')
+      : '<span class="muted" style="font-size:11px;">—</span>';
+    return `
+    <tr>
+      <td>${esc(r.wbs_group||'—')}</td>
+      <td>${esc(r.wbs_activity||'—')}</td>
+      <td><strong>${esc(r.wbs_sub_activity||'—')}</strong></td>
+      <td>${gPills}</td>
+      <td>${admin?`
+        <button class="btn btn-ghost btn-sm" onclick="editWBSActivity('${esc(r.id)}')">Edit</button>
+        <button class="btn btn-danger btn-sm" onclick="deleteWBSActivity('${esc(r.id)}')">Delete</button>`:''}
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+async function saveWBSActivity() {
+  if (!wbsIsAdmin()) { toast('Only Admin','error'); return; }
+  const group = document.getElementById('wam_group')?.value?.trim();
+  const act   = document.getElementById('wam_activity')?.value?.trim();
+  const sub   = document.getElementById('wam_sub_activity')?.value?.trim();
+  const gWrap = document.getElementById('wam_granularity_chips');
+  const grans = JSON.parse(gWrap?.dataset.selected||'[]');
+  if (!group || !act || !sub) { toast('Group, Activity, Sub-Activity required','error'); return; }
+  const dup = (puState.wbsActivities||[]).find(r =>
+    r.wbs_group===group && r.wbs_activity===act && r.wbs_sub_activity===sub);
+  if (dup) { toast('Already exists','error'); return; }
+  pbShow('Saving…');
+  try {
+    const { error } = await sb.from('wbs_activity_master').insert({
+      wbs_group:group, wbs_activity:act, wbs_sub_activity:sub,
+      granularity_type_code: grans.length ? grans : null
+    });
+    if (error) throw new Error(error.message);
+    flashSuccess('Sub-activity added');
+    clearWBSActivityForm();
+    await loadWBSAll();
+  } catch(e){ toast('Error: '+e.message,'error'); }
+  finally{ pbDone(); }
+}
+
+function clearWBSActivityForm() {
+  ['wam_group','wam_activity','wam_sub_activity'].forEach(id=>{
+    const e=document.getElementById(id); if(e) e.value='';
+  });
+  setGranularityChips([]);
+}
+
+async function editWBSActivity(id) {
+  if (!wbsIsAdmin()) { toast('Only Admin','error'); return; }
+  const r = (puState.wbsActivities||[]).find(x=>x.id===id);
+  if (!r) return;
+  const curGrans = Array.isArray(r.granularity_type_code) ? r.granularity_type_code : [];
+  const typeChips = (puState.wbsLocTypes||[]).map(t => {
+    const on = curGrans.includes(t.type_code);
+    return `<span class="chip" data-val="${esc(t.type_code)}" onclick="toggleEditGranularityChip(this)"
+       style="cursor:pointer;padding:4px 9px;border:1px solid var(--border);border-radius:14px;font-size:11px;background:${on?'var(--primary)':'var(--bg)'};color:${on?'#fff':''};user-select:none;">
+       ${esc(t.type_name)}
+     </span>`;
+  }).join('');
+  openModal(`
+    <h3 style="margin-bottom:12px;">Edit Sub-Activity</h3>
+    <div class="grid-2" style="gap:12px;">
+      <div class="field"><label class="req">Group</label><input id="ewa_group" value="${esc(r.wbs_group||'')}"></div>
+      <div class="field"><label class="req">Activity</label><input id="ewa_activity" value="${esc(r.wbs_activity||'')}"></div>
+      <div class="field" style="grid-column:span 2;"><label class="req">Sub-Activity</label><input id="ewa_sub" value="${esc(r.wbs_sub_activity||'')}"></div>
+    </div>
+    <div class="field" style="margin-top:10px;">
+      <label>Granularity (multi-select)</label>
+      <div id="ewa_gran_chips" data-selected='${esc(JSON.stringify(curGrans))}'
+           style="min-height:42px;border:1px solid var(--border);border-radius:4px;padding:6px;display:flex;flex-wrap:wrap;gap:6px;background:var(--input-bg);">
+        ${typeChips}
+      </div>
+    </div>
+    <div class="muted" style="font-size:11px;margin-top:8px;">
+      Renaming Group/Activity/Sub-Activity cascades to all matching rows in wbs_master.
+    </div>
+    <div class="actions-row" style="margin-top:12px;">
+      <button class="btn btn-primary" onclick="confirmEditWBSActivity('${esc(id)}')">Save</button>
+      <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+    </div>`);
+}
+
+function toggleEditGranularityChip(el) {
+  const wrap = document.getElementById('ewa_gran_chips');
+  const sel = JSON.parse(wrap.dataset.selected||'[]');
+  const v = el.dataset.val;
+  const ix = sel.indexOf(v);
+  if (ix>=0) { sel.splice(ix,1); el.style.background='var(--bg)'; el.style.color=''; }
+  else       { sel.push(v);      el.style.background='var(--primary)'; el.style.color='#fff'; }
+  wrap.dataset.selected = JSON.stringify(sel);
+}
+
+async function confirmEditWBSActivity(id) {
+  const r = (puState.wbsActivities||[]).find(x=>x.id===id);
+  if (!r) return;
+  const oldG = r.wbs_group, oldA = r.wbs_activity, oldS = r.wbs_sub_activity;
+  const newG = document.getElementById('ewa_group')?.value?.trim();
+  const newA = document.getElementById('ewa_activity')?.value?.trim();
+  const newS = document.getElementById('ewa_sub')?.value?.trim();
+  const grans = JSON.parse(document.getElementById('ewa_gran_chips')?.dataset.selected||'[]');
+  if (!newG || !newA || !newS) { toast('All fields required','error'); return; }
+  pbShow('Saving…');
+  try {
+    const { error } = await sb.from('wbs_activity_master').update({
+      wbs_group:newG, wbs_activity:newA, wbs_sub_activity:newS,
+      granularity_type_code: grans.length ? grans : null
+    }).eq('id', id);
+    if (error) throw new Error(error.message);
+    if (newG!==oldG || newA!==oldA || newS!==oldS) {
+      const { error: rpcErr } = await sb.rpc('wbs_cascade_activity_rename', {
+        p_old_group: oldG, p_old_activity: oldA, p_old_subact: oldS,
+        p_new_group: newG, p_new_activity: newA, p_new_subact: newS
+      });
+      if (rpcErr) toast('Activity updated, but cascade-rename failed: '+rpcErr.message,'error');
+    }
+    closeModal();
+    flashSuccess('Sub-activity updated');
+    await loadWBSAll();
+  } catch(e){ toast('Error: '+e.message,'error'); }
+  finally{ pbDone(); }
+}
+
+async function deleteWBSActivity(id) {
+  if (!wbsIsAdmin()) { toast('Only Admin','error'); return; }
+  const r = (puState.wbsActivities||[]).find(x=>x.id===id);
+  if (!r) return;
+  openModal(`
+    <h3>Delete Sub-Activity</h3>
+    <div style="margin:14px 0;font-size:13px;">
+      Delete <strong>${esc(r.wbs_sub_activity)}</strong> from <em>${esc(r.wbs_activity)}</em>?<br>
+      <span style="color:var(--danger);font-size:12px;">Existing WBS elements in wbs_master are NOT affected.</span>
+    </div>
+    <div class="actions-row">
+      <button class="btn btn-danger" onclick="confirmDeleteWBSActivity('${esc(id)}')">Yes, Delete</button>
+      <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+    </div>`);
+}
+
+async function confirmDeleteWBSActivity(id) {
+  closeModal(); pbShow('Deleting…');
+  try {
+    const { error } = await sb.from('wbs_activity_master').update({is_active:false}).eq('id',id);
+    if (error) throw new Error(error.message);
+    flashSuccess('Deleted');
+    await loadWBSAll();
+  } catch(e){ toast('Error: '+e.message,'error'); }
+  finally{ pbDone(); }
+}
+
+// =====================================================================
+// TAB 2 — LEVELS (unchanged from v15)
+// =====================================================================
+function renderWBSLevels() {
+  const tbody = document.getElementById('wlm_list'); if (!tbody) return;
+  const rows = puState.wbsLevels||[];
+  if (!rows.length) { tbody.innerHTML='<tr><td colspan="5" class="center muted">No levels yet.</td></tr>'; return; }
+  const admin = wbsIsAdmin();
+  tbody.innerHTML = rows.map(r=>`
+    <tr>
+      <td><strong>${esc(r.level_code)}</strong></td>
+      <td>${esc(r.level_name)}</td>
+      <td class="num">${r.level_order}</td>
+      <td><span class="mono" style="font-size:11px;">${esc(r.level_kind)}</span></td>
+      <td>${admin?`
+        <button class="btn btn-ghost btn-sm" onclick="editWBSLevel('${esc(r.id)}')">Edit</button>
+        <button class="btn btn-danger btn-sm" onclick="deleteWBSLevel('${esc(r.id)}')">Delete</button>`:''}
+      </td>
+    </tr>`).join('');
+}
+
+async function saveWBSLevel() {
+  if (!wbsIsAdmin()) { toast('Only Admin','error'); return; }
+  const code  = document.getElementById('wlm_code')?.value?.trim();
+  const name  = document.getElementById('wlm_name')?.value?.trim();
+  const order = parseInt(document.getElementById('wlm_order')?.value);
+  const kind  = document.getElementById('wlm_kind')?.value||'floor';
+  if (!code || !name || isNaN(order)) { toast('Code, Name, Order required','error'); return; }
+  pbShow('Saving…');
+  try {
+    const { error } = await sb.from('wbs_level_master').insert({
+      level_code:code, level_name:name, level_order:order, level_kind:kind
+    });
+    if (error) throw new Error(error.message);
+    flashSuccess('Level added');
+    clearWBSLevelForm();
+    await loadWBSAll();
+  } catch(e){ toast('Error: '+e.message,'error'); }
+  finally{ pbDone(); }
+}
+
+function clearWBSLevelForm() {
+  ['wlm_code','wlm_name','wlm_order'].forEach(id=>{const e=document.getElementById(id); if(e) e.value='';});
+}
+
+async function bulkAddFloors() {
+  if (!wbsIsAdmin()) { toast('Only Admin','error'); return; }
+  openModal(`
+    <h3>Bulk Add Floors</h3>
+    <div class="grid-2" style="gap:12px;margin-top:10px;">
+      <div class="field"><label>Start floor #</label><input id="bf_start" type="number" value="1"></div>
+      <div class="field"><label>End floor #</label><input id="bf_end" type="number" value="25"></div>
+      <div class="field"><label>Code template</label><input id="bf_codetpl" value="{n}F"></div>
+      <div class="field"><label>Name template</label><input id="bf_nametpl" value="{n} Floor"></div>
+    </div>
+    <div class="muted" style="font-size:11px;margin-top:6px;">
+      Use {n} = floor number, {ord} = 1st/2nd/3rd…
+    </div>
+    <div class="actions-row" style="margin-top:12px;">
+      <button class="btn btn-primary" onclick="confirmBulkAddFloors()">Add</button>
+      <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+    </div>`);
+}
+
+function ordinal(n){const s=["th","st","nd","rd"],v=n%100;return n+(s[(v-20)%10]||s[v]||s[0]);}
+
+async function confirmBulkAddFloors() {
+  const start    = parseInt(document.getElementById('bf_start')?.value);
+  const end      = parseInt(document.getElementById('bf_end')?.value);
+  const codeTpl  = document.getElementById('bf_codetpl')?.value||'{n}F';
+  const nameTpl  = document.getElementById('bf_nametpl')?.value||'{n} Floor';
+  if (isNaN(start)||isNaN(end)||end<start) { toast('Invalid range','error'); return; }
+  closeModal(); pbShow('Adding floors…');
+  try {
+    const rows = [];
+    for (let n=start; n<=end; n++) {
+      const code = codeTpl.replaceAll('{n}',n).replaceAll('{ord}',ordinal(n));
+      const name = nameTpl.replaceAll('{n}',n).replaceAll('{ord}',ordinal(n));
+      rows.push({ level_code:code, level_name:name, level_order:n, level_kind:'floor' });
+    }
+    // Insert one-by-one to bypass partial-index quirks
+    let added = 0;
+    for (const row of rows) {
+      const { error } = await sb.from('wbs_level_master').insert(row);
+      if (!error) added++;
+    }
+    flashSuccess(`Added ${added} of ${rows.length} floors (skipped existing)`);
+    await loadWBSAll();
+  } catch(e){ toast('Error: '+e.message,'error'); }
+  finally{ pbDone(); }
+}
+
+async function editWBSLevel(id) {
+  if (!wbsIsAdmin()) return;
+  const r = (puState.wbsLevels||[]).find(x=>x.id===id); if (!r) return;
+  openModal(`
+    <h3>Edit Level</h3>
+    <div class="grid-2" style="gap:12px;">
+      <div class="field"><label class="req">Code</label><input id="el_code" value="${esc(r.level_code)}"></div>
+      <div class="field"><label class="req">Name</label><input id="el_name" value="${esc(r.level_name)}"></div>
+      <div class="field"><label class="req">Order</label><input id="el_order" type="number" value="${r.level_order}"></div>
+      <div class="field"><label>Kind</label>
+        <select id="el_kind">
+          <option value="floor"    ${r.level_kind==='floor'?'selected':''}>Floor</option>
+          <option value="basement" ${r.level_kind==='basement'?'selected':''}>Basement</option>
+          <option value="special"  ${r.level_kind==='special'?'selected':''}>Special</option>
+        </select></div>
+    </div>
+    <div class="actions-row" style="margin-top:12px;">
+      <button class="btn btn-primary" onclick="confirmEditWBSLevel('${esc(id)}')">Save</button>
+      <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+    </div>`);
+}
+
+async function confirmEditWBSLevel(id) {
+  const code  = document.getElementById('el_code')?.value?.trim();
+  const name  = document.getElementById('el_name')?.value?.trim();
+  const order = parseInt(document.getElementById('el_order')?.value);
+  const kind  = document.getElementById('el_kind')?.value||'floor';
+  pbShow('Saving…');
+  try {
+    const { error } = await sb.from('wbs_level_master')
+      .update({level_code:code, level_name:name, level_order:order, level_kind:kind}).eq('id',id);
+    if (error) throw new Error(error.message);
+    closeModal(); flashSuccess('Level updated'); await loadWBSAll();
+  } catch(e){ toast('Error: '+e.message,'error'); }
+  finally{ pbDone(); }
+}
+
+async function deleteWBSLevel(id) {
+  if (!wbsIsAdmin()) return;
+  openModal(`<h3>Delete Level?</h3>
+    <div style="margin:14px 0;">Soft-delete. Won't affect existing wbs_master rows.</div>
+    <div class="actions-row">
+      <button class="btn btn-danger" onclick="confirmDeleteWBSLevel('${esc(id)}')">Yes</button>
+      <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+    </div>`);
+}
+async function confirmDeleteWBSLevel(id) {
+  closeModal(); pbShow('Deleting…');
+  try {
+    const { error } = await sb.from('wbs_level_master').update({is_active:false}).eq('id',id);
+    if (error) throw new Error(error.message);
+    flashSuccess('Deleted'); await loadWBSAll();
+  } catch(e){ toast('Error: '+e.message,'error'); }
+  finally{ pbDone(); }
+}
+
+// =====================================================================
+// TAB 3 — BLOCKS
+// =====================================================================
+function renderWBSBlocks() {
+  const tbody = document.getElementById('wbm_list'); if (!tbody) return;
+  const rows = puState.wbsBlocks||[];
+  if (!rows.length) { tbody.innerHTML='<tr><td colspan="3" class="center muted">No blocks yet.</td></tr>'; return; }
+  const admin = wbsIsAdmin();
+  // count wbs_master usage per block
+  const counts = {};
+  (puState.wbsList||[]).forEach(w => { if (w.block) counts[w.block] = (counts[w.block]||0)+1; });
+  tbody.innerHTML = rows.map(r=>`
+    <tr>
+      <td><strong>${esc(r.block_name)}</strong></td>
+      <td class="num">${counts[r.block_name]||0}</td>
+      <td>${admin?`
+        <button class="btn btn-ghost btn-sm" onclick="editWBSBlock('${esc(r.id)}')">Rename</button>
+        <button class="btn btn-danger btn-sm" onclick="deleteWBSBlock('${esc(r.id)}')">Delete</button>`:''}
+      </td>
+    </tr>`).join('');
+}
+
+async function saveWBSBlock() {
+  if (!wbsIsAdmin()) { toast('Only Admin','error'); return; }
+  const name = document.getElementById('wbm_name')?.value?.trim();
+  if (!name) { toast('Block name required','error'); return; }
+  pbShow('Saving…');
+  try {
+    const { error } = await sb.from('wbs_block_master').insert({ block_name:name });
+    if (error) throw new Error(error.message);
+    flashSuccess('Block added');
+    document.getElementById('wbm_name').value='';
+    await loadWBSAll();
+  } catch(e){ toast('Error: '+e.message,'error'); }
+  finally{ pbDone(); }
+}
+
+async function editWBSBlock(id) {
+  if (!wbsIsAdmin()) return;
+  const r = (puState.wbsBlocks||[]).find(x=>x.id===id); if (!r) return;
+  openModal(`
+    <h3>Rename Block</h3>
+    <div class="field" style="margin:14px 0;">
+      <label class="req">Block Name</label>
+      <input id="eb_name" value="${esc(r.block_name)}">
+    </div>
+    <div class="muted" style="font-size:11px;">Renaming cascades to all wbs_master rows with this block name.</div>
+    <div class="actions-row" style="margin-top:12px;">
+      <button class="btn btn-primary" onclick="confirmEditWBSBlock('${esc(id)}','${esc(r.block_name)}')">Save</button>
+      <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+    </div>`);
+}
+async function confirmEditWBSBlock(id, oldName) {
+  const newName = document.getElementById('eb_name')?.value?.trim();
+  if (!newName) { toast('Name required','error'); return; }
+  pbShow('Saving…');
+  try {
+    const { error } = await sb.from('wbs_block_master').update({block_name:newName}).eq('id',id);
+    if (error) throw new Error(error.message);
+    if (newName !== oldName) {
+      // cascade to wbs_master
+      const { data: affected } = await sb.from('wbs_master').select('wbs_code').eq('block', oldName);
+      for (const row of (affected||[])) {
+        await sb.from('wbs_master').update({ block: newName }).eq('wbs_code', row.wbs_code);
+      }
+      // rebuild wbs_element strings — pull, mutate, push
+      const { data: toUpd } = await sb.from('wbs_master').select('*').eq('block', newName);
+      for (const w of (toUpd||[])) {
+        const el = buildWBSElement(w.block, w.wbs_group, w.wbs_activity, w.wbs_sub_activity, w.wbs_location);
+        await sb.from('wbs_master').update({ wbs_element: el }).eq('wbs_code', w.wbs_code);
+      }
+    }
+    closeModal(); flashSuccess('Block updated'); await loadWBSAll();
+  } catch(e){ toast('Error: '+e.message,'error'); }
+  finally{ pbDone(); }
+}
+
+async function deleteWBSBlock(id) {
+  if (!wbsIsAdmin()) return;
+  const r = (puState.wbsBlocks||[]).find(x=>x.id===id); if (!r) return;
+  const inUse = (puState.wbsList||[]).filter(w => w.block === r.block_name).length;
+  if (inUse > 0) {
+    openModal(`<h3>Cannot Delete Block</h3>
+      <div style="margin:14px 0;">
+        <strong>${esc(r.block_name)}</strong> is used by <strong>${inUse}</strong> WBS element(s).
+        Remove or reassign those first.
+      </div>
+      <div class="actions-row"><button class="btn btn-ghost" onclick="closeModal()">OK</button></div>`);
+    return;
+  }
+  openModal(`<h3>Delete Block?</h3>
+    <div style="margin:14px 0;">Delete <strong>${esc(r.block_name)}</strong>?</div>
+    <div class="actions-row">
+      <button class="btn btn-danger" onclick="confirmDeleteWBSBlock('${esc(id)}')">Yes</button>
+      <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+    </div>`);
+}
+async function confirmDeleteWBSBlock(id) {
+  closeModal(); pbShow('Deleting…');
+  try {
+    const { error } = await sb.from('wbs_block_master').update({is_active:false}).eq('id',id);
+    if (error) throw new Error(error.message);
+    flashSuccess('Deleted'); await loadWBSAll();
+  } catch(e){ toast('Error: '+e.message,'error'); }
+  finally{ pbDone(); }
+}
+
+// =====================================================================
+// TAB 4 — LOCATION TYPES & INSTANCES (Questionnaire)
+// =====================================================================
+function renderLocationQuestionnaire() {
+  const c = document.getElementById('locq_container'); if (!c) return;
+
+  // Build merged view: defaults + any custom types not in defaults
+  const existingTypes = puState.wbsLocTypes || [];
+  const existingInsts = puState.wbsLocInstances || [];
+
+  const defaultCodes = new Set(LOCQ_DEFAULTS.map(d => d.type_code));
+  const customTypes  = existingTypes.filter(t => !defaultCodes.has(t.type_code));
+
+  // For each default, find existing type/instances OR fall back to defaults
+  const rows = LOCQ_DEFAULTS.map(def => {
+    const t = existingTypes.find(x => x.type_code === def.type_code);
+    const insts = existingInsts.filter(i => i.type_code === def.type_code).map(i => i.instance_label);
+    const labels = insts.length ? insts : def.default_labels.slice();
+    return { ...def, exists: !!t, count: labels.length, labels };
+  });
+  // append custom-types (user-added beyond defaults)
+  customTypes.forEach(t => {
+    const insts = existingInsts.filter(i => i.type_code === t.type_code).map(i => i.instance_label);
+    rows.push({
+      type_code: t.type_code, type_name: t.type_name, scope: t.instance_scope, label_format: t.label_format,
+      count_label: `How many "${t.type_name}" per ${t.instance_scope==='vertical'?'block':'floor'}?`,
+      default_count: insts.length || 1, default_labels: insts, placeholder: t.type_name,
+      exists: true, count: insts.length, labels: insts, isCustom: true
+    });
+  });
+
+  c.innerHTML = rows.map((r,ix) => locqRowHTML(r, ix)).join('');
+}
+
+function locqRowHTML(r, ix) {
+  const scopeLabel = r.scope==='vertical' ? 'per block' : 'per floor';
+  return `
+    <div class="locq-row" data-ix="${ix}" data-typecode="${esc(r.type_code)}" data-scope="${esc(r.scope)}" data-format="${esc(r.label_format)}" data-typename="${esc(r.type_name)}" data-custom="${r.isCustom?'1':'0'}"
+         style="padding:14px;border:1px solid var(--border);border-radius:6px;margin-bottom:12px;background:var(--input-bg);">
+      <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;">
+        <div>
+          <div style="font-weight:600;font-size:13px;">${esc(r.type_name)} <span class="muted" style="font-weight:normal;font-size:11px;">(${esc(scopeLabel)}, code: ${esc(r.type_code)})</span></div>
+          <div class="muted" style="font-size:11px;margin-top:2px;">${esc(r.count_label)}</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <input type="number" class="locq-count" min="0" max="50" value="${r.count}"
+                 oninput="onLocqCountChange(${ix})"
+                 style="width:70px;padding:5px;background:var(--bg);border:1px solid var(--border);border-radius:4px;color:var(--text);text-align:center;font-weight:600;">
+          ${r.isCustom ? `<button class="btn btn-danger btn-sm" onclick="removeCustomLocqRow(${ix})">Remove</button>` : ''}
+        </div>
+      </div>
+      <div class="locq-labels" style="margin-top:10px;display:flex;flex-wrap:wrap;gap:8px;">
+        ${r.labels.map((lbl,i) => locqLabelInputHTML(ix, i, lbl, r.placeholder)).join('')}
+      </div>
+      <div class="locq-preview muted" style="font-size:11px;margin-top:8px;font-family:monospace;"></div>
+    </div>`;
+}
+
+function locqLabelInputHTML(rowIx, labelIx, value, placeholder) {
+  return `<div style="display:flex;flex-direction:column;">
+    <label class="muted" style="font-size:10px;margin-bottom:2px;">#${labelIx+1}</label>
+    <input class="locq-label" data-li="${labelIx}" value="${esc(value)}" placeholder="${esc(placeholder)}"
+           oninput="updateLocqPreview(${rowIx})"
+           style="width:120px;padding:5px;background:var(--bg);border:1px solid var(--border);border-radius:4px;color:var(--text);font-size:12px;">
+  </div>`;
+}
+
+function onLocqCountChange(rowIx) {
+  const rowEl = document.querySelector(`.locq-row[data-ix="${rowIx}"]`); if (!rowEl) return;
+  const newCount = Math.max(0, Math.min(50, parseInt(rowEl.querySelector('.locq-count').value)||0));
+  const labelsWrap = rowEl.querySelector('.locq-labels');
+  const placeholder = (LOCQ_DEFAULTS.find(d => d.type_code === rowEl.dataset.typecode) || {}).placeholder || rowEl.dataset.typename;
+  const def = LOCQ_DEFAULTS.find(d => d.type_code === rowEl.dataset.typecode);
+
+  // Capture existing values
+  const existing = [...labelsWrap.querySelectorAll('.locq-label')].map(i => i.value);
+
+  // Build new labels list of size newCount
+  const newLabels = [];
+  for (let i = 0; i < newCount; i++) {
+    if (existing[i] !== undefined) newLabels.push(existing[i]);
+    else if (def && def.default_labels[i]) newLabels.push(def.default_labels[i]);
+    else newLabels.push(`${rowEl.dataset.typename}-${i+1}`);
+  }
+  labelsWrap.innerHTML = newLabels.map((v,i) => locqLabelInputHTML(rowIx, i, v, placeholder)).join('');
+  updateLocqPreview(rowIx);
+}
+
+function updateLocqPreview(rowIx) {
+  const rowEl = document.querySelector(`.locq-row[data-ix="${rowIx}"]`); if (!rowEl) return;
+  const labels = [...rowEl.querySelectorAll('.locq-label')].map(i => i.value.trim()).filter(Boolean);
+  const fmt    = rowEl.dataset.format;
+  const scope  = rowEl.dataset.scope;
+  const sampleLevel = (puState.wbsLevels||[]).find(l => l.level_kind==='floor')?.level_code || '5F';
+  const preview = labels.slice(0,4).map(lbl => {
+    if (scope === 'vertical') return fmt.replaceAll('{instance}', lbl);
+    return fmt.replaceAll('{level}', sampleLevel).replaceAll('{instance}', lbl);
+  });
+  const p = rowEl.querySelector('.locq-preview');
+  if (p) p.textContent = preview.length ? 'Preview: ' + preview.join('   ') + (labels.length>4?'   …':'') : '';
+}
+
+function removeCustomLocqRow(rowIx) {
+  const rowEl = document.querySelector(`.locq-row[data-ix="${rowIx}"]`); if (!rowEl) return;
+  if (rowEl.dataset.custom !== '1') return;
+  // mark for removal so save() knows to soft-delete the type
+  rowEl.dataset.remove = '1';
+  rowEl.style.display = 'none';
+}
+
+function addCustomLocationRow() {
+  const c = document.getElementById('locq_container'); if (!c) return;
+  openModal(`
+    <h3>Add Custom Location Type</h3>
+    <div class="grid-2" style="gap:12px;margin-top:10px;">
+      <div class="field"><label class="req">Type Name</label><input id="ncl_name" placeholder="e.g. Refuge Area, Helipad"></div>
+      <div class="field"><label class="req">Code</label><input id="ncl_code" placeholder="e.g. REFUGE" style="text-transform:uppercase;"></div>
+      <div class="field"><label>Scope</label>
+        <select id="ncl_scope">
+          <option value="per_floor">Per Floor (one per floor)</option>
+          <option value="vertical">Vertical (one per block, across floors)</option>
+        </select></div>
+      <div class="field"><label>Count</label><input id="ncl_count" type="number" value="1" min="0" max="50"></div>
+    </div>
+    <div class="actions-row" style="margin-top:12px;">
+      <button class="btn btn-primary" onclick="confirmAddCustomLocq()">Add</button>
+      <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+    </div>`);
+}
+
+function confirmAddCustomLocq() {
+  const name  = document.getElementById('ncl_name')?.value?.trim();
+  const code  = (document.getElementById('ncl_code')?.value||'').trim().toUpperCase();
+  const scope = document.getElementById('ncl_scope')?.value||'per_floor';
+  const count = parseInt(document.getElementById('ncl_count')?.value)||1;
+  if (!name || !code) { toast('Name and Code required','error'); return; }
+  // append a custom row to the questionnaire (not yet saved)
+  const c = document.getElementById('locq_container');
+  const ix = c.querySelectorAll('.locq-row').length;
+  const fmt = scope==='vertical' ? '{instance}' : '{level}-{instance}';
+  const labels = [];
+  for (let i=0;i<count;i++) labels.push(`${name}-${i+1}`);
+  const r = {
+    type_code:code, type_name:name, scope, label_format:fmt,
+    count_label:`How many "${name}" per ${scope==='vertical'?'block':'floor'}?`,
+    default_count:count, default_labels:labels, placeholder:name,
+    exists:false, count, labels, isCustom:true
+  };
+  c.insertAdjacentHTML('beforeend', locqRowHTML(r, ix));
+  closeModal();
+  updateLocqPreview(ix);
+}
+
+async function saveLocationQuestionnaire() {
+  if (!wbsIsAdmin()) { toast('Only Admin','error'); return; }
+  const rows = [...document.querySelectorAll('.locq-row')];
+
+  // Build desired state: for each type, the new set of instance labels
+  const desired = rows.map(r => {
+    const labels = [...r.querySelectorAll('.locq-label')].map(i => i.value.trim()).filter(Boolean);
+    return {
+      type_code: r.dataset.typecode,
+      type_name: r.dataset.typename,
+      scope: r.dataset.scope,
+      label_format: r.dataset.format,
+      labels,
+      remove: r.dataset.remove === '1',
+    };
+  });
+
+  // 1. SAFETY CHECK: refuse if any reduction orphans existing wbs_master rows
+  //    Match wbs_location by EXACT format reconstruction, not substring.
+  const conflicts = [];
+  const levelCodes = (puState.wbsLevels||[]).map(l => l.level_code);
+
+  for (const d of desired) {
+    if (d.remove) continue;
+    const oldLabels = (puState.wbsLocInstances||[])
+      .filter(i => i.type_code === d.type_code).map(i => i.instance_label);
+    const removed = oldLabels.filter(l => !d.labels.includes(l));
+    if (!removed.length) continue;
+
+    // Build the exact set of location strings each removed instance could have produced
+    const fmt = d.label_format || '{level}-{instance}';
+    const orphanLocations = new Set();
+    removed.forEach(lbl => {
+      if (d.scope === 'vertical') {
+        orphanLocations.add(fmt.replaceAll('{instance}', lbl));
+      } else {
+        // per_floor — multiplied by every known level
+        levelCodes.forEach(lvl => {
+          orphanLocations.add(fmt.replaceAll('{level}', lvl).replaceAll('{instance}', lbl));
+        });
+        // also the rare "instance only, no level" case
+        orphanLocations.add(lbl);
+      }
+    });
+
+    const usedRows = (puState.wbsList||[]).filter(w => {
+      if (!w.wbs_location) return false;
+      return orphanLocations.has(w.wbs_location);
+    });
+
+    if (usedRows.length) {
+      conflicts.push({ type: d.type_name, removed, count: usedRows.length,
+        sampleCodes: usedRows.slice(0,5).map(w=>w.wbs_code) });
+    }
+  }
+  if (conflicts.length) {
+    const msg = conflicts.map(c =>
+      `<div style="margin-bottom:8px;"><strong>${esc(c.type)}</strong>: removing [${c.removed.map(esc).join(', ')}] would orphan <strong>${c.count}</strong> WBS element(s)<br>
+       <span class="muted" style="font-size:11px;">e.g. ${c.sampleCodes.map(esc).join(', ')}${c.count>5?', …':''}</span></div>`
+    ).join('');
+    openModal(`<h3>Cannot Save — Conflicts</h3>
+      <div style="margin:14px 0;font-size:13px;">${msg}</div>
+      <div class="muted" style="font-size:11px;">Either keep those instances, or delete the affected WBS elements first.</div>
+      <div class="actions-row"><button class="btn btn-ghost" onclick="closeModal()">OK</button></div>`);
+    return;
+  }
+
+  // 2. Persist: upsert types, replace instances (soft-delete removed + insert new)
+  pbShow('Saving location masters…');
+  try {
+    // 2a. Types — upsert
+    for (const d of desired) {
+      const existing = (puState.wbsLocTypes||[]).find(t => t.type_code === d.type_code);
+      if (d.remove) {
+        if (existing) {
+          await sb.from('wbs_location_type_master').update({is_active:false}).eq('id', existing.id);
+          // also soft-delete its instances
+          await sb.from('wbs_location_instance_master').update({is_active:false}).eq('type_code', d.type_code);
+        }
+        continue;
+      }
+      if (!existing) {
+        const { error } = await sb.from('wbs_location_type_master').insert({
+          type_code: d.type_code, type_name: d.type_name, instance_scope: d.scope, label_format: d.label_format
+        });
+        if (error) throw new Error(`Type ${d.type_code}: ${error.message}`);
+      } else {
+        await sb.from('wbs_location_type_master').update({
+          type_name: d.type_name, instance_scope: d.scope, label_format: d.label_format, is_active: true
+        }).eq('id', existing.id);
+      }
+    }
+
+    // 2b. Instances — soft-delete removed, insert new
+    for (const d of desired) {
+      if (d.remove) continue;
+      const oldInsts = (puState.wbsLocInstances||[]).filter(i => i.type_code === d.type_code);
+      const oldLabels = oldInsts.map(i => i.instance_label);
+      const toRemove  = oldInsts.filter(i => !d.labels.includes(i.instance_label));
+      const toAdd     = d.labels.filter(l => !oldLabels.includes(l));
+      for (const ri of toRemove) {
+        await sb.from('wbs_location_instance_master').update({is_active:false}).eq('id', ri.id);
+      }
+      for (const lbl of toAdd) {
+        const { error } = await sb.from('wbs_location_instance_master').insert({
+          type_code: d.type_code, instance_label: lbl
+        });
+        if (error) throw new Error(`Instance ${lbl}: ${error.message}`);
+      }
+    }
+    flashSuccess('Location types & instances saved');
+    await loadWBSAll();
+    switchWBSTab('locq'); // re-render
+  } catch(e) { toast('Save error: '+e.message,'error'); }
+  finally { pbDone(); }
+}
+
+// =====================================================================
+// TAB 5 — GENERATOR (multi-granularity)
+// =====================================================================
+function refreshGenerator() {
+  // Sub-Activity dropdown
+  const sel = document.getElementById('gen_subact'); if (sel) {
+    const cur = sel.value;
+    sel.innerHTML = '<option value="">— select sub-activity —</option>' +
+      (puState.wbsActivities||[]).map(a => {
+        const g = Array.isArray(a.granularity_type_code) ? a.granularity_type_code : [];
+        const gTag = g.length ? ` [${g.join(', ')}]` : '';
+        return `<option value="${esc(a.id)}" ${a.id===cur?'selected':''}>${esc(a.wbs_group)} › ${esc(a.wbs_activity)} › ${esc(a.wbs_sub_activity)}${gTag}</option>`;
+      }).join('');
+  }
+  // Blocks chips — from wbs_block_master
+  const bWrap = document.getElementById('gen_blocks_chips');
+  if (bWrap) {
+    const blocks = (puState.wbsBlocks||[]).map(b => b.block_name);
+    bWrap.dataset.selected = JSON.stringify([]);
+    bWrap.innerHTML = blocks.length ? blocks.map(b => renderGenChip(b, 'gen_blocks_chips')).join('')
+      : '<span class="muted" style="font-size:12px;">No blocks yet. Add some in the Blocks tab.</span>';
+  }
+  // Levels chips
+  const lWrap = document.getElementById('gen_levels_chips');
+  if (lWrap) {
+    lWrap.dataset.selected = JSON.stringify([]);
+    const lvls = puState.wbsLevels||[];
+    lWrap.innerHTML = lvls.length ? lvls.map(l => renderGenChip(l.level_code, 'gen_levels_chips')).join('')
+      : '<span class="muted" style="font-size:12px;">No levels defined.</span>';
+  }
+  document.getElementById('gen_instance_panels').innerHTML = '';
+  document.getElementById('gen_preview_summary').textContent = 'Pick a sub-activity to start.';
+  document.getElementById('gen_preview_list').innerHTML = '';
+}
+
+function renderGenChip(val, wrapId) {
+  return `<span class="chip" data-val="${esc(val)}" onclick="toggleGenChip(this,'${wrapId}')"
+    style="cursor:pointer;padding:5px 10px;border:1px solid var(--border);border-radius:14px;font-size:11px;background:var(--bg);user-select:none;">
+    ${esc(val)}
+  </span>`;
+}
+
+function getChipSet(wrapId) {
+  const w = document.getElementById(wrapId);
+  if (!w) return new Set();
+  return new Set(JSON.parse(w.dataset.selected||'[]'));
+}
+function setChipSet(wrapId, codes) {
+  const w = document.getElementById(wrapId); if (!w) return;
+  w.dataset.selected = JSON.stringify([...codes]);
+  w.querySelectorAll('.chip').forEach(c => {
+    const on = codes.has(c.dataset.val);
+    c.style.background = on ? 'var(--primary)' : 'var(--bg)';
+    c.style.color = on ? '#fff' : '';
+  });
+}
+
+function toggleGenChip(el, wrapId) {
+  const wrap = document.getElementById(wrapId);
+  const sel = new Set(JSON.parse(wrap.dataset.selected||'[]'));
+  const v = el.dataset.val;
+  if (sel.has(v)) { sel.delete(v); el.style.background='var(--bg)'; el.style.color=''; }
+  else            { sel.add(v);    el.style.background='var(--primary)'; el.style.color='#fff'; }
+  wrap.dataset.selected = JSON.stringify([...sel]);
+  updateGenPreview();
+}
+
+function onGenSubActChange() {
+  const id = document.getElementById('gen_subact')?.value;
+  const a  = (puState.wbsActivities||[]).find(x=>x.id===id);
+  const info = document.getElementById('gen_subact_info');
+  let granCodes = Array.isArray(a?.granularity_type_code) ? a.granularity_type_code : [];
+  // Fallback: if no granularity, offer ALL types
+  if (!granCodes.length && a) granCodes = (puState.wbsLocTypes||[]).map(t=>t.type_code);
+
+  if (info && a) {
+    const names = granCodes.map(c => (puState.wbsLocTypes||[]).find(t=>t.type_code===c)?.type_name || c);
+    info.innerHTML = a && Array.isArray(a.granularity_type_code) && a.granularity_type_code.length
+      ? `Tracks at: <strong>${names.map(esc).join(' + ')}</strong>`
+      : `<span style="color:var(--warning,#d97706);">⚠ No granularity set — generator offering all location types.</span>`;
+  } else if (info) info.innerHTML='';
+
+  renderGenInstancePanels(granCodes);
+  updateGenPreview();
+}
+
+function renderGenInstancePanels(granCodes) {
+  const c = document.getElementById('gen_instance_panels'); if (!c) return;
+  if (!granCodes.length) { c.innerHTML=''; return; }
+  c.innerHTML = '<label style="font-weight:600;font-size:12px;display:block;margin-bottom:8px;">Instances (multi-select per type)</label>' +
+    granCodes.map(code => {
+      const t = (puState.wbsLocTypes||[]).find(x=>x.type_code===code);
+      if (!t) return '';
+      const insts = (puState.wbsLocInstances||[]).filter(i => i.type_code === code);
+      const chipsHTML = insts.length ? insts.map(i => {
+        const tip = i.level_restriction?.length ? ` (only: ${i.level_restriction.join(',')})` : '';
+        return `<span class="chip" data-val="${esc(i.instance_label + tip)}" onclick="toggleGenChip(this,'gen_inst_${esc(code)}')"
+          style="cursor:pointer;padding:5px 10px;border:1px solid var(--border);border-radius:14px;font-size:11px;background:var(--bg);">${esc(i.instance_label)}${esc(tip)}</span>`;
+      }).join('') : '<span class="muted" style="font-size:11px;">No instances of this type defined.</span>';
+      return `<div style="margin-bottom:10px;padding:10px;border:1px solid var(--border);border-radius:6px;background:var(--input-bg);">
+        <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:6px;">
+          <div style="font-weight:600;font-size:12px;">${esc(t.type_name)} <span class="muted" style="font-weight:normal;font-size:10px;">(${esc(t.instance_scope)})</span></div>
+          <div style="display:flex;gap:6px;">
+            <button class="btn btn-ghost btn-sm" onclick="genSelectAllChipsIn('gen_inst_${esc(code)}',true)">All</button>
+            <button class="btn btn-ghost btn-sm" onclick="genSelectAllChipsIn('gen_inst_${esc(code)}',false)">Clear</button>
+          </div>
+        </div>
+        <div id="gen_inst_${esc(code)}" class="chip-multi" data-selected="[]" data-typecode="${esc(code)}"
+             style="display:flex;flex-wrap:wrap;gap:6px;background:var(--bg);padding:6px;border-radius:4px;border:1px solid var(--border);">
+          ${chipsHTML}
+        </div>
+      </div>`;
+    }).join('');
+}
+
+function genSelectAllChipsIn(wrapId, on) {
+  const w = document.getElementById(wrapId); if (!w) return;
+  w.querySelectorAll('.chip').forEach(c => {
+    const cur = new Set(JSON.parse(w.dataset.selected||'[]'));
+    const v = c.dataset.val;
+    const has = cur.has(v);
+    if (on && !has) toggleGenChip(c, wrapId);
+    if (!on && has) toggleGenChip(c, wrapId);
+  });
+}
+
+function genSelectAllBlocks(on) { genSelectAllChipsIn('gen_blocks_chips', on); }
+function genSelectAllLevels(on) { genSelectAllChipsIn('gen_levels_chips', on); }
+function genSelectLevelKind(kind) {
+  const codes = new Set((puState.wbsLevels||[]).filter(l=>l.level_kind===kind).map(l=>l.level_code));
+  const wrap = document.getElementById('gen_levels_chips'); if (!wrap) return;
+  wrap.querySelectorAll('.chip').forEach(c => {
+    const v = c.dataset.val;
+    const cur = new Set(JSON.parse(wrap.dataset.selected||'[]'));
+    if (codes.has(v) && !cur.has(v)) toggleGenChip(c,'gen_levels_chips');
+  });
+}
+
+function genComputeCombinations() {
+  const a = (puState.wbsActivities||[]).find(x=>x.id===document.getElementById('gen_subact')?.value);
+  if (!a) return { combos:[], a:null };
+
+  const blocks = [...getChipSet('gen_blocks_chips')];
+  if (!blocks.length) return { combos:[], a };
+
+  const selLevels = [...getChipSet('gen_levels_chips')];
+
+  // Collect instances grouped by type — from the rendered instance panels
+  const panelDivs = [...document.querySelectorAll('#gen_instance_panels [id^="gen_inst_"]')];
+  const stripHint = s => s.replace(/\s*\(only:[^)]*\)\s*$/, '');
+  const instByType = {};
+  panelDivs.forEach(d => {
+    const code = d.dataset.typecode;
+    const sel = JSON.parse(d.dataset.selected||'[]').map(stripHint);
+    if (sel.length) instByType[code] = sel;
+  });
+
+  const combos = [];
+  // For each granularity type with selected instances → produce its combos
+  const granCodes = Object.keys(instByType);
+  if (!granCodes.length) {
+    // No instance selected anywhere — at least produce block × level rows (single-style)
+    if (!selLevels.length) {
+      blocks.forEach(blk => combos.push(buildCombo(blk, a, '', '', '{level}')));
+    } else {
+      blocks.forEach(blk => selLevels.forEach(lvl => combos.push(buildCombo(blk, a, lvl, '', '{level}'))));
+    }
+    return { combos, a };
+  }
+
+  granCodes.forEach(code => {
+    const t = (puState.wbsLocTypes||[]).find(x=>x.type_code===code);
+    if (!t) return;
+    const fmt = t.label_format || '{level}-{instance}';
+    const instances = instByType[code];
+    // look up instance objects for restriction enforcement
+    const lookupByLabel = {};
+    (puState.wbsLocInstances||[]).forEach(i => { if (i.type_code===code) lookupByLabel[i.instance_label]=i; });
+
+    if (t.instance_scope === 'vertical') {
+      blocks.forEach(blk => {
+        instances.forEach(lbl => {
+          const inst = lookupByLabel[lbl]; if (!inst) return;
+          if (inst.block_restriction?.length && !inst.block_restriction.includes(blk)) return;
+          combos.push(buildCombo(blk, a, '', lbl, fmt));
+        });
+      });
+    } else {
+      // per_floor
+      if (!selLevels.length) return;
+      blocks.forEach(blk => {
+        selLevels.forEach(lvl => {
+          instances.forEach(lbl => {
+            const inst = lookupByLabel[lbl]; if (!inst) return;
+            if (inst.level_restriction?.length && !inst.level_restriction.includes(lvl)) return;
+            if (inst.block_restriction?.length && !inst.block_restriction.includes(blk)) return;
+            combos.push(buildCombo(blk, a, lvl, lbl, fmt));
+          });
+        });
+      });
+    }
+  });
+  return { combos, a };
+}
+
+function buildCombo(block, a, level, instance, fmt) {
+  fmt = fmt || '{level}-{instance}';
+  let loc = '';
+  if (level && instance) loc = fmt.replaceAll('{level}', level).replaceAll('{instance}', instance);
+  else if (level)        loc = level;
+  else if (instance)     loc = instance;
+  return {
+    block,
+    wbs_group:        a.wbs_group,
+    wbs_activity:     a.wbs_activity,
+    wbs_sub_activity: a.wbs_sub_activity,
+    wbs_location:     loc || null
+  };
+}
+
+function updateGenPreview() {
+  const { combos, a } = genComputeCombinations();
+  const sum  = document.getElementById('gen_preview_summary');
+  const list = document.getElementById('gen_preview_list');
+  if (!sum || !list) return;
+
+  if (!a) { sum.innerHTML = 'Pick a sub-activity to start.'; list.innerHTML=''; return; }
+  if (!combos.length) {
+    sum.innerHTML = '<span style="color:var(--danger);">No combinations yet — pick blocks, levels, and instances.</span>';
+    list.innerHTML=''; return;
+  }
+  const existKeys = new Set((puState.wbsList||[]).map(w => keyOf(w)));
+  const dupCount  = combos.filter(c => existKeys.has(keyOf(c))).length;
+  const newCount  = combos.length - dupCount;
+  sum.innerHTML = `Will generate <strong>${combos.length}</strong> combination(s) — `+
+    `<span style="color:var(--success);">${newCount} new</span>, `+
+    `<span style="color:var(--muted);">${dupCount} already exist (skipped)</span>.`;
+  const limit = 200;
+  const shown = combos.slice(0, limit);
+  list.innerHTML = shown.map(c => {
+    const dup = existKeys.has(keyOf(c));
+    const el = buildWBSElement(c.block, c.wbs_group, c.wbs_activity, c.wbs_sub_activity, c.wbs_location);
+    return `<div style="padding:2px 0;${dup?'opacity:.5;text-decoration:line-through;':''}">${esc(el)}</div>`;
+  }).join('') + (combos.length>limit ? `<div class="muted" style="margin-top:6px;">…and ${combos.length-limit} more</div>` : '');
+}
+
+function keyOf(c) {
+  return [c.block, c.wbs_group, c.wbs_activity, c.wbs_sub_activity, c.wbs_location||''].join('|');
+}
+
+async function generateWBSElements() {
+  if (!wbsIsAdmin()) { toast('Only Admin','error'); return; }
+  const { combos } = genComputeCombinations();
+  if (!combos.length) { toast('No combinations to create','error'); return; }
+  const existKeys = new Set((puState.wbsList||[]).map(w => keyOf(w)));
+  const fresh = combos.filter(c => !existKeys.has(keyOf(c)));
+  if (!fresh.length) { toast('All these elements already exist','info'); return; }
+
+  pbShow(`Generating ${fresh.length} elements…`);
+  try {
+    const { data: last } = await sb.from('wbs_master')
+      .select('wbs_code').order('wbs_code',{ascending:false}).limit(1);
+    let nextNum = last?.length ? parseInt((last[0].wbs_code||'WBS0000').replace('WBS',''))||0 : 0;
+
+    const rows = fresh.map(c => {
+      nextNum += 1;
+      const code = 'WBS' + String(nextNum).padStart(4,'0');
+      const el   = buildWBSElement(c.block, c.wbs_group, c.wbs_activity, c.wbs_sub_activity, c.wbs_location);
+      return {
+        wbs_code: code,
+        block: c.block,
+        wbs_group: c.wbs_group,
+        wbs_activity: c.wbs_activity,
+        wbs_sub_activity: c.wbs_sub_activity,
+        wbs_location: c.wbs_location,
+        wbs_element: el,
+        is_active: true
+      };
+    });
+    const chunkSize = 500;
+    for (let i=0; i<rows.length; i+=chunkSize) {
+      const slice = rows.slice(i, i+chunkSize);
+      const { error } = await sb.from('wbs_master').insert(slice);
+      if (error) throw new Error(error.message);
+    }
+    flashSuccess(`Generated ${rows.length} WBS elements (${combos.length-fresh.length} skipped as duplicates)`);
+    await loadWBSAll();
+    updateGenPreview();
+  } catch(e) {
+    toast('Generation error: '+e.message,'error');
+  } finally { pbDone(); }
+}
+// ====================================================================
+// END WBS REDESIGN MODULE
+// ====================================================================
 
 
 
@@ -12920,9 +14550,9 @@ function applyRoleTabVisibility() {
 function applyPurchaseSubTabVisibility() {
   const r = state.role;
   const puTabRules = {
-    'mir':   ['Site Manager','Procurement','Project Manager','Admin'],
+    'mir':   ['Site Manager','Store Executive','Procurement','Project Manager','Admin'],
     'rfq':   ['Procurement','Project Manager','Admin'],
-    'po':    ['Procurement','Project Manager','Planning/ QS','Admin'],
+    'po':    ['Procurement','Store Executive','Project Manager','Planning/ QS','Admin'],
     'grn':   ['Store Executive','Site Manager','Project Manager','Admin'],
     'pob':   ['Planning/ QS','Project Manager','Admin'],
     'mis':   ['Store Executive','Site Manager','Project Manager','Admin'],
@@ -12939,7 +14569,6 @@ async function loadDashboard() {
     loadDashPendingCards(),
     loadTrackerA(),
     loadTrackerB(),
-    loadActivityFeed(),
   ]);
 }
 
@@ -13131,6 +14760,10 @@ function trackerDateRange(fromId, toId) {
   return { from: (fromEl ? fromEl.value : fromDate.toISOString().slice(0,10)), to: (toEl ? toEl.value : toDate.toISOString().slice(0,10)) };
 }
 
+// Tracker A: single MIR open at a time (accordion). null = all collapsed (default).
+let _trkAOpenMir = null;
+// Back-compat aliases (no longer referenced by tracker but kept to avoid breaking other code)
+let _trkACollapsed = new Set();
 let _trkAExpanded = new Set();
 
 async function loadTrackerA() {
@@ -13139,7 +14772,6 @@ async function loadTrackerA() {
   tbody.innerHTML = '<tr><td colspan="4" class="center muted" style="padding:20px;">Loading…</td></tr>';
   const range = trackerDateRange('trk_a_from', 'trk_a_to');
   const from = range.from;
-  const statusFilter = document.getElementById('trk_a_status') ? document.getElementById('trk_a_status').value : '';
 
   try {
     const results = await Promise.all([
@@ -13188,176 +14820,158 @@ async function loadTrackerA() {
       const allPOMap = new Map();
       mirPOs.concat(qcPOs).forEach(function(p){ allPOMap.set(p.po_number, p); });
       const allPOs = Array.from(allPOMap.values());
-      const allGRNs = allPOs.flatMap(function(p){ return grnByPo[p.po_number] || []; });
 
-      const mirRaised    = true; // we're iterating an existing MIR row
       const mirRejected  = mir.status === 'Rejected';
       const mirApproved  = mir.status !== 'Pending Approval' && mir.status !== 'Rejected';
-      const rfqRaised    = mirRFQs.length > 0;
-      const qcApproved   = mirQCs.some(function(q){ return q.status === 'Approved'; });
-      const qcAllRejected = rfqRaised && mirQCs.length > 0 && mirQCs.every(function(q){ return q.status === 'Rejected'; });
-      const poCreated    = allPOs.length > 0;
-      // Short-Closed counts as "approved" (its partial GRNs are real); Cancelled does not.
-      const poApproved   = allPOs.some(function(p){ return ['Open','Partial Receipt','Fully Received','Short-Closed'].indexOf(p.status) >= 0; });
-      const poAllRejected  = poCreated && allPOs.every(function(p){ return p.status === 'Rejected'; });
-      const poAllCancelled = poCreated && allPOs.every(function(p){ return p.status === 'Cancelled'; });
-      // poAllClosed = every PO has reached a terminal state (Cancelled, Short-Closed, Fully Received)
-      const poAllClosed    = poCreated && allPOs.every(function(p){ return ['Cancelled','Short-Closed','Fully Received'].indexOf(p.status) >= 0; });
-      const grnReceived  = allGRNs.length > 0;
-      const grnVerified  = allGRNs.some(function(g){ return ['Verified','Partially Billed','Billed'].indexOf(g.status) >= 0; });
-      const grnAllRejected = grnReceived && allGRNs.every(function(g){ return g.status === 'Rejected'; });
+      const qcAllRejected = mirRFQs.length > 0 && mirQCs.length > 0 && mirQCs.every(function(q){ return q.status === 'Rejected'; });
 
-      // Direct-PO path: when a PO exists without any RFQ, the RFQ/QC steps were legitimately bypassed.
-      // In that case render them as grey "pending" (never active) so they don't read as the bottleneck.
-      const directPOPath = poCreated && !rfqRaised;
-
-      // Each milestone resolves to: 'done' if its own condition holds, else 'rejected' if a terminal
-      // negative outcome occurred at that step, else 'active' if it's the current bottleneck, else 'pending'.
-      // Once a step is rejected, all downstream steps stay 'pending' (chain is dead — no orange anywhere downstream).
-      const chainDead = mirRejected; // extended below as we walk the chain
-      const sMirRaised    = 'done'; // always done if rendered
-      const sMirApproved  = mirRejected ? 'rejected'
-                          : mirApproved ? 'done'
-                          : 'active';
-      const sRfqRaised    = mirRejected ? 'pending'
-                          : rfqRaised ? 'done'
-                          : directPOPath ? 'pending'
-                          : (mirApproved ? 'active' : 'pending');
-      const sQcApproved   = mirRejected ? 'pending'
-                          : qcApproved ? 'done'
-                          : qcAllRejected ? 'rejected'
-                          : directPOPath ? 'pending'
-                          : (rfqRaised ? 'active' : 'pending');
-      const sPoCreated    = mirRejected || qcAllRejected ? 'pending'
-                          : poCreated ? 'done'
-                          : (directPOPath || qcApproved ? 'active'
-                            : mirApproved && !rfqRaised ? 'active' // MIR approved, no RFQ yet, awaiting either path
-                            : 'pending');
-      const sPoApproved   = mirRejected || qcAllRejected ? 'pending'
-                          : poAllCancelled ? 'rejected'
-                          : poApproved ? 'done'
-                          : poAllRejected ? 'rejected'
-                          : (poCreated ? 'active' : 'pending');
-      const sGrnReceived  = mirRejected || qcAllRejected || poAllRejected || poAllCancelled ? 'pending'
-                          : grnReceived ? 'done'
-                          : (poApproved ? 'active' : 'pending');
-      const sGrnVerified  = mirRejected || qcAllRejected || poAllRejected || poAllCancelled ? 'pending'
-                          : grnVerified ? 'done'
-                          : grnAllRejected ? 'rejected'
-                          : (grnReceived ? 'active' : 'pending');
-
-      let overallSt = 'In Progress';
-      if (mirRejected) overallSt = 'Rejected';
-      else if (qcAllRejected || poAllRejected || grnAllRejected) overallSt = 'Rejected';
-      else if (poAllCancelled) overallSt = 'Cancelled';
-      else if (poAllClosed && (grnVerified ? allGRNs.every(function(g){ return ['Verified','Billed','Partially Billed'].indexOf(g.status) >= 0; }) : true)) overallSt = 'Completed';
-      else if (grnVerified) overallSt = allGRNs.every(function(g){ return ['Verified','Billed','Partially Billed'].indexOf(g.status) >= 0; }) ? 'Completed' : 'In Progress';
-
-      if (statusFilter) {
-        if (statusFilter==='completed' && overallSt!=='Completed') return;
-        if (statusFilter==='in_progress' && overallSt!=='In Progress') return;
-        if (statusFilter==='stuck') {
-          const ageDays = (new Date()-new Date(mir.mir_date))/(1000*60*60*24);
-          if (overallSt === 'Completed' || ageDays < 3) return;
-        }
-      }
-
-      const stClass = overallSt==='Completed'?'completed':(overallSt==='Rejected'||overallSt==='Cancelled')?'rejected':'active';
-      const isExpanded = _trkAExpanded.has(mir.mir_number);
-      const thisItems = itemsByMir[mir.mir_number] || [];
-      const childCount = thisItems.length + allPOs.length + allGRNs.length;
-
-      // PO Approved date: pick approved_at from a non-Rejected/non-Cancelled PO if any are approved,
-      // otherwise from the latest rejected PO when all POs were rejected. Empty for cancelled / pending.
-      let poApprovedDate = '';
-      if (poApproved) {
-        const approvedPO = allPOs.find(function(p){ return ['Open','Partial Receipt','Fully Received','Short-Closed'].indexOf(p.status) >= 0 && p.approved_at; });
-        if (approvedPO) poApprovedDate = approvedPO.approved_at;
-      } else if (poAllRejected) {
-        const rejectedWithDate = allPOs.filter(function(p){ return p.status === 'Rejected' && p.approved_at; })
-          .sort(function(a,b){ return new Date(b.approved_at) - new Date(a.approved_at); });
-        if (rejectedWithDate.length) poApprovedDate = rejectedWithDate[0].approved_at;
-      }
-
-      const milestones = [
-        dashMs(sMirRaised,    'MIR Raised',    mir.mir_date),
-        dashMs(sMirApproved,  'MIR Approved',  mir.approved_at),
-        dashMs(sRfqRaised,    'RFQ Raised',    directPOPath ? '' : (mirRFQs[0] ? mirRFQs[0].rfq_date : null)),
-        dashMs(sQcApproved,   'QC Approved',   directPOPath ? '' : (mirQCs.find(function(q){return q.status==='Approved';})?.approved_at)),
-        dashMs(sPoCreated,    'PO Created',    allPOs[0] ? allPOs[0].po_date : null),
-        dashMs(sPoApproved,   'PO Approved',   poApprovedDate),
-        dashMs(sGrnReceived,  'GRN Received',  allGRNs[0] ? allGRNs[0].grn_date : null),
-        dashMs(sGrnVerified,  'GRN Verified',  allGRNs.find(function(g){return g.status==='Verified';})?.grn_date),
+      // Parent row milestones — strictly MIR stage only
+      const sMirRaised   = 'done';
+      const sMirApproved = mirRejected ? 'rejected' : mirApproved ? 'done' : 'active';
+      const parentMilestones = [
+        dashMs(sMirRaised,   'MIR Raised',   mir.mir_date),
+        dashMs(sMirApproved, 'MIR Approved', mir.approved_at),
       ];
 
+      // Split MIR items into "on a PO" vs "pending procurement"
+      const thisItems = itemsByMir[mir.mir_number] || [];
+      const pendingItems = thisItems.filter(function(it){
+        const st = it.item_status || 'Pending';
+        return st === 'Pending' || st === 'RFQ Raised';
+      });
+
+      const isExpanded = _trkAOpenMir === mir.mir_number;
       const chevronParts = [];
-      if (thisItems.length) chevronParts.push(thisItems.length+' item'+(thisItems.length!==1?'s':''));
-      if (allPOs.length)    chevronParts.push(allPOs.length+' PO'+(allPOs.length!==1?'s':''));
-      if (allGRNs.length)   chevronParts.push(allGRNs.length+' GRN'+(allGRNs.length!==1?'s':''));
+      if (allPOs.length)        chevronParts.push(allPOs.length+' PO'+(allPOs.length!==1?'s':''));
+      if (pendingItems.length)  chevronParts.push(pendingItems.length+' pending item'+(pendingItems.length!==1?'s':''));
+      const hasChildren = allPOs.length > 0 || pendingItems.length > 0;
+
+      // Parent header indicator (no overall status — but show special cases)
+      let parentStatus = '';
+      if (mirRejected) {
+        parentStatus = '<span class="status rejected" style="font-size:10px;">MIR Rejected</span>';
+      } else if (qcAllRejected && !allPOs.length) {
+        parentStatus = '<span class="status rejected" style="font-size:10px;">All QCs Rejected</span>';
+      } else if (!mirApproved) {
+        parentStatus = '<span class="status pending-approval" style="font-size:10px;">Pending Approval</span>';
+      }
 
       html += '<tr class="parent-row" onclick="toggleTrkARow(\''+esc(mir.mir_number)+'\')">'+
         '<td class="mono" style="font-size:11px;">'+esc(mir.mir_number)+'</td>'+
-        '<td style="font-size:11px;">'+esc(mir.purpose||'—')+'<br>'+
-          (childCount?'<span class="expand-btn">'+(isExpanded?'▼':'▶')+' '+chevronParts.join(' · ')+'</span>':'')+
+        '<td style="font-size:11px;">'+esc(mir.purpose||'—')+
+          (hasChildren?'<br><span class="expand-btn">'+(isExpanded?'▼':'▶')+' '+chevronParts.join(' · ')+'</span>':'')+
         '</td>'+
-        '<td>'+renderMilestoneRow(milestones)+'</td>'+
-        '<td><span class="status '+stClass+'" style="font-size:10px;">'+overallSt+'</span></td>'+
+        '<td>'+renderMilestoneRow(parentMilestones)+'</td>'+
+        '<td>'+parentStatus+'</td>'+
       '</tr>';
 
-      if (isExpanded) {
-        // Line items table — what the MIR was raised for
-        if (thisItems.length) {
-          let itemsTbl = '<div style="padding:6px 4px 8px 4px;">'+
-            '<div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;margin-bottom:4px;">MIR Line Items</div>'+
-            '<table style="width:100%;border-collapse:collapse;font-size:10.5px;background:#fafcff;border:1px solid #e3ebf5;">'+
-              '<thead><tr style="background:#eef3fa;">'+
-                '<th style="padding:5px 8px;text-align:left;width:40px;border-bottom:1px solid #d8e2ef;">#</th>'+
-                '<th style="padding:5px 8px;text-align:left;border-bottom:1px solid #d8e2ef;">Material</th>'+
-                '<th style="padding:5px 8px;text-align:left;width:60px;border-bottom:1px solid #d8e2ef;">UOM</th>'+
-                '<th style="padding:5px 8px;text-align:right;width:80px;border-bottom:1px solid #d8e2ef;">Qty</th>'+
-                '<th style="padding:5px 8px;text-align:left;border-bottom:1px solid #d8e2ef;">WBS Sub Activity</th>'+
-                '<th style="padding:5px 8px;text-align:left;width:110px;border-bottom:1px solid #d8e2ef;">Status</th>'+
-              '</tr></thead><tbody>';
-          thisItems.forEach(function(it){
-            // Display override: when MIR is rejected, force every item to Rejected regardless of stored status
-            // (handles existing rejected MIRs in DB whose item_status was never cascaded)
-            let itSt = mirRejected ? 'Rejected' : (it.item_status || 'Pending');
-            let itStCls;
-            if (itSt === 'Rejected')      itStCls = 'rejected';
-            else if (itSt === 'Received') itStCls = 'completed';
-            else                          itStCls = 'active';
-            itemsTbl += '<tr>'+
-              '<td style="padding:4px 8px;border-bottom:1px solid #eef2f8;color:var(--muted);">'+esc(it.sno||'')+'</td>'+
-              '<td style="padding:4px 8px;border-bottom:1px solid #eef2f8;">'+esc(it.material_name||'—')+'</td>'+
-              '<td style="padding:4px 8px;border-bottom:1px solid #eef2f8;">'+esc(it.uom||'')+'</td>'+
-              '<td style="padding:4px 8px;border-bottom:1px solid #eef2f8;text-align:right;" class="mono">'+(it.qty_required!=null?Number(it.qty_required).toLocaleString('en-IN'):'')+'</td>'+
-              '<td style="padding:4px 8px;border-bottom:1px solid #eef2f8;">'+esc(it.wbs_sub_activity||'—')+'</td>'+
-              '<td style="padding:4px 8px;border-bottom:1px solid #eef2f8;"><span class="status '+itStCls+'" style="font-size:9px;">'+esc(itSt)+'</span></td>'+
-            '</tr>';
-          });
-          itemsTbl += '</tbody></table></div>';
-          html += '<tr class="child-row"><td colspan="4" style="padding:0 12px;">'+itemsTbl+'</td></tr>';
-        }
+      if (!isExpanded) return;
 
-        allPOs.forEach(function(po) {
-          const poGRNs = grnByPo[po.po_number] || [];
-          html += '<tr class="child-row">'+
-            '<td class="mono" style="font-size:10px;color:var(--accent);">'+esc(po.po_number)+'</td>'+
-            '<td style="font-size:10px;">'+esc(po.status)+'<br><span class="muted">'+fmtINRSym(po.grand_total)+'</span></td>'+
-            '<td colspan="2">'+
-              (poGRNs.length ? poGRNs.map(function(g) {
-                return '<div style="display:flex;align-items:center;gap:8px;margin:2px 0;">'+
-                  '<span class="mono" style="font-size:10px;color:var(--muted);min-width:80px;">'+esc(g.grn_number)+'</span>'+
-                  renderMilestoneRow([
-                    dashMs('done','GRN Created',g.grn_date),
-                    dashMs(['Verified','Billed'].indexOf(g.status)>=0?'done':g.status==='Rejected'?'rejected':'active','Verified',g.status==='Verified'?g.grn_date:'')
-                  ])+
-                  '<span class="status '+(g.status==='Verified'?'approved':g.status==='Rejected'?'rejected':'pending-approval')+'" style="font-size:9px;">'+g.status+'</span>'+
-                '</div>';
-              }).join('') : '<span class="muted" style="font-size:10px;">No GRNs yet</span>')+
-            '</td>'+
+      // ── PO CHILD ROWS ──
+      allPOs.forEach(function(po) {
+        const poGRNs = grnByPo[po.po_number] || [];
+        // Was this PO raised via an RFQ/QC, or direct?
+        const poViaQC = !!po.qc_number;
+        // RFQ associated with this PO (via its QC)
+        let rfqForPO = null, qcForPO = null;
+        if (poViaQC) {
+          qcForPO = qcs.find(function(q){ return q.qc_number === po.qc_number; });
+          if (qcForPO) {
+            rfqForPO = rfqs.find(function(r){ return r.rfq_number === qcForPO.rfq_number; });
+          }
+        }
+        const directPOPath = !poViaQC;
+
+        // Milestone states
+        const isPoRejected   = po.status === 'Rejected';
+        const isPoCancelled  = po.status === 'Cancelled';
+        const isPoOpen       = ['Open','Partial Receipt','Fully Received','Short-Closed'].indexOf(po.status) >= 0;
+        const isPoPending    = po.status === 'Pending Approval';
+
+        const sRfq = directPOPath ? 'pending'
+                   : rfqForPO ? 'done'
+                   : 'active';
+        const sQc  = directPOPath ? 'pending'
+                   : qcForPO && qcForPO.status === 'Approved' ? 'done'
+                   : qcForPO && qcForPO.status === 'Rejected' ? 'rejected'
+                   : qcForPO ? 'active'
+                   : 'pending';
+        const sPoCreated  = 'done';
+        const sPoApproved = isPoRejected ? 'rejected'
+                          : isPoCancelled ? 'rejected'
+                          : isPoOpen ? 'done'
+                          : 'active';
+
+        // GRN rollup across all GRNs for this PO (non-rejected counted)
+        const activeGRNs = poGRNs.filter(function(g){ return g.status !== 'Rejected'; });
+        const verifiedGRNs = poGRNs.filter(function(g){ return ['Verified','Partially Billed','Billed'].indexOf(g.status) >= 0; });
+        const grnReceived = activeGRNs.length > 0;
+        const allVerified = grnReceived && activeGRNs.every(function(g){ return ['Verified','Partially Billed','Billed'].indexOf(g.status) >= 0; });
+        const sGrnRcv = !isPoOpen ? 'pending'
+                      : grnReceived ? 'done'
+                      : 'active';
+        const sGrnVer = !isPoOpen ? 'pending'
+                      : allVerified && grnReceived ? 'done'
+                      : grnReceived ? 'active'
+                      : 'pending';
+
+        // Tooltip for GRN dots — list all GRNs with no, date, status
+        const grnTooltip = poGRNs.length
+          ? poGRNs.map(function(g){ return g.grn_number+' ('+fmtDateShort(g.grn_date)+', '+g.status+')'; }).join('\n')
+          : 'No GRNs yet';
+        const grnCountSuffix = activeGRNs.length > 0 ? ' ('+activeGRNs.length+')' : '';
+
+        const poMilestones = [
+          dashMs(sRfq, 'RFQ Raised'+(directPOPath?' (skipped)':''), rfqForPO ? rfqForPO.rfq_date : null),
+          dashMs(sQc,  'QC Approved'+(directPOPath?' (skipped)':''), qcForPO && qcForPO.status==='Approved' ? qcForPO.approved_at : null),
+          dashMs(sPoCreated,  'PO Created',  po.po_date),
+          dashMs(sPoApproved, 'PO Approved', isPoOpen ? po.approved_at : null),
+          dashMs(sGrnRcv, 'GRN Received'+grnCountSuffix, grnReceived ? activeGRNs[0].grn_date : null),
+          dashMs(sGrnVer, 'GRN Verified'+grnCountSuffix, allVerified && verifiedGRNs.length ? verifiedGRNs[0].grn_date : null),
+        ];
+
+        // Status pill — match PO table styling
+        const poStCls = po.status.toLowerCase().replace(/[\s/]+/g,'-');
+
+        html += '<tr class="child-row">'+
+          '<td class="mono" style="font-size:10px;color:var(--accent);text-decoration:underline;cursor:pointer;" onclick="event.stopPropagation();viewPO(\''+esc(po.po_number)+'\')" title="View PO details">'+esc(po.po_number)+'</td>'+
+          '<td style="font-size:10px;">'+esc(po.vendor_name||'—')+'<br><span class="muted">'+fmtINRSym(po.grand_total)+'</span></td>'+
+          '<td title="'+esc(grnTooltip)+'">'+renderMilestoneRow(poMilestones)+'</td>'+
+          '<td><span class="status '+poStCls+'" style="font-size:10px;">'+esc(po.status)+'</span></td>'+
+        '</tr>';
+      });
+
+      // ── PENDING ITEMS SUB-GROUP ──
+      // Items not yet on any PO — show as a single grouped sub-table at the bottom of the MIR's children
+      if (pendingItems.length) {
+        let itemsTbl = '<div style="padding:6px 4px 8px 4px;">'+
+          '<div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;margin-bottom:4px;">Pending Items — Not on any PO ('+pendingItems.length+')</div>'+
+          '<table style="width:100%;border-collapse:collapse;font-size:10.5px;background:#fafcff;border:1px solid #e3ebf5;">'+
+            '<thead><tr style="background:#eef3fa;">'+
+              '<th style="padding:5px 8px;text-align:left;width:40px;border-bottom:1px solid #d8e2ef;">#</th>'+
+              '<th style="padding:5px 8px;text-align:left;border-bottom:1px solid #d8e2ef;">Material</th>'+
+              '<th style="padding:5px 8px;text-align:left;width:60px;border-bottom:1px solid #d8e2ef;">UOM</th>'+
+              '<th style="padding:5px 8px;text-align:right;width:80px;border-bottom:1px solid #d8e2ef;">Qty</th>'+
+              '<th style="padding:5px 8px;text-align:left;border-bottom:1px solid #d8e2ef;">WBS Sub Activity</th>'+
+              '<th style="padding:5px 8px;text-align:left;width:140px;border-bottom:1px solid #d8e2ef;">Status</th>'+
+            '</tr></thead><tbody>';
+        pendingItems.forEach(function(it){
+          const rawSt = it.item_status || 'Pending';
+          const label = rawSt === 'Pending' ? 'Awaiting RFQ'
+                      : rawSt === 'RFQ Raised' ? 'RFQ Raised'
+                      : rawSt;
+          const cls = rawSt === 'RFQ Raised' ? 'active' : 'pending-approval';
+          itemsTbl += '<tr>'+
+            '<td style="padding:4px 8px;border-bottom:1px solid #eef2f8;color:var(--muted);">'+esc(it.sno||'')+'</td>'+
+            '<td style="padding:4px 8px;border-bottom:1px solid #eef2f8;">'+esc(it.material_name||'—')+'</td>'+
+            '<td style="padding:4px 8px;border-bottom:1px solid #eef2f8;">'+esc(it.uom||'')+'</td>'+
+            '<td style="padding:4px 8px;border-bottom:1px solid #eef2f8;text-align:right;" class="mono">'+(it.qty_required!=null?Number(it.qty_required).toLocaleString('en-IN'):'')+'</td>'+
+            '<td style="padding:4px 8px;border-bottom:1px solid #eef2f8;">'+esc(it.wbs_sub_activity||'—')+'</td>'+
+            '<td style="padding:4px 8px;border-bottom:1px solid #eef2f8;"><span class="status '+cls+'" style="font-size:9px;">'+esc(label)+'</span></td>'+
           '</tr>';
         });
+        itemsTbl += '</tbody></table></div>';
+        html += '<tr class="child-row"><td colspan="4" style="padding:0 12px;">'+itemsTbl+'</td></tr>';
       }
     });
 
@@ -13369,8 +14983,9 @@ async function loadTrackerA() {
 }
 
 function toggleTrkARow(mirNum) {
-  if (_trkAExpanded.has(mirNum)) _trkAExpanded.delete(mirNum);
-  else _trkAExpanded.add(mirNum);
+  // Accordion behaviour: clicking opens this MIR and closes any other;
+  // clicking the currently-open MIR collapses it.
+  _trkAOpenMir = (_trkAOpenMir === mirNum) ? null : mirNum;
   loadTrackerA();
 }
 
