@@ -1821,10 +1821,11 @@ input[type="number"] {
     <div class="card" id="masterAddVendorCard">
       <h3>Add Vendor</h3>
       <div class="grid-3">
-        <div class="field"><label class="req">Vendor Name</label><input id="mv_name" placeholder="Full legal name"></div>
+        <div class="field" style="position:relative;"><label class="req">Vendor Name</label><input id="mv_name" placeholder="Full legal name" oninput="mvDupCheck()" autocomplete="off"></div>
         <div class="field"><label class="req">Trade / Category</label><input id="mv_trade" placeholder="e.g. Equipment Hire"></div>
-        <div class="field"><label class="req">GSTIN</label><input id="mv_gstin" placeholder="29XXXXX…"></div>
+        <div class="field"><label class="req">GSTIN</label><input id="mv_gstin" placeholder="29XXXXX…" oninput="mvDupCheck()" autocomplete="off"></div>
       </div>
+      <div id="mv_dup" style="display:none;margin-top:10px;padding:8px 10px;border-radius:4px;font-size:12px;color:var(--text);"></div>
       <div class="grid-3" style="margin-top:12px;">
         <div class="field"><label>PAN</label><input id="mv_pan"></div>
         <div class="field"><label class="req">Contact Person</label><input id="mv_contact"></div>
@@ -1855,9 +1856,10 @@ input[type="number"] {
     <div class="card" id="masterAddActivityCard">
       <h3>Add Activity</h3>
       <div class="grid-3">
-        <div class="field" style="grid-column:1/3;"><label class="req">Activity Description</label><input id="ma_desc" placeholder="e.g. Tower Crane Hire — 10T capacity"></div>
-        <div class="field"><label class="req">UOM</label><input id="ma_uom" placeholder="e.g. Day, Month, Hour, Trip"></div>
+        <div class="field" style="grid-column:1/3;position:relative;"><label class="req">Activity Description</label><input id="ma_desc" placeholder="e.g. Tower Crane Hire — 10T capacity" oninput="maDupCheck()" autocomplete="off"></div>
+        <div class="field"><label class="req">UOM</label><input id="ma_uom" placeholder="e.g. Day, Month, Hour, Trip" oninput="maDupCheck()"></div>
       </div>
+      <div id="ma_dup" style="display:none;margin-top:10px;padding:8px 10px;border-radius:4px;font-size:12px;color:var(--text);"></div>
       <div class="grid-3" style="margin-top:12px;">
         <div class="field"><label>Default Rate (₹)</label><input type="number" id="ma_rate" step="0.01" placeholder="0.00"></div>
         <div class="field"><label>Category</label><input id="ma_category" placeholder="e.g. Crane, RMC, Labour"></div>
@@ -2112,8 +2114,12 @@ input[type="number"] {
     <div class="card" id="masterAddMaterialCard">
       <h3>Add Material</h3>
       <div class="grid-3">
-        <div class="field" style="grid-column:1/3;"><label class="req">Material Name</label><input id="mm_name" placeholder="e.g. OPC Cement 53 Grade, TMT Fe500D 8mm"></div>
-        <div class="field"><label class="req">UOM</label><input id="mm_uom" placeholder="e.g. Bags, MT, Nos, RMT"></div>
+        <div class="field" style="grid-column:1/3;position:relative;">
+          <label class="req">Material Name</label>
+          <input id="mm_name" placeholder="e.g. OPC Cement 53 Grade, TMT Fe500D 8mm" oninput="mmNameDupCheck()" autocomplete="off">
+          <div id="mm_name_dup" style="display:none;margin-top:6px;padding:8px 10px;background:rgba(255,193,7,0.08);border:1px solid rgba(255,193,7,0.4);border-radius:4px;font-size:12px;color:var(--text);"></div>
+        </div>
+        <div class="field"><label class="req">UOM</label><input id="mm_uom" placeholder="e.g. Bags, MT, Nos, RMT" oninput="mmNameDupCheck()"></div>
       </div>
       <div class="grid-4" style="margin-top:12px;">
         <div class="field">
@@ -2156,16 +2162,17 @@ input[type="number"] {
     <div class="card" id="masterAddContractorCard">
       <h3>Add Contractor</h3>
       <div class="grid-3">
-        <div class="field" style="grid-column:1/3;"><label class="req">Contractor Name</label>
-          <input id="mc_name" placeholder="Full legal name of contractor / agency"></div>
+        <div class="field" style="grid-column:1/3;position:relative;"><label class="req">Contractor Name</label>
+          <input id="mc_name" placeholder="Full legal name of contractor / agency" oninput="mcDupCheck()" autocomplete="off"></div>
         <div class="field"><label class="req">Trade / Specialisation</label>
           <input id="mc_trade" placeholder="e.g. Civil, MEP, Finishing"></div>
       </div>
       <div class="grid-3" style="margin-top:12px;">
-        <div class="field"><label class="req">GSTIN</label><input id="mc_gstin" placeholder="29XXXXX…"></div>
+        <div class="field"><label class="req">GSTIN</label><input id="mc_gstin" placeholder="29XXXXX…" oninput="mcDupCheck()" autocomplete="off"></div>
         <div class="field"><label class="req">Contact Person</label><input id="mc_contact"></div>
         <div class="field"><label class="req">Phone</label><input id="mc_phone" type="tel"></div>
       </div>
+      <div id="mc_dup" style="display:none;margin-top:10px;padding:8px 10px;border-radius:4px;font-size:12px;color:var(--text);"></div>
       <div class="field" style="margin-top:12px;"><label class="req">Address</label>
         <textarea id="mc_address" rows="2"></textarea></div>
       <div class="grid-4" style="margin-top:12px;">
@@ -2585,6 +2592,7 @@ input[type="number"] {
       </div>
       <div>
         <button class="btn btn-primary" id="btn_newGRN" onclick="newGRN()">+ New GRN</button>
+        <button class="btn btn-warning" id="btn_newCashGRN" onclick="newCashGRN()" style="background:#ad6800;color:#fff;border-color:#ad6800;">💵 Cash Purchase</button>
         <button class="btn btn-ghost" onclick="loadGRNList()">↻ Refresh</button>
       </div>
     </div>
@@ -2626,6 +2634,63 @@ input[type="number"] {
         <button class="btn btn-ghost" onclick="closeGRNForm()">Cancel</button>
       </div>
     </div>
+    <!-- Cash Purchase GRN Form -->
+    <div id="cashGrnForm" class="card" style="display:none;border-left:4px solid #ad6800;">
+      <h3 style="display:flex;align-items:center;gap:10px;">💵 New Cash Purchase GRN
+        <span style="font-size:11px;background:#ad6800;color:#fff;padding:2px 8px;border-radius:3px;font-weight:600;">CASH</span>
+      </h3>
+      <div class="muted" style="font-size:12px;margin-bottom:12px;">Materials purchased on cash, no PO reference. Will follow regular verification flow.</div>
+      <div class="grid-4">
+        <div class="field"><label>GRN Number</label><input id="cgrn_number" readonly style="opacity:.6;"></div>
+        <div class="field"><label class="req">GRN Date</label><input type="date" id="cgrn_date"></div>
+        <div class="field"><label class="req">Cash Purchase Ref</label><input id="cgrn_cashRef" value="Cash Purchase" placeholder="e.g. Petty Cash Voucher #45"></div>
+        <div class="field typeahead" style="position:relative;"><label class="req">Vendor</label>
+          <div style="display:flex;gap:4px;">
+            <input id="cgrn_vendorSearch" placeholder="Type to search vendor master…" autocomplete="off"
+              oninput="cgrnVendorTypeahead()"
+              style="flex:1;">
+            <button type="button" class="btn btn-ghost btn-sm" onclick="cgrnClearVendor()" title="Clear vendor">✕</button>
+          </div>
+          <input type="hidden" id="cgrn_vendorName">
+          <input type="hidden" id="cgrn_vendorCode">
+          <div class="typeahead-results" id="cgrn_vendorRes"></div>
+        </div>
+      </div>
+      <div class="grid-4" style="margin-top:12px;">
+        <div class="field"><label class="req">Vehicle / Challan No.</label><input id="cgrn_challan" placeholder="DC No. or Vehicle No."></div>
+        <div class="field"><label class="req">Invoice No.</label><input id="cgrn_invoiceNo" placeholder="Supplier invoice number"></div>
+        <div class="field"><label class="req">Invoice Date</label><input type="date" id="cgrn_invoiceDate"></div>
+        <div class="field"><label>Received By</label><input id="cgrn_receivedBy" readonly style="opacity:.6;"></div>
+      </div>
+      <!-- Cash GRN Items -->
+      <div style="margin-top:16px;">
+        <div class="row" style="justify-content:space-between;align-items:center;margin-bottom:8px;">
+          <h3 style="font-size:13px;margin:0;color:var(--text);">Materials Received</h3>
+          <button type="button" class="btn btn-primary btn-sm" onclick="addCashGRNItem()">+ Add Material</button>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr>
+              <th>#</th><th>Material</th><th>UOM</th>
+              <th class="num">Qty</th><th class="num">Unit Rate (₹)</th><th class="num">Amount (₹)</th>
+              <th>Remarks</th><th></th>
+            </tr></thead>
+            <tbody id="cgrnItemsBody"><tr><td colspan="8" class="center muted">Click "+ Add Material" to start</td></tr></tbody>
+            <tfoot><tr>
+              <td colspan="5" class="num" style="font-weight:600;">Total</td>
+              <td class="num" style="font-weight:600;" id="cgrn_totalAmt">₹0.00</td>
+              <td colspan="2"></td>
+            </tr></tfoot>
+          </table>
+        </div>
+      </div>
+      <div class="field" style="margin-top:12px;max-width:600px;"><label>Remarks</label><textarea id="cgrn_remarks" rows="2"></textarea></div>
+      <div class="actions-row">
+        <button class="btn btn-primary" onclick="saveCashGRN()">💾 Save Cash Purchase GRN</button>
+        <button class="btn btn-ghost" onclick="closeCashGRNForm()">Cancel</button>
+      </div>
+    </div>
+
     <!-- GRN List -->
     <div id="grnListCard" class="card">
       <div class="row" style="margin-bottom:12px;">
@@ -2637,6 +2702,11 @@ input[type="number"] {
           <option value="Partially Billed">Partially Billed</option>
           <option value="Billed">Billed</option>
           <option value="Rejected">Rejected</option>
+        </select>
+        <select id="grnSourceFilter" style="padding:7px;background:var(--input-bg);color:var(--text);border:1px solid var(--border);border-radius:4px;" onchange="renderGRNList()" title="Filter by source">
+          <option value="">All Sources</option>
+          <option value="po">PO-based only</option>
+          <option value="cash">Cash Purchase only</option>
         </select>
         <button class="btn btn-ghost" onclick="downloadGRNList()" title="Download filtered GRNs + all line items as CSV">📥 Download CSV</button>
       </div>
@@ -2662,6 +2732,7 @@ input[type="number"] {
       </div>
       <div>
         <button class="btn btn-primary" id="btn_newPOB" onclick="newPOB()">+ New PO Bill</button>
+        <button class="btn btn-warning" id="btn_newCashPOB" onclick="newCashPOB()" style="background:#ad6800;color:#fff;border-color:#ad6800;">💵 Cash Purchase Bill</button>
         <button class="btn btn-ghost" onclick="loadPOBList()">↻ Refresh</button>
       </div>
     </div>
@@ -2756,6 +2827,131 @@ input[type="number"] {
         </div>
       </div>
     </div>
+    <!-- Cash Purchase Bill Form -->
+    <div id="cashPobForm" class="card" style="display:none;border-left:4px solid #ad6800;">
+      <h3 id="cpob_formTitle" style="display:flex;align-items:center;gap:10px;">💵 New Cash Purchase Bill
+        <span style="font-size:11px;background:#ad6800;color:#fff;padding:2px 8px;border-radius:3px;font-weight:600;">CASH</span>
+      </h3>
+      <div class="muted" style="font-size:12px;margin-bottom:12px;">Bill against cash-purchase GRNs from a single vendor. Follows the same PM approval and PRR flow.</div>
+
+      <!-- Step 1: Select Vendor -->
+      <div class="card" style="background:#fff7e6;border-color:#ffd591;">
+        <h3 style="font-size:13px;">Step 1 — Select Vendor</h3>
+        <div class="grid-3">
+          <div class="field typeahead" style="position:relative;"><label class="req">Vendor</label>
+            <div style="display:flex;gap:4px;">
+              <input id="cpob_vendorSearch" placeholder="Type to search vendors with cash GRNs…" autocomplete="off"
+                oninput="cpobVendorTypeahead()" style="flex:1;">
+              <button type="button" class="btn btn-ghost btn-sm" onclick="cpobClearVendor()" title="Clear vendor">✕</button>
+            </div>
+            <input type="hidden" id="cpob_vendorName">
+            <div class="typeahead-results" id="cpob_vendorRes"></div>
+          </div>
+          <div class="field"><label>Selected Vendor</label><input id="cpob_vendor" readonly style="opacity:.6;"></div>
+        </div>
+      </div>
+
+      <!-- Step 2: Select Cash GRNs -->
+      <div class="card" id="cpob_grnCard" style="display:none;background:#fff7e6;border-color:#ffd591;margin-top:8px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+          <h3 style="font-size:13px;margin:0;">Step 2 — Select Verified Cash GRNs to Bill</h3>
+          <div style="display:flex;gap:6px;">
+            <button type="button" class="btn btn-ghost btn-sm" onclick="cpobSelectAllGRNs(true)">Select All</button>
+            <button type="button" class="btn btn-ghost btn-sm" onclick="cpobSelectAllGRNs(false)">Clear All</button>
+          </div>
+        </div>
+        <div id="cpob_grnCheckList"></div>
+        <div style="margin-top:8px;font-size:12px;color:var(--muted);">Selected GRNs: <span id="cpob_selectedGRNs">None</span></div>
+      </div>
+
+      <!-- Bill details (shown after GRNs selected) -->
+      <div id="cpob_billDetails" style="display:none;margin-top:8px;">
+        <div class="grid-4">
+          <div class="field"><label>POB Number</label><input id="cpob_number" readonly style="opacity:.6;"></div>
+          <div class="field"><label class="req">Bill Date</label><input type="date" id="cpob_date"></div>
+          <div class="field"><label class="req">Vendor Invoice No.</label><input id="cpob_vendorInvNo"></div>
+          <div class="field"><label class="req">Vendor Invoice Date</label><input type="date" id="cpob_vendorInvDate"></div>
+        </div>
+
+        <!-- GST Mode panel (cash bills need manual entry — no PO to inherit from) -->
+        <div class="card" style="background:#fff7e6;border-color:#ffd591;margin-top:8px;">
+          <h3 style="font-size:13px;">GST Configuration</h3>
+          <div class="grid-4">
+            <div class="field"><label>GST Type</label>
+              <select id="cpob_gstType" onchange="onCashPobGSTTypeChange()">
+                <option value="cgst_sgst">CGST + SGST</option>
+                <option value="igst">IGST</option>
+                <option value="none">No GST</option>
+              </select>
+            </div>
+            <div class="field" id="cpob_cgstWrap"><label>CGST %</label><input type="number" id="cpob_cgstPct" step="0.01" value="9" oninput="recalcCashPobTotals()"></div>
+            <div class="field" id="cpob_sgstWrap"><label>SGST %</label><input type="number" id="cpob_sgstPct" step="0.01" value="9" oninput="recalcCashPobTotals()"></div>
+            <div class="field" id="cpob_igstWrap" style="display:none;"><label>IGST %</label><input type="number" id="cpob_igstPct" step="0.01" value="18" oninput="recalcCashPobTotals()"></div>
+          </div>
+        </div>
+
+        <div class="grid-3" style="margin-top:12px;">
+          <div class="field"><label>Credit Period (days)</label><input type="number" id="cpob_creditPeriod" value="0" oninput="calcCashPobPayDue()"></div>
+          <div class="field"><label>Invoice Pay Due</label><input type="date" id="cpob_invPayDue" readonly style="opacity:.6;"></div>
+          <div class="field"><label>TDS %</label><input type="number" id="cpob_tdsPct" value="2" step="0.01" oninput="recalcCashPobTotals()"></div>
+        </div>
+
+        <!-- Bill Line Items -->
+        <div style="margin-top:16px;">
+          <h3 style="font-size:13px;margin-bottom:8px;color:var(--text);">Bill Line Items <small style="color:var(--muted);font-weight:400;">(rates editable, pre-filled from GRN)</small></h3>
+          <div class="table-wrap">
+            <table>
+              <thead><tr>
+                <th>#</th><th>GRN</th><th>Material</th><th>UOM</th>
+                <th class="num">Qty</th><th class="num">Rate (editable)</th><th class="num">Base Amt</th>
+                <th>WBS Sub Activity <span style="color:var(--danger);">*</span></th>
+              </tr></thead>
+              <tbody id="cpob_itemsBody"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Extra lines -->
+        <div style="margin-top:14px;">
+          <h3 style="font-size:13px;margin-bottom:8px;color:var(--text);">Additional / Deduction Lines</h3>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Description</th><th>Type</th><th>Timing</th><th class="num">Amount (₹)</th><th></th></tr></thead>
+              <tbody id="cpob_extraBody"></tbody>
+            </table>
+          </div>
+          <button class="btn btn-ghost btn-sm" style="margin-top:6px;" onclick="addCashPobExtraLine()">+ Add Line</button>
+        </div>
+
+        <!-- Bill Summary -->
+        <div class="card" style="margin-top:12px;background:#fff7e6;border-color:#ffd591;">
+          <h3 style="font-size:13px;">Bill Computation</h3>
+          <table style="max-width:420px;margin-left:auto;">
+            <tr><td style="padding:4px 8px;color:var(--muted);">Gross Amount</td><td class="num" style="padding:4px 8px;" id="cpob_s_gross">0.00</td></tr>
+            <tr><td style="padding:4px 8px;color:var(--muted);">Add: Before-GST</td><td class="num" style="padding:4px 8px;" id="cpob_s_extraBefore">0.00</td></tr>
+            <tr><td style="padding:4px 8px;color:var(--muted);">Taxable Value</td><td class="num" style="padding:4px 8px;font-weight:600;" id="cpob_s_taxable">0.00</td></tr>
+            <tr><td style="padding:4px 8px;color:var(--muted);" id="cpob_s_gstLabel">GST</td><td class="num" style="padding:4px 8px;" id="cpob_s_gst">0.00</td></tr>
+            <tr><td style="padding:4px 8px;color:var(--muted);">Add: After-GST</td><td class="num" style="padding:4px 8px;" id="cpob_s_extraAfter">0.00</td></tr>
+            <tr style="border-top:1px solid var(--border);"><td style="padding:6px 8px;font-weight:600;">Invoice Value</td><td class="num" style="padding:6px 8px;font-weight:600;" id="cpob_s_invoice">0.00</td></tr>
+            <tr><td style="padding:4px 8px;color:var(--muted);">Less: TDS (<span id="cpob_s_tdsLbl">2</span>%)</td><td class="num" style="padding:4px 8px;" id="cpob_s_tds">0.00</td></tr>
+            <tr><td style="padding:4px 8px;color:var(--muted);">Less: Hold Amount</td>
+              <td class="num" style="padding:4px 8px;"><input type="number" id="cpob_holdAmt" value="0" step="0.01" style="width:100px;text-align:right;" oninput="recalcCashPobTotals()"></td></tr>
+            <tr style="background:#e6f4f1;"><td style="padding:6px 8px;font-weight:700;color:var(--accent);">Net Payable (₹)</td>
+              <td class="num" style="padding:6px 8px;font-weight:700;font-size:16px;color:var(--accent);" id="cpob_s_net">0.00</td></tr>
+          </table>
+        </div>
+
+        <div class="grid-2" style="margin-top:12px;">
+          <div class="field"><label>Hold Description</label><input id="cpob_holdDesc"></div>
+          <div class="field"><label>Remarks</label><textarea id="cpob_remarks" rows="2"></textarea></div>
+        </div>
+        <div class="actions-row">
+          <button class="btn btn-primary" onclick="saveCashPOB()">💾 Submit Cash Bill for PM Approval</button>
+          <button class="btn btn-ghost" onclick="closeCashPOBForm()">Cancel</button>
+        </div>
+      </div>
+    </div>
+
     <!-- POB List -->
     <div id="pobListCard" class="card">
       <div class="row" style="margin-bottom:12px;">
@@ -2767,6 +2963,11 @@ input[type="number"] {
           <option value="Partial">Partial</option>
           <option value="Paid">Paid</option>
           <option value="Rejected">Rejected</option>
+        </select>
+        <select id="pobSourceFilter" style="padding:7px;background:var(--input-bg);color:var(--text);border:1px solid var(--border);border-radius:4px;" onchange="renderPOBList()" title="Filter by source">
+          <option value="">All Sources</option>
+          <option value="po">PO-based only</option>
+          <option value="cash">Cash Purchase only</option>
         </select>
       </div>
       <div class="table-wrap">
@@ -3628,7 +3829,7 @@ async function apiGetAdvanceOutstanding(vendor) {
   return { ok: true, outstanding: Math.max(0, totalAdv - totalRec) };
 }
 
-// apiGetUnpaidBills is defined below in the WO section (combined HO+WO)
+// apiGetUnpaidBills is defined below in the WO section (combined HO+WO+POB)
 
 async function apiSaveHOB(data) {
   _cacheBust('hobList','unpaidBills','hocList');
@@ -3968,11 +4169,15 @@ async function apiSavePaymentConfirmation(payload) {
   }
 }
 
-// Per-invoice PRR payment — each bill gets its own specified amount
+// Per-invoice PRR payment — each bill gets its own specified amount.
+// Handles all three bill types (HOB → ho_bills, WOB → wo_bills, POB → pu_po_bills) inline.
+// Earlier versions split this with a POB override using _orig_applyPRRPayment; that pattern
+// is unsafe because function-declaration hoisting makes the "original" reference capture the
+// override itself, causing infinite recursion (same bug we hit on apiGetUnpaidBills).
 async function _applyPRRPaymentPerInvoice(prrNumber, perInvoice) {
   for (const entry of perInvoice) {
     const { data: prrItem } = await sb.from('ho_prr_items')
-      .select('id, requested_amount, paid_amount')
+      .select('id, requested_amount, paid_amount, bill_type')
       .eq('prr_number', prrNumber)
       .eq('bill_number', entry.billNumber)
       .single();
@@ -3984,11 +4189,13 @@ async function _applyPRRPaymentPerInvoice(prrNumber, perInvoice) {
       .update({ paid_amount: newPaid, status: itemStatus })
       .eq('id', prrItem.id);
 
-    // Update the bill's own status based on total paid across ALL PRR items vs net_payable
-    // Check bill_type to determine which table to update
-    const { data: prrItemMeta } = await sb.from('ho_prr_items').select('bill_type').eq('id', prrItem.id).single();
-    const billType = prrItemMeta?.bill_type || 'HOB';
-    const billTable = billType === 'WOB' ? 'wo_bills' : 'ho_bills';
+    // Update the bill's own status based on total paid across ALL PRR items vs net_payable.
+    // Bill source table is keyed off bill_type — prefer entry.billType (passed in by caller)
+    // and fall back to the value stored on the PRR item itself.
+    const billType = entry.billType || prrItem.bill_type || 'HOB';
+    const billTable = billType === 'POB' ? 'pu_po_bills'
+                    : billType === 'WOB' ? 'wo_bills'
+                    : 'ho_bills';
     const { data: bill } = await sb.from(billTable).select('net_payable').eq('bill_number', entry.billNumber).single();
     if (bill) {
       const { data: allItems } = await sb.from('ho_prr_items').select('paid_amount').eq('bill_number', entry.billNumber);
@@ -4492,14 +4699,28 @@ async function apiSaveRRR(data) {
 
 // ── UNIFIED UNPAID BILLS (HO + WO) ───────────────────────────
 async function apiGetUnpaidBills() {
-  const [hoR, woR, prrRes, activePRRRes] = await Promise.all([
-    sb.from('ho_bills').select('*').in('status',['Unpaid','Partial']).order('bill_number'),
-    sb.from('wo_bills').select('*').in('status',['Unpaid','Partial']).order('bill_number'),
+  // Single consolidated loader for all bill sources (HOB, WOB, POB).
+  // Pulls everything regardless of status casing and filters in JS — guards against
+  // rows where status was written/migrated in different casing (e.g. 'unpaid' vs 'Unpaid').
+  // Earlier versions split this into two functions (a base + a POB override using
+  // _origApiGetUnpaidBills); that pattern broke after both got rewritten because
+  // function-declaration hoisting made the "original" reference capture the override itself,
+  // causing infinite recursion. Merging into one function avoids the hazard.
+  const [hoR, woR, pobR, prrRes, activePRRRes] = await Promise.all([
+    sb.from('ho_bills').select('*').order('bill_number'),
+    sb.from('wo_bills').select('*').order('bill_number'),
+    sb.from('pu_po_bills').select('*').order('bill_number'),
     sb.from('ho_prr_items').select('bill_number, paid_amount, requested_amount, prr_number, bill_type'),
-    sb.from('ho_prr').select('prr_number').in('status',['Unpaid','Partial'])
+    sb.from('ho_prr').select('prr_number, status')
   ]);
 
-  const activePRRSet = new Set((activePRRRes.data||[]).map(p => p.prr_number));
+  const _openStatuses     = new Set(['unpaid','partial']);
+  const _activePRRStatuses = new Set(['unpaid','partial']);
+  const activePRRSet = new Set(
+    (activePRRRes.data||[])
+      .filter(p => _activePRRStatuses.has((p.status||'').toLowerCase()))
+      .map(p => p.prr_number)
+  );
   const paidMap = {}, inFlightMap = {};
   (prrRes.data||[]).forEach(it => {
     paidMap[it.bill_number] = (paidMap[it.bill_number]||0) + num(it.paid_amount);
@@ -4509,21 +4730,41 @@ async function apiGetUnpaidBills() {
     }
   });
 
-  const hoBills = (hoR.data||[]).map(b => {
-    const os = Math.max(0, num(b.net_payable) - (paidMap[b.bill_number]||0) - (inFlightMap[b.bill_number]||0));
-    return { 'Bill Number': b.bill_number, 'HO Number': b.ho_number, 'Vendor Name': b.vendor_name,
-      'Invoice Value': b.invoice_value, 'Net Payable': b.net_payable, 'Outstanding': os,
-      'Status': b.status, 'Type': 'HOB' };
-  }).filter(b => b['Outstanding'] > 0.005 && !Object.keys(inFlightMap).includes(b['Bill Number']));
+  // Outstanding is already net of paid + in-flight. The OS>0.005 filter alone is the right gate —
+  // a previous bug also excluded any bill present in inFlightMap, which wrongly hid bills with
+  // partial outstanding still requestable on a new PRR.
+  const hoBills = (hoR.data||[])
+    .filter(b => _openStatuses.has((b.status||'').toLowerCase()))
+    .map(b => {
+      const os = Math.max(0, num(b.net_payable) - (paidMap[b.bill_number]||0) - (inFlightMap[b.bill_number]||0));
+      return { 'Bill Number': b.bill_number, 'HO Number': b.ho_number, 'Vendor Name': b.vendor_name,
+        'Invoice Value': b.invoice_value, 'Net Payable': b.net_payable, 'Outstanding': os,
+        'Status': b.status, 'Type': 'HOB' };
+    }).filter(b => b['Outstanding'] > 0.005);
 
-  const woBills = (woR.data||[]).map(b => {
-    const os = Math.max(0, num(b.net_payable) - (paidMap[b.bill_number]||0) - (inFlightMap[b.bill_number]||0));
-    return { 'Bill Number': b.bill_number, 'WO Number': b.wo_number, 'HO Number': b.wo_number,
-      'Vendor Name': b.vendor_name, 'Invoice Value': b.invoice_value,
-      'Net Payable': b.net_payable, 'Outstanding': os, 'Status': b.status, 'Type': 'WOB' };
-  }).filter(b => b['Outstanding'] > 0.005 && !Object.keys(inFlightMap).includes(b['Bill Number']));
+  const woBills = (woR.data||[])
+    .filter(b => _openStatuses.has((b.status||'').toLowerCase()))
+    .map(b => {
+      const os = Math.max(0, num(b.net_payable) - (paidMap[b.bill_number]||0) - (inFlightMap[b.bill_number]||0));
+      return { 'Bill Number': b.bill_number, 'WO Number': b.wo_number, 'HO Number': b.wo_number,
+        'Vendor Name': b.vendor_name, 'Invoice Value': b.invoice_value,
+        'Net Payable': b.net_payable, 'Outstanding': os, 'Status': b.status, 'Type': 'WOB' };
+    }).filter(b => b['Outstanding'] > 0.005);
 
-  return { ok: true, bills: [...hoBills, ...woBills] };
+  const pobBills = (pobR.data||[])
+    .filter(b => _openStatuses.has((b.status||'').toLowerCase()))
+    .map(b => {
+      const os = Math.max(0, num(b.net_payable) - (paidMap[b.bill_number]||0) - (inFlightMap[b.bill_number]||0));
+      // For cash bills (no PO), display "Cash Purchase" label in the PO column
+      // so PMs can identify them in the PRR picker.
+      const orderLabel = b.is_cash_purchase ? 'Cash Purchase' : (b.po_number||'');
+      return { 'Bill Number': b.bill_number, 'HO Number': orderLabel, 'PO Number': orderLabel,
+        'Vendor Name': b.vendor_name, 'Invoice Value': b.invoice_value,
+        'Net Payable': b.net_payable, 'Outstanding': os, 'Status': b.status, 'Type': 'POB',
+        'Is Cash Purchase': !!b.is_cash_purchase };
+    }).filter(b => b['Outstanding'] > 0.005);
+
+  return { ok: true, bills: [...hoBills, ...woBills, ...pobBills] };
 }
 
 // ── MASTERS SAVE ──────────────────────────────────────────────
@@ -5254,19 +5495,25 @@ async function saveMaster(type) {
     if (!branch) { toast('Branch is required','error'); return; }
     if (!bank) { toast('Account No. is required','error'); return; }
     if (!ifsc) { toast('IFSC Code is required','error'); return; }
-    // Duplicate check
+    // Duplicate check — name (normalised) + GSTIN hard block
     const isEdit = document.querySelector('#master-vendors .card')?.dataset.editCode;
-    const dup = (state.masters.vendors||[]).find(v => v['Vendor Name'].toLowerCase() === name.toLowerCase() && v['Vendor Code'] !== isEdit);
-    if (dup) { toast('Vendor "' + name + '" already exists','error'); return; }
+    const nameKey  = _normKey(name);
+    const gstinKey = _normGSTIN(gstin);
+    const vendors  = state.masters.vendors || [];
+    const dupName = vendors.find(v => _normKey(v['Vendor Name']) === nameKey && v['Vendor Code'] !== isEdit);
+    if (dupName) { toast('Vendor "' + name + '" already exists (Code: ' + dupName['Vendor Code'] + ')','error'); return; }
+    const dupGSTIN = vendors.find(v => _normGSTIN(v['GSTIN']) === gstinKey && v['Vendor Code'] !== isEdit);
+    if (dupGSTIN) { toast('GSTIN ' + gstin + ' is already registered to "' + dupGSTIN['Vendor Name'] + '" (Code: ' + dupGSTIN['Vendor Code'] + ')','error'); return; }
     row = { name, trade, gstin, pan: document.getElementById('mv_pan').value, contact, phone, address, bankName, branch, bank, ifsc };
   } else if (type === 'activity') {
     const desc = document.getElementById('ma_desc').value.trim();
     const uom  = document.getElementById('ma_uom').value.trim();
     if (!desc || !uom) { toast('Description & UOM required','error'); return; }
-    // Duplicate check
+    // Duplicate check — normalised description
     const isEdit = document.querySelector('#master-activities .card')?.dataset.editCode;
-    const actDup = (state.masters.activities||[]).find(a => a['Activity Description'].toLowerCase() === desc.toLowerCase() && a['Activity Code'] !== isEdit);
-    if (actDup) { toast('Activity "' + desc + '" already exists','error'); return; }
+    const descKey = _normKey(desc);
+    const actDup = (state.masters.activities||[]).find(a => _normKey(a['Activity Description']) === descKey && a['Activity Code'] !== isEdit);
+    if (actDup) { toast('Activity "' + desc + '" already exists (Code: ' + actDup['Activity Code'] + ')','error'); return; }
     row = { desc, uom, rate: num(document.getElementById('ma_rate').value), category: document.getElementById('ma_category').value };
   } else if (type === 'boq') {
     const name  = document.getElementById('mb_name').value.trim();
@@ -5293,6 +5540,9 @@ async function saveMaster(type) {
     renderAllMasters();
     const tabId = { vendor:'vendors', activity:'activities', boq:'boq', service:'service' }[type];
     document.querySelectorAll(`#master-${tabId} input, #master-${tabId} textarea`).forEach(el => el.value = '');
+    // Hide any duplicate-warning panels
+    if (type === 'vendor')   _renderDupBox('mv_dup', 'hide');
+    if (type === 'activity') _renderDupBox('ma_dup', 'hide');
     if (type === 'boq') populateBOQL1Dropdown();
     if (type === 'service') populateServiceParentDropdown();
   } else toast(r.error || 'Save failed','error');
@@ -5301,6 +5551,17 @@ async function saveMaster(type) {
 // ============================================================
 // TYPEAHEADS
 // ============================================================
+
+// ---------- Duplicate-key normaliser ----------
+// Lowercase, trim, collapse internal whitespace. Use this whenever comparing
+// names/identifiers for duplicate detection so "ACC Cement" == "acc  cement ".
+function _normKey(s) {
+  return (s||'').toString().toLowerCase().replace(/\s+/g, ' ').trim();
+}
+// GSTIN-specific: uppercase, strip all whitespace.
+function _normGSTIN(s) {
+  return (s||'').toString().toUpperCase().replace(/\s+/g, '');
+}
 
 // ---------- Fuzzy matching helpers ----------
 // Tokenize a query: split on whitespace, lowercase, filter empties
@@ -5378,7 +5639,6 @@ function _anchorDropdown(inp, res) {
   // Hide any other currently-anchored dropdown
   if (_activeTypeaheadEl && _activeTypeaheadEl !== res) {
     _activeTypeaheadEl.classList.remove('show');
-    _activeTypeaheadEl.style.display = 'none';
   }
   // Move to body once (so parent overflow can't clip)
   if (res.parentNode !== document.body) {
@@ -5404,8 +5664,10 @@ function _anchorDropdown(inp, res) {
   res.style.border       = '1px solid #cbd5e1';
   res.style.borderTop    = '1px solid #e2e8f0';
   res.style.borderRadius = '0 0 4px 4px';
-  res.style.display      = 'block';
   res.style.fontSize     = '12.5px';
+  // Note: visibility is driven by the .show class (CSS rule .typeahead-results.show { display:block; }).
+  // We do NOT set inline display:block here so that removing .show on outside click cleanly hides it.
+  res.style.removeProperty('display');
   res.classList.add('show');
   _activeTypeaheadEl = res;
   // Track which input this dropdown is anchored to (for scroll reposition)
@@ -5422,7 +5684,6 @@ function _repositionActiveDropdown() {
   const rect = inp.getBoundingClientRect();
   // If input is scrolled off-screen, hide the dropdown
   if (rect.bottom < 0 || rect.top > window.innerHeight) {
-    _activeTypeaheadEl.style.display = 'none';
     _activeTypeaheadEl.classList.remove('show');
     return;
   }
@@ -5441,7 +5702,6 @@ document.addEventListener('mousedown', (e) => {
   if (_activeTypeaheadEl.contains(e.target)) return;
   if (inp && inp.contains(e.target)) return;
   _activeTypeaheadEl.classList.remove('show');
-  _activeTypeaheadEl.style.display = 'none';
 }, true);
 
 function vendorTypeahead(inputId, resultsId, codeId) {
@@ -5455,7 +5715,7 @@ function vendorTypeahead(inputId, resultsId, codeId) {
     return _fuzzyMatch(hay, tokens);
   }).slice(0,12);
   if (!matches.length) { res.classList.remove('show'); res.style.display='none'; return; }
-  res.innerHTML = matches.map(v => `<div class="typeahead-item" onclick="selectVendor('${inputId}','${resultsId}','${codeId}','${esc(v['Vendor Name'])}','${esc(v['Vendor Code']||'')}')">
+  res.innerHTML = matches.map(v => `<div class="typeahead-item" onmousedown="event.preventDefault();selectVendor('${inputId}','${resultsId}','${codeId}','${esc(v['Vendor Name'])}','${esc(v['Vendor Code']||'')}')">
     <div>${esc(v['Vendor Name'])}</div>
     <div class="muted">${esc(v['Trade']||'')}${v['GSTIN'] ? ' · '+v['GSTIN'] : ''}</div>
   </div>`).join('');
@@ -5522,7 +5782,7 @@ function locationTypeahead(inputId, resultsId) {
     return _fuzzyMatch(hay, tokens);
   }).slice(0,10);
   if (!matches.length) { res.classList.remove('show'); res.style.display='none'; return; }
-  res.innerHTML = matches.map(l => `<div class="typeahead-item" onclick="selectLocation('${inputId}','${resultsId}','${esc(l['Location Name'])}')">
+  res.innerHTML = matches.map(l => `<div class="typeahead-item" onmousedown="event.preventDefault();selectLocation('${inputId}','${resultsId}','${esc(l['Location Name'])}')">
     ${esc(l['Location Name'])}${l['Block'] ? ' <span class="muted">\u00b7 '+esc(l['Block'])+'</span>' : ''}
   </div>`).join('');
   _anchorDropdown(inp, res);
@@ -5559,7 +5819,7 @@ function boqTypeahead(inputId, resultsId, codeId) {
     return _fuzzyMatch(hay, tokens);
   }).slice(0,12);
   if (!matches.length) { res.classList.remove('show'); res.style.display='none'; return; }
-  res.innerHTML = matches.map(b => `<div class="typeahead-item" onclick="selectBOQ('${inputId}','${resultsId}','${codeId}','${esc(b['BOQ Name'])}','${esc(b['BOQ Code']||'')}')">
+  res.innerHTML = matches.map(b => `<div class="typeahead-item" onmousedown="event.preventDefault();selectBOQ('${inputId}','${resultsId}','${codeId}','${esc(b['BOQ Name'])}','${esc(b['BOQ Code']||'')}')">
     <div>${esc(b['BOQ Name'])}</div>
     <div class="muted">${esc(b['BOQ Code']||'')}${b['Budget Amount'] ? ' &middot; Budget: \u20b9'+fmtINR(b['Budget Amount']) : ''}</div>
   </div>`).join('');
@@ -5587,7 +5847,7 @@ function activityTypeahead(inputId, resultsId, rateId, uomId, rowIdx, orderType)
   }).slice(0,12);
   if (!matches.length) { res.classList.remove('show'); res.style.display='none'; return; }
   const selectFn = orderType === 'WO' ? 'selectWOActivity' : 'selectActivity';
-  res.innerHTML = matches.map(a => `<div class="typeahead-item" onclick="${selectFn}(${rowIdx},'${esc(a['Activity Description'])}','${esc(a['UOM']||'')}',${num(a['Default Rate']||0)})">
+  res.innerHTML = matches.map(a => `<div class="typeahead-item" onmousedown="event.preventDefault();${selectFn}(${rowIdx},'${esc(a['Activity Description'])}','${esc(a['UOM']||'')}',${num(a['Default Rate']||0)})">
     <div>${esc(a['Activity Description'])}</div>
     <div class="muted">${esc(a['UOM']||'')} \u00b7 \u20b9${fmtINR(a['Default Rate']||0)}</div>
   </div>`).join('');
@@ -6338,7 +6598,7 @@ async function reviseHOC(hocNum) {
           value="${esc(it['WBS Sub Activity']||it.wbs_sub_activity||'')}"
           style="width:100%;font-size:11px;"
           oninput="wbsTypeahead(this.id,this.id+'_res',this.id+'_code','sub_activity')"
-          id="hocWBSSub_${i}" onblur="setTimeout(()=>document.getElementById('hocWBSSub_${i}_res')?.classList.remove('show'),200)">
+          id="hocWBSSub_${i}">
         <div class="typeahead-results" id="hocWBSSub_${i}_res" style="min-width:280px;position:absolute;top:100%;left:0;z-index:9999;box-shadow:0 4px 16px rgba(0,0,0,.15);"></div>
         <input type="hidden" id="hocWBSSub_${i}_code">
       </div></td>
@@ -6347,7 +6607,7 @@ async function reviseHOC(hocNum) {
           value="${esc(it['WBS Element']||it.wbs_element||'')}"
           style="width:100%;font-size:11px;"
           oninput="wbsTypeahead(this.id,this.id+'_res',this.id+'_code','element')"
-          id="hocWBSEl_${i}" onblur="setTimeout(()=>document.getElementById('hocWBSEl_${i}_res')?.classList.remove('show'),200)">
+          id="hocWBSEl_${i}">
         <div class="typeahead-results" id="hocWBSEl_${i}_res" style="min-width:320px;position:absolute;top:100%;left:0;z-index:9999;box-shadow:0 4px 16px rgba(0,0,0,.15);"></div>
         <input type="hidden" id="hocWBSEl_${i}_code">
       </div></td>
@@ -6532,9 +6792,7 @@ async function onHOBHOCChange() {
       <td><div style="position:relative;">
         <input class="hob_wbsSub" id="hobWBS_${i}" placeholder="Type WBS…" autocomplete="off" style="width:100%;font-size:12px;"
           value="${esc(wbsSub)}"
-          onfocus="wbsTypeahead('hobWBS_${i}','hobWBSRes_${i}','hobWBSCode_${i}','sub_activity')"
-          oninput="wbsTypeahead('hobWBS_${i}','hobWBSRes_${i}','hobWBSCode_${i}','sub_activity')"
-          onblur="setTimeout(()=>document.getElementById('hobWBSRes_${i}')?.classList.remove('show'),200)">
+          oninput="wbsTypeahead('hobWBS_${i}','hobWBSRes_${i}','hobWBSCode_${i}','sub_activity')">
         <div class="typeahead-results" id="hobWBSRes_${i}" style="min-width:320px;position:absolute;top:100%;left:0;z-index:9999;box-shadow:0 4px 16px rgba(0,0,0,.15);"></div>
         <input type="hidden" id="hobWBSCode_${i}" value="${esc(wbsCode)}">
       </div></td>
@@ -7342,8 +7600,7 @@ async function onWOCWOChange() {
           value="${esc(it['WBS Sub Activity']||it.wbs_sub_activity||'')}"
           style="width:100%;font-size:11px;"
           id="wocWBSSub_${i}"
-          oninput="wbsTypeahead('wocWBSSub_${i}','wocWBSSub_${i}_res','wocWBSSub_${i}_code','sub_activity')"
-          onblur="setTimeout(()=>document.getElementById('wocWBSSub_${i}_res')?.classList.remove('show'),200)">
+          oninput="wbsTypeahead('wocWBSSub_${i}','wocWBSSub_${i}_res','wocWBSSub_${i}_code','sub_activity')">
         <div class="typeahead-results" id="wocWBSSub_${i}_res" style="min-width:280px;position:absolute;top:100%;left:0;z-index:9999;box-shadow:0 4px 16px rgba(0,0,0,.15);"></div>
         <input type="hidden" id="wocWBSSub_${i}_code">
       </div></td>
@@ -7352,8 +7609,7 @@ async function onWOCWOChange() {
           value="${esc(it['WBS Element']||it.wbs_element||'')}"
           style="width:100%;font-size:11px;"
           id="wocWBSEl_${i}"
-          oninput="wbsTypeahead('wocWBSEl_${i}','wocWBSEl_${i}_res','wocWBSEl_${i}_code','element')"
-          onblur="setTimeout(()=>document.getElementById('wocWBSEl_${i}_res')?.classList.remove('show'),200)">
+          oninput="wbsTypeahead('wocWBSEl_${i}','wocWBSEl_${i}_res','wocWBSEl_${i}_code','element')">
         <div class="typeahead-results" id="wocWBSEl_${i}_res" style="min-width:320px;position:absolute;top:100%;left:0;z-index:9999;box-shadow:0 4px 16px rgba(0,0,0,.15);"></div>
         <input type="hidden" id="wocWBSEl_${i}_code">
       </div></td>
@@ -7635,9 +7891,7 @@ async function onWOBWOCChange() {
       <td><div style="position:relative;">
         <input class="wob_wbsSub" id="wobWBS_${i}" placeholder="Type WBS…" autocomplete="off" style="width:100%;font-size:12px;"
           value="${esc(wbsSub)}"
-          onfocus="wbsTypeahead('wobWBS_${i}','wobWBSRes_${i}','wobWBSCode_${i}','sub_activity')"
-          oninput="wbsTypeahead('wobWBS_${i}','wobWBSRes_${i}','wobWBSCode_${i}','sub_activity')"
-          onblur="setTimeout(()=>document.getElementById('wobWBSRes_${i}')?.classList.remove('show'),200)">
+          oninput="wbsTypeahead('wobWBS_${i}','wobWBSRes_${i}','wobWBSCode_${i}','sub_activity')">
         <div class="typeahead-results" id="wobWBSRes_${i}" style="min-width:320px;position:absolute;top:100%;left:0;z-index:9999;box-shadow:0 4px 16px rgba(0,0,0,.15);"></div>
         <input type="hidden" id="wobWBSCode_${i}" value="${esc(wbsCode)}">
       </div></td>
@@ -8001,11 +8255,33 @@ async function newPRR() {
   const billsRes = await apiGetUnpaidBills();
   const tbody = document.getElementById('prr_billsBody');
   const bills = billsRes.ok ? billsRes.bills : [];
-  if (!bills.length) { tbody.innerHTML = '<tr><td colspan="9" class="center muted">No outstanding bills available.</td></tr>'; return; }
+  if (!bills.length) {
+    // Quick diagnostic: log distinct statuses across source tables so a casing/value mismatch
+    // (e.g. 'unpaid' vs 'Unpaid', or some custom status) is immediately visible in the console.
+    try {
+      const [{data:hb},{data:wb},{data:pb}] = await Promise.all([
+        sb.from('ho_bills').select('status,bill_number'),
+        sb.from('wo_bills').select('status,bill_number'),
+        sb.from('pu_po_bills').select('status,bill_number'),
+      ]);
+      const distinct = (rows) => [...new Set((rows||[]).map(r=>r.status||'(null)'))];
+      console.debug('[PRR] No bills returned. Distinct statuses →',
+        'ho_bills:', distinct(hb),
+        '| wo_bills:', distinct(wb),
+        '| pu_po_bills:', distinct(pb),
+        '| total rows:', (hb||[]).length + (wb||[]).length + (pb||[]).length);
+    } catch(e) { console.debug('[PRR] diagnostic query failed', e); }
+    tbody.innerHTML = '<tr><td colspan="9" class="center muted">No outstanding bills available.</td></tr>';
+    return;
+  }
   tbody.innerHTML = bills.map(b => {
     const os = num(b['Outstanding']);
     const billType = b['Type']||'HOB';
     const orderNum = billType === 'WOB' ? b['WO Number'] : b['HO Number'];
+    const isCashPOB = billType === 'POB' && b['Is Cash Purchase'];
+    const cashBadge = isCashPOB
+      ? ' <span style="font-size:10px;background:#ad6800;color:#fff;padding:1px 5px;border-radius:3px;font-weight:600;">CASH</span>'
+      : '';
     return `<tr>
       <td class="center"><input type="checkbox" class="prr_billCheck"
         data-billnum="${esc(b['Bill Number'])}"
@@ -8014,7 +8290,7 @@ async function newPRR() {
         data-vendor="${esc(b['Vendor Name']||'')}"
         data-os="${os}"
         onchange="updatePRRTotal()"></td>
-      <td class="mono">${esc(b['Bill Number'])}</td>
+      <td class="mono">${esc(b['Bill Number'])}${cashBadge}</td>
       <td><span style="font-size:11px;padding:2px 7px;border-radius:8px;background:${billType==='WOB'?'#dbeafe':'#d1fae5'};color:${billType==='WOB'?'#1e40af':'#065f46'};">${esc(billType)}</span></td>
       <td class="mono">${esc(orderNum||'—')}</td>
       <td>${esc(b['Vendor Name']||'—')}</td>
@@ -8322,7 +8598,7 @@ async function onPayConfRefChange() {
         <td class="num mono" style="color:${os>0.005?'var(--warn)':'var(--muted)'};">${fmtINRSym(os)}</td>
         <td class="num">
           <input type="number" class="prr_pay_input" id="prrPayAmt_${i}"
-            data-os="${os}" data-billnum="${esc(it.bill_number)}"
+            data-os="${os}" data-billnum="${esc(it.bill_number)}" data-billtype="${esc(it.bill_type||'HOB')}"
             value="${os.toFixed(2)}" min="0" step="0.01"
             style="width:110px;text-align:right;padding:5px;"
             oninput="updatePRRPayTotal()">
@@ -8381,7 +8657,7 @@ async function savePaymentConfirmation() {
     document.querySelectorAll('.prr_pay_input').forEach((inp, i) => {
       const val = num(inp.value); const os = num(inp.dataset.os);
       if (val > os + 0.005) hasOver = true;
-      if (val > 0.005) { total += val; perInvoice.push({ billNumber: inp.dataset.billnum, amount: val }); }
+      if (val > 0.005) { total += val; perInvoice.push({ billNumber: inp.dataset.billnum, amount: val, billType: inp.dataset.billtype || 'HOB' }); }
     });
     if (!perInvoice.length) { toast('Enter amount for at least one invoice','error'); return; }
     if (hasOver && !confirm('Some amounts exceed the O/S. Confirm anyway?')) return;
@@ -9066,9 +9342,13 @@ async function saveMaterialMaster() {
   if (!name) { toast('Material name required','error'); return; }
   if (!uom)  { toast('UOM required','error'); return; }
   if (!cat)  { toast('Category required','error'); return; }
-  // Duplicate check
-  const dup = puState.materials.find(m => m.material_name.toLowerCase() === name.toLowerCase());
-  if (dup) { toast('Material "' + name + '" already exists (Code: ' + dup.material_code + ')','error'); return; }
+  // Duplicate check — composite key on (name + UOM), normalised
+  const nameKey = _normKey(name);
+  const uomKey  = _normKey(uom);
+  const dup = puState.materials.find(m =>
+    _normKey(m.material_name) === nameKey && _normKey(m.uom) === uomKey
+  );
+  if (dup) { toast('Material "' + name + '" with UOM "' + uom + '" already exists (Code: ' + dup.material_code + ')','error'); return; }
   pbShow('Saving material…');
   try {
     const { data: last } = await sb.from('pu_material_master')
@@ -9088,10 +9368,267 @@ async function saveMaterialMaster() {
       const el = document.getElementById(id); if (el) el.value = '';
     });
     document.getElementById('mm_category').value = '';
+    const dupBox = document.getElementById('mm_name_dup');
+    if (dupBox) { dupBox.style.display = 'none'; dupBox.innerHTML = ''; }
     await apiLoadMaterials();
     renderMaterialMaster();
   } catch(e) { toast('Error: ' + e.message,'error'); }
   finally { pbDone(); }
+}
+
+// Live duplicate / similar-match check on the Add Material form.
+// Shows: exact match (same name + UOM) as red block; close matches as amber warning.
+// =====================================================================
+// MASTER DUPLICATE-CHECK HELPERS
+// Live "similar record exists" warnings on Add Vendor / Activity /
+// Contractor / Material forms. Same visual language across all four:
+//   🔴 Red box   = exact duplicate, save will be blocked
+//   🟡 Amber box = similar / informational, save will still go through
+// =====================================================================
+
+// Generic renderer — paints the warning panel for any master form.
+// kind: 'block' (red) | 'warn' (amber) | 'hide'
+function _renderDupBox(boxId, kind, html) {
+  const box = document.getElementById(boxId);
+  if (!box) return;
+  if (kind === 'hide') {
+    box.style.display = 'none';
+    box.innerHTML = '';
+    return;
+  }
+  if (kind === 'block') {
+    box.style.background  = 'rgba(220,53,69,0.10)';
+    box.style.border      = '1px solid rgba(220,53,69,0.5)';
+  } else { // warn
+    box.style.background  = 'rgba(255,193,7,0.10)';
+    box.style.border      = '1px solid rgba(255,193,7,0.5)';
+  }
+  box.innerHTML = html;
+  box.style.display = 'block';
+}
+
+// Fuzzy near-match scorer — shared by all four masters.
+// Returns the top N records whose name tokens overlap ≥ 60% with the query.
+// Edit-distance tolerance scales with token length: 1 for short tokens (3-4
+// chars), 2 for longer tokens (5+) so common typos like Cement↔Cemnet match.
+function _fuzzyTopMatches(query, records, nameAccessor, limit) {
+  const tokens = _fuzzyTokens(query).filter(t => t.length >= 3);
+  if (!tokens.length) return [];
+  const scored = [];
+  for (const r of records) {
+    const recName = nameAccessor(r) || '';
+    const recTokens = _fuzzyTokens(recName);
+    if (!recTokens.length) continue;
+    let hits = 0;
+    for (const t of tokens) {
+      const maxDist = t.length >= 5 ? 2 : 1;
+      if (recTokens.some(rt => rt === t || rt.includes(t) || t.includes(rt) || _editDistance(t, rt, maxDist) <= maxDist)) hits++;
+    }
+    const score = hits / tokens.length;
+    if (score >= 0.6) scored.push({ r, score });
+  }
+  scored.sort((a, b) => b.score - a.score);
+  return scored.slice(0, limit || 4).map(s => s.r);
+}
+
+// ── VENDOR ─────────────────────────────────────────────────────────────
+function mvDupCheck() {
+  const name  = (document.getElementById('mv_name')?.value || '').trim();
+  const gstin = (document.getElementById('mv_gstin')?.value || '').trim();
+  if (name.length < 3 && gstin.length < 5) { _renderDupBox('mv_dup', 'hide'); return; }
+  const isEdit  = document.querySelector('#master-vendors .card')?.dataset.editCode;
+  const vendors = (state.masters.vendors || []).filter(v => v['Vendor Code'] !== isEdit);
+
+  // 1. Exact name match
+  if (name.length >= 3) {
+    const nameKey = _normKey(name);
+    const exact = vendors.find(v => _normKey(v['Vendor Name']) === nameKey);
+    if (exact) {
+      _renderDupBox('mv_dup', 'block',
+        '⛔ <b>Vendor name already exists:</b> ' + esc(exact['Vendor Name']) +
+        ' <span class="muted">(' + esc(exact['Vendor Code']) + ', GSTIN: ' + esc(exact['GSTIN']||'—') + ')</span>');
+      return;
+    }
+  }
+
+  // 2. Exact GSTIN match
+  if (gstin.length >= 5) {
+    const gstinKey = _normGSTIN(gstin);
+    const exact = vendors.find(v => v['GSTIN'] && _normGSTIN(v['GSTIN']) === gstinKey);
+    if (exact) {
+      _renderDupBox('mv_dup', 'block',
+        '⛔ <b>GSTIN already registered to:</b> ' + esc(exact['Vendor Name']) +
+        ' <span class="muted">(' + esc(exact['Vendor Code']) + ')</span>');
+      return;
+    }
+  }
+
+  // 3. Fuzzy near-match on name
+  if (name.length >= 3) {
+    const near = _fuzzyTopMatches(name, vendors, v => v['Vendor Name'], 4);
+    if (near.length) {
+      _renderDupBox('mv_dup', 'warn',
+        '⚠️ <b>Similar vendor(s) found</b> — please check before adding:<br>' +
+        near.map(v =>
+          '&nbsp;&nbsp;• ' + esc(v['Vendor Name']) +
+          ' <span class="muted">(' + esc(v['Vendor Code']) +
+          (v['GSTIN'] ? ', GSTIN: ' + esc(v['GSTIN']) : '') + ')</span>'
+        ).join('<br>'));
+      return;
+    }
+  }
+  _renderDupBox('mv_dup', 'hide');
+}
+
+// ── ACTIVITY ───────────────────────────────────────────────────────────
+function maDupCheck() {
+  const desc = (document.getElementById('ma_desc')?.value || '').trim();
+  const uom  = (document.getElementById('ma_uom')?.value || '').trim();
+  if (desc.length < 3) { _renderDupBox('ma_dup', 'hide'); return; }
+  const isEdit     = document.querySelector('#master-activities .card')?.dataset.editCode;
+  const activities = (state.masters.activities || []).filter(a => a['Activity Code'] !== isEdit);
+  const descKey    = _normKey(desc);
+
+  // 1. Exact description match
+  const exact = activities.find(a => _normKey(a['Activity Description']) === descKey);
+  if (exact) {
+    const sameUOM = uom && _normKey(exact['UOM']) === _normKey(uom);
+    _renderDupBox('ma_dup', 'block',
+      '⛔ <b>Activity already exists:</b> ' + esc(exact['Activity Description']) +
+      ' / ' + esc(exact['UOM']||'—') +
+      ' <span class="muted">(' + esc(exact['Activity Code']) + ')</span>' +
+      (uom && !sameUOM ? '<br><span class="muted">Note: existing record uses UOM "' + esc(exact['UOM']||'—') + '"; you entered "' + esc(uom) + '"</span>' : ''));
+    return;
+  }
+
+  // 2. Fuzzy near-match on description
+  const near = _fuzzyTopMatches(desc, activities, a => a['Activity Description'], 4);
+  if (near.length) {
+    _renderDupBox('ma_dup', 'warn',
+      '⚠️ <b>Similar activity(ies) found</b> — please check before adding:<br>' +
+      near.map(a =>
+        '&nbsp;&nbsp;• ' + esc(a['Activity Description']) +
+        ' / ' + esc(a['UOM']||'—') +
+        ' <span class="muted">(' + esc(a['Activity Code']) + ')</span>'
+      ).join('<br>'));
+    return;
+  }
+  _renderDupBox('ma_dup', 'hide');
+}
+
+// ── CONTRACTOR ─────────────────────────────────────────────────────────
+function mcDupCheck() {
+  const name  = (document.getElementById('mc_name')?.value || '').trim();
+  const gstin = (document.getElementById('mc_gstin')?.value || '').trim();
+  if (name.length < 3 && gstin.length < 5) { _renderDupBox('mc_dup', 'hide'); return; }
+  const contractors = state.masters.contractors || [];
+
+  // 1. Exact name match
+  if (name.length >= 3) {
+    const nameKey = _normKey(name);
+    const exact = contractors.find(c => _normKey(c['Contractor Name']) === nameKey);
+    if (exact) {
+      _renderDupBox('mc_dup', 'block',
+        '⛔ <b>Contractor name already exists:</b> ' + esc(exact['Contractor Name']) +
+        ' <span class="muted">(' + esc(exact['Contractor Code']) + ', GSTIN: ' + esc(exact['GSTIN']||'—') + ')</span>');
+      return;
+    }
+  }
+
+  // 2. Exact GSTIN match
+  if (gstin.length >= 5) {
+    const gstinKey = _normGSTIN(gstin);
+    const exact = contractors.find(c => c['GSTIN'] && _normGSTIN(c['GSTIN']) === gstinKey);
+    if (exact) {
+      _renderDupBox('mc_dup', 'block',
+        '⛔ <b>GSTIN already registered to:</b> ' + esc(exact['Contractor Name']) +
+        ' <span class="muted">(' + esc(exact['Contractor Code']) + ')</span>');
+      return;
+    }
+  }
+
+  // 3. Fuzzy near-match on name
+  if (name.length >= 3) {
+    const near = _fuzzyTopMatches(name, contractors, c => c['Contractor Name'], 4);
+    if (near.length) {
+      _renderDupBox('mc_dup', 'warn',
+        '⚠️ <b>Similar contractor(s) found</b> — please check before adding:<br>' +
+        near.map(c =>
+          '&nbsp;&nbsp;• ' + esc(c['Contractor Name']) +
+          ' <span class="muted">(' + esc(c['Contractor Code']) +
+          (c['GSTIN'] ? ', GSTIN: ' + esc(c['GSTIN']) : '') + ')</span>'
+        ).join('<br>'));
+      return;
+    }
+  }
+  _renderDupBox('mc_dup', 'hide');
+}
+
+function mmNameDupCheck() {
+  const nameEl = document.getElementById('mm_name');
+  const uomEl  = document.getElementById('mm_uom');
+  const box    = document.getElementById('mm_name_dup');
+  if (!nameEl || !box) return;
+  const name = (nameEl.value||'').trim();
+  const uom  = (uomEl?.value||'').trim();
+  if (name.length < 3) { box.style.display = 'none'; box.innerHTML = ''; return; }
+  const nameKey = _normKey(name);
+  const uomKey  = _normKey(uom);
+  const mats = puState.materials || [];
+
+  // 1. Exact composite match (name + UOM) — hard duplicate
+  if (uomKey) {
+    const exact = mats.find(m => _normKey(m.material_name) === nameKey && _normKey(m.uom) === uomKey);
+    if (exact) {
+      box.style.background = 'rgba(220,53,69,0.10)';
+      box.style.borderColor = 'rgba(220,53,69,0.5)';
+      box.innerHTML = '⛔ <b>Exact match exists:</b> ' + esc(exact.material_name) + ' / ' + esc(exact.uom) +
+                      ' &nbsp;<span class="muted">(' + esc(exact.material_code) + ')</span>';
+      box.style.display = 'block';
+      return;
+    }
+  }
+
+  // 2. Same name, different UOM — informational
+  const sameName = mats.filter(m => _normKey(m.material_name) === nameKey);
+  if (sameName.length) {
+    box.style.background = 'rgba(255,193,7,0.10)';
+    box.style.borderColor = 'rgba(255,193,7,0.5)';
+    box.innerHTML = 'ℹ️ Same name exists with other UOM(s): ' +
+      sameName.map(m => '<b>' + esc(m.uom) + '</b> (' + esc(m.material_code) + ')').join(', ');
+    box.style.display = 'block';
+    return;
+  }
+
+  // 3. Fuzzy near-match — token overlap on tokens of length ≥ 3
+  const tokens = _fuzzyTokens(name).filter(t => t.length >= 3);
+  if (!tokens.length) { box.style.display = 'none'; return; }
+  const scored = [];
+  for (const m of mats) {
+    const matTokens = _fuzzyTokens(m.material_name||'');
+    if (!matTokens.length) continue;
+    let hits = 0;
+    for (const t of tokens) {
+      if (matTokens.some(mt => mt === t || mt.includes(t) || t.includes(mt) || _editDistance(t, mt, 2) <= 1)) hits++;
+    }
+    const score = hits / tokens.length;
+    if (score >= 0.6) scored.push({ m, score });
+  }
+  scored.sort((a,b) => b.score - a.score);
+  const top = scored.slice(0, 4);
+  if (top.length) {
+    box.style.background = 'rgba(255,193,7,0.10)';
+    box.style.borderColor = 'rgba(255,193,7,0.5)';
+    box.innerHTML = '⚠️ <b>Similar material(s) found</b> — check before adding:<br>' +
+      top.map(({m}) =>
+        '&nbsp;&nbsp;• ' + esc(m.material_name) + ' / ' + esc(m.uom) +
+        ' <span class="muted">(' + esc(m.material_code) + ')</span>'
+      ).join('<br>');
+    box.style.display = 'block';
+  } else {
+    box.style.display = 'none';
+    box.innerHTML = '';
+  }
 }
 
 function materialTypeahead(inputId, resultsId) {
@@ -9106,7 +9643,7 @@ function materialTypeahead(inputId, resultsId) {
   }).slice(0, 15);
   if (!matches.length) { res.classList.remove('show'); res.style.display='none'; return; }
   res.innerHTML = matches.map(m =>
-    `<div class="typeahead-item" onclick="selectMaterialItem('${inputId}','${resultsId}','${esc(m.material_name).replace(/'/g,"\\'")}','${esc(m.uom).replace(/'/g,"\\'")}')">
+    `<div class="typeahead-item" onmousedown="event.preventDefault();selectMaterialItem('${inputId}','${resultsId}','${esc(m.material_name).replace(/'/g,"\\'")}','${esc(m.uom).replace(/'/g,"\\'")}')">
       <strong>${esc(m.material_name)}</strong>
       <div class="muted">${esc(m.category||'')}${m.sub_category?' · '+esc(m.sub_category):''} · ${esc(m.uom)}</div>
     </div>`
@@ -9214,9 +9751,7 @@ function addMIRItem() {
     <td><input id="mirSpec_${i}" style="width:160px;" placeholder="Grade / spec"></td>
     <td><div style="position:relative;width:160px;">
       <input id="mirWBS_${i}" placeholder="Type WBS…" autocomplete="off" style="width:100%;"
-        onfocus="wbsTypeahead('mirWBS_${i}','mirWBSRes_${i}','mirWBSCode_${i}','sub_activity')"
-        oninput="wbsTypeahead('mirWBS_${i}','mirWBSRes_${i}','mirWBSCode_${i}','sub_activity')"
-        onblur="setTimeout(()=>document.getElementById('mirWBSRes_${i}')?.classList.remove('show'),200)">
+        oninput="wbsTypeahead('mirWBS_${i}','mirWBSRes_${i}','mirWBSCode_${i}','sub_activity')">
       <div class="typeahead-results" id="mirWBSRes_${i}" style="min-width:300px;position:absolute;top:100%;left:0;z-index:9999;box-shadow:0 4px 16px rgba(0,0,0,.15);"></div>
       <input type="hidden" id="mirWBSCode_${i}">
     </div></td>
@@ -11059,6 +11594,10 @@ async function confirmShortClosePO(poNum) {
 // GRN — GOODS RECEIPT NOTE
 // ============================================================
 async function loadGRNList() {
+  // Reset to list-only view (Refresh should always return user to the list)
+  const grnF = document.getElementById('grnForm');         if (grnF)  grnF.style.display  = 'none';
+  const cGrnF= document.getElementById('cashGrnForm');     if (cGrnF) cGrnF.style.display = 'none';
+  const listC= document.getElementById('grnListCard');     if (listC) listC.style.display = 'block';
   const {data}=await sb.from('pu_grn').select('*').order('created_at',{ascending:false});
   puState.grnList=data||[];
   renderGRNList();
@@ -11067,9 +11606,12 @@ async function loadGRNList() {
 function renderGRNList() {
   const q=(document.getElementById('grnSearch')?.value||'').toLowerCase();
   const sf=document.getElementById('grnStatusFilter')?.value||'';
+  const src=document.getElementById('grnSourceFilter')?.value||'';
   let rows=puState.grnList;
-  if(q) rows=rows.filter(g=>g.grn_number.toLowerCase().includes(q)||g.vendor_name.toLowerCase().includes(q)||g.po_number.toLowerCase().includes(q));
+  if(q) rows=rows.filter(g=>g.grn_number.toLowerCase().includes(q)||g.vendor_name.toLowerCase().includes(q)||(g.po_number||'').toLowerCase().includes(q)||(g.cash_purchase_ref||'').toLowerCase().includes(q));
   if(sf) rows=rows.filter(g=>g.status===sf);
+  if(src==='cash') rows=rows.filter(g=>g.is_cash_purchase);
+  else if(src==='po') rows=rows.filter(g=>!g.is_cash_purchase);
   const perms=ROLE_PERMS[state.role]||{};
   document.getElementById('grn_listBody').innerHTML=rows.map(g=>{
     const st=g.status||'Pending Verification';
@@ -11078,9 +11620,15 @@ function renderGRNList() {
     if(perms.canApproveGRN && st==='Pending Verification')
       acts+=` <button class="btn btn-primary btn-sm" onclick="verifyGRN('${esc(g.grn_number)}')">Verify</button>
               <button class="btn btn-danger btn-sm" onclick="rejectDoc('GRN','${esc(g.grn_number)}')">Reject</button>`;
+    const cashBadge = g.is_cash_purchase
+      ? ' <span style="font-size:10px;background:#ad6800;color:#fff;padding:1px 6px;border-radius:3px;font-weight:600;vertical-align:middle;">CASH</span>'
+      : '';
+    const poDisplay = g.is_cash_purchase
+      ? `<span class="muted" style="font-style:italic;">${esc(g.cash_purchase_ref||'Cash Purchase')}</span>`
+      : `<span class="mono">${esc(g.po_number||'—')}</span>`;
     return `<tr>
-      <td class="mono">${esc(g.grn_number)}</td><td>${fmtDate(g.grn_date)}</td>
-      <td class="mono">${esc(g.po_number)}</td><td>${esc(g.vendor_name)}</td>
+      <td class="mono">${esc(g.grn_number)}${cashBadge}</td><td>${fmtDate(g.grn_date)}</td>
+      <td>${poDisplay}</td><td>${esc(g.vendor_name)}</td>
       <td>${esc(g.vehicle_challan||'—')} / ${esc(g.invoice_no||'—')}</td>
       <td>${esc(g.received_by||'—')}</td><td>${esc(g.verified_by||'—')}</td>
       <td><span class="status ${stCls}">${st}</span></td><td>${acts}</td></tr>`;
@@ -11093,14 +11641,18 @@ function renderGRNList() {
 // One row per line item, with GRN header columns repeated on each row
 // (denormalized) so users can filter/pivot in Excel directly.
 async function downloadGRNList() {
-  // Determine which GRNs to export — apply same search/status filter as table
+  // Determine which GRNs to export — apply same search/status/source filter as table
   const q  = (document.getElementById('grnSearch')?.value||'').toLowerCase();
   const sf = document.getElementById('grnStatusFilter')?.value||'';
+  const src= document.getElementById('grnSourceFilter')?.value||'';
   let grns = puState.grnList || [];
   if (q)  grns = grns.filter(g => (g.grn_number||'').toLowerCase().includes(q) ||
                                    (g.vendor_name||'').toLowerCase().includes(q) ||
-                                   (g.po_number||'').toLowerCase().includes(q));
+                                   (g.po_number||'').toLowerCase().includes(q) ||
+                                   (g.cash_purchase_ref||'').toLowerCase().includes(q));
   if (sf) grns = grns.filter(g => g.status === sf);
+  if (src==='cash') grns = grns.filter(g => g.is_cash_purchase);
+  else if (src==='po') grns = grns.filter(g => !g.is_cash_purchase);
   if (!grns.length) { toast('No GRNs to download (check filters)', 'info'); return; }
 
   pbShow(`Fetching items for ${grns.length} GRN(s)…`);
@@ -11121,7 +11673,7 @@ async function downloadGRNList() {
     // (Field names match the actual pu_grn / pu_grn_items schema.)
     const cols = [
       // GRN header
-      'GRN Number','GRN Date','PO Number','Vendor Name',
+      'GRN Number','GRN Date','PO Number','Is Cash Purchase','Cash Purchase Ref','Vendor Name',
       'Vehicle/Challan','Invoice No','Invoice Date',
       'Received By','Verified By','Status','Created At','GRN Remarks',
       // Line item
@@ -11133,9 +11685,11 @@ async function downloadGRNList() {
     const rows = [cols];
     grns.forEach(g => {
       const its = itemsByGRN[g.grn_number] || [];
+      const isCash = g.is_cash_purchase ? 'Yes' : 'No';
+      const cashRef = g.is_cash_purchase ? (g.cash_purchase_ref||'Cash Purchase') : '';
       if (!its.length) {
         rows.push([
-          g.grn_number||'', g.grn_date||'', g.po_number||'', g.vendor_name||'',
+          g.grn_number||'', g.grn_date||'', g.po_number||'', isCash, cashRef, g.vendor_name||'',
           g.vehicle_challan||'', g.invoice_no||'', g.invoice_date||'',
           g.received_by||'', g.verified_by||'', g.status||'',
           g.created_at||'', g.remarks||'',
@@ -11144,7 +11698,7 @@ async function downloadGRNList() {
       } else {
         its.forEach(it => {
           rows.push([
-            g.grn_number||'', g.grn_date||'', g.po_number||'', g.vendor_name||'',
+            g.grn_number||'', g.grn_date||'', g.po_number||'', isCash, cashRef, g.vendor_name||'',
             g.vehicle_challan||'', g.invoice_no||'', g.invoice_date||'',
             g.received_by||'', g.verified_by||'', g.status||'',
             g.created_at||'', g.remarks||'',
@@ -11185,6 +11739,7 @@ async function downloadGRNList() {
 
 async function newGRN() {
   if(!hasPerm('canCreateGRN')){toast('Only Store Executive can create GRN','error');return;}
+  document.getElementById('cashGrnForm').style.display='none';  // hide sibling
   document.getElementById('grnForm').style.display='block';
   document.getElementById('grnListCard').style.display='none';
   document.getElementById('grn_date').value=today();
@@ -11316,6 +11871,287 @@ function closeGRNForm() {
   document.getElementById('grnListCard').style.display='block';
 }
 
+// =====================================================================
+// CASH PURCHASE GRN — parallel flow, no PO required
+// Items pulled from Material Master, vendor from Vendor Master only.
+// Flagged via is_cash_purchase = true on pu_grn (and pu_grn_items).
+// =====================================================================
+
+let _cgrnItemCount = 0;
+
+async function newCashGRN() {
+  if (!hasPerm('canCreateGRN')) { toast('Not permitted to create GRNs','error'); return; }
+  // Hide regular GRN form if open, hide list
+  document.getElementById('grnForm').style.display = 'none';
+  document.getElementById('grnListCard').style.display = 'none';
+  document.getElementById('cashGrnForm').style.display = 'block';
+  // Reset fields
+  document.getElementById('cgrn_number').value = 'GRN/' + currentFY() + '/—— (auto)';
+  document.getElementById('cgrn_date').value = today();
+  document.getElementById('cgrn_cashRef').value = 'Cash Purchase';
+  document.getElementById('cgrn_vendorSearch').value = '';
+  document.getElementById('cgrn_vendorName').value = '';
+  document.getElementById('cgrn_vendorCode').value = '';
+  document.getElementById('cgrn_challan').value = '';
+  document.getElementById('cgrn_invoiceNo').value = '';
+  document.getElementById('cgrn_invoiceDate').value = '';
+  document.getElementById('cgrn_receivedBy').value = state.userName || '';
+  document.getElementById('cgrn_remarks').value = '';
+  document.getElementById('cgrnItemsBody').innerHTML = '<tr><td colspan="8" class="center muted">Click "+ Add Material" to start</td></tr>';
+  document.getElementById('cgrn_totalAmt').textContent = '₹0.00';
+  _cgrnItemCount = 0;
+  // Make sure material master is loaded
+  if (!(puState.materials||[]).length) await apiLoadMaterials();
+  window.scrollTo(0, 0);
+}
+
+function closeCashGRNForm() {
+  document.getElementById('cashGrnForm').style.display = 'none';
+  document.getElementById('grnListCard').style.display = 'block';
+}
+
+// ── Vendor typeahead (Vendor Master only) ──────────────────────────────
+function cgrnVendorTypeahead() {
+  const inp = document.getElementById('cgrn_vendorSearch');
+  const res = document.getElementById('cgrn_vendorRes');
+  if (!inp || !res) return;
+  const q = (inp.value||'').trim().toLowerCase();
+  const vendors = state.masters.vendors || [];
+  if (q.length < 1) {
+    // Show top 10 alphabetically when focused with no input
+    const top = vendors.slice(0, 10);
+    res.innerHTML = top.map(v => _cgrnVendorRow(v)).join('') ||
+      '<div style="padding:10px;color:var(--muted);font-size:12px;">No vendors in master</div>';
+    res.classList.add('show');
+    return;
+  }
+  const tokens = _fuzzyTokens(q);
+  const matches = vendors.filter(v => {
+    const hay = ((v['Vendor Name']||'')+'|'+(v['Trade']||'')+'|'+(v['GSTIN']||'')).toLowerCase();
+    return _fuzzyMatch(hay, tokens);
+  }).slice(0, 15);
+  if (!matches.length) {
+    res.innerHTML = '<div style="padding:10px;color:var(--muted);font-size:12px;">No matching vendor. (Add via Master → Vendor first.)</div>';
+    res.classList.add('show');
+    return;
+  }
+  res.innerHTML = matches.map(v => _cgrnVendorRow(v)).join('');
+  res.classList.add('show');
+}
+
+function _cgrnVendorRow(v) {
+  const code = esc(v['Vendor Code']);
+  const name = esc(v['Vendor Name']).replace(/'/g,"\\'");
+  return `<div class="typeahead-item" onmousedown="event.preventDefault();cgrnPickVendor('${code}','${name}')">
+    <strong>${esc(v['Vendor Name'])}</strong>
+    <div class="muted">${esc(v['Vendor Code'])}${v['Trade'] ? ' · ' + esc(v['Trade']) : ''}${v['GSTIN'] ? ' · GSTIN: ' + esc(v['GSTIN']) : ''}</div>
+  </div>`;
+}
+
+function cgrnPickVendor(code, name) {
+  document.getElementById('cgrn_vendorCode').value = code;
+  document.getElementById('cgrn_vendorName').value = name;
+  document.getElementById('cgrn_vendorSearch').value = name;
+  document.getElementById('cgrn_vendorRes')?.classList.remove('show');
+}
+
+function cgrnClearVendor() {
+  document.getElementById('cgrn_vendorCode').value = '';
+  document.getElementById('cgrn_vendorName').value = '';
+  document.getElementById('cgrn_vendorSearch').value = '';
+  document.getElementById('cgrn_vendorRes')?.classList.remove('show');
+  document.getElementById('cgrn_vendorSearch').focus();
+}
+
+// ── Item row management ────────────────────────────────────────────────
+async function addCashGRNItem() {
+  // Lazy-load materials if not yet cached
+  if (!(puState.materials||[]).length) await apiLoadMaterials();
+  const tbody = document.getElementById('cgrnItemsBody');
+  // Clear placeholder row on first add
+  if (_cgrnItemCount === 0) tbody.innerHTML = '';
+  const i = _cgrnItemCount++;
+  const tr = document.createElement('tr');
+  tr.id = 'cgrnItem_' + i;
+  tr.innerHTML = `
+    <td>${i+1}</td>
+    <td class="typeahead" style="min-width:220px;">
+      <input id="cgrnMat_${i}" placeholder="Type material…" autocomplete="off" style="width:100%;"
+        oninput="cgrnMatTypeahead(${i})">
+      <input type="hidden" id="cgrnMatCode_${i}">
+      <div class="typeahead-results" id="cgrnMatRes_${i}" style="position:fixed;min-width:280px;max-width:420px;z-index:9999;"></div>
+    </td>
+    <td><input id="cgrnUOM_${i}" readonly style="opacity:.7;width:80px;"></td>
+    <td><input type="number" step="0.001" id="cgrnQty_${i}" class="num" style="width:90px;" oninput="cgrnRecalcRow(${i})"></td>
+    <td><input type="number" step="0.01" id="cgrnRate_${i}" class="num" style="width:110px;" oninput="cgrnRecalcRow(${i})"></td>
+    <td class="num" id="cgrnAmt_${i}" style="font-weight:600;">₹0.00</td>
+    <td><input id="cgrnRmk_${i}" placeholder="Remarks" style="width:140px;"></td>
+    <td><button type="button" class="btn btn-ghost btn-sm" onclick="removeCashGRNItem(${i})" title="Remove">✕</button></td>
+  `;
+  tbody.appendChild(tr);
+}
+
+function removeCashGRNItem(i) {
+  const tr = document.getElementById('cgrnItem_' + i);
+  if (tr) tr.remove();
+  cgrnRecalcTotal();
+  // If all rows removed, restore placeholder
+  if (!document.querySelectorAll('#cgrnItemsBody tr').length) {
+    document.getElementById('cgrnItemsBody').innerHTML =
+      '<tr><td colspan="8" class="center muted">Click "+ Add Material" to start</td></tr>';
+    _cgrnItemCount = 0;
+  }
+}
+
+function cgrnMatTypeahead(i) {
+  const inp = document.getElementById('cgrnMat_' + i);
+  const res = document.getElementById('cgrnMatRes_' + i);
+  if (!inp || !res) return;
+  const q = (inp.value||'').toLowerCase();
+  const mats = puState.materials || [];
+  const tokens = _fuzzyTokens(q);
+  let list;
+  if (!q) {
+    list = mats.slice(0, 12);
+  } else {
+    list = mats.filter(m => {
+      const hay = ((m.material_name||'')+'|'+(m.category||'')+'|'+(m.sub_category||'')+'|'+(m.uom||'')).toLowerCase();
+      return _fuzzyMatch(hay, tokens);
+    }).slice(0, 15);
+  }
+  if (!list.length) {
+    res.innerHTML = '<div style="padding:10px;color:var(--muted);font-size:12px;">No matching material. (Add via Master → Material first.)</div>';
+  } else {
+    res.innerHTML = list.map(m => {
+      const name = esc(m.material_name).replace(/'/g,"\\'");
+      const uom  = esc(m.uom||'').replace(/'/g,"\\'");
+      const code = esc(m.material_code).replace(/'/g,"\\'");
+      return `<div class="typeahead-item" onmousedown="event.preventDefault();cgrnPickMat(${i},'${code}','${name}','${uom}')">
+        <strong>${esc(m.material_name)}</strong>
+        <div class="muted">${esc(m.material_code)} · ${esc(m.uom||'—')}${m.category ? ' · ' + esc(m.category) : ''}</div>
+      </div>`;
+    }).join('');
+  }
+  // Position the dropdown using fixed coords to escape table-wrap overflow clipping
+  const rect = inp.getBoundingClientRect();
+  res.style.top   = (rect.bottom + 2) + 'px';
+  res.style.left  = rect.left + 'px';
+  res.style.width = Math.max(rect.width, 280) + 'px';
+  res.classList.add('show');
+}
+
+function cgrnPickMat(i, code, name, uom) {
+  document.getElementById('cgrnMat_' + i).value = name;
+  document.getElementById('cgrnMatCode_' + i).value = code;
+  document.getElementById('cgrnUOM_' + i).value = uom;
+  document.getElementById('cgrnMatRes_' + i)?.classList.remove('show');
+  document.getElementById('cgrnQty_' + i).focus();
+}
+
+function cgrnRecalcRow(i) {
+  const qty  = parseFloat(document.getElementById('cgrnQty_'+i)?.value)  || 0;
+  const rate = parseFloat(document.getElementById('cgrnRate_'+i)?.value) || 0;
+  const amt  = qty * rate;
+  const cell = document.getElementById('cgrnAmt_'+i);
+  if (cell) cell.textContent = fmtINR(amt);
+  cgrnRecalcTotal();
+}
+
+function cgrnRecalcTotal() {
+  let total = 0;
+  document.querySelectorAll('#cgrnItemsBody tr').forEach(tr => {
+    const idMatch = (tr.id||'').match(/cgrnItem_(\d+)/);
+    if (!idMatch) return;
+    const i = idMatch[1];
+    const qty  = parseFloat(document.getElementById('cgrnQty_'+i)?.value)  || 0;
+    const rate = parseFloat(document.getElementById('cgrnRate_'+i)?.value) || 0;
+    total += qty * rate;
+  });
+  document.getElementById('cgrn_totalAmt').textContent = fmtINR(total);
+}
+
+// ── Save ───────────────────────────────────────────────────────────────
+async function saveCashGRN() {
+  if (!hasPerm('canCreateGRN')) { toast('Not permitted','error'); return; }
+  const date     = document.getElementById('cgrn_date').value;
+  const cashRef  = document.getElementById('cgrn_cashRef').value.trim();
+  const vendor   = document.getElementById('cgrn_vendorName').value.trim();
+  const vCode    = document.getElementById('cgrn_vendorCode').value.trim();
+  const challan  = document.getElementById('cgrn_challan').value.trim();
+  const invNo    = document.getElementById('cgrn_invoiceNo').value.trim();
+  const invDate  = document.getElementById('cgrn_invoiceDate').value;
+
+  if (!date)    { toast('GRN Date required','error'); return; }
+  if (!cashRef) { toast('Cash Purchase Ref required','error'); return; }
+  if (!vendor || !vCode) { toast('Select a vendor from Vendor Master','error'); return; }
+  if (!challan) { toast('Vehicle / Challan No. required','error'); return; }
+  if (!invNo)   { toast('Invoice No. required','error'); return; }
+  if (!invDate) { toast('Invoice Date required','error'); return; }
+
+  // Collect line items
+  const entries = [];
+  const rows = document.querySelectorAll('#cgrnItemsBody tr');
+  for (const tr of rows) {
+    const idMatch = (tr.id||'').match(/cgrnItem_(\d+)/);
+    if (!idMatch) continue;
+    const i = idMatch[1];
+    const matName = (document.getElementById('cgrnMat_'+i)?.value||'').trim();
+    const uom     = (document.getElementById('cgrnUOM_'+i)?.value||'').trim();
+    const qty     = parseFloat(document.getElementById('cgrnQty_'+i)?.value)  || 0;
+    const rate    = parseFloat(document.getElementById('cgrnRate_'+i)?.value) || 0;
+    if (!matName) continue;       // skip blank rows silently
+    if (qty <= 0) { toast('Qty must be > 0 for ' + matName,'error'); return; }
+    if (rate <= 0){ toast('Rate must be > 0 for ' + matName,'error'); return; }
+    // Verify material is from master (matCode hidden input must be set)
+    const matCode = document.getElementById('cgrnMatCode_'+i)?.value;
+    if (!matCode) { toast('Select "' + matName + '" from the material dropdown','error'); return; }
+    entries.push({
+      sno: entries.length + 1,
+      material_name: matName,
+      uom: uom,
+      po_qty: 0,                    // not applicable for cash
+      prev_received_qty: 0,
+      this_grn_qty: qty,
+      total_received_qty: qty,
+      balance_qty: 0,
+      unit_rate: rate,
+      base_amount: qty * rate,
+      remarks: document.getElementById('cgrnRmk_'+i)?.value || null,
+      is_cash_purchase: true,
+    });
+  }
+  if (!entries.length) { toast('Add at least one material','error'); return; }
+
+  pbShow('Saving Cash Purchase GRN…');
+  try {
+    const grnNumber = await nextPUGRNNumber();
+    const { error: hErr } = await sb.from('pu_grn').insert({
+      grn_number: grnNumber, grn_date: date,
+      po_number: null,                          // no PO for cash
+      is_cash_purchase: true,
+      cash_purchase_ref: cashRef,
+      vendor_name: vendor,
+      vehicle_challan: challan, invoice_no: invNo, invoice_date: invDate,
+      received_by: state.userName, received_by_id: state.userId,
+      remarks: document.getElementById('cgrn_remarks').value || null,
+      status: 'Pending Verification',
+    });
+    if (hErr) throw new Error(hErr.message);
+    const { error: iErr } = await sb.from('pu_grn_items').insert(
+      entries.map(e => ({ ...e, grn_number: grnNumber }))
+    );
+    if (iErr) throw new Error(iErr.message);
+
+    flashSuccess('Cash Purchase GRN ' + grnNumber + ' saved — pending Site Manager verification');
+    closeCashGRNForm();
+    loadGRNList();
+  } catch (e) {
+    toast('Error: ' + e.message, 'error');
+  } finally {
+    pbDone();
+  }
+}
+
 async function verifyGRN(grnNum) {
   if(!hasPerm('canApproveGRN')){toast('Only Site Manager can verify GRNs','error');return;}
   pbShow('Verifying GRN…');
@@ -11356,20 +12192,35 @@ async function viewGRN(grnNum) {
   ]);
   pbDone();
   const total=(items||[]).reduce((s,r)=>s+num(r.base_amount),0);
-  openModal(`<h3>GRN — ${esc(grnNum)}</h3>
+  const isCash = !!h?.is_cash_purchase;
+  const cashBadge = isCash
+    ? ' <span style="font-size:11px;background:#ad6800;color:#fff;padding:2px 8px;border-radius:3px;font-weight:600;vertical-align:middle;">CASH PURCHASE</span>'
+    : '';
+  const refField = isCash
+    ? `<div><label class="muted" style="font-size:11px;">CASH PURCHASE REF</label><div style="font-style:italic;">${esc(h?.cash_purchase_ref||'Cash Purchase')}</div></div>`
+    : `<div><label class="muted" style="font-size:11px;">PO</label><div class="mono">${esc(h?.po_number||'')}</div></div>`;
+  // Cash GRN has simplified item table (no PO Qty / Prev / Balance)
+  const itemTable = isCash
+    ? `<div class="table-wrap"><table>
+        <thead><tr><th>#</th><th>Material</th><th>UOM</th><th class="num">Qty</th><th class="num">Rate</th><th class="num">Amount</th><th>Remarks</th></tr></thead>
+        <tbody>${(items||[]).map(it=>`<tr><td>${it.sno}</td><td>${esc(it.material_name)}</td><td>${esc(it.uom)}</td><td class="num">${fmtINR(it.this_grn_qty)}</td><td class="num">${fmtINR(it.unit_rate)}</td><td class="num">${fmtINR(it.base_amount)}</td><td>${esc(it.remarks||'—')}</td></tr>`).join('')}
+        <tr style="background:#fff7e6;font-weight:700;"><td colspan="5" style="text-align:right;padding:6px 8px;">Total</td><td class="num">${fmtINRSym(total)}</td><td></td></tr>
+        </tbody></table></div>`
+    : `<div class="table-wrap"><table>
+        <thead><tr><th>#</th><th>Material</th><th>UOM</th><th class="num">PO Qty</th><th class="num">Prev Recd</th><th class="num">This GRN</th><th class="num">Balance</th><th class="num">Rate</th><th class="num">Amount</th></tr></thead>
+        <tbody>${(items||[]).map(it=>`<tr><td>${it.sno}</td><td>${esc(it.material_name)}</td><td>${esc(it.uom)}</td><td class="num">${fmtINR(it.po_qty)}</td><td class="num">${fmtINR(it.prev_received_qty)}</td><td class="num">${fmtINR(it.this_grn_qty)}</td><td class="num">${fmtINR(it.balance_qty)}</td><td class="num">${fmtINR(it.unit_rate)}</td><td class="num">${fmtINR(it.base_amount)}</td></tr>`).join('')}
+        <tr style="background:#e6f4f1;font-weight:700;"><td colspan="8" style="text-align:right;padding:6px 8px;">Total</td><td class="num">${fmtINRSym(total)}</td></tr>
+        </tbody></table></div>`;
+  openModal(`<h3>GRN — ${esc(grnNum)}${cashBadge}</h3>
     <div class="grid-3" style="margin-bottom:10px;">
-      <div><label class="muted" style="font-size:11px;">PO</label><div class="mono">${esc(h?.po_number||'')}</div></div>
+      ${refField}
       <div><label class="muted" style="font-size:11px;">VENDOR</label><div>${esc(h?.vendor_name||'')}</div></div>
       <div><label class="muted" style="font-size:11px;">DATE</label><div>${fmtDate(h?.grn_date)}</div></div>
       <div><label class="muted" style="font-size:11px;">CHALLAN</label><div>${esc(h?.vehicle_challan||'—')}</div></div>
       <div><label class="muted" style="font-size:11px;">INVOICE</label><div>${esc(h?.invoice_no||'—')} / ${h?.invoice_date?fmtDate(h.invoice_date):'—'}</div></div>
       <div><label class="muted" style="font-size:11px;">STATUS</label><div>${esc(h?.status||'')}</div></div>
     </div>
-    <div class="table-wrap"><table>
-      <thead><tr><th>#</th><th>Material</th><th>UOM</th><th class="num">PO Qty</th><th class="num">Prev Recd</th><th class="num">This GRN</th><th class="num">Balance</th><th class="num">Rate</th><th class="num">Amount</th></tr></thead>
-      <tbody>${(items||[]).map(it=>`<tr><td>${it.sno}</td><td>${esc(it.material_name)}</td><td>${esc(it.uom)}</td><td class="num">${fmtINR(it.po_qty)}</td><td class="num">${fmtINR(it.prev_received_qty)}</td><td class="num">${fmtINR(it.this_grn_qty)}</td><td class="num">${fmtINR(it.balance_qty)}</td><td class="num">${fmtINR(it.unit_rate)}</td><td class="num">${fmtINR(it.base_amount)}</td></tr>`).join('')}
-      <tr style="background:#e6f4f1;font-weight:700;"><td colspan="8" style="text-align:right;padding:6px 8px;">Total</td><td class="num">${fmtINRSym(total)}</td></tr>
-      </tbody></table></div>
+    ${itemTable}
     <div class="actions-row"><button class="btn btn-ghost" onclick="closeModal()">Close</button></div>`);
 }
 
@@ -11379,6 +12230,10 @@ async function viewGRN(grnNum) {
 let _pobExtraCount=0, _pobSelectedGRNs=[], _pobLineItems=[], _pobGSTInfo={};
 
 async function loadPOBList() {
+  // Reset to list-only view (Refresh should always return user to the list)
+  const pobF = document.getElementById('pobForm');       if (pobF)  pobF.style.display  = 'none';
+  const cpobF= document.getElementById('cashPobForm');   if (cpobF) cpobF.style.display = 'none';
+  const listC= document.getElementById('pobListCard');   if (listC) listC.style.display = 'block';
   const [{data:bills},{data:prrItems}]=await Promise.all([
     sb.from('pu_po_bills').select('*').order('created_at',{ascending:false}),
     sb.from('ho_prr_items').select('bill_number,paid_amount').eq('bill_type','POB'),
@@ -11392,9 +12247,12 @@ async function loadPOBList() {
 function renderPOBList() {
   const q=(document.getElementById('pobSearch')?.value||'').toLowerCase();
   const sf=document.getElementById('pobStatusFilter')?.value||'';
+  const src=document.getElementById('pobSourceFilter')?.value||'';
   let rows=puState.pobList;
-  if(q) rows=rows.filter(b=>b.bill_number.toLowerCase().includes(q)||b.vendor_name.toLowerCase().includes(q));
+  if(q) rows=rows.filter(b=>b.bill_number.toLowerCase().includes(q)||b.vendor_name.toLowerCase().includes(q)||(b.po_number||'').toLowerCase().includes(q));
   if(sf) rows=rows.filter(b=>b.status===sf);
+  if(src==='cash') rows=rows.filter(b=>b.is_cash_purchase);
+  else if(src==='po') rows=rows.filter(b=>!b.is_cash_purchase);
   const perms=ROLE_PERMS[state.role]||{};
   document.getElementById('pob_listBody').innerHTML=rows.map(b=>{
     const stCls=b.status.toLowerCase().replace(/\s/g,'-');
@@ -11403,9 +12261,15 @@ function renderPOBList() {
     if(perms.canApprovePOB && b.status==='Pending Approval')
       acts+=` <button class="btn btn-primary btn-sm" onclick="approvePOB('${esc(b.bill_number)}')">Approve</button>
               <button class="btn btn-danger btn-sm" onclick="rejectDoc('POB','${esc(b.bill_number)}')">Reject</button>`;
+    const cashBadge = b.is_cash_purchase
+      ? ' <span style="font-size:10px;background:#ad6800;color:#fff;padding:1px 6px;border-radius:3px;font-weight:600;vertical-align:middle;">CASH</span>'
+      : '';
+    const poDisplay = b.is_cash_purchase
+      ? `<span class="muted" style="font-style:italic;">Cash Purchase</span>`
+      : `<span class="mono">${esc(b.po_number||'—')}</span>`;
     return `<tr>
-      <td class="mono">${esc(b.bill_number)}</td><td>${fmtDate(b.bill_date)}</td>
-      <td class="mono">${esc(b.po_number)}</td><td>${esc(b.vendor_name)}</td>
+      <td class="mono">${esc(b.bill_number)}${cashBadge}</td><td>${fmtDate(b.bill_date)}</td>
+      <td>${poDisplay}</td><td>${esc(b.vendor_name)}</td>
       <td style="font-size:11px;">${esc(b.grn_numbers||'—')}</td>
       <td class="num">${fmtINR(b.invoice_value)}</td>
       <td class="num" style="font-weight:600;">${fmtINR(b.net_payable)}</td>
@@ -11418,6 +12282,7 @@ function renderPOBList() {
 
 async function newPOB() {
   if(!hasPerm('canCreatePOB')){toast('Only Planning/QS can create bills','error');return;}
+  document.getElementById('cashPobForm').style.display='none';  // hide sibling
   document.getElementById('pobForm').style.display='block';
   document.getElementById('pobListCard').style.display='none';
   document.getElementById('pob_date').value=today();
@@ -11480,9 +12345,7 @@ async function onPOBGRNSelect() {
       <td class="num">${fmtINR(it.base_amount)}</td>
       <td><div style="position:relative;width:200px;">
         <input class="pob_wbsSub" id="pobWBS_${i}" placeholder="Type WBS…" autocomplete="off" style="width:100%;"
-          onfocus="wbsTypeahead('pobWBS_${i}','pobWBSRes_${i}','pobWBSCode_${i}','sub_activity')"
-          oninput="wbsTypeahead('pobWBS_${i}','pobWBSRes_${i}','pobWBSCode_${i}','sub_activity')"
-          onblur="setTimeout(()=>document.getElementById('pobWBSRes_${i}')?.classList.remove('show'),200)">
+          oninput="wbsTypeahead('pobWBS_${i}','pobWBSRes_${i}','pobWBSCode_${i}','sub_activity')">
         <div class="typeahead-results" id="pobWBSRes_${i}" style="min-width:320px;position:absolute;top:100%;left:0;z-index:9999;box-shadow:0 4px 16px rgba(0,0,0,.15);"></div>
         <input type="hidden" id="pobWBSCode_${i}">
       </div></td>
@@ -11633,6 +12496,371 @@ function closePOBForm() {
   _pobSelectedGRNs=[]; _pobLineItems=[]; _pobGSTInfo={};
 }
 
+// =====================================================================
+// CASH PURCHASE BILL — parallel POB flow, no PO required
+// Anchored on vendor (not PO); GRNs filtered to vendor's verified cash GRNs.
+// GST entered manually (no PO to inherit from).
+// Inserts into pu_po_bills with is_cash_purchase=true, po_number=null.
+// Downstream PRR/payment flow uses the same pu_po_bills table → automatic.
+// =====================================================================
+
+let _cpobSelectedGRNs = [], _cpobLineItems = [], _cpobExtraCount = 0;
+
+async function newCashPOB() {
+  if (!hasPerm('canCreatePOB')) { toast('Only Planning/QS can create bills','error'); return; }
+  document.getElementById('pobForm').style.display = 'none';
+  document.getElementById('cashPobForm').style.display = 'block';
+  document.getElementById('pobListCard').style.display = 'none';
+  // Reset all fields
+  document.getElementById('cpob_number').value = 'POB/' + currentFY() + '/—— (auto)';
+  document.getElementById('cpob_date').value = today();
+  document.getElementById('cpob_vendorSearch').value = '';
+  document.getElementById('cpob_vendorName').value = '';
+  document.getElementById('cpob_vendor').value = '';
+  document.getElementById('cpob_vendorInvNo').value = '';
+  document.getElementById('cpob_vendorInvDate').value = '';
+  document.getElementById('cpob_creditPeriod').value = '0';        // cash = paid immediately
+  document.getElementById('cpob_invPayDue').value = '';
+  document.getElementById('cpob_tdsPct').value = '2';
+  document.getElementById('cpob_holdAmt').value = '0';
+  document.getElementById('cpob_holdDesc').value = '';
+  document.getElementById('cpob_remarks').value = '';
+  document.getElementById('cpob_gstType').value = 'cgst_sgst';
+  document.getElementById('cpob_cgstPct').value = '9';
+  document.getElementById('cpob_sgstPct').value = '9';
+  document.getElementById('cpob_igstPct').value = '18';
+  onCashPobGSTTypeChange();
+  document.getElementById('cpob_grnCard').style.display = 'none';
+  document.getElementById('cpob_billDetails').style.display = 'none';
+  document.getElementById('cpob_itemsBody').innerHTML = '';
+  document.getElementById('cpob_extraBody').innerHTML = '';
+  document.getElementById('cpob_selectedGRNs').textContent = 'None';
+  document.getElementById('cpob_grnCheckList').innerHTML = '';
+  _cpobSelectedGRNs = []; _cpobLineItems = []; _cpobExtraCount = 0;
+  window.scrollTo(0, 0);
+}
+
+function closeCashPOBForm() {
+  document.getElementById('cashPobForm').style.display = 'none';
+  document.getElementById('pobListCard').style.display = 'block';
+  _cpobSelectedGRNs = []; _cpobLineItems = [];
+}
+
+// ── Vendor typeahead — only vendors with unbilled verified cash GRNs ───
+async function cpobVendorTypeahead() {
+  const inp = document.getElementById('cpob_vendorSearch');
+  const res = document.getElementById('cpob_vendorRes');
+  if (!inp || !res) return;
+  // Fetch distinct vendors with verified+unbilled cash GRNs.
+  // We cache the list on the form's dataset to avoid repeated DB hits.
+  let candidates = window._cpobVendorCandidates;
+  if (!candidates) {
+    const { data } = await sb.from('pu_grn')
+      .select('vendor_name')
+      .eq('is_cash_purchase', true)
+      .in('status', ['Verified','Partially Billed'])
+      .order('vendor_name');
+    const seen = new Set();
+    candidates = [];
+    (data||[]).forEach(g => {
+      const v = (g.vendor_name||'').trim();
+      if (v && !seen.has(v)) { seen.add(v); candidates.push(v); }
+    });
+    window._cpobVendorCandidates = candidates;
+  }
+  const q = (inp.value||'').trim().toLowerCase();
+  const matches = q
+    ? candidates.filter(v => v.toLowerCase().includes(q)).slice(0, 15)
+    : candidates.slice(0, 15);
+  if (!matches.length) {
+    res.innerHTML = '<div style="padding:10px;color:var(--muted);font-size:12px;">No vendor with billable cash GRNs.</div>';
+  } else {
+    res.innerHTML = matches.map(v => {
+      const safe = esc(v).replace(/'/g, "\\'");
+      return `<div class="typeahead-item" onmousedown="event.preventDefault();cpobPickVendor('${safe}')"><strong>${esc(v)}</strong></div>`;
+    }).join('');
+  }
+  res.classList.add('show');
+}
+
+async function cpobPickVendor(name) {
+  document.getElementById('cpob_vendorName').value = name;
+  document.getElementById('cpob_vendor').value = name;
+  document.getElementById('cpob_vendorSearch').value = name;
+  document.getElementById('cpob_vendorRes')?.classList.remove('show');
+  // Load this vendor's verified cash GRNs
+  await onCashPobVendorChange(name);
+}
+
+function cpobClearVendor() {
+  document.getElementById('cpob_vendorName').value = '';
+  document.getElementById('cpob_vendor').value = '';
+  document.getElementById('cpob_vendorSearch').value = '';
+  document.getElementById('cpob_vendorRes')?.classList.remove('show');
+  document.getElementById('cpob_grnCard').style.display = 'none';
+  document.getElementById('cpob_billDetails').style.display = 'none';
+  document.getElementById('cpob_grnCheckList').innerHTML = '';
+  document.getElementById('cpob_selectedGRNs').textContent = 'None';
+  _cpobSelectedGRNs = []; _cpobLineItems = [];
+  document.getElementById('cpob_vendorSearch').focus();
+}
+
+// Refresh candidate cache when leaving the form (so next time it's fresh)
+function _cpobInvalidateCache() { window._cpobVendorCandidates = null; }
+
+async function onCashPobVendorChange(vendorName) {
+  if (!vendorName) { document.getElementById('cpob_grnCard').style.display = 'none'; return; }
+  const { data: grns } = await sb.from('pu_grn').select('*')
+    .eq('is_cash_purchase', true)
+    .eq('vendor_name', vendorName)
+    .in('status', ['Verified','Partially Billed'])
+    .order('grn_number');
+  document.getElementById('cpob_grnCard').style.display = grns?.length ? '' : 'none';
+  if (!grns?.length) { toast('No verified cash GRNs for this vendor','warn'); return; }
+  document.getElementById('cpob_grnCheckList').innerHTML = (grns||[]).map(g => `
+    <label style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--border);cursor:pointer;">
+      <input type="checkbox" class="cpob_grnChk" value="${esc(g.grn_number)}" onchange="onCashPobGRNSelect()">
+      <span><strong>${esc(g.grn_number)}</strong> · ${fmtDate(g.grn_date)} · ${esc(g.cash_purchase_ref||'Cash Purchase')} · Inv: ${esc(g.invoice_no||'—')}</span>
+    </label>`).join('');
+}
+
+function cpobSelectAllGRNs(state) {
+  document.querySelectorAll('.cpob_grnChk').forEach(c => { c.checked = !!state; });
+  onCashPobGRNSelect();
+}
+
+async function onCashPobGRNSelect() {
+  _cpobSelectedGRNs = [...document.querySelectorAll('.cpob_grnChk:checked')].map(c => c.value);
+  document.getElementById('cpob_selectedGRNs').textContent = _cpobSelectedGRNs.length ? _cpobSelectedGRNs.join(', ') : 'None';
+  if (!_cpobSelectedGRNs.length) { document.getElementById('cpob_billDetails').style.display = 'none'; return; }
+  document.getElementById('cpob_billDetails').style.display = '';
+  if (!(puState.wbsList||[]).length) loadWBSMaster();
+  const { data: grnItems } = await sb.from('pu_grn_items').select('*')
+    .in('grn_number', _cpobSelectedGRNs).order('grn_number').order('sno');
+  _cpobLineItems = grnItems || [];
+  // Render items with editable rate inputs
+  document.getElementById('cpob_itemsBody').innerHTML = _cpobLineItems.map((it, i) => {
+    return `<tr>
+      <td>${i+1}</td>
+      <td class="mono" style="font-size:11px;">${esc(it.grn_number)}</td>
+      <td>${esc(it.material_name)}</td>
+      <td>${esc(it.uom)}</td>
+      <td class="num">${fmtINR(it.this_grn_qty)}</td>
+      <td class="num"><input type="number" id="cpobRate_${i}" class="num" step="0.01" value="${num(it.unit_rate).toFixed(2)}" style="width:110px;text-align:right;" oninput="cpobRecalcLine(${i})"></td>
+      <td class="num" id="cpobAmt_${i}">${fmtINR(it.base_amount)}</td>
+      <td class="typeahead" style="position:relative;width:200px;">
+        <input class="cpob_wbsSub" id="cpobWBS_${i}" placeholder="Type WBS…" autocomplete="off" style="width:100%;"
+          oninput="wbsTypeahead('cpobWBS_${i}','cpobWBSRes_${i}','cpobWBSCode_${i}','sub_activity')">
+        <div class="typeahead-results" id="cpobWBSRes_${i}" style="min-width:320px;"></div>
+        <input type="hidden" id="cpobWBSCode_${i}">
+      </td>
+    </tr>`;
+  }).join('') || '<tr><td colspan="8" class="center muted">No items</td></tr>';
+  recalcCashPobTotals();
+}
+
+function cpobRecalcLine(i) {
+  const qty  = num(_cpobLineItems[i]?.this_grn_qty);
+  const rate = num(document.getElementById('cpobRate_'+i)?.value);
+  const amt  = qty * rate;
+  // Mutate the in-memory line item so save uses the edited rate
+  if (_cpobLineItems[i]) {
+    _cpobLineItems[i].unit_rate  = rate;
+    _cpobLineItems[i].base_amount = amt;
+  }
+  const cell = document.getElementById('cpobAmt_'+i);
+  if (cell) cell.textContent = fmtINR(amt);
+  recalcCashPobTotals();
+}
+
+function onCashPobGSTTypeChange() {
+  const t = document.getElementById('cpob_gstType').value;
+  document.getElementById('cpob_cgstWrap').style.display = (t==='cgst_sgst') ? '' : 'none';
+  document.getElementById('cpob_sgstWrap').style.display = (t==='cgst_sgst') ? '' : 'none';
+  document.getElementById('cpob_igstWrap').style.display = (t==='igst')      ? '' : 'none';
+  if (t === 'none') {
+    document.getElementById('cpob_cgstPct').value = '0';
+    document.getElementById('cpob_sgstPct').value = '0';
+    document.getElementById('cpob_igstPct').value = '0';
+  }
+  recalcCashPobTotals();
+}
+
+function _cashPobGSTPct() {
+  const t = document.getElementById('cpob_gstType').value;
+  if (t === 'none') return { cgst:0, sgst:0, igst:0, total:0 };
+  if (t === 'igst') {
+    const i = num(document.getElementById('cpob_igstPct').value);
+    return { cgst:0, sgst:0, igst:i, total:i };
+  }
+  const c = num(document.getElementById('cpob_cgstPct').value);
+  const s = num(document.getElementById('cpob_sgstPct').value);
+  return { cgst:c, sgst:s, igst:0, total:c+s };
+}
+
+function addCashPobExtraLine() {
+  const i = _cpobExtraCount++;
+  const tr = document.createElement('tr'); tr.id = 'cpobExtra_'+i;
+  tr.innerHTML = `
+    <td><input placeholder="Description" style="width:180px;"></td>
+    <td><select><option value="Addition">Addition</option><option value="Deduction">Deduction</option></select></td>
+    <td><select><option value="Before GST">Before GST</option><option value="After GST">After GST</option></select></td>
+    <td><input type="number" step="0.01" style="width:100px;text-align:right;" oninput="recalcCashPobTotals()"></td>
+    <td><button class="btn btn-ghost btn-sm" onclick="this.closest('tr').remove();recalcCashPobTotals()">✕</button></td>`;
+  document.getElementById('cpob_extraBody').appendChild(tr);
+}
+
+function recalcCashPobTotals() {
+  // Sum gross from current line items (uses live mutated rates)
+  let gross = 0;
+  _cpobLineItems.forEach(it => { gross += num(it.base_amount); });
+  let extraBefore = 0, extraAfter = 0;
+  document.querySelectorAll('#cpob_extraBody tr').forEach(tr => {
+    const cells = tr.cells;
+    const amt    = num(cells[3]?.querySelector('input')?.value || 0);
+    const type   = cells[1]?.querySelector('select')?.value;
+    const timing = cells[2]?.querySelector('select')?.value;
+    const signed = type === 'Addition' ? amt : -amt;
+    if (timing === 'Before GST') extraBefore += signed; else extraAfter += signed;
+  });
+  const taxable = gross + extraBefore;
+  const gstInfo = _cashPobGSTPct();
+  const gst = taxable * gstInfo.total / 100;
+  const invoice = taxable + gst + extraAfter;
+  const tdsPct = num(document.getElementById('cpob_tdsPct')?.value);
+  const tds = invoice * tdsPct / 100;
+  const hold = num(document.getElementById('cpob_holdAmt')?.value);
+  const net = invoice - tds - hold;
+  document.getElementById('cpob_s_gross').textContent = fmtINR(gross);
+  document.getElementById('cpob_s_extraBefore').textContent = (extraBefore >= 0 ? '+' : '') + fmtINR(extraBefore);
+  document.getElementById('cpob_s_taxable').textContent = fmtINR(taxable);
+  document.getElementById('cpob_s_gstLabel').textContent = 'GST (' + gstInfo.total + '%)';
+  document.getElementById('cpob_s_gst').textContent = fmtINR(gst);
+  document.getElementById('cpob_s_extraAfter').textContent = (extraAfter >= 0 ? '+' : '') + fmtINR(extraAfter);
+  document.getElementById('cpob_s_invoice').textContent = fmtINR(invoice);
+  document.getElementById('cpob_s_tds').textContent = fmtINR(tds);
+  document.getElementById('cpob_s_tdsLbl').textContent = tdsPct;
+  document.getElementById('cpob_s_net').textContent = fmtINR(net);
+  const f = document.getElementById('cashPobForm');
+  if (f) {
+    f.dataset.gross = gross; f.dataset.invoice = invoice; f.dataset.net = net; f.dataset.gst = gst;
+    f.dataset.extraBefore = extraBefore; f.dataset.extraAfter = extraAfter;
+    f.dataset.cgst = gstInfo.cgst; f.dataset.sgst = gstInfo.sgst; f.dataset.igst = gstInfo.igst;
+  }
+}
+
+function calcCashPobPayDue() {
+  const invDate = document.getElementById('cpob_vendorInvDate')?.value;
+  const days = num(document.getElementById('cpob_creditPeriod')?.value) || 0;
+  if (!invDate) return;
+  const d = new Date(invDate);
+  d.setDate(d.getDate() + days);
+  document.getElementById('cpob_invPayDue').value = d.toISOString().slice(0,10);
+}
+
+async function saveCashPOB() {
+  if (!hasPerm('canCreatePOB')) { toast('Only Planning/QS can create bills','error'); return; }
+  const vendor = document.getElementById('cpob_vendorName').value.trim();
+  const date   = document.getElementById('cpob_date').value;
+  const invNo  = document.getElementById('cpob_vendorInvNo').value.trim();
+  const invDate= document.getElementById('cpob_vendorInvDate').value;
+  if (!vendor) { toast('Select a vendor','error'); return; }
+  if (!date)   { toast('Bill date required','error'); return; }
+  if (!invNo)  { toast('Vendor Invoice No. required','error'); return; }
+  if (!invDate){ toast('Invoice Date required','error'); return; }
+  if (!_cpobSelectedGRNs.length) { toast('Select at least one cash GRN','error'); return; }
+  // WBS sub-activity required on every line (decision #5)
+  const wbsInputs = document.querySelectorAll('.cpob_wbsSub');
+  for (const el of wbsInputs) {
+    if (!el.value?.trim()) { toast('WBS Sub Activity required for all bill line items','error'); el.focus(); return; }
+  }
+  // Validate rates
+  for (let i = 0; i < _cpobLineItems.length; i++) {
+    const r = num(document.getElementById('cpobRate_'+i)?.value);
+    if (r <= 0) { toast('Rate must be > 0 for line ' + (i+1),'error'); return; }
+  }
+  // Recalc to make sure dataset is up-to-date with any last edit
+  recalcCashPobTotals();
+  const f = document.getElementById('cashPobForm');
+  const gross   = num(f.dataset.gross);
+  const invoice = num(f.dataset.invoice);
+  const net     = num(f.dataset.net);
+  const gst     = num(f.dataset.gst);
+  const cgst    = num(f.dataset.cgst);
+  const sgst    = num(f.dataset.sgst);
+  const igst    = num(f.dataset.igst);
+  const gstTotal = cgst + sgst + igst;
+  // GST amount split
+  const cgstAmt = gstTotal > 0 ? gst * cgst / gstTotal : 0;
+  const sgstAmt = gstTotal > 0 ? gst * sgst / gstTotal : 0;
+  const igstAmt = gstTotal > 0 ? gst * igst / gstTotal : 0;
+
+  pbShow('Saving Cash Purchase Bill…');
+  try {
+    const billNumber = await nextPUDocNumber('POB');
+    calcCashPobPayDue();
+    const { error } = await sb.from('pu_po_bills').insert({
+      bill_number: billNumber, bill_date: date,
+      po_number: null,
+      is_cash_purchase: true,
+      vendor_name: vendor,
+      vendor_inv_no: invNo, vendor_inv_date: invDate,
+      credit_period: num(document.getElementById('cpob_creditPeriod').value) || 0,
+      inv_pay_due: document.getElementById('cpob_invPayDue').value || null,
+      grn_numbers: _cpobSelectedGRNs.join(', '),
+      gross_amount: gross,
+      cgst_pct: cgst, sgst_pct: sgst, igst_pct: igst,
+      cgst_amount: cgstAmt, sgst_amount: sgstAmt, igst_amount: igstAmt,
+      tds_pct: num(document.getElementById('cpob_tdsPct').value) || 0,
+      tds_amount: invoice * (num(document.getElementById('cpob_tdsPct').value) || 0) / 100,
+      hold_amount: num(document.getElementById('cpob_holdAmt').value),
+      hold_description: document.getElementById('cpob_holdDesc')?.value || null,
+      invoice_value: invoice, net_payable: net,
+      prepared_by: state.userName, prepared_by_id: state.userId,
+      remarks: document.getElementById('cpob_remarks').value || null,
+      status: 'Pending Approval',
+    });
+    if (error) throw new Error(error.message);
+
+    // Insert bill items with editable rate & base_amount, WBS coded
+    const wbsArr     = [...document.querySelectorAll('.cpob_wbsSub')];
+    const wbsCodeArr = [...document.querySelectorAll('[id^="cpobWBSCode_"]')];
+    await sb.from('pu_po_bill_items').insert(_cpobLineItems.map((it, i) => ({
+      bill_number: billNumber, sno: i+1, grn_number: it.grn_number,
+      material_name: it.material_name, uom: it.uom, qty: it.this_grn_qty,
+      unit_rate: it.unit_rate, base_amount: it.base_amount,
+      wbs_sub_activity: wbsArr[i]?.value?.trim() || null,
+      wbs_code: wbsCodeArr[i]?.value?.trim() || null,
+    })));
+
+    // Extra lines
+    const extraLines = [];
+    document.querySelectorAll('#cpob_extraBody tr').forEach((tr, i) => {
+      const cells = tr.cells;
+      extraLines.push({
+        bill_number: billNumber, sno: i+1,
+        description: cells[0]?.querySelector('input')?.value || null,
+        line_type: cells[1]?.querySelector('select')?.value,
+        timing: cells[2]?.querySelector('select')?.value,
+        amount: num(cells[3]?.querySelector('input')?.value),
+      });
+    });
+    if (extraLines.length) await sb.from('pu_po_bill_extra_lines').insert(extraLines);
+
+    // Flip GRNs to Partially Billed (same as regular flow)
+    await sb.from('pu_grn').update({ status: 'Partially Billed' }).in('grn_number', _cpobSelectedGRNs);
+
+    flashSuccess('Cash Purchase Bill ' + billNumber + ' submitted for PM approval');
+    _cpobInvalidateCache();
+    closeCashPOBForm();
+    loadPOBList();
+  } catch (e) {
+    toast('Error: ' + e.message, 'error');
+  } finally {
+    pbDone();
+  }
+}
+
 async function approvePOB(billNum) {
   if(!hasPerm('canApprovePOB')){toast('Only PM can approve bills','error');return;}
   await sb.from('pu_po_bills').update({
@@ -11651,9 +12879,16 @@ async function viewPOB(billNum) {
   const {data:h}=await sb.from('pu_po_bills').select('*').eq('bill_number',billNum).single();
   pbDone();
   if(!h){toast('Bill not found','error');return;}
-  openModal(`<h3>POB — ${esc(h.bill_number)}</h3>
+  const isCash = !!h.is_cash_purchase;
+  const cashBadge = isCash
+    ? ' <span style="font-size:11px;background:#ad6800;color:#fff;padding:2px 8px;border-radius:3px;font-weight:600;vertical-align:middle;">CASH PURCHASE</span>'
+    : '';
+  const refField = isCash
+    ? `<div><label class="muted" style="font-size:11px;">SOURCE</label><div style="font-style:italic;">Cash Purchase</div></div>`
+    : `<div><label class="muted" style="font-size:11px;">PO</label><div class="mono">${esc(h.po_number||'')}</div></div>`;
+  openModal(`<h3>POB — ${esc(h.bill_number)}${cashBadge}</h3>
     <div class="grid-3" style="margin-bottom:10px;">
-      <div><label class="muted" style="font-size:11px;">PO</label><div class="mono">${esc(h.po_number)}</div></div>
+      ${refField}
       <div><label class="muted" style="font-size:11px;">VENDOR</label><div>${esc(h.vendor_name)}</div></div>
       <div><label class="muted" style="font-size:11px;">STATUS</label><div>${esc(h.status)}</div></div>
       <div><label class="muted" style="font-size:11px;">GRNs</label><div>${esc(h.grn_numbers||'—')}</div></div>
@@ -11687,13 +12922,17 @@ function renderMISList() {
   document.getElementById('mis_listBody').innerHTML=rows.map(m=>{
     const its=puState.misLedger.filter(it=>it.mis_number===m.mis_number);
     const totalVal=its.reduce((s,it)=>s+num(it.amount),0);
+    const hasCash=its.some(it=>it.is_cash_purchase);
+    const cashBadge = hasCash
+      ? ' <span style="font-size:10px;background:#ad6800;color:#fff;padding:1px 6px;border-radius:3px;font-weight:600;vertical-align:middle;" title="Contains material with cash-purchase history">CASH</span>'
+      : '';
     const stCls=m.status==='Approved'?'approved':'pending-approval';
     let acts=`<button class="btn btn-ghost btn-sm" onclick="viewMIS('${esc(m.mis_number)}')">View</button>`;
     if(perms.canApproveMIS && m.status==='Pending Approval')
       acts+=` <button class="btn btn-primary btn-sm" onclick="approveMIS('${esc(m.mis_number)}')">Approve</button>
               <button class="btn btn-danger btn-sm" onclick="rejectDoc('MIS','${esc(m.mis_number)}')">Reject</button>`;
     return `<tr>
-      <td class="mono">${esc(m.mis_number)}</td><td>${fmtDate(m.issue_date)}</td>
+      <td class="mono">${esc(m.mis_number)}${cashBadge}</td><td>${fmtDate(m.issue_date)}</td>
       <td>${esc(m.issued_to)}</td>
       <td>${esc(m.issued_by||'—')}</td>
       <td class="num">${its.length}</td>
@@ -11715,10 +12954,13 @@ function renderMISLedger() {
   });
   document.getElementById('mis_ledgerBody').innerHTML=rows.map(r=>{
     const mis=puState.misList.find(m=>m.mis_number===r.mis_number);
+    const cashBadge = r.is_cash_purchase
+      ? ' <span style="font-size:9px;background:#ad6800;color:#fff;padding:1px 5px;border-radius:3px;font-weight:600;vertical-align:middle;" title="Material has cash-purchase history">CASH</span>'
+      : '';
     return `<tr>
       <td class="mono">${esc(r.mis_number)}</td><td>${fmtDate(mis?.issue_date)}</td>
       <td>${esc(mis?.issued_to||'—')}</td><td>${esc(mis?.location_name||'—')}</td>
-      <td>${esc(r.material_name)}</td><td>${esc(r.uom)}</td>
+      <td>${esc(r.material_name)}${cashBadge}</td><td>${esc(r.uom)}</td>
       <td class="num">${fmtINR(r.qty_issued)}</td>
       <td class="num">${fmtINR(r.unit_rate)}</td>
       <td class="num">${fmtINR(r.amount)}</td></tr>`;
@@ -11738,28 +12980,45 @@ async function newMIS() {
   const misCClear=document.getElementById('mis_contractorCode');
   if(misCClear) misCClear.value='';
   document.getElementById('misItemsBody').innerHTML=''; _misItemC=0;
+  _misStockMap = {};  // force refresh of stock balances on next addMISItem
   await addMISItem();
   window.scrollTo(0,0);
 }
 
+// Cache of stock-balance rows keyed by material_name (lower-cased).
+// Refreshed each time the MIS form is opened (newMIS) so balances stay current.
+let _misStockMap = {};
+
+async function _refreshMISStockMap() {
+  const {data:stockRows} = await sb.from('pu_stock_balance').select('*');
+  _misStockMap = {};
+  (stockRows||[]).forEach(s => {
+    if (s.material_name) _misStockMap[s.material_name.toLowerCase()] = s;
+  });
+}
+
 async function addMISItem() {
-  const {data:stockRows}=await sb.from('pu_stock_balance').select('*').order('material_name');
+  // Ensure material master is loaded for fuzzy search
+  if (!(puState.materials||[]).length) await apiLoadMaterials();
+  // Refresh stock balances on first row of a fresh form; subsequent rows reuse the cache
+  if (!Object.keys(_misStockMap).length) await _refreshMISStockMap();
   const i=_misItemC++;
   const tr=document.createElement('tr'); tr.id='misItem_'+i;
-  const matOptions=(stockRows||[]).map(s=>`<option value="${esc(s.material_name)}" data-uom="${esc(s.uom||'')}" data-balance="${s.balance_qty||0}" data-rate="${s.latest_rate||0}">${esc(s.material_name)} (Bal: ${fmtINR(s.balance_qty)} ${esc(s.uom||'')})</option>`).join('');
   tr.innerHTML=`
     <td>${i+1}</td>
-    <td><select id="misMat_${i}" class="pu_material" style="width:220px;" onchange="onMISMaterialChange(${i})">
-      <option value="">— Select Material —</option>${matOptions}
-    </select></td>
+    <td style="min-width:240px;"><div style="position:relative;">
+      <input class="pu_material" id="misMat_${i}" placeholder="Type material…" style="width:100%;" autocomplete="off"
+        oninput="misMaterialTypeahead(${i})">
+      <div class="typeahead-results" id="misMatRes_${i}" style="min-width:340px;position:absolute;top:100%;left:0;z-index:9999;box-shadow:0 4px 16px rgba(0,0,0,.15);"></div>
+      <input type="hidden" id="misMatBal_${i}" value="0">
+      <input type="hidden" id="misMatRate_${i}" value="0">
+    </div></td>
     <td><input id="misUom_${i}" class="pu_uom" style="width:60px;" readonly></td>
     <td class="num" id="misBalance_${i}" style="font-weight:600;color:var(--accent);">—</td>
     <td><input type="number" id="misQty_${i}" class="num" style="width:90px;" step="0.001" oninput="recalcMISRow(${i})"></td>
     <td style="min-width:160px;"><div style="position:relative;">
       <input id="misWBS_${i}" placeholder="WBS Element…" autocomplete="off" style="width:100%;font-size:11px;"
-        onfocus="wbsTypeahead('misWBS_${i}','misWBSRes_${i}','misWBSCode_${i}','element')"
-        oninput="wbsTypeahead('misWBS_${i}','misWBSRes_${i}','misWBSCode_${i}','element')"
-        onblur="setTimeout(()=>document.getElementById('misWBSRes_${i}')?.classList.remove('show'),200)">
+        oninput="wbsTypeahead('misWBS_${i}','misWBSRes_${i}','misWBSCode_${i}','element')">
       <div class="typeahead-results" id="misWBSRes_${i}" style="min-width:320px;position:absolute;top:100%;left:0;z-index:9999;box-shadow:0 4px 16px rgba(0,0,0,.15);"></div>
       <input type="hidden" id="misWBSCode_${i}">
     </div></td>
@@ -11769,26 +13028,102 @@ async function addMISItem() {
   document.getElementById('misItemsBody').appendChild(tr);
 }
 
-function onMISMaterialChange(i) {
-  const sel=document.getElementById('misMat_'+i);
-  const opt=sel?.options[sel.selectedIndex];
-  if(!opt?.value) return;
-  document.getElementById('misUom_'+i).value=opt.dataset.uom||'';
-  document.getElementById('misBalance_'+i).textContent=fmtINR(parseFloat(opt.dataset.balance||0))+' '+(opt.dataset.uom||'');
-  document.getElementById('misRate_'+i).textContent=fmtINR(parseFloat(opt.dataset.rate||0));
+// Fuzzy-search material master and render typeahead options for an MIS row.
+// Shows balance from the stock map (or "no stock" badge when zero/missing).
+function misMaterialTypeahead(i) {
+  const inp = document.getElementById('misMat_'+i);
+  const res = document.getElementById('misMatRes_'+i);
+  if (!inp || !res) return;
+  const q = (inp.value||'').toLowerCase();
+  if (!q) { res.classList.remove('show'); res.style.display='none'; return; }
+  const data = puState.materials || [];
+  const tokens = q ? _fuzzyTokens(q) : [];
+  const CAP = 20;
+  const all = data.filter(m => {
+    if (!q) return true;
+    const hay = ((m.material_name||'')+'|'+(m.category||'')+'|'+(m.sub_category||'')+'|'+(m.uom||'')+'|'+(m.material_code||'')).toLowerCase();
+    return _fuzzyMatch(hay, tokens);
+  });
+  const matches = all.slice(0, CAP);
+  if (!matches.length) { res.classList.remove('show'); res.style.display='none'; return; }
+  const hint = all.length > CAP
+    ? `<div class="typeahead-item" style="background:var(--input-bg);font-size:11px;cursor:default;" onmousedown="event.preventDefault();event.stopPropagation()">
+         <span class="muted">Showing ${matches.length} of ${all.length} ${q?'matches — type more to narrow down':'materials — type to filter'}</span>
+       </div>` : '';
+  res.innerHTML = hint + matches.map(m => {
+    const stock = _misStockMap[(m.material_name||'').toLowerCase()];
+    const bal   = stock ? parseFloat(stock.balance_qty||0) : 0;
+    const rate  = stock ? parseFloat(stock.latest_rate||0) : 0;
+    const balBadge = stock && bal>0
+      ? `<span style="color:var(--accent);font-weight:600;">Bal: ${fmtINR(bal)} ${esc(m.uom||'')}</span>`
+      : `<span class="muted" style="color:#dc2626;">No stock</span>`;
+    return `<div class="typeahead-item"
+      onmousedown="event.preventDefault();selectMISMaterial(${i},'${esc(m.material_name).replace(/'/g,"\\'")}','${esc(m.uom||'').replace(/'/g,"\\'")}',${bal},${rate})">
+      <strong>${esc(m.material_name)}</strong>
+      <div class="muted" style="font-size:10px;">${esc(m.category||'')}${m.sub_category?' · '+esc(m.sub_category):''} · ${esc(m.uom||'')} · ${balBadge}</div>
+    </div>`;
+  }).join('');
+  _anchorDropdown(inp, res);
+}
+
+// Confirm a selection from the material-master dropdown for row i.
+// Locks the input (readOnly + ✕ clear button) so manual entry is impossible —
+// users must either pick from the dropdown or clear and retry.
+function selectMISMaterial(i, name, uom, balance, rate) {
+  const inp = document.getElementById('misMat_'+i);
+  if (inp) { inp.value = name; inp.readOnly = true; }
+  const res = document.getElementById('misMatRes_'+i);
+  if (res) { res.classList.remove('show'); res.style.display='none'; }
+  document.getElementById('misUom_'+i).value = uom || '';
+  document.getElementById('misMatBal_'+i).value  = balance || 0;
+  document.getElementById('misMatRate_'+i).value = rate || 0;
+  document.getElementById('misBalance_'+i).textContent = fmtINR(parseFloat(balance||0)) + ' ' + (uom||'');
+  document.getElementById('misRate_'+i).textContent    = fmtINR(parseFloat(rate||0));
+  // Inject ✕ clear button next to input (same pattern as WBS/contractor fields)
+  const btnId = 'misMat_'+i+'_clrBtn';
+  if (inp && !document.getElementById(btnId)) {
+    const btn = document.createElement('button');
+    btn.type = 'button'; btn.id = btnId; btn.textContent = '✕';
+    btn.title = 'Clear material'; btn.setAttribute('aria-label','Clear material selection');
+    btn.style.cssText = 'position:absolute;right:4px;top:50%;transform:translateY(-50%);padding:2px 6px;border:1px solid #cbd5e1;background:#f8fafc;color:#64748b;border-radius:3px;cursor:pointer;font-size:11px;line-height:1;';
+    btn.onmouseenter = () => { btn.style.background='#fee2e2'; btn.style.color='#dc2626'; btn.style.borderColor='#fca5a5'; };
+    btn.onmouseleave = () => { btn.style.background='#f8fafc'; btn.style.color='#64748b'; btn.style.borderColor='#cbd5e1'; };
+    btn.onclick = (ev) => { ev.preventDefault(); ev.stopPropagation(); clearMISMaterial(i); };
+    if (inp.parentNode) inp.parentNode.appendChild(btn);
+  }
   recalcMISRow(i);
 }
 
+function clearMISMaterial(i) {
+  const inp = document.getElementById('misMat_'+i);
+  if (inp) { inp.value=''; inp.readOnly=false; inp.focus(); }
+  document.getElementById('misUom_'+i).value = '';
+  document.getElementById('misMatBal_'+i).value  = 0;
+  document.getElementById('misMatRate_'+i).value = 0;
+  document.getElementById('misBalance_'+i).textContent = '—';
+  document.getElementById('misRate_'+i).textContent    = '—';
+  const qtyEl = document.getElementById('misQty_'+i);
+  if (qtyEl) qtyEl.value = '';
+  const amtEl = document.getElementById('misAmt_'+i);
+  if (amtEl) amtEl.textContent = '—';
+  const btn = document.getElementById('misMat_'+i+'_clrBtn');
+  if (btn && btn.parentNode) btn.parentNode.removeChild(btn);
+  const res = document.getElementById('misMatRes_'+i);
+  if (res) res.classList.remove('show');
+}
+
 function recalcMISRow(i) {
-  const sel=document.getElementById('misMat_'+i);
-  const opt=sel?.options[sel.selectedIndex];
-  const balance=parseFloat(opt?.dataset.balance||0);
-  const qtyEl=document.getElementById('misQty_'+i);
+  const balance = parseFloat(document.getElementById('misMatBal_'+i)?.value || 0);
+  const rate    = parseFloat(document.getElementById('misMatRate_'+i)?.value || 0);
+  const qtyEl   = document.getElementById('misQty_'+i);
   if(!qtyEl) return;
-  if((parseFloat(qtyEl.value)||0)>balance){qtyEl.value=balance;toast('Qty cannot exceed stock balance','warn');}
-  const rate=parseFloat(opt?.dataset.rate||0);
-  const amt=(parseFloat(qtyEl.value)||0)*rate;
-  const amtEl=document.getElementById('misAmt_'+i); if(amtEl) amtEl.textContent=fmtINR(amt);
+  if((parseFloat(qtyEl.value)||0) > balance){
+    qtyEl.value = balance;
+    toast('Qty cannot exceed stock balance','warn');
+  }
+  const amt = (parseFloat(qtyEl.value)||0) * rate;
+  const amtEl = document.getElementById('misAmt_'+i);
+  if (amtEl) amtEl.textContent = fmtINR(amt);
 }
 
 function closeMISForm() {
@@ -11813,13 +13148,20 @@ async function saveMIS() {
   const items=[];
   const wbsEls = [...document.querySelectorAll('[id^="misWBS_"]')];
   const trsAll = [...document.querySelectorAll('#misItemsBody tr')];
-  // Check WBS Element mandatory for every populated line
+  // Validate every populated line: material must be selected from master + WBS mandatory
   for (let i=0; i<trsAll.length; i++) {
     const tr = trsAll[i];
-    const sel = tr.querySelector('select');
-    const mat = sel?.value;
+    const matInp = tr.querySelector('.pu_material');
+    const mat = matInp?.value?.trim();
     const qty = parseFloat(tr.querySelector('input[type="number"]')?.value)||0;
     if (mat && qty > 0) {
+      // Material field must be locked (readOnly === true) — i.e., user picked from the dropdown,
+      // not typed freely. This mirrors the contractor field guard above.
+      if (!matInp.readOnly) {
+        toast('Material must be selected from the master — type and choose from dropdown','error');
+        matInp.focus();
+        return;
+      }
       const wbsVal = wbsEls[i]?.value?.trim();
       if (!wbsVal) {
         toast('WBS Element required for all material lines','error');
@@ -11829,21 +13171,43 @@ async function saveMIS() {
     }
   }
   document.querySelectorAll('#misItemsBody tr').forEach((tr,i)=>{
-    const sel=tr.querySelector('select');
-    if(!sel) return;
-    const mat=sel.value;
-    const opt=sel.options[sel.selectedIndex];
-    const qty=parseFloat(tr.querySelector('input[type="number"]')?.value)||0;
-    if(!mat||qty<=0) return;
-    const rate=parseFloat(opt?.dataset.rate||0);
-    items.push({sno:items.length+1,material_name:mat,uom:opt?.dataset.uom||'',
-      qty_issued:qty,stock_before:parseFloat(opt?.dataset.balance||0),
-      stock_after:Math.max(0,parseFloat(opt?.dataset.balance||0)-qty),
-      unit_rate:rate,amount:qty*rate});
+    const matInp = tr.querySelector('.pu_material');
+    if (!matInp) return;
+    const mat = matInp.value?.trim();
+    const qty = parseFloat(tr.querySelector('input[type="number"]')?.value)||0;
+    if (!mat || qty<=0) return;
+    // Read row metadata from hidden fields populated by selectMISMaterial
+    const idMatch = matInp.id.match(/^misMat_(\d+)$/);
+    const ri = idMatch ? idMatch[1] : null;
+    const uom     = ri!=null ? (document.getElementById('misUom_'+ri)?.value || '') : '';
+    const balance = ri!=null ? parseFloat(document.getElementById('misMatBal_'+ri)?.value || 0) : 0;
+    const rate    = ri!=null ? parseFloat(document.getElementById('misMatRate_'+ri)?.value || 0) : 0;
+    items.push({sno:items.length+1, material_name:mat, uom:uom,
+      qty_issued:qty, stock_before:balance,
+      stock_after:Math.max(0, balance - qty),
+      unit_rate:rate, amount:qty*rate});
   });
   if(!items.length){toast('Add at least one item','error');return;}
+  // Guard: don't allow issuing more than available stock for any line
+  const overdraft = items.find(it => it.qty_issued > it.stock_before);
+  if (overdraft) {
+    toast('Cannot issue '+overdraft.material_name+': qty exceeds available stock ('+fmtINR(overdraft.stock_before)+' '+overdraft.uom+')','error');
+    return;
+  }
   pbShow('Saving MIS…');
   try {
+    // Determine which materials have ever been received via cash GRN.
+    // This is a simple "material has any cash sourcing in its history" check —
+    // it's a heuristic for traceability, not exact source attribution.
+    const matNames = [...new Set(items.map(it => it.material_name))];
+    const cashMatSet = new Set();
+    if (matNames.length) {
+      const { data: cashItems } = await sb.from('pu_grn_items')
+        .select('material_name')
+        .eq('is_cash_purchase', true)
+        .in('material_name', matNames);
+      (cashItems||[]).forEach(r => cashMatSet.add(r.material_name));
+    }
     const misNumber=await nextPUMISNumber();
     const {error}=await sb.from('pu_mis').insert({
       mis_number:misNumber, issue_date:date, issued_to:issuedTo,
@@ -11859,6 +13223,7 @@ async function saveMIS() {
       ...it, mis_number:misNumber,
       wbs_element: misWBSEls[idx2]?.value?.trim()||null,
       wbs_code:    misWBSCodes[idx2]?.value?.trim()||null,
+      is_cash_purchase: cashMatSet.has(it.material_name),
     })));
     flashSuccess('MIS '+misNumber+' saved — pending Site Manager approval');
     closeMISForm(); loadMISList(); loadStockBalance();
@@ -11880,7 +13245,14 @@ async function viewMIS(misNum) {
   ]);
   pbDone();
   const total=(items||[]).reduce((s,it)=>s+num(it.amount),0);
-  openModal(`<h3>MIS — ${esc(misNum)}</h3>
+  const anyCash = (items||[]).some(it=>it.is_cash_purchase);
+  const headerBadge = anyCash
+    ? ' <span style="font-size:11px;background:#ad6800;color:#fff;padding:2px 8px;border-radius:3px;font-weight:600;vertical-align:middle;" title="Contains material with cash-purchase history">CASH</span>'
+    : '';
+  const lineBadge = (it) => it.is_cash_purchase
+    ? ' <span style="font-size:9px;background:#ad6800;color:#fff;padding:1px 5px;border-radius:3px;font-weight:600;vertical-align:middle;">CASH</span>'
+    : '';
+  openModal(`<h3>MIS — ${esc(misNum)}${headerBadge}</h3>
     <div class="grid-3" style="margin-bottom:10px;">
       <div><label class="muted" style="font-size:11px;">DATE</label><div>${fmtDate(h?.issue_date)}</div></div>
       <div><label class="muted" style="font-size:11px;">ISSUED TO</label><div>${esc(h?.issued_to||'')}</div></div>
@@ -11890,7 +13262,7 @@ async function viewMIS(misNum) {
     </div>
     <div class="table-wrap"><table>
       <thead><tr><th>#</th><th>Material</th><th>UOM</th><th class="num">Stock Before</th><th class="num">Qty Issued</th><th class="num">Rate</th><th class="num">Amount</th></tr></thead>
-      <tbody>${(items||[]).map(it=>`<tr><td>${it.sno}</td><td>${esc(it.material_name)}</td><td>${esc(it.uom)}</td><td class="num">${fmtINR(it.stock_before)}</td><td class="num">${fmtINR(it.qty_issued)}</td><td class="num">${fmtINR(it.unit_rate)}</td><td class="num">${fmtINR(it.amount)}</td></tr>`).join('')}
+      <tbody>${(items||[]).map(it=>`<tr><td>${it.sno}</td><td>${esc(it.material_name)}${lineBadge(it)}</td><td>${esc(it.uom)}</td><td class="num">${fmtINR(it.stock_before)}</td><td class="num">${fmtINR(it.qty_issued)}</td><td class="num">${fmtINR(it.unit_rate)}</td><td class="num">${fmtINR(it.amount)}</td></tr>`).join('')}
       <tr style="background:#e6f4f1;font-weight:700;"><td colspan="6" style="text-align:right;padding:6px 8px;">Total</td><td class="num">${fmtINRSym(total)}</td></tr>
       </tbody></table></div>
     <div class="actions-row"><button class="btn btn-ghost" onclick="closeModal()">Close</button></div>`);
@@ -12015,47 +13387,12 @@ async function confirmRejectDoc(docType, docNum) {
 
 // applyRoleUI purchase logic is now merged into the main applyRoleUI function above
 
-// Extend apiGetUnpaidBills to include POB
-const _origApiGetUnpaidBills = typeof apiGetUnpaidBills==='function' ? apiGetUnpaidBills : async()=>({ok:true,bills:[]});
-async function apiGetUnpaidBills() {
-  const base=await _origApiGetUnpaidBills();
-  const [{data:pobBills},{data:prrItems}]=await Promise.all([
-    sb.from('pu_po_bills').select('*').in('status',['Unpaid','Partial']).order('bill_number'),
-    sb.from('ho_prr_items').select('bill_number,paid_amount').eq('bill_type','POB'),
-  ]);
-  const paidMap={};
-  (prrItems||[]).forEach(it=>{paidMap[it.bill_number]=(paidMap[it.bill_number]||0)+num(it.paid_amount);});
-  const pobEntries=(pobBills||[]).map(b=>{
-    const os=Math.max(0,num(b.net_payable)-(paidMap[b.bill_number]||0));
-    return {'Bill Number':b.bill_number,'HO Number':b.po_number,'PO Number':b.po_number,
-      'Vendor Name':b.vendor_name,'Invoice Value':b.invoice_value,
-      'Net Payable':b.net_payable,'Outstanding':os,'Status':b.status,'Type':'POB'};
-  }).filter(b=>b.Outstanding>0.005);
-  return {ok:true,bills:[...(base.bills||[]),...pobEntries]};
-}
+// (POB handling is merged directly into apiGetUnpaidBills above — the earlier override pattern
+//  caused infinite recursion because function-declaration hoisting made _origApiGetUnpaidBills
+//  capture the override itself rather than the previous declaration.)
 
-// Extend PRR payment to route POB payments correctly
-const _orig_applyPRRPayment = typeof _applyPRRPaymentPerInvoice==='function' ? _applyPRRPaymentPerInvoice : async()=>{};
-async function _applyPRRPaymentPerInvoice(prrNumber, perInvoice) {
-  const pobEntries=perInvoice.filter(e=>e.billType==='POB');
-  const otherEntries=perInvoice.filter(e=>e.billType!=='POB');
-  if(otherEntries.length) await _orig_applyPRRPayment(prrNumber,otherEntries);
-  for(const entry of pobEntries){
-    const {data:prrItem}=await sb.from('ho_prr_items').select('id,requested_amount,paid_amount')
-      .eq('prr_number',prrNumber).eq('bill_number',entry.billNumber).single();
-    if(!prrItem) continue;
-    const newPaid=num(prrItem.paid_amount)+num(entry.amount);
-    const itemStatus=newPaid>=num(prrItem.requested_amount)-0.005?'Paid':'Partial';
-    await sb.from('ho_prr_items').update({paid_amount:newPaid,status:itemStatus}).eq('id',prrItem.id);
-    const {data:bill}=await sb.from('pu_po_bills').select('net_payable').eq('bill_number',entry.billNumber).single();
-    if(bill){
-      const {data:allItems}=await sb.from('ho_prr_items').select('paid_amount').eq('bill_number',entry.billNumber);
-      const totalPaid=(allItems||[]).reduce((s,r)=>s+num(r.paid_amount),0);
-      const bs=totalPaid>=num(bill.net_payable)-0.005?'Paid':totalPaid>0?'Partial':'Unpaid';
-      await sb.from('pu_po_bills').update({status:bs}).eq('bill_number',entry.billNumber);
-    }
-  }
-}
+// (POB handling is merged directly into _applyPRRPaymentPerInvoice above — the earlier
+//  override pattern would have caused infinite recursion when paying a POB-containing PRR.)
 
 // Also load materials on initApp
 const _origInitAppForPU = window.initApp;
@@ -12609,11 +13946,14 @@ async function saveContractorMaster() {
   if(!contact) { toast('Contact Person is required','error'); return; }
   if(!phone)   { toast('Phone is required','error'); return; }
   if(!address) { toast('Address is required','error'); return; }
-  // Duplicate check
-  const dup = (state.masters.contractors||[]).find(c =>
-    c['Contractor Name'].toLowerCase() === name.toLowerCase()
-  );
-  if(dup){ toast('Contractor "'+name+'" already exists ('+dup['Contractor Code']+')','error'); return; }
+  // Duplicate check — name (normalised) + GSTIN hard block
+  const nameKey  = _normKey(name);
+  const gstinKey = _normGSTIN(gstin);
+  const contractors = state.masters.contractors || [];
+  const dupName = contractors.find(c => _normKey(c['Contractor Name']) === nameKey);
+  if(dupName){ toast('Contractor "'+name+'" already exists ('+dupName['Contractor Code']+')','error'); return; }
+  const dupGSTIN = contractors.find(c => _normGSTIN(c['GSTIN']) === gstinKey);
+  if(dupGSTIN){ toast('GSTIN '+gstin+' is already registered to "'+dupGSTIN['Contractor Name']+'" ('+dupGSTIN['Contractor Code']+')','error'); return; }
 
   pbShow('Saving contractor…');
   try {
@@ -12642,6 +13982,7 @@ async function saveContractorMaster() {
      'mc_bankName','mc_branch','mc_bank','mc_ifsc'].forEach(id=>{
       const e=document.getElementById(id); if(e) e.value='';
     });
+    _renderDupBox('mc_dup', 'hide');
     // Reload contractors into state
     const {data:fresh} = await sb.from('wo_contractors').select('*').eq('is_active',true).order('contractor_name');
     state.masters.contractors = (fresh||[]).map(r=>({
@@ -12672,7 +14013,7 @@ function contractorTypeahead(inputId, resultsId, codeId) {
   if(!matches.length){ res.classList.remove('show'); res.style.display='none'; return; }
   res.innerHTML = matches.map(c=>`
     <div class="typeahead-item"
-      onclick="selectContractor('${inputId}','${resultsId}','${codeId}','${esc(c['Contractor Name']).replace(/'/g,"\'")}','${esc(c['Contractor Code'])}')">
+      onmousedown="event.preventDefault();selectContractor('${inputId}','${resultsId}','${codeId}','${esc(c['Contractor Name']).replace(/'/g,"\'")}','${esc(c['Contractor Code'])}')">
       <strong>${esc(c['Contractor Name'])}</strong>
       <div class="muted">${esc(c['Trade']||'')} ${c['GSTIN']?' · GSTIN: '+esc(c['GSTIN']):''}</div>
     </div>`).join('');
@@ -13348,6 +14689,7 @@ function wbsTypeahead(inputId, resultsId, codeId, level='element') {
   const res = document.getElementById(resultsId);
   const inp = document.getElementById(inputId);
   if (!res) return;
+  if (!q) { res.classList.remove('show'); res.style.display='none'; return; }
   const data = puState.wbsList||[];
   const CAP = 20;
   const tokens = q ? _fuzzyTokens(q) : [];
@@ -13375,14 +14717,14 @@ function wbsTypeahead(inputId, resultsId, codeId, level='element') {
   }
   if (!matches.length) { res.classList.remove('show'); res.style.display='none'; return; }
   const hint = totalCount > CAP
-    ? `<div class="typeahead-item" style="background:var(--input-bg);font-size:11px;cursor:default;" onclick="event.stopPropagation()">
+    ? `<div class="typeahead-item" style="background:var(--input-bg);font-size:11px;cursor:default;" onmousedown="event.preventDefault();event.stopPropagation()">
          <span class="muted">Showing ${matches.length} of ${totalCount} ${q?'matches — type more to narrow down':'options — type to filter'}</span>
        </div>` : '';
   res.innerHTML = hint + matches.map(w=>{
     const display = level==='sub_activity' ? (w.wbs_sub_activity||'—') : (w.wbs_element||'—');
     const code    = level==='sub_activity' ? (w.wbs_sub_activity||'') : w.wbs_code;
     return `<div class="typeahead-item"
-      onclick="selectWBS('${inputId}','${resultsId}','${codeId}','${esc(display).replace(/'/g,"\'")}','${esc(code).replace(/'/g,"\'")}')">
+      onmousedown="event.preventDefault();selectWBS('${inputId}','${resultsId}','${codeId}','${esc(display).replace(/'/g,"\'")}','${esc(code).replace(/'/g,"\'")}')">
       <strong>${esc(display)}</strong>
       ${level!=='sub_activity'?`<div class="muted" style="font-size:10px;">${esc(w.block||'')} · ${esc(w.wbs_group||'')} · ${esc(w.wbs_activity||'')}</div>`:''}
     </div>`;
@@ -13399,6 +14741,24 @@ function selectWBS(inputId, resultsId, codeId, display, code) {
   if (cEl) cEl.value = code;
   const res = document.getElementById(resultsId);
   if (res) res.classList.remove('show');
+  // Inject a clear (✕) button right next to the input, unless already present.
+  // Using a sibling button keeps markup-agnostic across all call sites.
+  if (inp && !document.getElementById(inputId + '_clrBtn')) {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.id   = inputId + '_clrBtn';
+    btn.textContent = '✕';
+    btn.title = 'Clear';
+    btn.setAttribute('aria-label','Clear WBS selection');
+    btn.style.cssText = 'margin-left:4px;padding:2px 7px;border:1px solid #cbd5e1;background:#f8fafc;color:#64748b;border-radius:3px;cursor:pointer;font-size:11px;line-height:1;vertical-align:middle;';
+    btn.onmouseenter = () => { btn.style.background='#fee2e2'; btn.style.color='#dc2626'; btn.style.borderColor='#fca5a5'; };
+    btn.onmouseleave = () => { btn.style.background='#f8fafc'; btn.style.color='#64748b'; btn.style.borderColor='#cbd5e1'; };
+    btn.onclick = (ev) => { ev.preventDefault(); ev.stopPropagation(); clearWBSField(inputId, codeId, resultsId); };
+    // Insert after input
+    if (inp.parentNode) {
+      inp.parentNode.insertBefore(btn, inp.nextSibling);
+    }
+  }
 }
 
 function clearWBSField(inputId, codeId, resultsId) {
@@ -13408,6 +14768,9 @@ function clearWBSField(inputId, codeId, resultsId) {
   if (cEl) cEl.value='';
   const res = document.getElementById(resultsId);
   if (res) res.classList.remove('show');
+  // Remove the clear button if we previously injected one
+  const btn = document.getElementById(inputId + '_clrBtn');
+  if (btn && btn.parentNode) btn.parentNode.removeChild(btn);
 }
 
 
@@ -14830,7 +16193,7 @@ async function loadTrackerA() {
     const qcByRfq = {}; qcs.forEach(function(q){ if(q.rfq_number){ if(!qcByRfq[q.rfq_number]) qcByRfq[q.rfq_number]=[]; qcByRfq[q.rfq_number].push(q); } });
     const poByMir = {}; pos.forEach(function(p){ if(p.mir_number){ if(!poByMir[p.mir_number]) poByMir[p.mir_number]=[]; poByMir[p.mir_number].push(p); } });
     const poByQc = {}; pos.forEach(function(p){ if(p.qc_number){ if(!poByQc[p.qc_number]) poByQc[p.qc_number]=[]; poByQc[p.qc_number].push(p); } });
-    const grnByPo = {}; grns.forEach(function(g){ if(!grnByPo[g.po_number]) grnByPo[g.po_number]=[]; grnByPo[g.po_number].push(g); });
+    const grnByPo = {}; grns.forEach(function(g){ if(!g.po_number) return; /* skip cash GRNs */ if(!grnByPo[g.po_number]) grnByPo[g.po_number]=[]; grnByPo[g.po_number].push(g); });
 
     let html = '';
     mirs.forEach(function(mir) {
@@ -15060,8 +16423,8 @@ async function loadTrackerBPurchase(from) {
     const overallSt = paid>=num(b.net_payable)-0.01?'Paid':prrRaised?'PRR Raised':b.status==='Pending Approval'?'Pending Approval':'Unpaid';
     const stClass = overallSt==='Paid'?'paid':overallSt==='Pending Approval'?'pending-approval':'unpaid';
     html += '<tr class="parent-row">'+
-      '<td><div class="mono" style="font-size:11px;">'+esc(b.bill_number)+'</div>'+
-        '<div style="font-size:10px;color:var(--muted);">'+esc(b.po_number)+'</div></td>'+
+      '<td><div class="mono" style="font-size:11px;">'+esc(b.bill_number)+(b.is_cash_purchase?' <span style="font-size:9px;background:#ad6800;color:#fff;padding:1px 4px;border-radius:2px;">CASH</span>':'')+'</div>'+
+        '<div style="font-size:10px;color:var(--muted);">'+esc(b.is_cash_purchase ? 'Cash Purchase' : (b.po_number||'—'))+'</div></td>'+
       '<td style="font-size:11px;">'+esc(b.vendor_name)+'</td>'+
       '<td>'+renderMilestoneRow(milestones)+'</td>'+
       '<td><span class="status '+stClass+'" style="font-size:10px;">'+overallSt+'</span>'+
@@ -15239,8 +16602,8 @@ async function loadActivityFeed() {
     data[1].forEach(function(r){ push(r.rfq_date, 'created', 'RFQ <strong>'+r.rfq_number+'</strong> raised', 'By '+(r.raised_by||'—'), 0); });
     data[2].forEach(function(q){ push(q.qc_date, q.status==='Approved'?'approved':q.status==='Rejected'?'rejected':'pending', 'Quote Comparison <strong>'+q.qc_number+'</strong> — '+q.status, 'By '+(q.prepared_by||'—'), 0); });
     data[3].forEach(function(p){ push(p.po_date, p.status==='Open'?'approved':p.status==='Rejected'?'rejected':'pending', 'Purchase Order <strong>'+p.po_number+'</strong> — '+p.status, 'Vendor: '+(p.vendor_name||'—')+' | By: '+(p.prepared_by||'—'), num(p.grand_total)); });
-    data[4].forEach(function(g){ push(g.grn_date, g.status==='Verified'?'approved':'created', 'GRN <strong>'+g.grn_number+'</strong> '+g.status, 'Against '+g.po_number+' | By '+(g.received_by||'—'), 0); });
-    data[5].forEach(function(b){ push(b.bill_date, b.status==='Unpaid'?'approved':b.status==='Rejected'?'rejected':'pending', 'PO Bill <strong>'+b.bill_number+'</strong> — '+b.status, 'Vendor: '+(b.vendor_name||'—'), num(b.net_payable)); });
+    data[4].forEach(function(g){ push(g.grn_date, g.status==='Verified'?'approved':'created', 'GRN <strong>'+g.grn_number+'</strong> '+g.status+(g.is_cash_purchase?' <span style="font-size:10px;background:#ad6800;color:#fff;padding:1px 5px;border-radius:3px;">CASH</span>':''), (g.is_cash_purchase?'Cash Purchase':'Against '+(g.po_number||'—'))+' | By '+(g.received_by||'—'), 0); });
+    data[5].forEach(function(b){ push(b.bill_date, b.status==='Unpaid'?'approved':b.status==='Rejected'?'rejected':'pending', 'PO Bill <strong>'+b.bill_number+'</strong> — '+b.status+(b.is_cash_purchase?' <span style="font-size:10px;background:#ad6800;color:#fff;padding:1px 5px;border-radius:3px;">CASH</span>':''), 'Vendor: '+(b.vendor_name||'—'), num(b.net_payable)); });
     data[6].forEach(function(m){ push(m.issue_date, m.status==='Approved'?'approved':'pending', 'Material Issue <strong>'+m.mis_number+'</strong> — '+m.status, 'To: '+(m.issued_to||'—'), 0); });
     data[7].forEach(function(h){ push(h.ho_date, h.status==='Open'?'approved':h.status==='Rejected'?'rejected':'pending', 'Hire Order <strong>'+h.ho_number+'</strong> — '+h.status, 'Vendor: '+(h.vendor_name||'—'), 0); });
     data[8].forEach(function(c){ push(c.hoc_date, c.status==='Unbilled'?'approved':c.status==='Rejected'?'rejected':'pending', 'HO Certification <strong>'+c.hoc_number+'</strong> — '+c.status, 'HO: '+c.ho_number+' | By '+(c.certified_by||'—'), 0); });
