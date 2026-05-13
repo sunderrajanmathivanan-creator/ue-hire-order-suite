@@ -2592,7 +2592,7 @@ input[type="number"] {
       </div>
       <div>
         <button class="btn btn-primary" id="btn_newGRN" onclick="newGRN()">+ New GRN</button>
-        <button class="btn btn-warning" id="btn_newCashGRN" onclick="newCashGRN()" style="background:#ad6800;color:#fff;border-color:#ad6800;">💵 Cash Purchase</button>
+        <button class="btn btn-warning" id="btn_newCashGRN" onclick="newCashGRN()" style="background:#ad6800;color:#fff;border-color:#ad6800;">💵 Direct Purchase</button>
         <button class="btn btn-ghost" onclick="loadGRNList()">↻ Refresh</button>
       </div>
     </div>
@@ -2634,16 +2634,16 @@ input[type="number"] {
         <button class="btn btn-ghost" onclick="closeGRNForm()">Cancel</button>
       </div>
     </div>
-    <!-- Cash Purchase GRN Form -->
+    <!-- Direct Purchase GRN Form -->
     <div id="cashGrnForm" class="card" style="display:none;border-left:4px solid #ad6800;">
-      <h3 style="display:flex;align-items:center;gap:10px;">💵 New Cash Purchase GRN
-        <span style="font-size:11px;background:#ad6800;color:#fff;padding:2px 8px;border-radius:3px;font-weight:600;">CASH</span>
+      <h3 style="display:flex;align-items:center;gap:10px;">💵 New Direct Purchase GRN
+        <span style="font-size:11px;background:#ad6800;color:#fff;padding:2px 8px;border-radius:3px;font-weight:600;">DIRECT</span>
       </h3>
       <div class="muted" style="font-size:12px;margin-bottom:12px;">Materials purchased on cash, no PO reference. Will follow regular verification flow.</div>
       <div class="grid-4">
         <div class="field"><label>GRN Number</label><input id="cgrn_number" readonly style="opacity:.6;"></div>
         <div class="field"><label class="req">GRN Date</label><input type="date" id="cgrn_date"></div>
-        <div class="field"><label class="req">Cash Purchase Ref</label><input id="cgrn_cashRef" value="Cash Purchase" placeholder="e.g. Petty Cash Voucher #45"></div>
+        <div class="field"><label class="req">Direct Purchase Ref</label><input id="cgrn_cashRef" value="Direct Purchase" placeholder="e.g. Petty Cash Voucher #45"></div>
         <div class="field typeahead" style="position:relative;"><label class="req">Vendor</label>
           <div style="display:flex;gap:4px;">
             <input id="cgrn_vendorSearch" placeholder="Type to search vendor master…" autocomplete="off"
@@ -2662,7 +2662,7 @@ input[type="number"] {
         <div class="field"><label class="req">Invoice Date</label><input type="date" id="cgrn_invoiceDate"></div>
         <div class="field"><label>Received By</label><input id="cgrn_receivedBy" readonly style="opacity:.6;"></div>
       </div>
-      <!-- Cash GRN Items -->
+      <!-- Direct GRN Items -->
       <div style="margin-top:16px;">
         <div class="row" style="justify-content:space-between;align-items:center;margin-bottom:8px;">
           <h3 style="font-size:13px;margin:0;color:var(--text);">Materials Received</h3>
@@ -2686,7 +2686,7 @@ input[type="number"] {
       </div>
       <div class="field" style="margin-top:12px;max-width:600px;"><label>Remarks</label><textarea id="cgrn_remarks" rows="2"></textarea></div>
       <div class="actions-row">
-        <button class="btn btn-primary" onclick="saveCashGRN()">💾 Save Cash Purchase GRN</button>
+        <button class="btn btn-primary" onclick="saveCashGRN()">💾 Save Direct Purchase GRN</button>
         <button class="btn btn-ghost" onclick="closeCashGRNForm()">Cancel</button>
       </div>
     </div>
@@ -2706,7 +2706,7 @@ input[type="number"] {
         <select id="grnSourceFilter" style="padding:7px;background:var(--input-bg);color:var(--text);border:1px solid var(--border);border-radius:4px;" onchange="renderGRNList()" title="Filter by source">
           <option value="">All Sources</option>
           <option value="po">PO-based only</option>
-          <option value="cash">Cash Purchase only</option>
+          <option value="cash">Direct Purchase only</option>
         </select>
         <button class="btn btn-ghost" onclick="downloadGRNList()" title="Download filtered GRNs + all line items as CSV">📥 Download CSV</button>
       </div>
@@ -2732,7 +2732,7 @@ input[type="number"] {
       </div>
       <div>
         <button class="btn btn-primary" id="btn_newPOB" onclick="newPOB()">+ New PO Bill</button>
-        <button class="btn btn-warning" id="btn_newCashPOB" onclick="newCashPOB()" style="background:#ad6800;color:#fff;border-color:#ad6800;">💵 Cash Purchase Bill</button>
+        <button class="btn btn-warning" id="btn_newCashPOB" onclick="newCashPOB()" style="background:#ad6800;color:#fff;border-color:#ad6800;">💵 Direct Purchase Bill</button>
         <button class="btn btn-ghost" onclick="loadPOBList()">↻ Refresh</button>
       </div>
     </div>
@@ -2825,10 +2825,10 @@ input[type="number"] {
         </div>
       </div>
     </div>
-    <!-- Cash Purchase Bill Form -->
+    <!-- Direct Purchase Bill Form -->
     <div id="cashPobForm" class="card" style="display:none;border-left:4px solid #ad6800;">
-      <h3 id="cpob_formTitle" style="display:flex;align-items:center;gap:10px;">💵 New Cash Purchase Bill
-        <span style="font-size:11px;background:#ad6800;color:#fff;padding:2px 8px;border-radius:3px;font-weight:600;">CASH</span>
+      <h3 id="cpob_formTitle" style="display:flex;align-items:center;gap:10px;">💵 New Direct Purchase Bill
+        <span style="font-size:11px;background:#ad6800;color:#fff;padding:2px 8px;border-radius:3px;font-weight:600;">DIRECT</span>
       </h3>
       <div class="muted" style="font-size:12px;margin-bottom:12px;">Bill against cash-purchase GRNs from a single vendor. Follows the same PM approval and PRR flow.</div>
 
@@ -2852,7 +2852,7 @@ input[type="number"] {
       <!-- Step 2: Select Cash GRNs -->
       <div class="card" id="cpob_grnCard" style="display:none;background:#fff7e6;border-color:#ffd591;margin-top:8px;">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
-          <h3 style="font-size:13px;margin:0;">Step 2 — Select Verified Cash GRNs to Bill</h3>
+          <h3 style="font-size:13px;margin:0;">Step 2 — Select Verified Direct GRNs to Bill</h3>
           <div style="display:flex;gap:6px;">
             <button type="button" class="btn btn-ghost btn-sm" onclick="cpobSelectAllGRNs(true)">Select All</button>
             <button type="button" class="btn btn-ghost btn-sm" onclick="cpobSelectAllGRNs(false)">Clear All</button>
@@ -2963,7 +2963,7 @@ input[type="number"] {
         <select id="pobSourceFilter" style="padding:7px;background:var(--input-bg);color:var(--text);border:1px solid var(--border);border-radius:4px;" onchange="renderPOBList()" title="Filter by source">
           <option value="">All Sources</option>
           <option value="po">PO-based only</option>
-          <option value="cash">Cash Purchase only</option>
+          <option value="cash">Direct Purchase only</option>
         </select>
       </div>
       <div class="table-wrap">
@@ -4751,9 +4751,9 @@ async function apiGetUnpaidBills() {
     .filter(b => _openStatuses.has((b.status||'').toLowerCase()))
     .map(b => {
       const os = Math.max(0, num(b.net_payable) - (paidMap[b.bill_number]||0) - (inFlightMap[b.bill_number]||0));
-      // For cash bills (no PO), display "Cash Purchase" label in the PO column
+      // For direct bills (no PO), display "Direct Purchase" label in the PO column
       // so PMs can identify them in the PRR picker.
-      const orderLabel = b.is_cash_purchase ? 'Cash Purchase' : (b.po_number||'');
+      const orderLabel = b.is_cash_purchase ? 'Direct Purchase' : (b.po_number||'');
       return { 'Bill Number': b.bill_number, 'HO Number': orderLabel, 'PO Number': orderLabel,
         'Vendor Name': b.vendor_name, 'Invoice Value': b.invoice_value,
         'Net Payable': b.net_payable, 'Outstanding': os, 'Status': b.status, 'Type': 'POB',
@@ -5137,7 +5137,8 @@ function applyRoleUI() {
     btn_newHRR:'canCreateHRR', btn_newRRR:'canCreateRRR',
     // Purchase buttons
     btn_newMIR:'canCreateMIR', btn_newRFQ:'canCreateRFQ', btn_newPO:'canCreatePO',
-    btn_newGRN:'canCreateGRN', btn_newPOB:'canCreatePOB', btn_newMIS:'canCreateMIS'
+    btn_newGRN:'canCreateGRN', btn_newCashGRN:'canCreateGRN',
+    btn_newPOB:'canCreatePOB', btn_newCashPOB:'canCreatePOB', btn_newMIS:'canCreateMIS'
   };
   Object.entries(ids).forEach(([id, perm]) => {
     const el = document.getElementById(id);
@@ -8300,7 +8301,7 @@ async function newPRR() {
     const orderNum = billType === 'WOB' ? b['WO Number'] : b['HO Number'];
     const isCashPOB = billType === 'POB' && b['Is Cash Purchase'];
     const cashBadge = isCashPOB
-      ? ' <span style="font-size:10px;background:#ad6800;color:#fff;padding:1px 5px;border-radius:3px;font-weight:600;">CASH</span>'
+      ? ' <span style="font-size:10px;background:#ad6800;color:#fff;padding:1px 5px;border-radius:3px;font-weight:600;">DIRECT</span>'
       : '';
     return `<tr>
       <td class="center"><input type="checkbox" class="prr_billCheck"
@@ -11641,10 +11642,10 @@ function renderGRNList() {
       acts+=` <button class="btn btn-primary btn-sm" onclick="verifyGRN('${esc(g.grn_number)}')">Verify</button>
               <button class="btn btn-danger btn-sm" onclick="rejectDoc('GRN','${esc(g.grn_number)}')">Reject</button>`;
     const cashBadge = g.is_cash_purchase
-      ? ' <span style="font-size:10px;background:#ad6800;color:#fff;padding:1px 6px;border-radius:3px;font-weight:600;vertical-align:middle;">CASH</span>'
+      ? ' <span style="font-size:10px;background:#ad6800;color:#fff;padding:1px 6px;border-radius:3px;font-weight:600;vertical-align:middle;">DIRECT</span>'
       : '';
     const poDisplay = g.is_cash_purchase
-      ? `<span class="muted" style="font-style:italic;">${esc(g.cash_purchase_ref||'Cash Purchase')}</span>`
+      ? `<span class="muted" style="font-style:italic;">${esc(g.cash_purchase_ref||'Direct Purchase')}</span>`
       : `<span class="mono">${esc(g.po_number||'—')}</span>`;
     return `<tr>
       <td class="mono">${esc(g.grn_number)}${cashBadge}</td><td>${fmtDate(g.grn_date)}</td>
@@ -11693,7 +11694,7 @@ async function downloadGRNList() {
     // (Field names match the actual pu_grn / pu_grn_items schema.)
     const cols = [
       // GRN header
-      'GRN Number','GRN Date','PO Number','Is Cash Purchase','Cash Purchase Ref','Vendor Name',
+      'GRN Number','GRN Date','PO Number','Is Direct Purchase','Direct Purchase Ref','Vendor Name',
       'Vehicle/Challan','Invoice No','Invoice Date',
       'Received By','Verified By','Status','Created At','GRN Remarks',
       // Line item
@@ -11706,7 +11707,7 @@ async function downloadGRNList() {
     grns.forEach(g => {
       const its = itemsByGRN[g.grn_number] || [];
       const isCash = g.is_cash_purchase ? 'Yes' : 'No';
-      const cashRef = g.is_cash_purchase ? (g.cash_purchase_ref||'Cash Purchase') : '';
+      const cashRef = g.is_cash_purchase ? (g.cash_purchase_ref||'Direct Purchase') : '';
       if (!its.length) {
         rows.push([
           g.grn_number||'', g.grn_date||'', g.po_number||'', isCash, cashRef, g.vendor_name||'',
@@ -11908,7 +11909,7 @@ async function newCashGRN() {
   // Reset fields
   document.getElementById('cgrn_number').value = 'GRN/' + currentFY() + '/—— (auto)';
   document.getElementById('cgrn_date').value = today();
-  document.getElementById('cgrn_cashRef').value = 'Cash Purchase';
+  document.getElementById('cgrn_cashRef').value = 'Direct Purchase';
   document.getElementById('cgrn_vendorSearch').value = '';
   document.getElementById('cgrn_vendorName').value = '';
   document.getElementById('cgrn_vendorCode').value = '';
@@ -12102,7 +12103,7 @@ async function saveCashGRN() {
   const invDate  = document.getElementById('cgrn_invoiceDate').value;
 
   if (!date)    { toast('GRN Date required','error'); return; }
-  if (!cashRef) { toast('Cash Purchase Ref required','error'); return; }
+  if (!cashRef) { toast('Direct Purchase Ref required','error'); return; }
   if (!vendor || !vCode) { toast('Select a vendor from Vendor Master','error'); return; }
   if (!challan) { toast('Vehicle / Challan No. required','error'); return; }
   if (!invNo)   { toast('Invoice No. required','error'); return; }
@@ -12142,7 +12143,7 @@ async function saveCashGRN() {
   }
   if (!entries.length) { toast('Add at least one material','error'); return; }
 
-  pbShow('Saving Cash Purchase GRN…');
+  pbShow('Saving Direct Purchase GRN…');
   try {
     const grnNumber = await nextPUGRNNumber();
     const { error: hErr } = await sb.from('pu_grn').insert({
@@ -12162,7 +12163,7 @@ async function saveCashGRN() {
     );
     if (iErr) throw new Error(iErr.message);
 
-    flashSuccess('Cash Purchase GRN ' + grnNumber + ' saved — pending Site Manager verification');
+    flashSuccess('Direct Purchase GRN ' + grnNumber + ' saved — pending Site Manager verification');
     closeCashGRNForm();
     loadGRNList();
   } catch (e) {
@@ -12217,7 +12218,7 @@ async function viewGRN(grnNum) {
     ? ' <span style="font-size:11px;background:#ad6800;color:#fff;padding:2px 8px;border-radius:3px;font-weight:600;vertical-align:middle;">CASH PURCHASE</span>'
     : '';
   const refField = isCash
-    ? `<div><label class="muted" style="font-size:11px;">CASH PURCHASE REF</label><div style="font-style:italic;">${esc(h?.cash_purchase_ref||'Cash Purchase')}</div></div>`
+    ? `<div><label class="muted" style="font-size:11px;">DIRECT PURCHASE REF</label><div style="font-style:italic;">${esc(h?.cash_purchase_ref||'Direct Purchase')}</div></div>`
     : `<div><label class="muted" style="font-size:11px;">PO</label><div class="mono">${esc(h?.po_number||'')}</div></div>`;
   // Cash GRN has simplified item table (no PO Qty / Prev / Balance)
   const itemTable = isCash
@@ -12282,10 +12283,10 @@ function renderPOBList() {
       acts+=` <button class="btn btn-primary btn-sm" onclick="approvePOB('${esc(b.bill_number)}')">Approve</button>
               <button class="btn btn-danger btn-sm" onclick="rejectDoc('POB','${esc(b.bill_number)}')">Reject</button>`;
     const cashBadge = b.is_cash_purchase
-      ? ' <span style="font-size:10px;background:#ad6800;color:#fff;padding:1px 6px;border-radius:3px;font-weight:600;vertical-align:middle;">CASH</span>'
+      ? ' <span style="font-size:10px;background:#ad6800;color:#fff;padding:1px 6px;border-radius:3px;font-weight:600;vertical-align:middle;">DIRECT</span>'
       : '';
     const poDisplay = b.is_cash_purchase
-      ? `<span class="muted" style="font-style:italic;">Cash Purchase</span>`
+      ? `<span class="muted" style="font-style:italic;">Direct Purchase</span>`
       : `<span class="mono">${esc(b.po_number||'—')}</span>`;
     return `<tr>
       <td class="mono">${esc(b.bill_number)}${cashBadge}</td><td>${fmtDate(b.bill_date)}</td>
@@ -12633,7 +12634,7 @@ async function onCashPobVendorChange(vendorName) {
   document.getElementById('cpob_grnCheckList').innerHTML = (grns||[]).map(g => `
     <label style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--border);cursor:pointer;">
       <input type="checkbox" class="cpob_grnChk" value="${esc(g.grn_number)}" onchange="onCashPobGRNSelect()">
-      <span><strong>${esc(g.grn_number)}</strong> · ${fmtDate(g.grn_date)} · ${esc(g.cash_purchase_ref||'Cash Purchase')} · Inv: ${esc(g.invoice_no||'—')}</span>
+      <span><strong>${esc(g.grn_number)}</strong> · ${fmtDate(g.grn_date)} · ${esc(g.cash_purchase_ref||'Direct Purchase')} · Inv: ${esc(g.invoice_no||'—')}</span>
     </label>`).join('');
 }
 
@@ -12804,7 +12805,7 @@ async function saveCashPOB() {
   const sgstAmt = gstTotal > 0 ? gst * sgst / gstTotal : 0;
   const igstAmt = gstTotal > 0 ? gst * igst / gstTotal : 0;
 
-  pbShow('Saving Cash Purchase Bill…');
+  pbShow('Saving Direct Purchase Bill…');
   try {
     const billNumber = await nextPUDocNumber('POB');
     calcCashPobPayDue();
@@ -12858,7 +12859,7 @@ async function saveCashPOB() {
     // Flip GRNs to Partially Billed (same as regular flow)
     await sb.from('pu_grn').update({ status: 'Partially Billed' }).in('grn_number', _cpobSelectedGRNs);
 
-    flashSuccess('Cash Purchase Bill ' + billNumber + ' submitted for PM approval');
+    flashSuccess('Direct Purchase Bill ' + billNumber + ' submitted for PM approval');
     _cpobInvalidateCache();
     closeCashPOBForm();
     loadPOBList();
@@ -12892,7 +12893,7 @@ async function viewPOB(billNum) {
     ? ' <span style="font-size:11px;background:#ad6800;color:#fff;padding:2px 8px;border-radius:3px;font-weight:600;vertical-align:middle;">CASH PURCHASE</span>'
     : '';
   const refField = isCash
-    ? `<div><label class="muted" style="font-size:11px;">SOURCE</label><div style="font-style:italic;">Cash Purchase</div></div>`
+    ? `<div><label class="muted" style="font-size:11px;">SOURCE</label><div style="font-style:italic;">Direct Purchase</div></div>`
     : `<div><label class="muted" style="font-size:11px;">PO</label><div class="mono">${esc(h.po_number||'')}</div></div>`;
   openModal(`<h3>POB — ${esc(h.bill_number)}${cashBadge}</h3>
     <div class="grid-3" style="margin-bottom:10px;">
@@ -12932,7 +12933,7 @@ function renderMISList() {
     const totalVal=its.reduce((s,it)=>s+num(it.amount),0);
     const hasCash=its.some(it=>it.is_cash_purchase);
     const cashBadge = hasCash
-      ? ' <span style="font-size:10px;background:#ad6800;color:#fff;padding:1px 6px;border-radius:3px;font-weight:600;vertical-align:middle;" title="Contains material with cash-purchase history">CASH</span>'
+      ? ' <span style="font-size:10px;background:#ad6800;color:#fff;padding:1px 6px;border-radius:3px;font-weight:600;vertical-align:middle;" title="Contains material with cash-purchase history">DIRECT</span>'
       : '';
     const stCls=m.status==='Approved'?'approved':'pending-approval';
     let acts=`<button class="btn btn-ghost btn-sm" onclick="viewMIS('${esc(m.mis_number)}')">View</button>`;
@@ -12963,7 +12964,7 @@ function renderMISLedger() {
   document.getElementById('mis_ledgerBody').innerHTML=rows.map(r=>{
     const mis=puState.misList.find(m=>m.mis_number===r.mis_number);
     const cashBadge = r.is_cash_purchase
-      ? ' <span style="font-size:9px;background:#ad6800;color:#fff;padding:1px 5px;border-radius:3px;font-weight:600;vertical-align:middle;" title="Material has cash-purchase history">CASH</span>'
+      ? ' <span style="font-size:9px;background:#ad6800;color:#fff;padding:1px 5px;border-radius:3px;font-weight:600;vertical-align:middle;" title="Material has cash-purchase history">DIRECT</span>'
       : '';
     return `<tr>
       <td class="mono">${esc(r.mis_number)}</td><td>${fmtDate(mis?.issue_date)}</td>
@@ -13255,10 +13256,10 @@ async function viewMIS(misNum) {
   const total=(items||[]).reduce((s,it)=>s+num(it.amount),0);
   const anyCash = (items||[]).some(it=>it.is_cash_purchase);
   const headerBadge = anyCash
-    ? ' <span style="font-size:11px;background:#ad6800;color:#fff;padding:2px 8px;border-radius:3px;font-weight:600;vertical-align:middle;" title="Contains material with cash-purchase history">CASH</span>'
+    ? ' <span style="font-size:11px;background:#ad6800;color:#fff;padding:2px 8px;border-radius:3px;font-weight:600;vertical-align:middle;" title="Contains material with cash-purchase history">DIRECT</span>'
     : '';
   const lineBadge = (it) => it.is_cash_purchase
-    ? ' <span style="font-size:9px;background:#ad6800;color:#fff;padding:1px 5px;border-radius:3px;font-weight:600;vertical-align:middle;">CASH</span>'
+    ? ' <span style="font-size:9px;background:#ad6800;color:#fff;padding:1px 5px;border-radius:3px;font-weight:600;vertical-align:middle;">DIRECT</span>'
     : '';
   openModal(`<h3>MIS — ${esc(misNum)}${headerBadge}</h3>
     <div class="grid-3" style="margin-bottom:10px;">
@@ -16432,7 +16433,7 @@ async function loadTrackerBPurchase(from) {
     const stClass = overallSt==='Paid'?'paid':overallSt==='Pending Approval'?'pending-approval':'unpaid';
     html += '<tr class="parent-row">'+
       '<td><div class="mono" style="font-size:11px;">'+esc(b.bill_number)+(b.is_cash_purchase?' <span style="font-size:9px;background:#ad6800;color:#fff;padding:1px 4px;border-radius:2px;">CASH</span>':'')+'</div>'+
-        '<div style="font-size:10px;color:var(--muted);">'+esc(b.is_cash_purchase ? 'Cash Purchase' : (b.po_number||'—'))+'</div></td>'+
+        '<div style="font-size:10px;color:var(--muted);">'+esc(b.is_cash_purchase ? 'Direct Purchase' : (b.po_number||'—'))+'</div></td>'+
       '<td style="font-size:11px;">'+esc(b.vendor_name)+'</td>'+
       '<td>'+renderMilestoneRow(milestones)+'</td>'+
       '<td><span class="status '+stClass+'" style="font-size:10px;">'+overallSt+'</span>'+
@@ -16610,7 +16611,7 @@ async function loadActivityFeed() {
     data[1].forEach(function(r){ push(r.rfq_date, 'created', 'RFQ <strong>'+r.rfq_number+'</strong> raised', 'By '+(r.raised_by||'—'), 0); });
     data[2].forEach(function(q){ push(q.qc_date, q.status==='Approved'?'approved':q.status==='Rejected'?'rejected':'pending', 'Quote Comparison <strong>'+q.qc_number+'</strong> — '+q.status, 'By '+(q.prepared_by||'—'), 0); });
     data[3].forEach(function(p){ push(p.po_date, p.status==='Open'?'approved':p.status==='Rejected'?'rejected':'pending', 'Purchase Order <strong>'+p.po_number+'</strong> — '+p.status, 'Vendor: '+(p.vendor_name||'—')+' | By: '+(p.prepared_by||'—'), num(p.grand_total)); });
-    data[4].forEach(function(g){ push(g.grn_date, g.status==='Verified'?'approved':'created', 'GRN <strong>'+g.grn_number+'</strong> '+g.status+(g.is_cash_purchase?' <span style="font-size:10px;background:#ad6800;color:#fff;padding:1px 5px;border-radius:3px;">CASH</span>':''), (g.is_cash_purchase?'Cash Purchase':'Against '+(g.po_number||'—'))+' | By '+(g.received_by||'—'), 0); });
+    data[4].forEach(function(g){ push(g.grn_date, g.status==='Verified'?'approved':'created', 'GRN <strong>'+g.grn_number+'</strong> '+g.status+(g.is_cash_purchase?' <span style="font-size:10px;background:#ad6800;color:#fff;padding:1px 5px;border-radius:3px;">CASH</span>':''), (g.is_cash_purchase?'Direct Purchase':'Against '+(g.po_number||'—'))+' | By '+(g.received_by||'—'), 0); });
     data[5].forEach(function(b){ push(b.bill_date, b.status==='Unpaid'?'approved':b.status==='Rejected'?'rejected':'pending', 'PO Bill <strong>'+b.bill_number+'</strong> — '+b.status+(b.is_cash_purchase?' <span style="font-size:10px;background:#ad6800;color:#fff;padding:1px 5px;border-radius:3px;">CASH</span>':''), 'Vendor: '+(b.vendor_name||'—'), num(b.net_payable)); });
     data[6].forEach(function(m){ push(m.issue_date, m.status==='Approved'?'approved':'pending', 'Material Issue <strong>'+m.mis_number+'</strong> — '+m.status, 'To: '+(m.issued_to||'—'), 0); });
     data[7].forEach(function(h){ push(h.ho_date, h.status==='Open'?'approved':h.status==='Rejected'?'rejected':'pending', 'Hire Order <strong>'+h.ho_number+'</strong> — '+h.status, 'Vendor: '+(h.vendor_name||'—'), 0); });
