@@ -2249,7 +2249,7 @@ input[type="number"] {
     <div class="table-wrap">
       <table>
         <thead><tr>
-          <th>Name</th><th>Email</th><th>Role</th><th>Status</th><th class="center">Actions</th>
+          <th>Name</th><th>Email</th><th>Roles</th><th>Status</th><th class="center">Actions</th>
         </tr></thead>
         <tbody id="users_list"><tr><td colspan="5" class="center muted">Loading…</td></tr></tbody>
       </table>
@@ -2770,10 +2770,9 @@ input[type="number"] {
           <div class="field"><label class="req">Vendor Invoice No.</label><input id="pob_vendorInvNo"></div>
           <div class="field"><label class="req">Vendor Invoice Date</label><input type="date" id="pob_vendorInvDate"></div>
         </div>
-        <div class="grid-3" style="margin-top:12px;">
+        <div class="grid-2" style="margin-top:12px;">
           <div class="field"><label>Credit Period (days)</label><input type="number" id="pob_creditPeriod" value="30" oninput="calcPOBPayDue()"></div>
           <div class="field"><label>Invoice Pay Due</label><input type="date" id="pob_invPayDue" readonly style="opacity:.6;"></div>
-          <div class="field"><label>TDS %</label><input type="number" id="pob_tdsPct" value="2" step="0.01" oninput="recalcPOBTotals()"></div>
         </div>
         <!-- Bill Line Items -->
         <div style="margin-top:16px;">
@@ -2810,7 +2809,6 @@ input[type="number"] {
             <tr><td style="padding:4px 8px;color:var(--muted);" id="pob_s_gstLabel">GST</td><td class="num" style="padding:4px 8px;" id="pob_s_gst">0.00</td></tr>
             <tr><td style="padding:4px 8px;color:var(--muted);" id="pob_s_extraAfterLabel">Add: After-GST</td><td class="num" style="padding:4px 8px;" id="pob_s_extraAfter">0.00</td></tr>
             <tr style="border-top:1px solid var(--border);"><td style="padding:6px 8px;font-weight:600;">Invoice Value</td><td class="num" style="padding:6px 8px;font-weight:600;" id="pob_s_invoice">0.00</td></tr>
-            <tr><td style="padding:4px 8px;color:var(--muted);">Less: TDS (<span id="pob_s_tdsLbl">2</span>%)</td><td class="num" style="padding:4px 8px;" id="pob_s_tds">0.00</td></tr>
             <tr><td style="padding:4px 8px;color:var(--muted);">Less: Hold Amount</td>
               <td class="num" style="padding:4px 8px;"><input type="number" id="pob_holdAmt" value="0" step="0.01" style="width:100px;text-align:right;" oninput="recalcPOBTotals()"></td></tr>
             <tr style="background:#e6f4f1;"><td style="padding:6px 8px;font-weight:700;color:var(--accent);">Net Payable (₹)</td>
@@ -2890,10 +2888,9 @@ input[type="number"] {
           </div>
         </div>
 
-        <div class="grid-3" style="margin-top:12px;">
+        <div class="grid-2" style="margin-top:12px;">
           <div class="field"><label>Credit Period (days)</label><input type="number" id="cpob_creditPeriod" value="0" oninput="calcCashPobPayDue()"></div>
           <div class="field"><label>Invoice Pay Due</label><input type="date" id="cpob_invPayDue" readonly style="opacity:.6;"></div>
-          <div class="field"><label>TDS %</label><input type="number" id="cpob_tdsPct" value="2" step="0.01" oninput="recalcCashPobTotals()"></div>
         </div>
 
         <!-- Bill Line Items -->
@@ -2933,7 +2930,6 @@ input[type="number"] {
             <tr><td style="padding:4px 8px;color:var(--muted);" id="cpob_s_gstLabel">GST</td><td class="num" style="padding:4px 8px;" id="cpob_s_gst">0.00</td></tr>
             <tr><td style="padding:4px 8px;color:var(--muted);">Add: After-GST</td><td class="num" style="padding:4px 8px;" id="cpob_s_extraAfter">0.00</td></tr>
             <tr style="border-top:1px solid var(--border);"><td style="padding:6px 8px;font-weight:600;">Invoice Value</td><td class="num" style="padding:6px 8px;font-weight:600;" id="cpob_s_invoice">0.00</td></tr>
-            <tr><td style="padding:4px 8px;color:var(--muted);">Less: TDS (<span id="cpob_s_tdsLbl">2</span>%)</td><td class="num" style="padding:4px 8px;" id="cpob_s_tds">0.00</td></tr>
             <tr><td style="padding:4px 8px;color:var(--muted);">Less: Hold Amount</td>
               <td class="num" style="padding:4px 8px;"><input type="number" id="cpob_holdAmt" value="0" step="0.01" style="width:100px;text-align:right;" oninput="recalcCashPobTotals()"></td></tr>
             <tr style="background:#e6f4f1;"><td style="padding:6px 8px;font-weight:700;color:var(--accent);">Net Payable (₹)</td>
@@ -3224,7 +3220,7 @@ var puState = {
 // STATE
 // ============================================================
 const state = {
-  user: null, role: null, userName: null, userId: null,
+  user: null, role: null, roles: [], userName: null, userId: null,
   masters: { vendors: [], activities: [], boqItems: [], serviceLocations: [] },
   mastersCached: false,
   hireOrders: [], certifications: [], bills: [],
@@ -4815,16 +4811,21 @@ async function loadUsersList() {
   const tbody = document.getElementById('users_list');
   if (error) { tbody.innerHTML = `<tr><td colspan="5" class="center warn-text">${esc(error.message)}</td></tr>`; return; }
   document.getElementById('users_badge').textContent = (data||[]).length;
-  tbody.innerHTML = (data||[]).map(u => `<tr>
+  tbody.innerHTML = (data||[]).map(u => {
+    const roles = _parseRoles(u.role);
+    const rolesJson = esc(JSON.stringify(roles));
+    const chips = roles.map(r => `<span class="status open" style="margin-right:3px;font-size:10px;">${esc(r)}</span>`).join('');
+    return `<tr>
     <td>${esc(u.full_name)}</td>
     <td style="font-size:12px;color:var(--muted);">${esc(u.email || u.id.slice(0,8) + '\u2026')}</td>
-    <td><span class="status ${u.is_active ? 'open' : 'cancelled'}">${esc(u.role)}</span></td>
+    <td>${chips||'<span class="muted">—</span>'}</td>
     <td><span class="status ${u.is_active ? 'paid' : 'rejected'}">${u.is_active ? 'Active' : 'Inactive'}</span></td>
     <td class="center">
-      <button class="btn btn-ghost btn-sm" onclick="changeUserRole('${u.id}','${esc(u.full_name)}','${esc(u.role)}')">Change Role</button>
+      <button class="btn btn-ghost btn-sm" onclick="changeUserRole('${u.id}','${esc(u.full_name)}','${rolesJson}')">Change Roles</button>
       <button class="btn ${u.is_active ? 'btn-danger' : 'btn-primary'} btn-sm" onclick="toggleUserActive('${u.id}',${!u.is_active})">${u.is_active ? 'Deactivate' : 'Reactivate'}</button>
     </td>
-  </tr>`).join('') || '<tr><td colspan="5" class="center muted">No users found.</td></tr>';
+  </tr>`;
+  }).join('') || '<tr><td colspan="5" class="center muted">No users found.</td></tr>';
 }
 
 async function inviteUser() {
@@ -4859,21 +4860,19 @@ async function inviteUser() {
   flashSuccess('User created. Now send them a password reset email and assign their role below.');
 }
 
-async function changeUserRole(userId, name, currentRole) {
+async function changeUserRole(userId, name, rolesJson) {
   if (!hasPerm('canManageUsers')) { toast('Admin access only','error'); return; }
+  const currentRoles = _parseRoles(rolesJson);
+  const allRoles = ['Procurement','Site Manager','Store Executive','Planning/ QS','Project Manager','Admin'];
+  const checkboxes = allRoles.map(r => `
+    <label style="display:flex;align-items:center;gap:8px;padding:6px 0;cursor:pointer;">
+      <input type="checkbox" value="${esc(r)}" ${currentRoles.includes(r)?'checked':''} style="width:16px;height:16px;">
+      <span>${esc(r)}</span>
+    </label>`).join('');
   openModal(`
-    <h3>Change Role — ${esc(name)}</h3>
-    <div class="field" style="margin-bottom:16px;">
-      <label>New Role</label>
-      <select id="modal_newRole" style="padding:9px;background:var(--input-bg);color:var(--text);border:1px solid var(--border);border-radius:4px;width:100%;">
-        <option value="Procurement"     ${currentRole==='Procurement'?'selected':''}>Procurement</option>
-        <option value="Site Manager"      ${currentRole==='Site Manager'?'selected':''}>Site Manager</option>
-        <option value="Store Executive"   ${currentRole==='Store Executive'?'selected':''}>Store Executive</option>
-        <option value="Planning/ QS"      ${currentRole==='Planning/ QS'?'selected':''}>Planning/ QS</option>
-        <option value="Project Manager"   ${currentRole==='Project Manager'?'selected':''}>Project Manager</option>
-        <option value="Admin"             ${currentRole==='Admin'?'selected':''}>Admin</option>
-      </select>
-    </div>
+    <h3>Change Roles — ${esc(name)}</h3>
+    <p style="font-size:12px;color:var(--muted);margin-bottom:12px;">Select one or more roles. Permissions are combined across all assigned roles.</p>
+    <div id="modal_roleChecks" style="margin-bottom:16px;">${checkboxes}</div>
     <div class="actions-row">
       <button class="btn btn-primary" onclick="saveRoleChange('${userId}')">Save</button>
       <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
@@ -4882,11 +4881,13 @@ async function changeUserRole(userId, name, currentRole) {
 
 async function saveRoleChange(userId) {
   if (!hasPerm('canManageUsers')) { toast('Admin access only','error'); return; }
-  const newRole = document.getElementById('modal_newRole').value;
-  const { error } = await sb.from('user_profiles').update({ role: newRole, updated_at: new Date().toISOString() }).eq('id', userId);
+  const checked = [...document.querySelectorAll('#modal_roleChecks input[type="checkbox"]:checked')].map(cb => cb.value);
+  if (!checked.length) { toast('Select at least one role','error'); return; }
+  const roleValue = checked.length === 1 ? checked[0] : JSON.stringify(checked);
+  const { error } = await sb.from('user_profiles').update({ role: roleValue, updated_at: new Date().toISOString() }).eq('id', userId);
   if (error) { toast(error.message, 'error'); return; }
   closeModal();
-  flashSuccess('Role updated');
+  flashSuccess('Roles updated — ' + checked.join(', '));
   loadUsersList();
 }
 
@@ -5025,15 +5026,16 @@ async function onSignedIn(user) {
 
   state.userId   = user.id;
   state.user     = user.email;
-  state.role     = profile.role;
+  state.roles    = _parseRoles(profile.role);
+  state.role     = state.roles.join(' · '); // display string only — all logic uses state.roles
   state.userName = profile.full_name;
 
   document.getElementById('authGate').style.display = 'none';
   document.getElementById('app').classList.remove('hidden');
   document.getElementById('currentUser').textContent = profile.full_name;
-  document.getElementById('currentRole').textContent = profile.role;
+  document.getElementById('currentRole').textContent = state.roles.join(' · ');
 
-  if (profile.role === 'Admin') document.getElementById('tab-users').style.display = '';
+  if (hasRole('Admin')) document.getElementById('tab-users').style.display = '';
 
   applyRoleUI();
   await initApp();
@@ -5041,7 +5043,7 @@ async function onSignedIn(user) {
 
 async function doLogout() {
   _authHandled = false;
-  state.user = state.role = state.userName = state.userId = null;
+  state.user = state.role = state.userName = state.userId = null; state.roles = [];
   Object.keys(_cache).forEach(k => delete _cache[k]);
   await sb.auth.signOut();
   document.getElementById('authGate').style.display = 'flex';
@@ -5100,16 +5102,34 @@ sb.auth.onAuthStateChange(async (event, session) => {
 });
 
 
+// ── Multi-role helpers ──────────────────────────────────────────────────────
+// Parses the role value stored in the DB — supports:
+//   • JSON array string: '["Admin","Planning/ QS"]'
+//   • Legacy single string: 'Admin'
+// Always returns a plain JS array.
+function _parseRoles(raw) {
+  if (!raw) return [];
+  if (Array.isArray(raw)) return raw;
+  const s = String(raw).trim();
+  if (s.startsWith('[')) { try { return JSON.parse(s); } catch(e) {} }
+  return [s]; // legacy single-role
+}
+
+// Check if the signed-in user has a given role (exact string match)
+function hasRole(r) { return state.roles.includes(r); }
+
+// Union of all permission objects across every assigned role
+function mergedPerms() {
+  return state.roles.reduce((acc, r) => Object.assign(acc, ROLE_PERMS[r] || {}), {});
+}
+
 // ============================================================
 // ROLE HELPERS
 // ============================================================
-function hasPerm(p) {
-  const perms = ROLE_PERMS[state.role] || {};
-  return !!perms[p];
-}
+function hasPerm(p) { return !!mergedPerms()[p]; }
 
 function applyRoleUI() {
-  const perms = ROLE_PERMS[state.role] || {};
+  const perms = mergedPerms();
   const ids = {
     btn_newHO:'canCreateHO', btn_newHOC:'canCreateHOC', btn_newHOB:'canCreateHOB',
     btn_newWO:'canCreateWO', btn_newWOC:'canCreateWOC', btn_newWOB:'canCreateWOB',
@@ -5284,8 +5304,8 @@ function renderAllMasters() {
   const m = state.masters;
   // isAdmin gates edit/delete buttons. canAdd gates the Add cards.
   // Planning/QS can create new master entries but cannot edit/delete.
-  const isAdmin = state.role === 'Admin';
-  const canAdd  = isAdmin || state.role === 'Planning/ QS';
+  const isAdmin = hasRole('Admin');
+  const canAdd  = isAdmin || hasRole('Planning/ QS');
   // Safe innerHTML setter — skips missing elements so startup doesn't crash
   const setHTML = (id, html) => {
     const el = document.getElementById(id);
@@ -5404,7 +5424,7 @@ function onBOQLevelChange() {
 }
 
 async function deleteMaster(type, code, name) {
-  if (state.role !== 'Admin') { toast('Only Admin can delete masters','error'); return; }
+  if (!hasRole('Admin')) { toast('Only Admin can delete masters','error'); return; }
   if (!confirm('Delete "' + name + '"? This cannot be undone.')) return;
   pbShow('Deleting\u2026');
   try {
@@ -5422,7 +5442,7 @@ async function deleteMaster(type, code, name) {
 }
 
 async function editMaster(type, code) {
-  if (state.role !== 'Admin') { toast('Only Admin can edit masters','error'); return; }
+  if (!hasRole('Admin')) { toast('Only Admin can edit masters','error'); return; }
   // Load the item and pre-fill the add form for editing
   const m = state.masters;
   let item;
@@ -5472,7 +5492,7 @@ async function editMaster(type, code) {
 }
 
 async function saveMaster(type) {
-  if (!['Admin','Planning/ QS'].includes(state.role)) { toast('Only Admin or Planning/QS can add master entries','error'); return; }
+  if (!hasRole('Admin') && !hasRole('Planning/ QS')) { toast('Only Admin or Planning/QS can add master entries','error'); return; }
   let row;
   if (type === 'vendor') {
     const name = document.getElementById('mv_name').value.trim();
@@ -5970,7 +5990,7 @@ function renderHOList() {
   if (sf) rows = rows.filter(o => o['Status'] === sf);
   if (!rows.length) { tbody.innerHTML = '<tr><td colspan="7" class="center muted">No hire orders found.</td></tr>'; return; }
 
-  const perms = ROLE_PERMS[state.role] || {};
+  const perms = mergedPerms();
   tbody.innerHTML = rows.map(o => {
     const st = o['Status'] || 'Open';
     const stClass = st.toLowerCase().replace(/\s/g,'-').replace(/-closed/,'');
@@ -6364,7 +6384,7 @@ function renderHOCList() {
   if (sf) rows = rows.filter(c => c['Status'] === sf);
   if (!rows.length) { tbody.innerHTML = '<tr><td colspan="7" class="center muted">No certifications found.</td></tr>'; return; }
 
-  const perms = ROLE_PERMS[state.role] || {};
+  const perms = mergedPerms();
   tbody.innerHTML = rows.map(c => {
     const st = c['Status'] || 'Unbilled';
     let actionBtns = `<button class="btn btn-ghost btn-sm" onclick="viewHOC('${esc(c['HOC Number'])}')">View</button>
@@ -6684,7 +6704,7 @@ function renderHOBList() {
   if (sf) rows = rows.filter(b => b['Status'] === sf);
   if (!rows.length) { tbody.innerHTML = '<tr><td colspan="11" class="center muted">No bills found.</td></tr>'; return; }
 
-  const perms = ROLE_PERMS[state.role] || {};
+  const perms = mergedPerms();
   tbody.innerHTML = rows.map(b => {
     const st = b['Status'] || 'Unpaid';
     let actionBtns = `<button class="btn btn-ghost btn-sm" onclick="viewHOBById('${esc(b['Bill Number'])}')">View</button>
@@ -7134,7 +7154,7 @@ function renderWOList() {
   if (sf) rows = rows.filter(o => o['Status'] === sf);
   if (!rows.length) { tbody.innerHTML = '<tr><td colspan="8" class="center muted">No work orders found.</td></tr>'; return; }
 
-  const perms = ROLE_PERMS[state.role] || {};
+  const perms = mergedPerms();
   tbody.innerHTML = rows.map(o => {
     const st = o['Status'] || 'Open';
     const stClass = st.toLowerCase().replace(/[\s-]+/g,'-');
@@ -7491,7 +7511,7 @@ function renderWOCList() {
   if (q)  rows = rows.filter(c => ['WOC Number','WO Number','Vendor Name'].some(f => String(c[f]||'').toLowerCase().includes(q)));
   if (sf) rows = rows.filter(c => c['Status']===sf);
   if (!rows.length) { tbody.innerHTML = '<tr><td colspan="7" class="center muted">No certifications found.</td></tr>'; return; }
-  const perms = ROLE_PERMS[state.role]||{};
+  const perms = mergedPerms();
   tbody.innerHTML = rows.map(c => {
     const st = c['Status']||'Unbilled';
     let ab = `<button class="btn btn-ghost btn-sm" onclick="viewWOC('${esc(c['WOC Number'])}')">View</button>
@@ -7767,7 +7787,7 @@ function renderWOBList() {
   if (q)  rows = rows.filter(b => ['Bill Number','WO Number','WOC Number'].some(f => String(b[f]||'').toLowerCase().includes(q)));
   if (sf) rows = rows.filter(b => b['Status']===sf);
   if (!rows.length) { tbody.innerHTML = '<tr><td colspan="11" class="center muted">No bills found.</td></tr>'; return; }
-  const perms = ROLE_PERMS[state.role]||{};
+  const perms = mergedPerms();
   tbody.innerHTML = rows.map(b => {
     const st = b['Status']||'Unpaid';
     let ab = `<button class="btn btn-ghost btn-sm" onclick="viewWOBById('${esc(b['Bill Number'])}')">View</button>
@@ -9333,7 +9353,7 @@ function renderMaterialMaster() {
 }
 
 async function saveMaterialMaster() {
-  if (!['Admin','Planning/ QS'].includes(state.role)) {
+  if (!hasRole('Admin') && !hasRole('Planning/ QS')) {
     toast('Only Admin or Planning/QS can add materials','error'); return;
   }
   const name = document.getElementById('mm_name').value.trim();
@@ -9694,7 +9714,7 @@ function renderMIRList() {
   let rows = puState.mirList;
   if (q)  rows = rows.filter(m => m.mir_number.toLowerCase().includes(q)||(m.purpose||'').toLowerCase().includes(q));
   if (sf) rows = rows.filter(m => m.status === sf);
-  const perms = ROLE_PERMS[state.role]||{};
+  const perms = mergedPerms();
   document.getElementById('mir_listBody').innerHTML = rows.map(m => {
     const st = m.status||'Pending Approval';
     const stCls = st.toLowerCase().replace(/[\s/()]+/g,'-');
@@ -9821,7 +9841,7 @@ async function viewMIR(mirNum) {
   pbDone();
   if (!h) { toast('MIR not found','error'); return; }
 
-  const perms = ROLE_PERMS[state.role]||{};
+  const perms = mergedPerms();
   const mirSt = h.status||'Pending Approval';
   const canAct = perms.canCreateRFQ &&
     (mirSt==='Approved'||mirSt==='Partial RFQ'||mirSt==='RFQ Raised');
@@ -9982,7 +10002,7 @@ async function loadRFQList() {
 }
 
 function renderRFQList() {
-  const perms = ROLE_PERMS[state.role]||{};
+  const perms = mergedPerms();
   document.getElementById('rfq_listBody').innerHTML = puState.rfqList.map(r => {
     const stCls = r.status.toLowerCase().replace(/\s/g,'-');
     let acts = `<button class="btn btn-ghost btn-sm" onclick="viewRFQ('${esc(r.rfq_number)}')">View</button>`;
@@ -10225,7 +10245,7 @@ async function viewRFQ(rfqNum) {
     sb.from('pu_rfq').select('*').eq('rfq_number',rfqNum).single(),
     sb.from('pu_rfq_items').select('*').eq('rfq_number',rfqNum).order('sno'),
   ]);
-  const permsRFQ = ROLE_PERMS[state.role]||{};
+  const permsRFQ = mergedPerms();
   const hasQC = puState.rfqWithQC?.has(rfqNum);
   const rfqActionBtns = permsRFQ.canCreateQC && !hasQC && (h?.status==='Open'||h?.status==='Comparison Ready')
     ? `<button class="btn btn-secondary" onclick="closeModal();newQCFromRFQ('${esc(rfqNum)}')">+ Compare Quotes</button>`
@@ -10273,7 +10293,7 @@ async function loadQCList() {
 }
 
 function renderQCList() {
-  const perms=ROLE_PERMS[state.role]||{};
+  const perms=mergedPerms();
   document.getElementById('qc_listBody').innerHTML=puState.qcList.map(q=>{
     const stCls=q.status.toLowerCase().replace(/\s/g,'-');
     let acts=`<button class="btn btn-ghost btn-sm" onclick="viewQC('${esc(q.qc_number)}')">View</button>`;
@@ -10555,7 +10575,7 @@ async function viewQC(qcNum) {
   ]);
   pbDone();
   if(!h){toast('QC not found','error');return;}
-  const perms=ROLE_PERMS[state.role]||{};
+  const perms=mergedPerms();
 
   const allRounds=[...new Set((negs||[]).map(n=>n.round))].sort((a,b)=>a-b);
   const maxRound=allRounds.length?allRounds[allRounds.length-1]:0;
@@ -10888,7 +10908,7 @@ async function viewQC(qcNum) {
     </div>`;
 
   const statusBadge=`<span class="status ${h.status.toLowerCase().replace(/\s/g,'-')}" style="margin-left:8px;">${h.status}</span>`;
-  const canCreatePONow=(ROLE_PERMS[state.role]||{}).canCreatePO&&h.status==='Approved';
+  const canCreatePONow=mergedPerms().canCreatePO&&h.status==='Approved';
   const printBtn=`<button class="btn btn-ghost btn-sm" onclick="printQCPopup('${esc(qcNum)}')">🖨 Print</button>`;
   const actionBtns=isApproval
     ?`${printBtn}
@@ -11345,7 +11365,7 @@ async function viewPO(poNum) {
 
   // Eligibility for Cancel / Short Close / Approve / Reject
   const grnCount = activeGRNs.length;
-  const perms = ROLE_PERMS[state.role]||{};
+  const perms = mergedPerms();
   const isCancelable    = perms.canCancelPO     && h.status==='Open'             && grnCount===0;
   const isShortClosable = perms.canShortClosePO && h.status==='Partial Receipt'  && grnCount>=1;
   const isApprovable    = perms.canApprovePO    && h.status==='Pending Approval';
@@ -11612,7 +11632,7 @@ function renderGRNList() {
   if(sf) rows=rows.filter(g=>g.status===sf);
   if(src==='cash') rows=rows.filter(g=>g.is_cash_purchase);
   else if(src==='po') rows=rows.filter(g=>!g.is_cash_purchase);
-  const perms=ROLE_PERMS[state.role]||{};
+  const perms=mergedPerms();
   document.getElementById('grn_listBody').innerHTML=rows.map(g=>{
     const st=g.status||'Pending Verification';
     const stCls=st.toLowerCase().replace(/\s/g,'-');
@@ -12253,7 +12273,7 @@ function renderPOBList() {
   if(sf) rows=rows.filter(b=>b.status===sf);
   if(src==='cash') rows=rows.filter(b=>b.is_cash_purchase);
   else if(src==='po') rows=rows.filter(b=>!b.is_cash_purchase);
-  const perms=ROLE_PERMS[state.role]||{};
+  const perms=mergedPerms();
   document.getElementById('pob_listBody').innerHTML=rows.map(b=>{
     const stCls=b.status.toLowerCase().replace(/\s/g,'-');
     let acts=`<button class="btn btn-ghost btn-sm" onclick="viewPOB('${esc(b.bill_number)}')">View</button>
@@ -12290,7 +12310,6 @@ async function newPOB() {
   ['pob_vendor','pob_poValue','pob_vendorInvNo','pob_remarks'].forEach(id=>{const e=document.getElementById(id);if(e)e.value='';});
   document.getElementById('pob_creditPeriod').value='30';
   document.getElementById('pob_holdAmt').value='0';
-  document.getElementById('pob_tdsPct').value='2';
   document.getElementById('pob_grnCard').style.display='none';
   document.getElementById('pob_billDetails').style.display='none';
   document.getElementById('pob_itemsBody').innerHTML='';
@@ -12395,18 +12414,14 @@ function recalcPOBTotals() {
   const gstPct=(_pobGSTInfo.cgst||0)+(_pobGSTInfo.sgst||0)+(_pobGSTInfo.igst||0);
   const gst=taxable*gstPct/100;
   const invoice=taxable+gst+extraAfter;
-  const tdsPct=parseFloat(document.getElementById('pob_tdsPct')?.value)||0;
-  const tds=invoice*tdsPct/100;
   const hold=num(document.getElementById('pob_holdAmt')?.value);
-  const net=invoice-tds-hold;
+  const net=invoice-hold;
   document.getElementById('pob_s_extraBefore').textContent=(extraBefore>=0?'+':'')+fmtINR(extraBefore);
   document.getElementById('pob_s_taxable').textContent=fmtINR(taxable);
   document.getElementById('pob_s_gstLabel').textContent='GST ('+gstPct+'%)';
   document.getElementById('pob_s_gst').textContent=fmtINR(gst);
   document.getElementById('pob_s_extraAfter').textContent=(extraAfter>=0?'+':'')+fmtINR(extraAfter);
   document.getElementById('pob_s_invoice').textContent=fmtINR(invoice);
-  document.getElementById('pob_s_tds').textContent=fmtINR(tds);
-  document.getElementById('pob_s_tdsLbl').textContent=tdsPct;
   document.getElementById('pob_s_net').textContent=fmtINR(net);
   const f=document.getElementById('pobForm');
   if(f){f.dataset.invoice=invoice;f.dataset.net=net;f.dataset.gst=gst;
@@ -12454,8 +12469,7 @@ async function savePOB() {
       cgst_amount:gst*(_pobGSTInfo.cgst||0)/((_pobGSTInfo.cgst||0)+(_pobGSTInfo.sgst||0)+(_pobGSTInfo.igst||1)),
       sgst_amount:gst*(_pobGSTInfo.sgst||0)/((_pobGSTInfo.cgst||0)+(_pobGSTInfo.sgst||0)+(_pobGSTInfo.igst||1)),
       igst_amount:gst*(_pobGSTInfo.igst||0)/((_pobGSTInfo.cgst||0)+(_pobGSTInfo.sgst||0)+(_pobGSTInfo.igst||1)),
-      tds_pct:num(document.getElementById('pob_tdsPct').value)||2,
-      tds_amount:invoice*(num(document.getElementById('pob_tdsPct').value)||2)/100,
+      tds_pct:0, tds_amount:0,
       hold_amount:num(document.getElementById('pob_holdAmt').value),
       hold_description:document.getElementById('pob_holdDesc')?.value||null,
       invoice_value:invoice, net_payable:net,
@@ -12521,7 +12535,6 @@ async function newCashPOB() {
   document.getElementById('cpob_vendorInvDate').value = '';
   document.getElementById('cpob_creditPeriod').value = '0';        // cash = paid immediately
   document.getElementById('cpob_invPayDue').value = '';
-  document.getElementById('cpob_tdsPct').value = '2';
   document.getElementById('cpob_holdAmt').value = '0';
   document.getElementById('cpob_holdDesc').value = '';
   document.getElementById('cpob_remarks').value = '';
@@ -12727,10 +12740,8 @@ function recalcCashPobTotals() {
   const gstInfo = _cashPobGSTPct();
   const gst = taxable * gstInfo.total / 100;
   const invoice = taxable + gst + extraAfter;
-  const tdsPct = num(document.getElementById('cpob_tdsPct')?.value);
-  const tds = invoice * tdsPct / 100;
   const hold = num(document.getElementById('cpob_holdAmt')?.value);
-  const net = invoice - tds - hold;
+  const net = invoice - hold;
   document.getElementById('cpob_s_gross').textContent = fmtINR(gross);
   document.getElementById('cpob_s_extraBefore').textContent = (extraBefore >= 0 ? '+' : '') + fmtINR(extraBefore);
   document.getElementById('cpob_s_taxable').textContent = fmtINR(taxable);
@@ -12738,8 +12749,6 @@ function recalcCashPobTotals() {
   document.getElementById('cpob_s_gst').textContent = fmtINR(gst);
   document.getElementById('cpob_s_extraAfter').textContent = (extraAfter >= 0 ? '+' : '') + fmtINR(extraAfter);
   document.getElementById('cpob_s_invoice').textContent = fmtINR(invoice);
-  document.getElementById('cpob_s_tds').textContent = fmtINR(tds);
-  document.getElementById('cpob_s_tdsLbl').textContent = tdsPct;
   document.getElementById('cpob_s_net').textContent = fmtINR(net);
   const f = document.getElementById('cashPobForm');
   if (f) {
@@ -12811,8 +12820,7 @@ async function saveCashPOB() {
       gross_amount: gross,
       cgst_pct: cgst, sgst_pct: sgst, igst_pct: igst,
       cgst_amount: cgstAmt, sgst_amount: sgstAmt, igst_amount: igstAmt,
-      tds_pct: num(document.getElementById('cpob_tdsPct').value) || 0,
-      tds_amount: invoice * (num(document.getElementById('cpob_tdsPct').value) || 0) / 100,
+      tds_pct: 0, tds_amount: 0,
       hold_amount: num(document.getElementById('cpob_holdAmt').value),
       hold_description: document.getElementById('cpob_holdDesc')?.value || null,
       invoice_value: invoice, net_payable: net,
@@ -12918,7 +12926,7 @@ function renderMISList() {
   const q=(document.getElementById('misSearch')?.value||'').toLowerCase();
   let rows=puState.misList;
   if(q) rows=rows.filter(m=>m.mis_number.toLowerCase().includes(q)||(m.issued_to||'').toLowerCase().includes(q));
-  const perms=ROLE_PERMS[state.role]||{};
+  const perms=mergedPerms();
   document.getElementById('mis_listBody').innerHTML=rows.map(m=>{
     const its=puState.misLedger.filter(it=>it.mis_number===m.mis_number);
     const totalVal=its.reduce((s,it)=>s+num(it.amount),0);
@@ -13844,7 +13852,6 @@ async function printPOB(billNum) {
     ${h.igst_amount>0?`<tr><td>IGST</td><td>₹ ${fmtI(h.igst_amount)}</td></tr>`:''}
     ${h.extra_after_gst?`<tr><td>Add (Post-GST)</td><td>₹ ${fmtI(h.extra_after_gst)}</td></tr>`:''}
     <tr><td>Invoice Value</td><td>₹ ${fmtI(h.invoice_value)}</td></tr>
-    <tr><td>TDS (${h.tds_pct||0}%)</td><td>— ₹ ${fmtI(h.tds_amount)}</td></tr>
     ${h.hold_amount>0?`<tr><td>Hold</td><td>— ₹ ${fmtI(h.hold_amount)}</td></tr>`:''}
     <tr class="grand"><td>NET PAYABLE</td><td>₹ ${fmtI(h.net_payable)}</td></tr>`;
   openPrintOverlay(`${printStyles()}
@@ -13914,7 +13921,7 @@ function renderContractorMaster() {
     c['Contractor Name'].toLowerCase().includes(q) ||
     (c['Trade']||'').toLowerCase().includes(q)
   );
-  const isAdmin = state.role === 'Admin';
+  const isAdmin = hasRole('Admin');
   document.getElementById('mc_list').innerHTML = rows.map(c=>`
     <tr>
       <td class="mono">${esc(c['Contractor Code']||'—')}</td>
@@ -13931,7 +13938,7 @@ function renderContractorMaster() {
 }
 
 async function saveContractorMaster() {
-  if(!['Admin','Planning/ QS'].includes(state.role)){
+  if(!hasRole('Admin') && !hasRole('Planning/ QS')){
     toast('Only Admin or Planning/QS can add contractors','error'); return;
   }
   const name    = document.getElementById('mc_name')?.value?.trim();
@@ -14052,7 +14059,7 @@ function clearContractorField(inputId, codeId, resultsId) {
 }
 
 async function editContractor(code) {
-  if(state.role !== 'Admin'){
+  if(!hasRole('Admin')){
     toast('Only Admin can edit contractors','error'); return;
   }
   const c = (state.masters.contractors||[]).find(x=>x['Contractor Code']===code);
@@ -14162,7 +14169,7 @@ async function confirmEditContractor(code) {
 }
 
 async function deleteContractor(code, name) {
-  if(state.role !== 'Admin'){
+  if(!hasRole('Admin')){
     toast('Only Admin can delete contractors','error'); return;
   }
   openModal(`
@@ -14516,7 +14523,7 @@ function renderWBSMaster() {
   const q        = (document.getElementById('wbs_search')?.value||'').toLowerCase();
   const fBlock   = document.getElementById('wbs_filter_block')?.value||'';
   const fGroup   = document.getElementById('wbs_filter_group')?.value||'';
-  const isAdmin  = state.role === 'Admin';
+  const isAdmin  = hasRole('Admin');
   let rows       = puState.wbsList||[];
   if (fBlock) rows = rows.filter(w => w.block===fBlock);
   if (fGroup) rows = rows.filter(w => w.wbs_group===fGroup);
@@ -14565,7 +14572,7 @@ function renderWBSMaster() {
 }
 
 async function saveWBSMaster() {
-  if (state.role !== 'Admin') {
+  if (!hasRole('Admin')) {
     toast('Only Admin can add WBS elements','error'); return;
   }
   const block    = document.getElementById('wbs_block')?.value?.trim();
@@ -14611,7 +14618,7 @@ function clearWBSForm() {
 }
 
 async function editWBS(code) {
-  if (state.role !== 'Admin') {
+  if (!hasRole('Admin')) {
     toast('Only Admin can edit WBS','error'); return;
   }
   const w = (puState.wbsList||[]).find(x=>x.wbs_code===code);
@@ -14784,7 +14791,7 @@ function clearWBSField(inputId, codeId, resultsId) {
 // ====================================================================
 
 const WBS_ADMIN_ROLES = ['Admin'];
-const wbsIsAdmin = () => WBS_ADMIN_ROLES.includes(state.role);
+const wbsIsAdmin = () => hasRole('Admin');
 
 // Default questionnaire structure: which types to show, in what order, with defaults
 const LOCQ_DEFAULTS = [
@@ -14804,7 +14811,7 @@ const LOCQ_DEFAULTS = [
 function switchWBSTab(tab) {
   // Role gate: only Admin sees the 5 creation sub-tabs.
   // Everyone else (Planning/QS, Procurement, Site Engineer, etc.) sees only WBS Elements.
-  const isWBSAdmin = state.role === 'Admin';
+  const isWBSAdmin = hasRole('Admin');
   const adminOnly = ['acts','lvls','blocks','locq','gen'];
   adminOnly.forEach(t => {
     const stab = document.querySelector(`.sub-tab[data-wbstab="${t}"]`);
@@ -14855,7 +14862,7 @@ async function loadWBSAll() {
 
   // Role-aware default sub-tab: Admin opens to Activity Hierarchy,
   // everyone else lands on WBS Elements (the only one they'll see anyway).
-  const defaultTab = state.role === 'Admin' ? 'acts' : 'elems';
+  const defaultTab = hasRole('Admin') ? 'acts' : 'elems';
   switchWBSTab(defaultTab);
 }
 
@@ -15915,7 +15922,6 @@ document.querySelectorAll('.tabs .tab').forEach(t => {
 });
 
 function applyRoleTabVisibility() {
-  const r = state.role;
   const tabRules = {
     'ho':       ['Procurement','Planning/ QS','Project Manager','Site Manager','Admin'],
     'wo':       ['Procurement','Planning/ QS','Project Manager','Site Manager','Admin'],
@@ -15926,13 +15932,12 @@ function applyRoleTabVisibility() {
   };
   Object.entries(tabRules).forEach(([tab, roles]) => {
     const el = document.querySelector('.tabs .tab[data-tab="'+tab+'"]');
-    if (el) el.style.display = roles.includes(r) ? '' : 'none';
+    if (el) el.style.display = state.roles.some(r => roles.includes(r)) ? '' : 'none';
   });
   applyPurchaseSubTabVisibility();
 }
 
 function applyPurchaseSubTabVisibility() {
-  const r = state.role;
   const puTabRules = {
     'mir':   ['Site Manager','Store Executive','Procurement','Project Manager','Admin'],
     'rfq':   ['Procurement','Project Manager','Admin'],
@@ -15944,7 +15949,7 @@ function applyPurchaseSubTabVisibility() {
   };
   Object.entries(puTabRules).forEach(([tab, roles]) => {
     const el = document.querySelector('.sub-tab[data-putab="'+tab+'"]');
-    if (el) el.style.display = roles.includes(r) ? '' : 'none';
+    if (el) el.style.display = state.roles.some(r => roles.includes(r)) ? '' : 'none';
   });
 }
 
@@ -16023,8 +16028,11 @@ const DASH_CARD_DEFS = {
 DASH_CARD_DEFS['Admin'] = DASH_CARD_DEFS['Project Manager'].slice();
 
 async function loadDashPendingCards() {
-  const role = state.role;
-  const defs = DASH_CARD_DEFS[role] || [];
+  // Merge dashboard cards from all assigned roles, deduplicated by card id
+  const seen = new Set();
+  const defs = state.roles.flatMap(r => (DASH_CARD_DEFS[r] || [])).filter(d => {
+    if (seen.has(d.id)) return false; seen.add(d.id); return true;
+  });
   const container = document.getElementById('dash-cards-container');
   if (!container) return;
   if (!defs.length) {
