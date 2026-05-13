@@ -3048,7 +3048,7 @@ input[type="number"] {
         <table>
           <thead><tr>
             <th>MIS Number</th><th>Date</th><th>Issued To</th>
-            <th>Issued By</th><th class="num">Items</th><th class="num">Total Value</th>
+            <th>Issued By</th><th>WBS Element</th><th class="num">Total Value</th>
             <th>Status</th><th>Actions</th>
           </tr></thead>
           <tbody id="mis_listBody"><tr><td colspan="8" class="center muted">Loading…</td></tr></tbody>
@@ -3082,7 +3082,7 @@ input[type="number"] {
     <div class="row" style="justify-content:space-between;margin:16px 0;">
       <div>
         <div class="section-title">Stock Balance</div>
-        <div class="section-sub">Live stock — GRN received minus MIS issued per material</div>
+        <div class="section-sub">Live stock — GRN received minus approved MIS issued. Reserved = pending approval MIS.</div>
       </div>
       <button class="btn btn-ghost" onclick="loadStockBalance()">↻ Refresh</button>
     </div>
@@ -3105,8 +3105,9 @@ input[type="number"] {
         <table>
           <thead><tr>
             <th>Material</th><th>Category</th><th>UOM</th>
-            <th class="num">Total Received</th><th class="num">Total Issued</th>
-            <th class="num">Balance Qty</th><th class="num">Latest Rate (₹)</th>
+            <th class="num">Total Received</th><th class="num">Approved Issued</th>
+            <th class="num">Reserved (Pending)</th>
+            <th class="num">Available Balance</th><th class="num">Latest Rate (₹)</th>
             <th class="num">Stock Value (₹)</th>
           </tr></thead>
           <tbody id="stock_body"><tr><td colspan="8" class="center muted">Loading…</td></tr></tbody>
@@ -3210,6 +3211,8 @@ var puState = {
   // ----
   mirList: [], mirItemsMap: {},
   rfqList: [], rfqWithQC: new Set(), qcList: [],
+  rfqQuotes: [],      // pu_rfq_quotes rows — keyed by rfq_number at runtime
+  rfqQuoteItems: [],  // pu_rfq_quote_items rows
   poList: [], grnList: [], pobList: [],
   misList: [], misLedger: [], stockBalance: [],
   qcVendorCols: [], qcRFQItems: [],
@@ -9992,13 +9995,20 @@ let _mirSelectedMirNum = '';
 let _rfqItemC = 0;
 
 async function loadRFQList() {
-  const [{data:rfqs},{data:qcs}] = await Promise.all([
+  const [{data:rfqs},{data:qcs},{data:rQuotes},{data:rQItems}] = await Promise.all([
     sb.from('pu_rfq').select('*').order('created_at',{ascending:false}),
     sb.from('pu_quote_comparison').select('rfq_number,status'),
+    sb.from('pu_rfq_quotes').select('*').order('sno'),
+    sb.from('pu_rfq_quote_items').select('*'),
   ]);
   puState.rfqList = rfqs||[];
-  // Build a set of RFQ numbers that already have a QC (any status)
-  puState.rfqWithQC = new Set((qcs||[]).map(q=>q.rfq_number).filter(Boolean));
+  // Build a set of RFQ numbers that have an active (non-Rejected) QC.
+  // Rejected QCs must not block creation of a fresh QC on the same RFQ.
+  puState.rfqWithQC = new Set(
+    (qcs||[]).filter(q=>q.status!=='Rejected').map(q=>q.rfq_number).filter(Boolean)
+  );
+  puState.rfqQuotes     = rQuotes||[];
+  puState.rfqQuoteItems = rQItems||[];
   renderRFQList();
 }
 
@@ -10006,15 +10016,584 @@ function renderRFQList() {
   const perms = mergedPerms();
   document.getElementById('rfq_listBody').innerHTML = puState.rfqList.map(r => {
     const stCls = r.status.toLowerCase().replace(/\s/g,'-');
-    let acts = `<button class="btn btn-ghost btn-sm" onclick="viewRFQ('${esc(r.rfq_number)}')">View</button>`;
-    return `<tr>
-      <td class="mono">${esc(r.rfq_number)}</td><td>${fmtDate(r.rfq_date)}</td>
+    const rfqNum = r.rfq_number;
+
+    // Quotes for this RFQ
+    const quotes = puState.rfqQuotes.filter(q=>q.rfq_number===rfqNum);
+    const hasActiveQC = puState.rfqWithQC?.has(rfqNum);
+    // Active QC status for this RFQ (to show correct lock message)
+    const activeQCRec = (puState.qcList||[]).find(qc=>qc.rfq_number===rfqNum && qc.status==='Pending Approval');
+
+    // Build pill buttons for each quote
+    let pillsHTML = '';
+    if (quotes.length) {
+      pillsHTML = quotes.map(q=>{
+        const grand = q.grand_total||0;
+        const label = `Q${q.sno} · ${esc(q.vendor_name)} · ${fmtINRSym(grand)}`;
+        return `<button class="rfq-quote-pill" id="pill_${q.id}"
+          onclick="toggleQuotePill('${rfqNum}','${q.id}',this)"
+          title="${esc(q.vendor_name)} | Ref: ${esc(q.quote_ref||'—')} | ${q.delivery_days||'—'}d delivery"
+          style="display:inline-flex;align-items:center;gap:5px;padding:3px 9px;margin:2px;
+            border-radius:12px;border:1.5px solid #93c5fd;background:#eff6ff;
+            color:#1e40af;font-size:11px;font-weight:500;cursor:pointer;white-space:nowrap;">
+          ${label}
+        </button>`;
+      }).join('');
+    }
+
+    // Add Quote button — always visible if user can create QC and RFQ is Open/Comparison Ready
+    const canAddQuote = perms.canCreateQC && ['Open','Comparison Ready'].includes(r.status);
+    const addQuoteBtn = canAddQuote
+      ? `<button class="btn btn-ghost btn-sm" style="font-size:11px;padding:3px 8px;"
+           onclick="newRFQQuote('${rfqNum}')">+ Add Quote</button>`
+      : '';
+
+    // Compare button — shown only when 2+ pills selected for this RFQ, no active pending QC, RFQ not Approved
+    const compareBtn = `<span id="compareBtn_${rfqNum}" style="display:none;">
+      <button class="btn btn-secondary btn-sm" style="font-size:11px;padding:3px 9px;"
+        onclick="viewQuoteComparison('${rfqNum}')">📊 View Comparison</button>
+    </span>`;
+
+    // Lock message if pending QC exists
+    const lockMsg = hasActiveQC && activeQCRec
+      ? `<span style="font-size:10px;color:#92400e;background:#fef3c7;padding:2px 7px;border-radius:10px;border:1px solid #fcd34d;">
+           🔒 ${activeQCRec.qc_number} pending approval</span>`
+      : '';
+
+    // Quote sub-row
+    const quotesRow = `<tr id="quotesRow_${rfqNum}" style="background:#f8fafc;">
+      <td colspan="7" style="padding:4px 10px 6px 32px;border-top:none;">
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+          <span style="font-size:10px;font-weight:700;color:#1e3a5f;text-transform:uppercase;
+            letter-spacing:.5px;white-space:nowrap;">Quotes</span>
+          ${pillsHTML||'<span style="font-size:10px;color:#94a3b8;font-style:italic;">No quotes yet</span>'}
+          ${addQuoteBtn}
+          ${compareBtn}
+          ${lockMsg}
+        </div>
+      </td>
+    </tr>`;
+
+    const mainRow = `<tr>
+      <td class="mono">${esc(rfqNum)}</td><td>${fmtDate(r.rfq_date)}</td>
       <td>${esc(r.mir_number||'—')}</td><td>${esc(r.description||'—')}</td>
       <td>${r.response_due?fmtDate(r.response_due):'—'}</td>
-      <td><span class="status ${stCls}">${r.status}</span></td><td>${acts}</td></tr>`;
+      <td><span class="status ${stCls}">${r.status}</span></td>
+      <td><button class="btn btn-ghost btn-sm" onclick="viewRFQ('${esc(rfqNum)}')">View</button></td>
+    </tr>`;
+
+    return mainRow + quotesRow;
   }).join('')||'<tr><td colspan="7" class="center muted">No RFQs.</td></tr>';
   setTimeout(() => { const t=document.getElementById('rfq_listBody')?.closest('table'); if(t) makeSortable(t); }, 50);
+  // Re-init any persisted selections (after re-render, selections are cleared — that's intentional)
 }
+
+// ── QUOTE SELECTION STATE ───────────────────────────────────────────────────
+// rfqNum → Set of selected quote IDs
+const _rfqQuoteSel = {};
+
+function toggleQuotePill(rfqNum, quoteId, btn) {
+  if (!_rfqQuoteSel[rfqNum]) _rfqQuoteSel[rfqNum] = new Set();
+  const sel = _rfqQuoteSel[rfqNum];
+  if (sel.has(quoteId)) {
+    sel.delete(quoteId);
+    btn.style.background = '#eff6ff';
+    btn.style.borderColor = '#93c5fd';
+    btn.style.color = '#1e40af';
+    btn.style.fontWeight = '500';
+  } else {
+    sel.add(quoteId);
+    btn.style.background = '#1e3a5f';
+    btn.style.borderColor = '#1e3a5f';
+    btn.style.color = '#fff';
+    btn.style.fontWeight = '700';
+  }
+  // Show/hide Compare button based on selection count and QC lock state
+  const cmpBtn = document.getElementById(`compareBtn_${rfqNum}`);
+  if (cmpBtn) {
+    const hasActiveQC = puState.rfqWithQC?.has(rfqNum);
+    cmpBtn.style.display = (!hasActiveQC && sel.size >= 2) ? '' : 'none';
+  }
+}
+
+// ── ADD INDIVIDUAL QUOTE TO RFQ ─────────────────────────────────────────────
+async function newRFQQuote(rfqNum) {
+  if (!hasPerm('canCreateQC')) { toast('Only Procurement can add quotes','error'); return; }
+  // Load RFQ items to build the rate grid
+  pbShow('Loading RFQ items…');
+  const {data:rfqItems} = await sb.from('pu_rfq_items').select('*').eq('rfq_number',rfqNum).order('sno');
+  pbDone();
+  if (!rfqItems||!rfqItems.length) { toast('No items found on this RFQ','error'); return; }
+
+  const existingCount = puState.rfqQuotes.filter(q=>q.rfq_number===rfqNum).length;
+  const nextSno = existingCount + 1;
+
+  // Build rate input rows
+  const rateRows = rfqItems.map((item,idx)=>`
+    <tr>
+      <td>${item.sno}</td>
+      <td style="font-size:11px;">${esc(item.material_name)}</td>
+      <td class="c">${esc(item.uom)}</td>
+      <td class="num">${item.qty_required}</td>
+      <td><input type="number" id="rqRate_${idx}" step="0.01" style="width:90px;text-align:right;"
+        oninput="calcRQTotal(${idx},${item.qty_required})" placeholder="0.00"></td>
+      <td><input type="number" id="rqGST_${idx}" step="0.01" style="width:55px;text-align:right;" value="18"
+        oninput="calcRQTotal(${idx},${item.qty_required})"></td>
+      <td class="num" id="rqTotal_${idx}">—</td>
+    </tr>`).join('');
+
+  openModal(`
+    <h3 style="margin-bottom:4px;">Add Quote — ${esc(rfqNum)}</h3>
+    <div style="font-size:11px;color:var(--muted);margin-bottom:12px;">Quote Q${nextSno}</div>
+    <div class="grid-2" style="margin-bottom:10px;">
+      <div class="field"><label class="req">Vendor</label>
+        <div style="position:relative;">
+          <input id="rqVendorName" placeholder="Type vendor name…" style="width:100%;"
+            oninput="vendorTypeahead('rqVendorName','rqVendorResults','rqVendorCode')">
+          <div class="typeahead-results" id="rqVendorResults" style="position:absolute;top:100%;left:0;right:0;z-index:9999;"></div>
+        </div>
+        <input type="hidden" id="rqVendorCode">
+      </div>
+      <div class="field"><label>Quote Reference</label>
+        <input id="rqQuoteRef" placeholder="Vendor's quote number / ref"></div>
+    </div>
+    <div class="grid-2" style="margin-bottom:10px;">
+      <div class="field"><label>Delivery Days</label>
+        <input type="number" id="rqDeliveryDays" placeholder="e.g. 14"></div>
+      <div class="field"><label>Payment Terms</label>
+        <input id="rqPayTerms" placeholder="e.g. 30 days from invoice"></div>
+    </div>
+    <div class="field" style="margin-bottom:10px;"><label>Technical Specs / Remarks</label>
+      <textarea id="rqTechSpecs" rows="2" style="width:100%;font-size:12px;"
+        placeholder="Grade, brand, standard, warranty…"></textarea>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr>
+          <th>#</th><th>Material</th><th class="c">UOM</th>
+          <th class="num">Qty</th><th class="num">Rate (₹)</th>
+          <th class="num">GST %</th><th class="num">Total (₹)</th>
+        </tr></thead>
+        <tbody>${rateRows}</tbody>
+        <tfoot><tr style="background:#e6f4f1;font-weight:700;">
+          <td colspan="6" style="padding:6px;">Grand Total (incl. GST)</td>
+          <td class="num" id="rqGrandTotal" style="padding:6px;">—</td>
+        </tr></tfoot>
+      </table>
+    </div>
+    <div class="actions-row" style="margin-top:12px;">
+      <button class="btn btn-primary"
+        onclick="saveRFQQuote('${rfqNum}',${nextSno},${rfqItems.length})">💾 Save Quote</button>
+      <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+    </div>
+  `, 'large');
+  // Store rfqItems in closure-accessible variable
+  window._rqRFQItems = rfqItems;
+}
+
+function calcRQTotal(idx, qty) {
+  const rate = parseFloat(document.getElementById(`rqRate_${idx}`)?.value)||0;
+  const gst  = parseFloat(document.getElementById(`rqGST_${idx}`)?.value)||0;
+  const total = qty * rate * (1 + gst/100);
+  const el = document.getElementById(`rqTotal_${idx}`);
+  if (el) el.textContent = fmtINRSym(total);
+  // Recalc grand total
+  let grand = 0;
+  (window._rqRFQItems||[]).forEach((_,i)=>{
+    const r = parseFloat(document.getElementById(`rqRate_${i}`)?.value)||0;
+    const g = parseFloat(document.getElementById(`rqGST_${i}`)?.value)||0;
+    grand += (window._rqRFQItems[i].qty_required||0) * r * (1 + g/100);
+  });
+  const gtEl = document.getElementById('rqGrandTotal');
+  if (gtEl) gtEl.textContent = fmtINRSym(grand);
+}
+
+async function saveRFQQuote(rfqNum, sno, itemCount) {
+  const vendorName = document.getElementById('rqVendorName')?.value?.trim();
+  const vendorCode = document.getElementById('rqVendorCode')?.value?.trim()||null;
+  if (!vendorName) { toast('Vendor name required','error'); return; }
+  if (!vendorCode) { toast('Select vendor from the dropdown — must be from vendor master','error'); return; }
+  // Compute grand total
+  let grand = 0;
+  const items = (window._rqRFQItems||[]).map((item,idx)=>{
+    const rate = parseFloat(document.getElementById(`rqRate_${idx}`)?.value)||0;
+    const gst  = parseFloat(document.getElementById(`rqGST_${idx}`)?.value)||18;
+    grand += item.qty_required * rate * (1 + gst/100);
+    return {
+      rfq_number:rfqNum, material_name:item.material_name, uom:item.uom,
+      qty_required:item.qty_required, unit_rate:rate, gst_pct:gst,
+      amount:item.qty_required*rate*(1+gst/100),
+    };
+  });
+  pbShow('Saving quote…');
+  try {
+    const {data:quote, error:qErr} = await sb.from('pu_rfq_quotes').insert({
+      rfq_number:rfqNum, sno,
+      vendor_name:vendorName, vendor_code:vendorCode,
+      quote_ref:document.getElementById('rqQuoteRef')?.value?.trim()||null,
+      delivery_days:parseInt(document.getElementById('rqDeliveryDays')?.value)||null,
+      payment_terms:document.getElementById('rqPayTerms')?.value?.trim()||null,
+      tech_specs:document.getElementById('rqTechSpecs')?.value?.trim()||null,
+      grand_total:grand,
+      created_by:state.userName, created_by_id:state.userId,
+    }).select().single();
+    if (qErr||!quote) throw new Error(qErr?.message||'Insert failed');
+    const itemsWithId = items.map(it=>({...it, rfq_quote_id:quote.id}));
+    const {error:iErr} = await sb.from('pu_rfq_quote_items').insert(itemsWithId);
+    if (iErr) throw new Error(iErr.message);
+    flashSuccess(`Quote Q${sno} saved for ${vendorName}`);
+    closeModal();
+    await loadRFQList();  // reloads quotes + re-renders pills
+  } catch(e){ toast('Error: '+e.message,'error'); }
+  finally{ pbDone(); }
+}
+
+// ── VIEW COMPARISON POPUP (from selected pills) ──────────────────────────────
+async function viewQuoteComparison(rfqNum) {
+  const selIds = [...(_rfqQuoteSel[rfqNum]||new Set())];
+  if (selIds.length < 2) { toast('Select at least 2 quotes to compare','error'); return; }
+  // Check lock
+  if (puState.rfqWithQC?.has(rfqNum)) {
+    const pend = (puState.qcList||[]).find(q=>q.rfq_number===rfqNum&&q.status==='Pending Approval');
+    toast(`${pend?.qc_number||'A QC'} is pending approval. Reject it before submitting a new comparison.`,'error',5000);
+    return;
+  }
+  pbShow('Building comparison…');
+  // Fetch selected quotes and their items
+  const selQuotes = puState.rfqQuotes.filter(q=>selIds.includes(String(q.id)));
+  const selItems  = puState.rfqQuoteItems.filter(i=>selIds.includes(String(i.rfq_quote_id)));
+  // Fetch historical PO prices
+  const mats = [...new Set(selItems.map(i=>i.material_name))];
+  const histMap = await fetchHistoricalPOPrices(mats);
+  pbDone();
+
+  // Build comparison table (same structure as viewQC)
+  const quotes = selQuotes.sort((a,b)=>a.sno-b.sno);
+  const subCols = 2; // Rate + Total (no negotiation rounds in pre-submission view)
+
+  // Grand totals for ranking
+  const grandTotals = quotes.map(v=>{
+    let grand = 0;
+    mats.forEach(mat=>{
+      const qi = selItems.find(i=>i.rfq_quote_id===v.id && i.material_name===mat);
+      if (qi) grand += (qi.qty_required||0)*(qi.unit_rate||0)*(1+(qi.gst_pct||0)/100);
+    });
+    return {vendorId:v.id, vendorName:v.vendor_name, grand};
+  });
+  const ranked = [...grandTotals].filter(x=>x.grand>0).sort((a,b)=>a.grand-b.grand);
+  const l1Grand = ranked[0]?.grand||0;
+  const posMap = {};
+  ranked.forEach((r,i)=>{ posMap[r.vendorId]='L'+(i+1); });
+  const bgMap = {L1:'#166534',L2:'#92400e',L3:'#991b1b',L4:'#334155'};
+
+  // Header
+  let thead = '<tr><th rowspan="2">#</th><th rowspan="2">Material</th><th rowspan="2" class="c">UOM</th><th rowspan="2" class="num">Qty</th>';
+  quotes.forEach(v=>{
+    thead += `<th colspan="${subCols}" class="num" style="border-bottom:2px solid #dde6f0;">
+      Q${v.sno} — ${esc(v.vendor_name)}<br>
+      <span style="font-size:9px;font-weight:400;">${esc(v.quote_ref||'')}${v.delivery_days?' · '+v.delivery_days+'d':''}</span>
+    </th>`;
+  });
+  thead += '</tr><tr style="background:#f8fafc;font-size:9px;">';
+  quotes.forEach(()=>{
+    thead += '<th class="num" style="font-size:9px;">Rate (₹)</th>';
+    thead += '<th class="num" style="font-size:9px;font-weight:700;color:#1e3a5f;background:#e8ecf2;">Total (₹)</th>';
+  });
+  thead += '</tr>';
+
+  // Material rows + history strips
+  let tbody = '';
+  mats.forEach((mat,idx)=>{
+    const sample = selItems.find(i=>i.material_name===mat);
+    const qty = sample?.qty_required||0;
+    const effRates = quotes.map(v=>{
+      const qi = selItems.find(i=>i.rfq_quote_id===v.id&&i.material_name===mat);
+      return qi?.unit_rate||0;
+    }).filter(r=>r>0);
+    const minR = effRates.length?Math.min(...effRates):0;
+    const maxR = effRates.length?Math.max(...effRates):0;
+    const hasVar = minR!==maxR && effRates.length>1;
+
+    tbody += `<tr><td>${idx+1}</td><td style="font-size:11px;">${esc(mat)}</td>
+      <td class="c">${esc(sample?.uom||'')}</td><td class="num">${qty}</td>`;
+    quotes.forEach(v=>{
+      const qi = selItems.find(i=>i.rfq_quote_id===v.id&&i.material_name===mat);
+      const rate = qi?.unit_rate||0;
+      const gst  = (qi?.gst_pct||0)/100;
+      const total = qty*rate*(1+gst);
+      let bg = '';
+      if (hasVar&&rate>0){ bg = rate===minR?'background:#d1fae5;':rate===maxR?'background:#fee2e2;':'background:#fef3c7;'; }
+      let varBadge = '';
+      if (hasVar&&rate>0&&rate!==minR){
+        const pct = ((rate-minR)/minR*100).toFixed(1);
+        varBadge = `<br><span style="font-size:8px;color:#dc2626;">+${pct}%</span>`;
+      }
+      tbody += `<td class="num" style="${bg}padding:5px 4px;font-size:11px;">${rate>0?('₹ '+fmtINR(rate)):'—'}${varBadge}</td>`;
+      tbody += `<td class="num" style="${bg}padding:5px 4px;font-size:11px;font-weight:600;${hasVar&&rate===minR?'background:#bbf7d0;':hasVar&&rate===maxR?'background:#fecaca;':''}">${rate>0?fmtINRSym(total):'—'}</td>`;
+    });
+    tbody += '</tr>';
+
+    // ── Historical PO prices strip ───────────────────────────────────────────
+    const h = histMap[mat];
+    if (h) {
+      tbody += `<tr><td colspan="${4+quotes.length*subCols}" style="padding:0;">
+        <div style="background:#f0f7ff;border-top:1px dashed #b8d4f0;padding:3px 8px;">
+          <span style="font-size:9px;font-weight:700;color:#1e3a5f;text-transform:uppercase;letter-spacing:.4px;margin-right:8px;">PO History</span>
+          <span style="font-size:9px;background:#d1fae5;color:#065f46;font-weight:700;padding:1px 5px;border-radius:3px;">Lowest</span>
+          <span style="font-size:10px;font-weight:600;color:#065f46;margin:0 4px;">₹${fmtINR(h.low.rate)}</span>
+          <span style="font-size:8px;color:#64748b;">${esc(h.low.vendor)} · ${h.low.po} · ${fmtDate(h.low.date)}</span>
+          <span style="margin:0 8px;color:#cbd5e1;">|</span>
+          <span style="font-size:9px;background:#fee2e2;color:#991b1b;font-weight:700;padding:1px 5px;border-radius:3px;">Highest</span>
+          <span style="font-size:10px;font-weight:600;color:#991b1b;margin:0 4px;">₹${fmtINR(h.high.rate)}</span>
+          <span style="font-size:8px;color:#64748b;">${esc(h.high.vendor)} · ${h.high.po} · ${fmtDate(h.high.date)}</span>
+          <span style="margin:0 8px;color:#cbd5e1;">|</span>
+          <span style="font-size:9px;background:#e0e7ff;color:#3730a3;font-weight:700;padding:1px 5px;border-radius:3px;">Last</span>
+          <span style="font-size:10px;font-weight:600;color:#3730a3;margin:0 4px;">₹${fmtINR(h.last.rate)}</span>
+          <span style="font-size:8px;color:#64748b;">${esc(h.last.vendor)} · ${h.last.po} · ${fmtDate(h.last.date)}</span>
+        </div>
+      </td></tr>`;
+    } else {
+      tbody += `<tr><td colspan="${4+quotes.length*subCols}" style="padding:0;">
+        <div style="background:#f8fafc;border-top:1px dashed #e2e8f0;padding:3px 8px;">
+          <span style="font-size:9px;font-weight:700;color:#1e3a5f;text-transform:uppercase;letter-spacing:.4px;margin-right:6px;">PO History</span>
+          <span style="font-size:9px;color:#94a3b8;font-style:italic;">No previous POs for this material</span>
+        </div>
+      </td></tr>`;
+    }
+  });
+
+  // Grand Total row
+  tbody += `<tr style="background:#e6f4f1;font-weight:700;"><td colspan="4" style="padding:8px;">Grand Total (incl. GST)</td>`;
+  quotes.forEach(v=>{
+    const gt = grandTotals.find(g=>g.vendorId===v.id);
+    tbody += `<td colspan="${subCols}" class="num" style="padding:8px;font-size:13px;">${gt&&gt.grand>0?fmtINRSym(gt.grand):'—'}</td>`;
+  });
+  tbody += '</tr>';
+
+  // Position row
+  tbody += '<tr><td colspan="4" style="padding:6px 8px;font-weight:700;background:#e8ecf2;color:#1e3a5f;">Position</td>';
+  quotes.forEach(v=>{
+    const label = posMap[v.id]||'—';
+    const bg = bgMap[label]||'#334155';
+    tbody += `<td colspan="${subCols}" class="num" style="padding:6px 8px;background:${bg};color:#fff;font-weight:700;font-size:14px;">${label}</td>`;
+  });
+  tbody += '</tr>';
+
+  // Premium row
+  tbody += '<tr style="background:#f8fafc;font-size:11px;"><td colspan="4" style="padding:6px 8px;font-weight:600;color:#1e3a5f;">Premium over L1</td>';
+  quotes.forEach(v=>{
+    const label = posMap[v.id];
+    const gt = grandTotals.find(g=>g.vendorId===v.id);
+    if (!label||label==='L1'||!l1Grand){
+      tbody += `<td colspan="${subCols}" class="num" style="padding:6px 8px;color:#166534;font-weight:600;">${label==='L1'?'Base (L1)':'—'}</td>`;
+    } else {
+      const pct = ((gt.grand-l1Grand)/l1Grand*100).toFixed(1);
+      tbody += `<td colspan="${subCols}" class="num" style="padding:6px 8px;color:#991b1b;font-weight:600;">+${pct}%</td>`;
+    }
+  });
+  tbody += '</tr>';
+
+  // Payment terms + delivery row
+  tbody += '<tr style="background:#f0f5fb;font-size:10px;"><td colspan="4" style="padding:5px 8px;font-weight:600;color:#1e3a5f;">Payment Terms</td>';
+  quotes.forEach(v=>{ tbody += `<td colspan="${subCols}" style="padding:5px 8px;">${esc(v.payment_terms||'—')}</td>`; });
+  tbody += '</tr><tr style="background:#f0f5fb;font-size:10px;"><td colspan="4" style="padding:5px 8px;font-weight:600;color:#1e3a5f;">Delivery Days</td>';
+  quotes.forEach(v=>{ tbody += `<td colspan="${subCols}" class="num" style="padding:5px 8px;">${v.delivery_days!=null?v.delivery_days+'d':'—'}</td>`; });
+  tbody += '</tr>';
+
+  openModal(`
+    <h3 style="margin-bottom:4px;">Quote Comparison — ${esc(rfqNum)}</h3>
+    <div style="font-size:11px;color:var(--muted);margin-bottom:10px;">
+      ${selIds.length} quotes selected &nbsp;|&nbsp; Date: ${today()}
+    </div>
+    <div class="table-wrap" style="overflow-x:auto;">
+      <table id="rfqCompareTable"><thead>${thead}</thead><tbody>${tbody}</tbody></table>
+    </div>
+    <div class="actions-row" style="margin-top:12px;">
+      <button class="btn btn-secondary" onclick="printRFQComparison('${rfqNum}')">🖨 Print</button>
+      <button class="btn btn-primary" onclick="submitQCFromSelection('${rfqNum}')">📤 Submit for Approval</button>
+      <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+    </div>
+  `, 'large');
+  // Store selection data for submit
+  window._pendingQCRfqNum   = rfqNum;
+  window._pendingQCQuotes   = quotes;
+  window._pendingQCItems    = selItems;
+  window._pendingQCMats     = mats;
+  window._pendingQCGrandMap = grandTotals;
+  window._pendingQCPosMap   = posMap;
+}
+
+// ── FETCH HISTORICAL PO PRICES ────────────────────────────────────────────────
+async function fetchHistoricalPOPrices(matNames) {
+  if (!matNames||!matNames.length) return {};
+  const {data:poItems} = await sb.from('pu_po_items')
+    .select('material_name,unit_rate,po_number')
+    .in('material_name', matNames);
+  if (!poItems||!poItems.length) return {};
+  // Get corresponding PO headers for date, vendor, status
+  const poNums = [...new Set(poItems.map(i=>i.po_number))];
+  const {data:poHdrs} = await sb.from('pu_po_orders')
+    .select('po_number,po_date,vendor_name,status')
+    .in('po_number', poNums)
+    .in('status', ['Open','Closed','Short-Closed','Approved']);
+  if (!poHdrs||!poHdrs.length) return {};
+  const hdrMap = {};
+  poHdrs.forEach(h=>{ hdrMap[h.po_number]=h; });
+
+  const result = {};
+  matNames.forEach(mat=>{
+    const rows = poItems
+      .filter(i=>i.material_name===mat && hdrMap[i.po_number])
+      .map(i=>({rate:i.unit_rate, po:i.po_number, vendor:hdrMap[i.po_number].vendor_name, date:hdrMap[i.po_number].po_date}))
+      .filter(r=>r.rate>0)
+      .sort((a,b)=>new Date(b.date)-new Date(a.date));
+    if (!rows.length) return;
+    const byRate = [...rows].sort((a,b)=>a.rate-b.rate);
+    result[mat] = {
+      low:  byRate[0],
+      high: byRate[byRate.length-1],
+      last: rows[0],   // most recent by date
+    };
+  });
+  return result;
+}
+
+// ── SUBMIT SELECTED QUOTES AS A QC ───────────────────────────────────────────
+async function submitQCFromSelection(rfqNum) {
+  if (!hasPerm('canCreateQC')) { toast('Only Procurement can submit QC','error'); return; }
+  // Re-check lock
+  if (puState.rfqWithQC?.has(rfqNum)) {
+    const pend = (puState.qcList||[]).find(q=>q.rfq_number===rfqNum&&q.status==='Pending Approval');
+    toast(`${pend?.qc_number||'A QC'} is pending approval. Reject it first.`,'error',5000);
+    return;
+  }
+  const quotes   = window._pendingQCQuotes||[];
+  const items    = window._pendingQCItems||[];
+  const posMap   = window._pendingQCPosMap||{};
+  const grandMap = window._pendingQCGrandMap||[];
+  if (!quotes.length) { toast('No quotes to submit','error'); return; }
+
+  // Recommended vendor = L1 by default
+  const l1Entry = grandMap.find(g=>posMap[g.vendorId]==='L1');
+  const recName = l1Entry?.vendorName||quotes[0].vendor_name;
+  const recQuote = quotes.find(q=>q.vendor_name===recName);
+  const recCode  = recQuote?.vendor_code||null;
+
+  pbShow('Submitting QC…');
+  try {
+    const qcNumber = await nextPUDocNumber('QC');
+    const {error:qe} = await sb.from('pu_quote_comparison').insert({
+      qc_number:qcNumber, qc_date:today(),
+      rfq_number:rfqNum, prepared_by:state.userName, prepared_by_id:state.userId,
+      recommended_vendor_name:recName, recommended_vendor_code:recCode,
+      creator_remarks:`L1 vendor by grand total. Generated from ${quotes.length} quotes.`,
+      status:'Pending Approval',
+    });
+    if (qe) throw new Error(qe.message);
+
+    // Copy each selected rfq_quote into pu_quotes, and rfq_quote_items into pu_quote_items
+    for (const [vi, q] of quotes.entries()) {
+      const {data:inserted, error:qve} = await sb.from('pu_quotes').insert({
+        qc_number:qcNumber, sno:vi+1,
+        vendor_code:q.vendor_code||null, vendor_name:q.vendor_name,
+        quote_ref:q.quote_ref||null, delivery_days:q.delivery_days||null,
+        payment_terms:q.payment_terms||null, tech_specs:q.tech_specs||null,
+        is_recommended: q.vendor_name===recName,
+      }).select().single();
+      if (qve||!inserted) continue;
+      const qItems = items
+        .filter(i=>i.rfq_quote_id===q.id)
+        .map(i=>({
+          qc_number:qcNumber, quote_id:inserted.id,
+          rfq_item_sno:null, material_name:i.material_name, uom:i.uom,
+          qty_required:i.qty_required, unit_rate:i.unit_rate, gst_pct:i.gst_pct,
+          amount:i.amount,
+        }));
+      if (qItems.length) await sb.from('pu_quote_items').insert(qItems);
+    }
+    // Update RFQ status to Comparison Ready
+    await sb.from('pu_rfq').update({status:'Comparison Ready'}).eq('rfq_number',rfqNum);
+
+    flashSuccess(`QC ${qcNumber} submitted for PM approval`);
+    closeModal();
+    await Promise.all([loadRFQList(), loadQCList()]);
+    // Clear selection for this RFQ
+    if (_rfqQuoteSel[rfqNum]) _rfqQuoteSel[rfqNum].clear();
+  } catch(e){ toast('Error: '+e.message,'error'); }
+  finally{ pbDone(); }
+}
+
+// ── PRINT RFQ COMPARISON (pre-submission) ────────────────────────────────────
+function printRFQComparison(rfqNum) {
+  const table = document.getElementById('rfqCompareTable');
+  if (!table) { toast('Nothing to print','error'); return; }
+  const firstRow = table.querySelector('tbody tr');
+  const colWidths = firstRow ? Array.from(firstRow.cells).map(td=>td.getBoundingClientRect().width) : [];
+  const totalWidth = colWidths.reduce((a,b)=>a+b,0)||1;
+  const colgroupHTML = colWidths.length
+    ? '<colgroup>'+colWidths.map(w=>`<col style="width:${((w/totalWidth)*100).toFixed(2)}%">`).join('')+'</colgroup>'
+    : '';
+  const clone = table.cloneNode(true);
+  clone.querySelectorAll('input,button,select').forEach(el=>el.remove());
+  clone.querySelectorAll('colgroup').forEach(el=>el.remove());
+  clone.insertAdjacentHTML('afterbegin', colgroupHTML);
+  const doc = `<!DOCTYPE html><html><head><meta charset="UTF-8">
+  <title>Quote Comparison — ${esc(rfqNum)}</title>
+  <style>
+    @page{size:A4 landscape;margin:12mm 14mm;}
+    *{box-sizing:border-box;margin:0;padding:0;}
+    body{font-family:Arial,Helvetica,sans-serif;font-size:8pt;color:#111;-webkit-print-color-adjust:exact;print-color-adjust:exact;}
+    .ph{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:2.5pt solid #1e3a5f;padding-bottom:7pt;margin-bottom:8pt;}
+    .co-name{font-size:14pt;font-weight:700;color:#1e3a5f;}
+    .co-sub{font-size:7.5pt;color:#444;margin-top:4pt;line-height:1.6;}
+    .doc-title{font-size:18pt;font-weight:700;color:#1e3a5f;margin-bottom:4pt;}
+    table{width:100%;border-collapse:collapse;font-size:6.5pt;table-layout:fixed;border:.5pt solid #1e3a5f;}
+    thead tr:first-child th{background:#1e3a5f;color:#fff;padding:4pt;font-size:7pt;font-weight:700;text-align:center;border:.4pt solid #2d4f7c;}
+    thead tr:nth-child(2) th{background:#344f6e;color:#e8f0fe;padding:3pt;font-size:6pt;text-align:right;border:.4pt solid #2d4f7c;}
+    td{padding:3.5pt 4pt;border:.4pt solid #dde6f0;vertical-align:middle;word-break:break-word;line-height:1.3;}
+    th.num,td.num{text-align:right;} th.c,td.c{text-align:center;}
+    tbody tr:nth-child(odd) td{background:#fff;} tbody tr:nth-child(even) td{background:#f4f7fb;}
+    span{font-size:5.5pt;} thead{display:table-header-group;} tr{page-break-inside:avoid;}
+    [style*="background:#d1fae5"]{background:#d1fae5 !important;}
+    [style*="background:#fee2e2"]{background:#fee2e2 !important;}
+    [style*="background:#fef3c7"]{background:#fef3c7 !important;}
+    [style*="background:#bbf7d0"]{background:#bbf7d0 !important;font-weight:700;}
+    [style*="background:#fecaca"]{background:#fecaca !important;}
+    [style*="background:#e6f4f1"]{background:#e6f4f1 !important;font-weight:700;}
+    [style*="background:#e8ecf2"]{background:#e8ecf2 !important;font-weight:700;color:#1e3a5f;}
+    [style*="background:#f0f7ff"]{background:#f0f7ff !important;}
+    [style*="background:#f8fafc"]{background:#f8fafc !important;}
+    [style*="background:#f0f5fb"]{background:#f0f5fb !important;}
+    [style*="background:#166534"]{background:#166534 !important;color:#fff !important;font-weight:700;}
+    [style*="background:#92400e"]{background:#92400e !important;color:#fff !important;font-weight:700;}
+    [style*="background:#991b1b"]{background:#991b1b !important;color:#fff !important;font-weight:700;}
+    [style*="background:#334155"]{background:#334155 !important;color:#fff !important;font-weight:700;}
+    [style*="background:#344f6e"]{background:#344f6e !important;color:#e8f0fe !important;}
+    [style*="background:#1e3a5f"]{background:#1e3a5f !important;color:#fff !important;}
+  </style></head><body>
+  <div class="ph">
+    <div><div class="co-name">URBAN EXCELLENCE LLP</div>
+      <div class="co-sub">76/1 Windchimes, Muthsandra Main Road, Bengaluru – 560087<br>GSTIN: 29AAHFU0117D1ZH &nbsp;|&nbsp; Project: Poetry of Earth, Phase 1</div>
+    </div>
+    <div style="text-align:right;">
+      <div class="doc-title">QUOTE COMPARISON</div>
+      <div style="font-size:8pt;">RFQ: <strong>${esc(rfqNum)}</strong> &nbsp;|&nbsp; Date: ${fmtDate(today())}</div>
+      <div style="font-size:8pt;color:#555;">Pre-submission draft</div>
+    </div>
+  </div>
+  ${clone.outerHTML}
+  <div style="margin-top:14pt;display:flex;justify-content:flex-end;">
+    <div style="width:110pt;border-top:.5pt solid #444;padding-top:4pt;font-size:7pt;text-align:center;color:#333;line-height:1.6;">
+      Prepared By<br>${esc(state.userName||'')}
+    </div>
+  </div>
+  </body></html>`;
+  const w = window.open('','_blank','width=1100,height=800');
+  if (!w) { toast('Allow pop-ups to print','error'); return; }
+  w.document.write(doc); w.document.close();
+  w.onload = ()=>{ w.focus(); w.print(); };
+}
+
 
 async function newRFQ() {
   if (!hasPerm('canCreateRFQ')) { toast('Only Procurement can create RFQ','error'); return; }
@@ -10288,8 +10867,10 @@ let _qcVendorCount=0, _qcRFQItems=[];
 async function loadQCList() {
   const {data}=await sb.from('pu_quote_comparison').select('*').order('created_at',{ascending:false});
   puState.qcList=data||[];
-  // Keep rfqWithQC in sync
-  puState.rfqWithQC = new Set((data||[]).map(q=>q.rfq_number).filter(Boolean));
+  // Keep rfqWithQC in sync — exclude Rejected QCs so their RFQs remain open for a new QC.
+  puState.rfqWithQC = new Set(
+    (data||[]).filter(q=>q.status!=='Rejected').map(q=>q.rfq_number).filter(Boolean)
+  );
   renderQCList();
 }
 
@@ -10432,7 +11013,8 @@ function calcQCPositions() {
   const rankMap={};
   sorted.forEach((t,i)=>{ rankMap[t.v]='L'+(i+1); });
 
-  const bgMap={L1:'#16a34a',L2:'#d97706',L3:'#dc2626',L4:'#64748b'};
+  // Darker shades ensure sufficient contrast with #fff text at all font sizes
+  const bgMap={L1:'#166534',L2:'#92400e',L3:'#991b1b',L4:'#334155'};
   totals.forEach(({v,grand})=>{
     const pos=grand>0?(rankMap[v]||'—'):'—';
     // Position cell
@@ -10440,7 +11022,7 @@ function calcQCPositions() {
     if(posEl){
       posEl.textContent=pos;
       posEl.style.color='#fff';
-      posEl.style.background=bgMap[pos]||'#94a3b8';
+      posEl.style.background=bgMap[pos]||'#334155';
     }
     // Premium % cell
     const premEl=document.getElementById(`qcPremium_${v}`);
@@ -10599,6 +11181,9 @@ async function viewQC(qcNum) {
 
   const mats=[...new Set((qItems||[]).map(qi=>qi.material_name))];
 
+  // Fetch historical PO prices for all materials in this QC (single query)
+  const histMap = await fetchHistoricalPOPrices(mats);
+
   // Grand totals using effective rates
   const grandTotals=(quotes||[]).map(v=>{
     let grand=0;
@@ -10616,7 +11201,7 @@ async function viewQC(qcNum) {
   const l1Grand=ranked[0]?.grand||0;
   const posMap={};
   ranked.forEach((r,i)=>{posMap[r.vendorId]={pos:'L'+(i+1),grand:r.grand};});
-  const bgMap2={L1:'#16a34a',L2:'#d97706',L3:'#dc2626',L4:'#64748b'};
+  const bgMap2={L1:'#166534',L2:'#92400e',L3:'#991b1b',L4:'#334155'};
 
   // Sub-columns per vendor: Orig | N1 | N2… | Total
   // Total spans all sub-cols and always shows effective total
@@ -10703,6 +11288,35 @@ async function viewQC(qcNum) {
       tbody+=`<td class="num" style="${cellBg}padding:5px 4px;font-size:11px;font-weight:600;background:${hasVar&&eff===minEff?'#bbf7d0':hasVar&&eff===maxEff?'#fecaca':''}">${eff>0?fmtINRSym(effTotal):'—'}</td>`;
     });
     tbody+='</tr>';
+
+    // ── Historical PO prices strip ──────────────────────────────────────────
+    const totalQCCols = 4 + (quotes||[]).length * subCols;
+    const h = histMap[mat];
+    if (h) {
+      tbody+=`<tr><td colspan="${totalQCCols}" style="padding:0;">
+        <div style="background:#f0f7ff;border-top:1px dashed #b8d4f0;padding:3px 8px;">
+          <span style="font-size:9px;font-weight:700;color:#1e3a5f;text-transform:uppercase;letter-spacing:.4px;margin-right:8px;">PO History</span>
+          <span style="font-size:9px;background:#d1fae5;color:#065f46;font-weight:700;padding:1px 5px;border-radius:3px;">Lowest</span>
+          <span style="font-size:10px;font-weight:600;color:#065f46;margin:0 4px;">₹${fmtINR(h.low.rate)}</span>
+          <span style="font-size:8px;color:#64748b;">${esc(h.low.vendor)} · ${h.low.po} · ${fmtDate(h.low.date)}</span>
+          <span style="margin:0 8px;color:#cbd5e1;">|</span>
+          <span style="font-size:9px;background:#fee2e2;color:#991b1b;font-weight:700;padding:1px 5px;border-radius:3px;">Highest</span>
+          <span style="font-size:10px;font-weight:600;color:#991b1b;margin:0 4px;">₹${fmtINR(h.high.rate)}</span>
+          <span style="font-size:8px;color:#64748b;">${esc(h.high.vendor)} · ${h.high.po} · ${fmtDate(h.high.date)}</span>
+          <span style="margin:0 8px;color:#cbd5e1;">|</span>
+          <span style="font-size:9px;background:#e0e7ff;color:#3730a3;font-weight:700;padding:1px 5px;border-radius:3px;">Last</span>
+          <span style="font-size:10px;font-weight:600;color:#3730a3;margin:0 4px;">₹${fmtINR(h.last.rate)}</span>
+          <span style="font-size:8px;color:#64748b;">${esc(h.last.vendor)} · ${h.last.po} · ${fmtDate(h.last.date)}</span>
+        </div>
+      </td></tr>`;
+    } else {
+      tbody+=`<tr><td colspan="${totalQCCols}" style="padding:0;">
+        <div style="background:#f8fafc;border-top:1px dashed #e2e8f0;padding:3px 8px;">
+          <span style="font-size:9px;font-weight:700;color:#1e3a5f;text-transform:uppercase;letter-spacing:.4px;margin-right:6px;">PO History</span>
+          <span style="font-size:9px;color:#94a3b8;font-style:italic;">No previous POs for this material</span>
+        </div>
+      </td></tr>`;
+    }
   });
 
   // Grand Total row
@@ -10717,7 +11331,7 @@ async function viewQC(qcNum) {
   tbody+='<tr><td colspan="4" style="padding:6px 8px;font-weight:700;background:#e8ecf2;color:#1e3a5f;">Position</td>';
   (quotes||[]).forEach(v=>{
     const pos=posMap[v.id];const label=pos?pos.pos:'—';
-    const bg=bgMap2[label]||'#94a3b8';
+    const bg=bgMap2[label]||'#334155';
     tbody+=`<td colspan="${subCols}" class="num" style="padding:6px 8px;background:${bg};color:#fff;font-weight:700;font-size:14px;">${label}</td>`;
   });
   tbody+='</tr>';
@@ -12935,16 +13549,19 @@ function renderMISList() {
     const cashBadge = hasCash
       ? ' <span style="font-size:10px;background:#ad6800;color:#fff;padding:1px 6px;border-radius:3px;font-weight:600;vertical-align:middle;" title="Contains material with cash-purchase history">DIRECT</span>'
       : '';
-    const stCls=m.status==='Approved'?'approved':'pending-approval';
-    let acts=`<button class="btn btn-ghost btn-sm" onclick="viewMIS('${esc(m.mis_number)}')">View</button>`;
-    if(perms.canApproveMIS && m.status==='Pending Approval')
-      acts+=` <button class="btn btn-primary btn-sm" onclick="approveMIS('${esc(m.mis_number)}')">Approve</button>
-              <button class="btn btn-danger btn-sm" onclick="rejectDoc('MIS','${esc(m.mis_number)}')">Reject</button>`;
+    const stCls=m.status==='Approved'?'approved':m.status==='Rejected'?'rejected':'pending-approval';
+    // Distinct WBS elements across all items — compact display
+    const wbsVals = [...new Set(its.map(it=>it.wbs_element).filter(Boolean))];
+    const wbsDisplay = wbsVals.length
+      ? `<span style="font-size:11px;">${esc(wbsVals.join(', '))}</span>`
+      : '<span style="color:#94a3b8;font-size:11px;font-style:italic;">—</span>';
+    // View button only — Approve/Reject moved into the popup
+    const acts=`<button class="btn btn-ghost btn-sm" onclick="viewMIS('${esc(m.mis_number)}')">View</button>`;
     return `<tr>
       <td class="mono">${esc(m.mis_number)}${cashBadge}</td><td>${fmtDate(m.issue_date)}</td>
       <td>${esc(m.issued_to)}</td>
       <td>${esc(m.issued_by||'—')}</td>
-      <td class="num">${its.length}</td>
+      <td>${wbsDisplay}</td>
       <td class="num">${fmtINR(totalVal)}</td>
       <td><span class="status ${stCls}">${m.status||'Pending Approval'}</span></td>
       <td>${acts}</td></tr>`;
@@ -13079,15 +13696,36 @@ function misMaterialTypeahead(i) {
 // Locks the input (readOnly + ✕ clear button) so manual entry is impossible —
 // users must either pick from the dropdown or clear and retry.
 function selectMISMaterial(i, name, uom, balance, rate) {
+  const bal = parseFloat(balance||0);
+
+  // Hard block: zero or negative stock — cannot be issued
+  if (bal <= 0) {
+    toast(`${name} has zero stock available — cannot be issued`, 'error', 5000);
+    // Clear the input so the user must pick a different material
+    const inp = document.getElementById('misMat_'+i);
+    if (inp) { inp.value = ''; inp.readOnly = false; }
+    const res = document.getElementById('misMatRes_'+i);
+    if (res) { res.classList.remove('show'); res.style.display='none'; }
+    return;
+  }
+
   const inp = document.getElementById('misMat_'+i);
   if (inp) { inp.value = name; inp.readOnly = true; }
   const res = document.getElementById('misMatRes_'+i);
   if (res) { res.classList.remove('show'); res.style.display='none'; }
   document.getElementById('misUom_'+i).value = uom || '';
-  document.getElementById('misMatBal_'+i).value  = balance || 0;
+  document.getElementById('misMatBal_'+i).value  = bal;
   document.getElementById('misMatRate_'+i).value = rate || 0;
-  document.getElementById('misBalance_'+i).textContent = fmtINR(parseFloat(balance||0)) + ' ' + (uom||'');
-  document.getElementById('misRate_'+i).textContent    = fmtINR(parseFloat(rate||0));
+
+  // Colour-coded balance: red = zero, amber = low (< 10), green = ok
+  const balEl = document.getElementById('misBalance_'+i);
+  if (balEl) {
+    balEl.textContent = fmtINR(bal) + ' ' + (uom||'');
+    balEl.style.fontWeight = '700';
+    balEl.style.color = bal <= 0 ? '#dc2626' : bal < 10 ? '#d97706' : 'var(--accent)';
+  }
+  document.getElementById('misRate_'+i).textContent = fmtINR(parseFloat(rate||0));
+
   // Inject ✕ clear button next to input (same pattern as WBS/contractor fields)
   const btnId = 'misMat_'+i+'_clrBtn';
   if (inp && !document.getElementById(btnId)) {
@@ -13197,18 +13835,35 @@ async function saveMIS() {
       unit_rate:rate, amount:qty*rate});
   });
   if(!items.length){toast('Add at least one item','error');return;}
-  // Guard: don't allow issuing more than available stock for any line
-  const overdraft = items.find(it => it.qty_issued > it.stock_before);
-  if (overdraft) {
-    toast('Cannot issue '+overdraft.material_name+': qty exceeds available stock ('+fmtINR(overdraft.stock_before)+' '+overdraft.uom+')','error');
-    return;
+
+  // ── Live stock check at save time ─────────────────────────────────────────
+  // Re-read pu_stock_balance NOW (not from the form cache) to catch concurrent
+  // pending MIS from other users that were saved after this form was opened.
+  // The view already deducts reserved_qty (pending MIS) from balance_qty.
+  pbShow('Checking live stock availability…');
+  const matNames = [...new Set(items.map(it => it.material_name))];
+  const {data:liveStock, error:stockErr} = await sb.from('pu_stock_balance')
+    .select('material_name,balance_qty,reserved_qty,uom')
+    .in('material_name', matNames);
+  pbDone();
+  if (stockErr) { toast('Stock check failed: '+stockErr.message,'error'); return; }
+  const liveMap = {};
+  (liveStock||[]).forEach(s => { liveMap[s.material_name] = parseFloat(s.balance_qty||0); });
+  for (const it of items) {
+    const available = liveMap[it.material_name] ?? 0;
+    if (it.qty_issued > available) {
+      toast(`Cannot issue ${it.material_name}: only ${fmtINR(available)} ${it.uom} available right now (includes reservations from other pending MIS). Reduce qty or wait for pending approvals to clear.`,'error',8000);
+      return;
+    }
   }
+  // Update stock_before from live values so the MIS record is accurate
+  items.forEach(it => {
+    it.stock_before = liveMap[it.material_name] ?? it.stock_before;
+    it.stock_after  = Math.max(0, it.stock_before - it.qty_issued);
+  });
   pbShow('Saving MIS…');
   try {
     // Determine which materials have ever been received via cash GRN.
-    // This is a simple "material has any cash sourcing in its history" check —
-    // it's a heuristic for traceability, not exact source attribution.
-    const matNames = [...new Set(items.map(it => it.material_name))];
     const cashMatSet = new Set();
     if (matNames.length) {
       const { data: cashItems } = await sb.from('pu_grn_items')
@@ -13240,41 +13895,148 @@ async function saveMIS() {
   finally{pbDone();}
 }
 
-async function approveMIS(misNum) {
-  if(!hasPerm('canApproveMIS')){toast('Only Site Manager can approve MIS','error');return;}
-  await sb.from('pu_mis').update({status:'Approved'}).eq('mis_number',misNum);
-  flashSuccess('MIS '+misNum+' Approved'); loadMISList();
+async function confirmApproveMIS(misNum) {
+  if (!hasPerm('canApproveMIS')) { toast('Only Site Manager can approve MIS','error'); return; }
+
+  // ── 1. Validate WBS from the already-fetched items (no DOM reading) ─────────
+  const misItems = window._misApprovalItems || [];
+  const missingLine = misItems.find(it => !it.wbs_element);
+  if (missingLine) {
+    toast(`Line ${missingLine.sno} (${missingLine.material_name}) has no WBS Element — the Store Executive must assign WBS before approval.`,'error',6000);
+    return;
+  }
+
+  closeModal();
+  pbShow('Approving MIS…');
+  try {
+    // ── 2. Set MIS status to Approved ──────────────────────────────────────────
+    const {error:approveErr} = await sb.from('pu_mis')
+      .update({
+        status:         'Approved',
+        approved_by:    state.userName,
+        approved_by_id: state.userId,
+        approved_at:    new Date().toISOString(),
+      }).eq('mis_number', misNum);
+    if (approveErr) throw new Error(approveErr.message);
+
+    flashSuccess('MIS '+misNum+' Approved');
+    window._misApprovalItems = [];
+    loadMISList();
+    loadStockBalance();
+  } catch(e) { toast('Error: '+e.message,'error'); }
+  finally { pbDone(); }
 }
 
 async function viewMIS(misNum) {
   pbShow('Loading…');
+  // Ensure WBS master is loaded for the typeahead
+  if (!(puState.wbsList||[]).length) await loadWBSMaster();
   const [{data:h},{data:items}]=await Promise.all([
     sb.from('pu_mis').select('*').eq('mis_number',misNum).single(),
     sb.from('pu_mis_items').select('*').eq('mis_number',misNum).order('sno'),
   ]);
   pbDone();
+  const perms = mergedPerms();
+  const isPending = h?.status === 'Pending Approval';
+  const canApprove = perms.canApproveMIS && isPending;
   const total=(items||[]).reduce((s,it)=>s+num(it.amount),0);
   const anyCash = (items||[]).some(it=>it.is_cash_purchase);
+
   const headerBadge = anyCash
-    ? ' <span style="font-size:11px;background:#ad6800;color:#fff;padding:2px 8px;border-radius:3px;font-weight:600;vertical-align:middle;" title="Contains material with cash-purchase history">DIRECT</span>'
+    ? ' <span style="font-size:11px;background:#ad6800;color:#fff;padding:2px 8px;border-radius:3px;font-weight:600;vertical-align:middle;">DIRECT</span>'
     : '';
   const lineBadge = (it) => it.is_cash_purchase
     ? ' <span style="font-size:9px;background:#ad6800;color:#fff;padding:1px 5px;border-radius:3px;font-weight:600;vertical-align:middle;">DIRECT</span>'
     : '';
-  openModal(`<h3>MIS — ${esc(misNum)}${headerBadge}</h3>
+
+  // Rejection reason banner — shown when status is Rejected
+  const rejBanner = h?.status === 'Rejected' && h?.rejection_reason
+    ? `<div style="background:#fef2f2;border:1px solid #fca5a5;border-radius:6px;padding:8px 12px;margin-bottom:10px;font-size:12px;">
+        <span style="font-weight:700;color:#991b1b;">Rejected:</span>
+        <span style="color:#7f1d1d;margin-left:6px;">${esc(h.rejection_reason)}</span>
+       </div>`
+    : '';
+
+  // Item rows — WBS always read-only, shown for all users
+  const itemRows = (items||[]).map((it,idx) => {
+    const wbsMissing = canApprove && !it.wbs_element;
+    const wbsCell = `<td style="font-size:11px;${wbsMissing?'background:#fef2f2;color:#991b1b;font-weight:600;':''}">${
+      it.wbs_element ? esc(it.wbs_element) : '<span style="color:#dc2626;font-style:italic;">Missing</span>'
+    }</td>`;
+    return `<tr>
+      <td>${it.sno}</td>
+      <td>${esc(it.material_name)}${lineBadge(it)}</td>
+      <td>${esc(it.uom)}</td>
+      ${wbsCell}
+      <td class="num">${fmtINR(it.stock_before)}</td>
+      <td class="num">${fmtINR(it.qty_issued)}</td>
+      <td class="num">${fmtINR(it.unit_rate)}</td>
+      <td class="num">${fmtINR(it.amount)}</td>
+    </tr>`;
+  }).join('');
+
+  // WBS warning for approver — if any item is missing WBS, block approval
+  const missingWBS = canApprove && (items||[]).some(it => !it.wbs_element);
+  const wbsNotice = canApprove
+    ? missingWBS
+      ? `<div style="background:#fef2f2;border:1px solid #fca5a5;border-radius:4px;padding:6px 10px;margin-bottom:8px;font-size:12px;">
+          <span style="font-weight:700;color:#991b1b;">⚠ Cannot Approve:</span>
+          <span style="color:#7f1d1d;margin-left:6px;">One or more line items are missing a WBS Element. The Store Executive must assign WBS before this MIS can be approved.</span>
+         </div>`
+      : `<div style="background:#f0fdf4;border:1px solid #86efac;border-radius:4px;padding:6px 10px;margin-bottom:8px;font-size:12px;color:#166534;">
+          ✓ All line items have WBS Elements assigned — ready to approve.
+         </div>`
+    : '';
+
+  // Action buttons
+  let actionBtns = '';
+  if (canApprove) {
+    actionBtns = `
+      <button class="btn btn-primary"
+        ${missingWBS?'disabled style="opacity:.5;cursor:not-allowed;" title="Assign WBS to all items before approving"':''}
+        onclick="confirmApproveMIS('${esc(misNum)}')">✓ Approve</button>
+      <button class="btn btn-danger" onclick="closeModal();rejectDoc('MIS','${esc(misNum)}')">✕ Reject</button>`;
+  }
+  actionBtns += `<button class="btn btn-ghost" onclick="closeModal()">Close</button>`;
+
+  // Store loaded items for confirmApproveMIS — avoids re-fetch and unsafe inline JSON
+  window._misApprovalItems = (items||[]).map(it=>({
+    id: it.id, sno: it.sno, material_name: it.material_name, wbs_element: it.wbs_element||null
+  }));
+
+  openModal(`
+    <h3 style="margin-bottom:4px;">MIS — ${esc(misNum)}${headerBadge}
+      <span class="status ${h?.status==='Approved'?'approved':h?.status==='Rejected'?'rejected':'pending-approval'}"
+        style="margin-left:8px;font-size:12px;">${h?.status||'Pending Approval'}</span>
+    </h3>
     <div class="grid-3" style="margin-bottom:10px;">
       <div><label class="muted" style="font-size:11px;">DATE</label><div>${fmtDate(h?.issue_date)}</div></div>
       <div><label class="muted" style="font-size:11px;">ISSUED TO</label><div>${esc(h?.issued_to||'')}</div></div>
       <div><label class="muted" style="font-size:11px;">LOCATION</label><div>${esc(h?.location_name||'—')}</div></div>
       <div><label class="muted" style="font-size:11px;">ISSUED BY</label><div>${esc(h?.issued_by||'')}</div></div>
-      <div><label class="muted" style="font-size:11px;">STATUS</label><div>${esc(h?.status||'')}</div></div>
+      ${h?.remarks?`<div style="grid-column:span 2;"><label class="muted" style="font-size:11px;">REMARKS</label><div style="font-size:12px;">${esc(h.remarks)}</div></div>`:''}
     </div>
-    <div class="table-wrap"><table>
-      <thead><tr><th>#</th><th>Material</th><th>UOM</th><th class="num">Stock Before</th><th class="num">Qty Issued</th><th class="num">Rate</th><th class="num">Amount</th></tr></thead>
-      <tbody>${(items||[]).map(it=>`<tr><td>${it.sno}</td><td>${esc(it.material_name)}${lineBadge(it)}</td><td>${esc(it.uom)}</td><td class="num">${fmtINR(it.stock_before)}</td><td class="num">${fmtINR(it.qty_issued)}</td><td class="num">${fmtINR(it.unit_rate)}</td><td class="num">${fmtINR(it.amount)}</td></tr>`).join('')}
-      <tr style="background:#e6f4f1;font-weight:700;"><td colspan="6" style="text-align:right;padding:6px 8px;">Total</td><td class="num">${fmtINRSym(total)}</td></tr>
-      </tbody></table></div>
-    <div class="actions-row"><button class="btn btn-ghost" onclick="closeModal()">Close</button></div>`);
+    ${rejBanner}
+    ${wbsNotice}
+    <div class="table-wrap">
+      <table>
+        <thead><tr>
+          <th>#</th><th>Material</th><th>UOM</th>
+          <th>WBS Element ${canApprove?'<span style="color:var(--danger);">*</span>':''}</th>
+          <th class="num">Stock Before</th><th class="num">Qty Issued</th>
+          <th class="num">Rate</th><th class="num">Amount</th>
+        </tr></thead>
+        <tbody>
+          ${itemRows}
+          <tr style="background:#e6f4f1;font-weight:700;">
+            <td colspan="7" style="text-align:right;padding:6px 8px;">Total</td>
+            <td class="num">${fmtINRSym(total)}</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="actions-row" style="margin-top:12px;">${actionBtns}</div>
+  `, 'large');
 }
 
 // ============================================================
@@ -13296,18 +14058,23 @@ function renderStockBalance() {
   let totalVal=0, matCount=0, lowCount=0;
   document.getElementById('stock_body').innerHTML=rows.map(s=>{
     totalVal+=num(s.stock_value||0); matCount++;
-    const isLow=num(s.balance_qty)<=0; if(isLow) lowCount++;
+    const bal     = num(s.balance_qty||0);
+    const reserved = num(s.reserved_qty||0);
+    const isLow   = bal <= 0; if(isLow) lowCount++;
+    const balColor = bal <= 0 ? 'var(--danger)' : bal < 10 ? 'var(--warn)' : 'var(--accent)';
+    const resColor = reserved > 0 ? '#d97706' : 'var(--muted)';
     return `<tr style="${isLow?'background:#fef2f2;':''}">
       <td>${esc(s.material_name)}</td>
       <td><span class="muted">—</span></td>
       <td>${esc(s.uom||'')}</td>
       <td class="num">${fmtINR(s.total_received_qty||0)}</td>
       <td class="num">${fmtINR(s.total_issued_qty||0)}</td>
-      <td class="num" style="font-weight:700;color:${isLow?'var(--danger)':'var(--accent)'};">${fmtINR(s.balance_qty||0)}</td>
+      <td class="num" style="font-weight:600;color:${resColor};">${reserved>0?fmtINR(reserved):'—'}</td>
+      <td class="num" style="font-weight:700;color:${balColor};">${fmtINR(bal)}</td>
       <td class="num">${fmtINR(s.latest_rate||0)}</td>
       <td class="num" style="font-weight:600;">${fmtINRSym(s.stock_value||0)}</td>
     </tr>`;
-  }).join('')||'<tr><td colspan="8" class="center muted">No stock data. Verify GRNs to populate.</td></tr>';
+  }).join('')||'<tr><td colspan="9" class="center muted">No stock data. Verify GRNs to populate.</td></tr>';
   document.getElementById('stock_matCount').textContent=matCount;
   document.getElementById('stock_totalValue').textContent=fmtINRSym(totalVal);
   document.getElementById('stock_lowCount').textContent=lowCount;
@@ -13377,12 +14144,113 @@ async function confirmRejectDoc(docType, docNum) {
   const colMap={MIR:'mir_number',QC:'qc_number',PO:'po_number',GRN:'grn_number',POB:'bill_number',MIS:'mis_number'};
   const {error}=await sb.from(tableMap[docType]).update({status:'Rejected',rejection_reason:reason}).eq(colMap[docType],docNum);
   if(error){ toast(error.message,'error'); return; }
-  // Cascade rejection to MIR line items so item_status reflects reality everywhere
+
+  // ── MIR rejection: cascade item_status to Rejected ──────────────────────────
   if (docType === 'MIR') {
     const {error: itemErr} = await sb.from('pu_mir_items')
       .update({item_status:'Rejected'}).eq('mir_number',docNum);
     if (itemErr) console.warn('MIR item-status cascade failed:', itemErr.message);
   }
+
+  // ── QC rejection: reopen the parent RFQ so a new QC can be raised ───────────
+  // The rejected QC's quotes/quote-items remain in the DB for reference.
+  // MIR items stay at 'RFQ Raised' — the RFQ itself was valid; only the
+  // comparison was rejected, so procurement can re-compare on the same RFQ.
+  if (docType === 'QC') {
+    const {data:qcH, error:qcHErr} = await sb.from('pu_quote_comparison')
+      .select('rfq_number').eq('qc_number',docNum).single();
+    if (qcHErr) { console.warn('QC cascade: could not read QC header:', qcHErr.message); }
+    else if (qcH?.rfq_number) {
+      const {error:rfqErr} = await sb.from('pu_rfq')
+        .update({status:'Open'}).eq('rfq_number',qcH.rfq_number);
+      if (rfqErr) console.warn('QC cascade: RFQ reopen failed:', rfqErr.message);
+      else toast('RFQ '+qcH.rfq_number+' reopened — raise a new Quote Comparison','info',4000);
+    }
+  }
+
+  // ── PO rejection: cascade back to QC-Approved or MIR-Pending ────────────────
+  // Path A (QC-based PO):  reset QC → Approved, MIR items → RFQ Raised, clear po_number on items.
+  // Path B (Direct PO):    reset MIR items → Pending, clear po_number & rfq_number on items.
+  // In both cases the MIR header is recomputed from the updated item statuses.
+  if (docType === 'PO') {
+    const {data:poHdr, error:poHdrErr} = await sb.from('pu_po_orders')
+      .select('mir_number,qc_number').eq('po_number',docNum).single();
+    if (poHdrErr) { console.warn('PO cascade: could not read PO header:', poHdrErr.message); }
+    else {
+      // Resolve MIR number — may be stored directly or via QC → RFQ → MIR
+      let mirNum = poHdr?.mir_number || null;
+      const qcRef = poHdr?.qc_number || null; // null for Direct PO
+      const isQCBased = qcRef && qcRef.startsWith('QC/');
+
+      if (!mirNum && isQCBased) {
+        const {data:qcH2} = await sb.from('pu_quote_comparison')
+          .select('rfq_number').eq('qc_number',qcRef).maybeSingle();
+        if (qcH2?.rfq_number) {
+          const {data:rfqH} = await sb.from('pu_rfq')
+            .select('mir_number').eq('rfq_number',qcH2.rfq_number).maybeSingle();
+          mirNum = rfqH?.mir_number || null;
+        }
+      }
+
+      if (isQCBased) {
+        // Path A — reopen the approved QC so Procurement can create a new PO from it
+        const {error:qcReopenErr} = await sb.from('pu_quote_comparison')
+          .update({status:'Approved'}).eq('qc_number',qcRef);
+        if (qcReopenErr) console.warn('PO cascade: QC reopen failed:', qcReopenErr.message);
+        else toast('QC '+qcRef+' restored to Approved — create a new PO from it','info',4000);
+
+        // Reset MIR items that were marked PO Raised under this PO back to RFQ Raised
+        if (mirNum) {
+          const {error:itemErr} = await sb.from('pu_mir_items')
+            .update({item_status:'RFQ Raised', po_number:null})
+            .eq('mir_number',mirNum).eq('po_number',docNum).eq('item_status','PO Raised');
+          if (itemErr) console.warn('PO cascade: MIR item reset failed:', itemErr.message);
+        }
+      } else {
+        // Path B — Direct PO: reset MIR items fully to Pending for re-procurement
+        if (mirNum) {
+          const {error:itemErr} = await sb.from('pu_mir_items')
+            .update({item_status:'Pending', po_number:null, rfq_number:null})
+            .eq('mir_number',mirNum).eq('po_number',docNum).eq('item_status','PO Raised');
+          if (itemErr) console.warn('PO cascade: MIR item reset (direct) failed:', itemErr.message);
+        }
+      }
+
+      // Recompute MIR header status from updated item states
+      if (mirNum) {
+        const [{data:allPOs},{data:allItems}] = await Promise.all([
+          sb.from('pu_po_orders').select('po_number,status').eq('mir_number',mirNum),
+          sb.from('pu_mir_items').select('item_status').eq('mir_number',mirNum),
+        ]);
+        const pos   = allPOs  || [];
+        const items = allItems|| [];
+        if (items.length) {
+          // If every non-rejected PO is now Rejected/Cancelled and no item is active → revert MIR to Approved
+          const allPOsDead = pos.length>0 && pos.every(p=>['Rejected','Cancelled'].includes(p.status));
+          const anyItemActive = items.some(it=>['RFQ Raised','PO Raised','Received'].includes(it.item_status));
+          let newMIRSt;
+          if (allPOsDead && !anyItemActive) {
+            newMIRSt = 'Approved';
+          } else {
+            const allReceived = items.every(it=>['Received','Closed'].includes(it.item_status));
+            const allPORaised = items.every(it=>['PO Raised','Received','Closed'].includes(it.item_status));
+            const anyPORaised = items.some( it=>['PO Raised','Received'].includes(it.item_status));
+            const allRFQ      = items.every(it=>['RFQ Raised','PO Raised','Received','Closed'].includes(it.item_status));
+            const anyRFQ      = items.some( it=>it.item_status==='RFQ Raised');
+            newMIRSt = allReceived ? 'Closed'
+                     : allPORaised ? 'PO Raised'
+                     : anyPORaised ? 'Partial RFQ'
+                     : allRFQ      ? 'RFQ Raised'
+                     : anyRFQ      ? 'Partial RFQ'
+                     : 'Approved';
+          }
+          const {error:mirStErr} = await sb.from('pu_mir').update({status:newMIRSt}).eq('mir_number',mirNum);
+          if (mirStErr) console.warn('PO cascade: MIR header recompute failed:', mirStErr.message);
+        }
+      }
+    }
+  }
+
   flashSuccess(docType+' '+docNum+' Rejected');
   const reloadMap={MIR:loadMIRList,QC:loadQCList,PO:loadPOList,GRN:loadGRNList,POB:loadPOBList,MIS:loadMISList};
   if(reloadMap[docType]) reloadMap[docType]();
@@ -13415,8 +14283,11 @@ function makeSortable(tableOrId) {
   if (!table || !table.querySelector) return;
   const ths = table.querySelectorAll('thead th');
   ths.forEach((th, col) => {
+    // Guard: skip if listener already attached — prevents stacking on every re-render
+    if (th.dataset.sortable === '1') return;
+    th.dataset.sortable = '1';
     th.classList.add('sortable');
-    th.dataset.sortDir = '';
+    if (!th.dataset.sortDir) th.dataset.sortDir = '';
     th.addEventListener('click', () => {
       const dir = th.dataset.sortDir === 'asc' ? 'desc' : 'asc';
       ths.forEach(h => { h.classList.remove('asc','desc'); h.dataset.sortDir = ''; });
@@ -14351,13 +15222,26 @@ async function printQCPopup(qcNum) {
   [style*="background:#e8ecf2"],[style*="background: #e8ecf2"] { background:#e8ecf2 !important; font-weight:700; color:#1e3a5f; }
   [style*="background:#bbf7d0"],[style*="background: #bbf7d0"] { background:#bbf7d0 !important; font-weight:700; }
   [style*="background:#fecaca"],[style*="background: #fecaca"] { background:#fecaca !important; }
-  [style*="background:#16a34a"],[style*="background: #16a34a"] { background:#16a34a !important; color:#fff !important; font-weight:700; }
-  [style*="background:#d97706"],[style*="background: #d97706"] { background:#d97706 !important; color:#fff !important; font-weight:700; }
-  [style*="background:#dc2626"],[style*="background: #dc2626"] { background:#dc2626 !important; color:#fff !important; font-weight:700; }
-  [style*="background:#94a3b8"],[style*="background: #94a3b8"] { background:#94a3b8 !important; color:#fff !important; font-weight:700; }
+  /* Position cells — new dark shades for L1/L2/L3/L4 (contrast 7:1+ with white) */
+  [style*="background:#166534"],[style*="background: #166534"] { background:#166534 !important; color:#fff !important; font-weight:700; }
+  [style*="background:#92400e"],[style*="background: #92400e"] { background:#92400e !important; color:#fff !important; font-weight:700; }
+  [style*="background:#991b1b"],[style*="background: #991b1b"] { background:#991b1b !important; color:#fff !important; font-weight:700; }
+  [style*="background:#334155"],[style*="background: #334155"] { background:#334155 !important; color:#fff !important; font-weight:700; }
+  /* Legacy overrides — remap old light shades to new dark ones for any older QC prints */
+  [style*="background:#16a34a"],[style*="background: #16a34a"] { background:#166534 !important; color:#fff !important; font-weight:700; }
+  [style*="background:#d97706"],[style*="background: #d97706"] { background:#92400e !important; color:#fff !important; font-weight:700; }
+  [style*="background:#dc2626"],[style*="background: #dc2626"] { background:#991b1b !important; color:#fff !important; font-weight:700; }
+  [style*="background:#94a3b8"],[style*="background: #94a3b8"] { background:#334155 !important; color:#fff !important; font-weight:700; }
   [style*="background:#f8fafc"],[style*="background: #f8fafc"] { background:#f8fafc !important; }
   [style*="background:#344f6e"],[style*="background: #344f6e"] { background:#344f6e !important; color:#e8f0fe !important; }
   [style*="background:#1e3a5f"],[style*="background: #1e3a5f"] { background:#1e3a5f !important; color:#fff !important; }
+  /* History strip backgrounds */
+  [style*="background:#f0f7ff"],[style*="background: #f0f7ff"] { background:#f0f7ff !important; }
+  [style*="background:#e0e7ff"],[style*="background: #e0e7ff"] { background:#e0e7ff !important; }
+  /* History badge colours */
+  [style*="color:#065f46"] { color:#065f46 !important; }
+  [style*="color:#991b1b"] { color:#991b1b !important; }
+  [style*="color:#3730a3"] { color:#3730a3 !important; }
 
   /* ── SIGNATURE ── */
   .sf { margin-top:16pt; display:flex; justify-content:flex-end; }
