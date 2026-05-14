@@ -2083,7 +2083,7 @@ input[type="number"] {
     <div id="wbs-tab-elems" class="hidden">
       <div class="card">
         <h3>WBS Elements</h3>
-        <div style="display:flex;gap:10px;margin-bottom:12px;flex-wrap:wrap;">
+        <div style="display:flex;gap:10px;margin-bottom:12px;flex-wrap:wrap;align-items:center;">
           <input id="wbs_search" placeholder="Search WBS…" autocomplete="off"
             style="padding:7px;background:var(--input-bg);color:var(--text);border:1px solid var(--border);border-radius:4px;width:260px;"
             oninput="renderWBSMaster()">
@@ -2096,7 +2096,12 @@ input[type="number"] {
             <option value="">All Groups</option>
           </select>
           <div class="muted" style="align-self:center;font-size:11px;" id="wbs_count_label"></div>
-        </div>
+          <!-- Multi-select bulk delete — Admin only, hidden until a checkbox is ticked -->
+          <button id="wbs_bulk_delete_btn" class="btn btn-danger btn-sm"
+            style="display:none;margin-left:auto;"
+            onclick="bulkDeleteWBSSelected()">
+            🗑 Delete Selected (<span id="wbs_sel_count">0</span>)
+          </button>
         <div class="table-wrap">
           <table><thead><tr>
             <th style="padding:8px 12px;">WBS Hierarchy &nbsp;<span class="muted" style="font-weight:normal;font-size:11px;">(click ▶ to expand)</span></th>
@@ -14158,19 +14163,72 @@ async function confirmRejectDoc(docType, docNum) {
     if (itemErr) console.warn('MIR item-status cascade failed:', itemErr.message);
   }
 
-  // ── QC rejection: reopen the parent RFQ so a new QC can be raised ───────────
+  // ── QC rejection: reopen the parent RFQ and back-populate pu_rfq_quotes ──────
   // The rejected QC's quotes/quote-items remain in the DB for reference.
   // MIR items stay at 'RFQ Raised' — the RFQ itself was valid; only the
   // comparison was rejected, so procurement can re-compare on the same RFQ.
+  //
+  // KEY FIX: if the QC was created via the legacy manual QC form (saveQC),
+  // quotes were saved directly into pu_quotes and never written to pu_rfq_quotes.
+  // After rejection we back-populate pu_rfq_quotes from pu_quotes so the pills
+  // appear in the RFQ list and the team can immediately select & re-compare them.
   if (docType === 'QC') {
     const {data:qcH, error:qcHErr} = await sb.from('pu_quote_comparison')
       .select('rfq_number').eq('qc_number',docNum).single();
     if (qcHErr) { console.warn('QC cascade: could not read QC header:', qcHErr.message); }
     else if (qcH?.rfq_number) {
+      const rfqNum = qcH.rfq_number;
+
+      // 1. Reopen the RFQ
       const {error:rfqErr} = await sb.from('pu_rfq')
-        .update({status:'Open'}).eq('rfq_number',qcH.rfq_number);
+        .update({status:'Open'}).eq('rfq_number',rfqNum);
       if (rfqErr) console.warn('QC cascade: RFQ reopen failed:', rfqErr.message);
-      else toast('RFQ '+qcH.rfq_number+' reopened — raise a new Quote Comparison','info',4000);
+
+      // 2. Check whether pu_rfq_quotes already has rows for this RFQ.
+      //    If not (legacy saveQC path), copy from pu_quotes + pu_quote_items.
+      const [{data:existingRFQQuotes}, {data:qcQuotes}, {data:qcItems}] = await Promise.all([
+        sb.from('pu_rfq_quotes').select('id').eq('rfq_number',rfqNum),
+        sb.from('pu_quotes').select('*').eq('qc_number',docNum).order('sno'),
+        sb.from('pu_quote_items').select('*').eq('qc_number',docNum),
+      ]);
+
+      if ((!existingRFQQuotes || existingRFQQuotes.length === 0) && qcQuotes && qcQuotes.length) {
+        for (const q of qcQuotes) {
+          const qItems = (qcItems||[]).filter(i => i.quote_id === q.id);
+          const grand  = qItems.reduce((s,i) => s + (i.qty_required||0)*(i.unit_rate||0)*(1+(i.gst_pct||0)/100), 0);
+          const {data:newRQ, error:rqErr} = await sb.from('pu_rfq_quotes').insert({
+            rfq_number:    rfqNum,
+            sno:           q.sno,
+            vendor_name:   q.vendor_name,
+            vendor_code:   q.vendor_code   || null,
+            quote_ref:     q.quote_ref     || null,
+            delivery_days: q.delivery_days || null,
+            payment_terms: q.payment_terms || null,
+            tech_specs:    q.tech_specs    || null,
+            grand_total:   grand,
+            created_by:    state.userName,
+            created_by_id: state.userId,
+          }).select().single();
+          if (rqErr || !newRQ) { console.warn('QC cascade: pu_rfq_quotes insert failed:', rqErr?.message); continue; }
+          const rfqQItems = qItems.map(i => ({
+            rfq_quote_id:  newRQ.id,
+            rfq_number:    rfqNum,
+            material_name: i.material_name,
+            uom:           i.uom,
+            qty_required:  i.qty_required,
+            unit_rate:     i.unit_rate,
+            gst_pct:       i.gst_pct,
+            amount:        i.amount,
+          }));
+          if (rfqQItems.length) {
+            const {error:riErr} = await sb.from('pu_rfq_quote_items').insert(rfqQItems);
+            if (riErr) console.warn('QC cascade: pu_rfq_quote_items insert failed:', riErr.message);
+          }
+        }
+        toast('RFQ '+rfqNum+' reopened — previous quotes restored for re-comparison','info',5000);
+      } else {
+        toast('RFQ '+rfqNum+' reopened — quotes are ready to compare again','info',4000);
+      }
     }
   }
 
@@ -15580,6 +15638,7 @@ function renderWBSMaster() {
                       const leafTableHTML = (rows) => `
                         <table style="width:100%;font-size:11px;">
                           <thead><tr style="background:var(--bg);">
+                            ${isAdmin?'<th style="width:28px;padding:4px 8px;text-align:center;"><input type="checkbox" title="Select all in this group" onclick="wbsToggleGroupCheckboxes(this)"></th>':''}
                             <th style="text-align:left;padding:4px 8px;">Code</th>
                             <th style="text-align:left;padding:4px 8px;">Location</th>
                             <th style="text-align:left;padding:4px 8px;">WBS Element</th>
@@ -15588,6 +15647,9 @@ function renderWBSMaster() {
                           <tbody>
                             ${rows.map(w=>`
                               <tr>
+                                ${isAdmin?`<td style="padding:3px 8px;text-align:center;">
+                                  <input type="checkbox" class="wbs-sel-cb" data-code="${esc(w.wbs_code)}" onchange="wbsUpdateBulkBtn()">
+                                </td>`:''}
                                 <td class="mono" style="padding:3px 8px;font-size:10px;">${esc(w.wbs_code||'—')}</td>
                                 <td style="padding:3px 8px;">${esc(w.wbs_location||'—')}</td>
                                 <td style="padding:3px 8px;font-size:10px;color:var(--muted);max-width:300px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"
@@ -15852,6 +15914,66 @@ async function confirmEditWBS(code) {
   closeModal();
   flashSuccess('WBS '+code+' updated');
   await loadWBSMaster();
+}
+
+// ── WBS MULTI-SELECT HELPERS ──────────────────────────────────────────────────
+
+// Update the "Delete Selected (N)" button visibility and count
+function wbsUpdateBulkBtn() {
+  const cbs  = document.querySelectorAll('.wbs-sel-cb:checked');
+  const btn  = document.getElementById('wbs_bulk_delete_btn');
+  const lbl  = document.getElementById('wbs_sel_count');
+  if (!btn) return;
+  if (lbl) lbl.textContent = cbs.length;
+  btn.style.display = (hasRole('Admin') && cbs.length > 0) ? '' : 'none';
+}
+
+// "Select all in this group" header checkbox toggles all siblings in same tbody
+function wbsToggleGroupCheckboxes(headerCb) {
+  const tbody = headerCb.closest('table')?.querySelector('tbody');
+  if (!tbody) return;
+  tbody.querySelectorAll('.wbs-sel-cb').forEach(cb => { cb.checked = headerCb.checked; });
+  wbsUpdateBulkBtn();
+}
+
+// Bulk delete all currently checked WBS elements
+async function bulkDeleteWBSSelected() {
+  if (!hasRole('Admin')) { toast('Only Admin can delete WBS elements','error'); return; }
+  const cbs   = [...document.querySelectorAll('.wbs-sel-cb:checked')];
+  const codes = cbs.map(cb => cb.dataset.code).filter(Boolean);
+  if (!codes.length) { toast('No elements selected','error'); return; }
+  openModal(`
+    <h3>Delete ${codes.length} WBS Element${codes.length>1?'s':''}</h3>
+    <div style="margin:16px 0;font-size:14px;">
+      You are about to permanently delete <strong>${codes.length}</strong> WBS element${codes.length>1?'s':''}.<br>
+      <span style="color:var(--danger);font-size:12px;">Existing transactions tagged to these WBS codes will not be affected.</span><br>
+      <span class="muted" style="font-size:11px;">Sample: ${codes.slice(0,5).join(', ')}${codes.length>5?', …':''}</span>
+    </div>
+    <div class="actions-row">
+      <button class="btn btn-danger" onclick="confirmBulkDeleteWBS(${JSON.stringify(codes).replace(/'/g,'&apos;')})">Yes, Delete ${codes.length}</button>
+      <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+    </div>
+  `);
+}
+
+async function confirmBulkDeleteWBS(codes) {
+  closeModal();
+  pbShow('Deleting '+codes.length+' WBS elements…');
+  try {
+    const chunk = 200;
+    for (let i = 0; i < codes.length; i += chunk) {
+      const slice = codes.slice(i, i + chunk);
+      const { error } = await sb.from('wbs_master').delete().in('wbs_code', slice);
+      if (error) throw new Error(error.message);
+    }
+    flashSuccess('Deleted '+codes.length+' WBS element(s)');
+    await loadWBSMaster();
+    renderWBSMaster();
+    // Hide the bulk button since selection is now stale
+    const btn = document.getElementById('wbs_bulk_delete_btn');
+    if (btn) btn.style.display = 'none';
+  } catch(e) { toast('Delete error: '+e.message,'error'); }
+  finally { pbDone(); }
 }
 
 async function deleteWBS(code, label) {
