@@ -3923,12 +3923,17 @@ async function apiSavePRR(data) {
     });
     if (he) return { ok: false, error: he.message };
     if ((data.bills||[]).length) {
-      await sb.from('ho_prr_items').insert(data.bills.map((b,i) => ({
+      const { error: ie } = await sb.from('ho_prr_items').insert(data.bills.map((b,i) => ({
         prr_number: data.prrNumber, sno: i+1, bill_number: b.billNumber,
-        ho_number: b.hoNumber, vendor_name: b.vendor,
+        ho_number: b.hoNumber||null, vendor_name: b.vendor,
         requested_amount: b.requestedAmount, paid_amount: 0, status: 'Unpaid',
         bill_type: b.billType || 'HOB'
       })));
+      if (ie) {
+        // Roll back the PRR header so we don't leave an orphan
+        await sb.from('ho_prr').delete().eq('prr_number', data.prrNumber);
+        return { ok: false, error: 'Failed to save bill items: ' + ie.message };
+      }
     }
     _cacheBust('prrList','allRequests','unpaidBills');
     return { ok: true };
@@ -5645,8 +5650,8 @@ function _repositionActiveDropdown() {
   _activeTypeaheadEl.style.left  = rect.left + 'px';
   _activeTypeaheadEl.style.width = rect.width + 'px';
 }
-window.addEventListener('scroll', _repositionActiveDropdown, true);
-window.addEventListener('resize', _repositionActiveDropdown);
+window.addEventListener('scroll', _repositionActiveDropdown, { capture: true, passive: true });
+window.addEventListener('resize', _repositionActiveDropdown, { passive: true });
 
 // Click-outside-to-close
 document.addEventListener('mousedown', (e) => {
@@ -8261,21 +8266,6 @@ async function newPRR() {
   const tbody = document.getElementById('prr_billsBody');
   const bills = billsRes.ok ? billsRes.bills : [];
   if (!bills.length) {
-    // Quick diagnostic: log distinct statuses across source tables so a casing/value mismatch
-    // (e.g. 'unpaid' vs 'Unpaid', or some custom status) is immediately visible in the console.
-    try {
-      const [{data:hb},{data:wb},{data:pb}] = await Promise.all([
-        sb.from('ho_bills').select('status,bill_number'),
-        sb.from('wo_bills').select('status,bill_number'),
-        sb.from('pu_po_bills').select('status,bill_number'),
-      ]);
-      const distinct = (rows) => [...new Set((rows||[]).map(r=>r.status||'(null)'))];
-      console.debug('[PRR] No bills returned. Distinct statuses →',
-        'ho_bills:', distinct(hb),
-        '| wo_bills:', distinct(wb),
-        '| pu_po_bills:', distinct(pb),
-        '| total rows:', (hb||[]).length + (wb||[]).length + (pb||[]).length);
-    } catch(e) { console.debug('[PRR] diagnostic query failed', e); }
     tbody.innerHTML = '<tr><td colspan="9" class="center muted">No outstanding bills available.</td></tr>';
     return;
   }
@@ -9978,7 +9968,7 @@ async function loadRFQList() {
     sb.from('pu_rfq').select('*').order('created_at',{ascending:false}),
     sb.from('pu_quote_comparison').select('qc_number,rfq_number,status').order('created_at',{ascending:false}),
     sb.from('pu_rfq_quotes').select('*').order('sno'),
-    sb.from('pu_rfq_quote_items').select('*'),
+    sb.from('pu_rfq_quote_items').select('rfq_quote_id,rfq_number,material_name,uom,qty_required,unit_rate,gst_pct,amount'),
   ]);
   puState.rfqList = rfqs||[];
   // Build a set of RFQ numbers that have an active (non-Rejected) QC.
@@ -10791,11 +10781,11 @@ async function saveRFQ() {
           }).eq('mir_number', mirNum).in('material_name', mirMats);
           if (updErr) {
             console.error('MIR item update error (material_name):', updErr.message);
-            // Fallback to sno
-            for (const sno of mirSnos) {
+            // Fallback to sno batch
+            if (mirSnos.length) {
               await sb.from('pu_mir_items').update({
                 item_status: 'RFQ Raised', rfq_number: rfqNumber
-              }).eq('mir_number', mirNum).eq('sno', sno);
+              }).eq('mir_number', mirNum).in('sno', mirSnos);
             }
           }
         }
@@ -11672,17 +11662,15 @@ async function savePO() {
         const {error:dmErr} = await sb.from('pu_mir_items').update({item_status:'PO Raised', po_number:poNumber})
           .eq('mir_number',directMir).in('material_name', directMats);
         if(dmErr) {
-          // Fallback to sno
-          for(const sno of snos) {
+          // Fallback to sno batch
+          if (snos.length) {
             await sb.from('pu_mir_items').update({item_status:'PO Raised', po_number:poNumber})
-              .eq('mir_number',directMir).eq('sno',sno);
+              .eq('mir_number',directMir).in('sno', snos);
           }
         }
       } else if(snos.length) {
-        for(const sno of snos) {
-          await sb.from('pu_mir_items').update({item_status:'PO Raised', po_number:poNumber})
-            .eq('mir_number',directMir).eq('sno',sno);
-        }
+        await sb.from('pu_mir_items').update({item_status:'PO Raised', po_number:poNumber})
+          .eq('mir_number',directMir).in('sno', snos);
       }
       // Check if all MIR items are now PO Raised
       const {data:allMirItems} = await sb.from('pu_mir_items').select('item_status').eq('mir_number',directMir);
@@ -16935,7 +16923,15 @@ const DASH_CARD_DEFS = {
     { id:'pr_wo',     label:'WOs Pending',       sub:'Work orders to submit',      cls:'info',   nav:function(){navDash('wo','orders','Pending Approval');},
       query: function(){return sb.from('wo_orders').select('wo_number',{count:'exact',head:true}).eq('status','Pending Approval');} },
     { id:'pr_rfq',    label:'RFQs Open',         sub:'No QC raised yet',           cls:'warn',   nav:function(){navDash('purchase','rfq','');},
-      query: async function(){ const {data}=await sb.from('pu_rfq').select('rfq_number').eq('status','Open'); const qcRes=await sb.from('pu_quote_comparison').select('rfq_number'); const withQC=new Set((qcRes.data||[]).map(q=>q.rfq_number)); return {count:(data||[]).filter(r=>!withQC.has(r.rfq_number)).length,error:null}; } },
+      query: async function(){
+        // Count Open RFQs that have no non-rejected QC
+        const [{data:openRFQs},{data:activeQCs}] = await Promise.all([
+          sb.from('pu_rfq').select('rfq_number').eq('status','Open'),
+          sb.from('pu_quote_comparison').select('rfq_number').neq('status','Rejected'),
+        ]);
+        const withQC = new Set((activeQCs||[]).map(q=>q.rfq_number));
+        return {count:(openRFQs||[]).filter(r=>!withQC.has(r.rfq_number)).length, error:null};
+      } },
     { id:'pr_po_corr',label:'POs for Correction',sub:'Returned for revision',      cls:'urgent', nav:function(){navDash('purchase','po','Rejected');},
       query: function(){return sb.from('pu_po_orders').select('po_number',{count:'exact',head:true}).in('status',['Rejected','Rejected - Correction']);} },
   ],
@@ -17124,10 +17120,13 @@ async function loadTrackerA() {
     const results = await Promise.all([
       sb.from('pu_mir').select('mir_number,mir_date,purpose,status,approved_by,approved_at')
         .or('mir_date.gte.'+from+',status.not.in.(Closed,Rejected)').order('mir_date',{ascending:false}),
-      sb.from('pu_rfq').select('rfq_number,rfq_date,mir_number,status'),
-      sb.from('pu_quote_comparison').select('qc_number,qc_date,rfq_number,status,approved_at'),
+      sb.from('pu_rfq').select('rfq_number,rfq_date,mir_number,status')
+        .or('rfq_date.gte.'+from+',status.not.in.(Approved,PO Raised)'),
+      sb.from('pu_quote_comparison').select('qc_number,qc_date,rfq_number,status,approved_at')
+        .or('qc_date.gte.'+from+',status.not.in.(PO Raised,Rejected)'),
       sb.from('pu_po_orders').select('po_number,po_date,qc_number,mir_number,status,grand_total,approved_at'),
-      sb.from('pu_grn').select('grn_number,grn_date,po_number,status,verified_by'),
+      sb.from('pu_grn').select('grn_number,grn_date,po_number,status,verified_by')
+        .or('grn_date.gte.'+from+',status.not.in.(Verified,Rejected)'),
     ]);
     const mirs = results[0].data || [];
     const rfqs = results[1].data || [];
@@ -17401,8 +17400,10 @@ async function loadTrackerBHO(from) {
   const results = await Promise.all([
     sb.from('ho_orders').select('ho_number,ho_date,vendor_name,status,total_amount')
       .or('ho_date.gte.'+from+',status.not.in.(Completed,Cancelled,Short-Closed)').order('ho_date',{ascending:false}).limit(25),
-    sb.from('ho_certifications').select('hoc_number,hoc_date,ho_number,status'),
-    sb.from('ho_bills').select('bill_number,bill_date,ho_number,hoc_number,status,net_payable'),
+    sb.from('ho_certifications').select('hoc_number,hoc_date,ho_number,status')
+      .or('hoc_date.gte.'+from+',status.not.in.(Billed,Rejected)'),
+    sb.from('ho_bills').select('bill_number,bill_date,ho_number,hoc_number,status,net_payable')
+      .or('bill_date.gte.'+from+',status.not.in.(Paid,Rejected)'),
     sb.from('ho_prr_items').select('bill_number,paid_amount,status'),
   ]);
   const hos = results[0].data || [];
@@ -17460,8 +17461,10 @@ async function loadTrackerBWO(from) {
   const results = await Promise.all([
     sb.from('wo_orders').select('wo_number,wo_date,vendor_name,status,total_amount')
       .or('wo_date.gte.'+from+',status.not.in.(Completed,Cancelled,Short-Closed,Terminated)').order('wo_date',{ascending:false}).limit(25),
-    sb.from('wo_certifications').select('woc_number,woc_date,wo_number,status'),
-    sb.from('wo_bills').select('bill_number,bill_date,wo_number,woc_number,status,net_payable'),
+    sb.from('wo_certifications').select('woc_number,woc_date,wo_number,status')
+      .or('woc_date.gte.'+from+',status.not.in.(Billed,Rejected)'),
+    sb.from('wo_bills').select('bill_number,bill_date,wo_number,woc_number,status,net_payable')
+      .or('bill_date.gte.'+from+',status.not.in.(Paid,Rejected)'),
     sb.from('ho_prr_items').select('bill_number,paid_amount,status').eq('bill_type','WOB'),
   ]);
   const wos = results[0].data || [];
