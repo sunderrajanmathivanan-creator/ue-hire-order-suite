@@ -2382,42 +2382,6 @@ input[type="number"] {
         <button class="btn btn-ghost" onclick="closeRFQForm()">Cancel</button>
       </div>
     </div>
-    <!-- Quote Comparison Form -->
-    <div id="qcForm" class="card" style="display:none;">
-      <h3 id="qc_formTitle">Quote Comparison</h3>
-      <div class="grid-4">
-        <div class="field"><label>QC Number</label><input id="qc_number" readonly style="opacity:.6;"></div>
-        <div class="field"><label class="req">Date</label><input type="date" id="qc_date"></div>
-        <div class="field"><label class="req">RFQ Reference</label>
-          <select id="qc_rfqLink" onchange="onQCRFQChange()"><option value="">— Select RFQ —</option></select>
-        </div>
-        <div class="field"><label>Prepared By</label><input id="qc_preparedBy" readonly style="opacity:.6;"></div>
-      </div>
-      <!-- Vendor columns -->
-      <div style="margin-top:16px;">
-        <div class="row" style="justify-content:space-between;margin-bottom:8px;">
-          <h3 style="font-size:13px;color:var(--text);margin:0;">Vendor Quotes (3–4 vendors)</h3>
-          <button class="btn btn-ghost btn-sm" onclick="addQCVendorCol()" id="btn_addVendorCol">+ Add Vendor</button>
-        </div>
-        <!-- Vendor header row -->
-        <div id="qc_vendorHeaders" class="grid-4" style="margin-bottom:6px;gap:8px;"></div>
-        <!-- Comparison grid rendered here -->
-        <div id="qc_comparisonGrid"></div>
-      </div>
-      <div class="grid-2" style="margin-top:12px;">
-        <div class="field"><label class="req" style="color:var(--danger);">★ Recommended Vendor (Mandatory)</label>
-          <select id="qc_recommendedVendor" style="border:2px solid var(--accent);"><option value="">— Select after comparison —</option></select>
-        </div>
-        <div class="field"><label>Reason for Selection</label>
-          <input id="qc_recommendReason" placeholder="e.g. L1 price with acceptable delivery terms">
-        </div>
-      </div>
-      <div class="field" style="margin-top:8px;max-width:600px;"><label>General Remarks</label><textarea id="qc_remarks" rows="2"></textarea></div>
-      <div class="actions-row">
-        <button class="btn btn-primary" onclick="saveQC()">Submit for PM Approval</button>
-        <button class="btn btn-ghost" onclick="closeQCForm()">Cancel</button>
-      </div>
-    </div>
     <!-- RFQ List -->
     <div id="rfqListCard" class="card">
       <div class="table-wrap">
@@ -3326,8 +3290,6 @@ function mapServiceLocation(r) {
     'Description': r.description
   };
 }
-function mapLocation(r) { return mapServiceLocation(r); }
-
 function toast(msg, type='info', dur=3500) {
   const el = document.getElementById('toastEl');
   el.textContent = msg; el.className = 'toast show ' + type;
@@ -3516,14 +3478,6 @@ async function dbUpdate(table, match, updates, bustKeys = []) {
   pbDone();
   if (error) return { ok: false, error: error.message };
   bustKeys.forEach(k => _cacheBust(k));
-  return { ok: true };
-}
-
-async function dbDelete(table, match) {
-  let q = sb.from(table).delete();
-  Object.entries(match).forEach(([k,v]) => { q = q.eq(k, v); });
-  const { error } = await q;
-  if (error) return { ok: false, error: error.message };
   return { ok: true };
 }
 
@@ -5290,20 +5244,6 @@ async function initApp() {
 // ============================================================
 // MASTERS
 // ============================================================
-async function loadMasters() {
-  return apiLoadMasters();
-}
-async function _oldLoadMasters_disabled() {
-  const r = { ok: false };
-  if (r.ok) {
-    state.masters.vendors    = r.vendors    || [];
-    state.masters.activities = r.activities || [];
-    state.masters.boqItems   = r.boqItems   || [];
-    state.masters.locations  = r.locations  || [];
-    state.mastersCached = true;
-  }
-}
-
 function renderAllMasters() {
   const m = state.masters;
   // isAdmin gates edit/delete buttons. canAdd gates the Add cards.
@@ -5415,16 +5355,6 @@ function populateServiceParentDropdown() {
     (state.masters.serviceLocations||[]).map(l =>
       `<option value="${esc(l['Location Code'])}">[${esc(l['Category'])}] ${esc(l['Location Name'])}</option>`
     ).join('');
-}
-
-function onBOQLevelChange() {
-  const level = document.getElementById('mb_level')?.value;
-  const parentField = document.getElementById('mb_parentField');
-  const budgetField = document.getElementById('mb_budgetField');
-  if (parentField) parentField.style.display = level === '2' ? '' : 'none';
-  if (budgetField) budgetField.style.display = level === '2' ? '' : 'none';
-  if (level === '1' && parentField) parentField.style.display = 'none';
-  if (level === '2') populateBOQL1Dropdown();
 }
 
 async function deleteMaster(type, code, name) {
@@ -5748,7 +5678,6 @@ function vendorTypeahead(inputId, resultsId, codeId) {
 
 // Master-field lock flags
 let ho_vendor_locked = false;
-let ho_location_locked = false;
 let hob_boq_locked = false;
 
 function clearMasterField(inputId, codeId, resultsId, clearBtnId) {
@@ -5758,7 +5687,6 @@ function clearMasterField(inputId, codeId, resultsId, clearBtnId) {
   document.getElementById(resultsId).classList.remove('show');
   document.getElementById(clearBtnId).style.display = 'none';
   if (inputId === 'ho_vendor')   ho_vendor_locked = false;
-  if (inputId === 'ho_location') ho_location_locked = false;
   if (inputId === 'hob_boqItem') hob_boq_locked = false;
   el.focus();
 }
@@ -5790,33 +5718,6 @@ function selectVendor(inputId, resultsId, codeId, name, code) {
       if (cEl && !cEl.value) cEl.value = vm['Contact Person'] || '';
     }
   }
-  // QC vendor columns — update recommend dropdown
-  if (/^qcV_name_\d+$/.test(inputId)) { setTimeout(updateQCRecommendDropdown, 100); }
-}
-
-function locationTypeahead(inputId, resultsId) {
-  if (ho_location_locked && inputId === 'ho_location') return;
-  const inp = document.getElementById(inputId);
-  const q = inp.value.toLowerCase();
-  const res = document.getElementById(resultsId);
-  if (!q) { res.classList.remove('show'); res.style.display='none'; return; }
-  const tokens = _fuzzyTokens(q);
-  const matches = (state.masters.locations||[]).filter(l => {
-    const hay = ((l['Location Name']||'')+'|'+(l['Block']||'')+'|'+(l['Category']||'')).toLowerCase();
-    return _fuzzyMatch(hay, tokens);
-  }).slice(0,10);
-  if (!matches.length) { res.classList.remove('show'); res.style.display='none'; return; }
-  res.innerHTML = matches.map(l => `<div class="typeahead-item" onmousedown="event.preventDefault();selectLocation('${inputId}','${resultsId}','${esc(l['Location Name'])}')">
-    ${esc(l['Location Name'])}${l['Block'] ? ' <span class="muted">\u00b7 '+esc(l['Block'])+'</span>' : ''}
-  </div>`).join('');
-  _anchorDropdown(inp, res);
-}
-
-function selectLocation(inputId, resultsId, name) {
-  document.getElementById(inputId).value = name;
-  const r = document.getElementById(resultsId);
-  if (r) { r.classList.remove('show'); r.style.display='none'; }
-  if (inputId === 'ho_location') { ho_location_locked = true; lockMasterField('ho_location','ho_location_clear'); }
 }
 
 function calcInvPayDue() {
@@ -6060,15 +5961,11 @@ function closeHOForm() {
   document.getElementById('hoListCard').style.display = 'block';
   document.getElementById('hoForm').dataset.revisingHO = '';
   document.getElementById('ho_formTitle').textContent = 'Hire Order — New';
-  ho_vendor_locked = false; ho_location_locked = false;
+  ho_vendor_locked = false;
   const vEl = document.getElementById('ho_vendor');
   if (vEl) { vEl.readOnly = false; }
-  const lEl = document.getElementById('ho_location');
-  if (lEl) { lEl.readOnly = false; }
   const vClear = document.getElementById('ho_vendor_clear');
   if (vClear) vClear.style.display = 'none';
-  const lClear = document.getElementById('ho_location_clear');
-  if (lClear) lClear.style.display = 'none';
 }
 
 let _hoItemCount = 0;
@@ -6185,9 +6082,6 @@ async function saveHO_direct() {
     } else toast(r.error || 'Save failed','error');
   }
 }
-
-// kept for print-from-list path
-async function saveAndPrintHO() { saveHO_direct(); }
 
 async function approveHO(hoNum) {
   if (!hasPerm('canApproveHO')) { toast('Only Project Manager can approve','error'); return; }
@@ -6552,8 +6446,6 @@ async function saveHOC_direct() {
     closeHOCForm(); loadHOCList(); loadHOList();
   } else toast(r.error || 'Save failed','error');
 }
-
-async function saveAndPrintHOC() { saveHOC_direct(); }
 
 async function approveHOC(hocNum, decision) {
   if (!hasPerm('canCreateHOB')) { toast('Only Planning/ QS can review certifications','error'); return; }
@@ -6999,8 +6891,6 @@ async function saveHOB_direct() {
     closeHOBForm(); loadHOBList(); loadHOCList();
   } else toast(r.error || 'Save failed','error');
 }
-
-async function saveAndPrintHOB() { saveHOB_direct(); }
 
 async function approveHOB(billNum) {
   if (!hasPerm('canApproveBill')) { toast('Only Project Manager can approve bills','error'); return; }
@@ -8057,7 +7947,98 @@ async function approveWOB(billNum) {
   else toast(r.error||'Update failed','error');
 }
 
-async function reviseWOB(billNum) { toast('Revision of WOB coming soon','info'); }
+async function reviseWOB(billNum) {
+  if (!hasPerm('canCreateWOB')) { toast('Only Planning/QS can revise WO bills','error'); return; }
+  const r = await apiGetWOBDetails(billNum);
+  if (!r.ok) { toast(r.error,'error'); return; }
+  const h = r.header; const items = r.items||[]; const extraLines = r.extraLines||[];
+
+  // Open WOB form pre-filled
+  document.getElementById('wobForm').style.display = 'block';
+  document.getElementById('wobListCard').style.display = 'none';
+  document.getElementById('wob_date').value         = h['Bill Date'] || today();
+  document.getElementById('wob_preparedBy').value   = state.userName;
+  document.getElementById('wob_gstPct').value        = h['GST %'] || 18;
+  document.getElementById('wob_retentionPct').value  = h['Retention %'] || 5;
+  document.getElementById('wob_vendorInvNo').value   = h['Vendor Invoice No'] || '';
+  document.getElementById('wob_vendorInvDate').value = h['Vendor Invoice Date'] || '';
+  document.getElementById('wob_creditPeriod').value  = h['Credit Period'] || 30;
+  document.getElementById('wob_invPayDue').value     = h['Invoice Pay Due'] || '';
+  document.getElementById('wob_mobAdvRecovery').value= h['Mob Advance Recovery'] || 0;
+  document.getElementById('wob_advRecovery').value   = h['Advance Recovery'] || 0;
+  document.getElementById('wob_tdsPct').value        = h['TDS %'] || 2;
+  document.getElementById('wob_holdAmt').value       = h['Hold Amount'] || 0;
+  document.getElementById('wob_holdDesc').value      = h['Hold Description'] || '';
+  document.getElementById('wob_remarks').value       = h['Remarks'] || '';
+
+  // BOQ
+  wob_boq_locked = false;
+  const boqEl = document.getElementById('wob_boqItem');
+  const boqClear = document.getElementById('wob_boq_clear');
+  if (boqEl) { boqEl.value = h['BOQ Item']||''; boqEl.readOnly = !!(h['BOQ Item']); }
+  if (boqClear) boqClear.style.display = h['BOQ Item'] ? '' : 'none';
+  document.getElementById('wob_boqCode').value = h['BOQ Item Code']||'';
+  if (h['BOQ Item']) wob_boq_locked = true;
+
+  // Populate WOC dropdown and pre-select — include the rejected bill's WOC even if already billed
+  const unbilledR = await apiGetUnbilledWOCs();
+  const rejWocRes = await apiGetWOCDetails(h['WOC Number']);
+  let wocOptions = unbilledR.ok ? unbilledR.certs : [];
+  if (rejWocRes.ok && !wocOptions.find(c => c['WOC Number'] === h['WOC Number'])) {
+    wocOptions = [rejWocRes.header, ...wocOptions];
+  }
+  const sel = document.getElementById('wob_wocSelect');
+  sel.innerHTML = '<option value="">— Select Certification —</option>' +
+    wocOptions.map(c => `<option value="${esc(c['WOC Number'])}">${esc(c['WOC Number'])} — ${esc(c['WO Number'])} — ${esc(c['Vendor Name'])}</option>`).join('');
+  sel.value = h['WOC Number'];
+
+  // Load WOC items directly without triggering onWOBWOCChange (items already known)
+  if (!(puState.wbsList||[]).length) await loadWBSMaster();
+  let gross = 0;
+  document.getElementById('wob_itemsBody').innerHTML = items.map((it,i) => {
+    const amt = num(it['This Period Qty']) * num(it['Unit Rate']);
+    gross += amt;
+    const wbsSub  = it['WBS Sub Activity']||'';
+    const wbsCode = it['WBS Code']||'';
+    return `<tr>
+      <td class="center">${i+1}</td><td>${esc(it['Description'])}</td><td class="center">${esc(it['UOM'])}</td>
+      <td class="num mono">${fmtINR(it['This Period Qty'])}</td>
+      <td class="num mono">${fmtINR(it['Unit Rate'])}</td>
+      <td class="num mono">${fmtINR(amt)}</td>
+      <td><div style="position:relative;">
+        <input class="wob_wbsSub" id="wobWBS_${i}" placeholder="Type WBS…" autocomplete="off" style="width:100%;font-size:12px;"
+          value="${esc(wbsSub)}"
+          oninput="wbsTypeahead('wobWBS_${i}','wobWBSRes_${i}','wobWBSCode_${i}','sub_activity')">
+        <div class="typeahead-results" id="wobWBSRes_${i}" style="min-width:320px;position:absolute;top:100%;left:0;z-index:9999;box-shadow:0 4px 16px rgba(0,0,0,.15);"></div>
+        <input type="hidden" id="wobWBSCode_${i}" value="${esc(wbsCode)}">
+      </div></td>
+    </tr>`;
+  }).join('');
+  document.getElementById('wob_grossAmt').textContent = fmtINR(gross);
+  document.getElementById('wob_retentionAmt').value = (gross * num(h['Retention %']||5) / 100).toFixed(2);
+
+  // Extra lines
+  document.getElementById('wob_extraBody').innerHTML = '';
+  _wobExtraCount = 0;
+  extraLines.forEach(el => {
+    addWOBExtraLine();
+    const i = _wobExtraCount - 1;
+    const tr = document.getElementById('wobExtra_'+i);
+    if (!tr) return;
+    tr.cells[1].querySelector('input').value  = el['Description']||'';
+    tr.cells[2].querySelector('select').value = el['Type']||'Addition';
+    tr.cells[3].querySelector('select').value = el['Timing']||'Before GST';
+    tr.cells[4].querySelector('input').value  = el['Amount']||0;
+  });
+
+  recalcWOBTotals();
+  document.getElementById('wob_number').value = h['Bill Number'];
+  document.getElementById('wobForm').dataset.revising = billNum;
+  const titleEl = document.querySelector('#wobForm h3');
+  if (titleEl) titleEl.textContent = 'Revise WO Bill — ' + billNum;
+  toast('Revising ' + billNum + ' — make changes and save again', 'info', 5000);
+  window.scrollTo(0,0);
+}
 
 async function viewWOBById(billNum) {
   const r = await apiGetWOBDetails(billNum); if (!r.ok) { toast(r.error,'error'); return; }
@@ -8663,8 +8644,6 @@ function onPayConfAmountInput() {
   const os = num(hint.replace('O/S:','').replace(/[^\d.]/g,''));
   document.getElementById('payconf_warnHint').style.display = (os > 0 && val > os + 0.005) ? '' : 'none';
 }
-
-function updatePayConfBalance() { onPayConfAmountInput(); }
 
 async function savePaymentConfirmation() {
   if (!hasPerm('canConfirmPayment') && !hasPerm('canCreateDirectPayment')) { toast('Not permitted','error'); return; }
@@ -10032,15 +10011,29 @@ function renderRFQList() {
     if (quotes.length) {
       pillsHTML = quotes.map(q=>{
         const grand = q.grand_total||0;
-        const label = `Q${q.sno} · ${esc(q.vendor_name)} · ${fmtINRSym(grand)}`;
-        return `<button class="rfq-quote-pill" id="pill_${q.id}"
-          onclick="toggleQuotePill('${rfqNum}','${q.id}',this)"
-          title="${esc(q.vendor_name)} | Ref: ${esc(q.quote_ref||'—')} | ${q.delivery_days||'—'}d delivery"
-          style="display:inline-flex;align-items:center;gap:5px;padding:3px 9px;margin:2px;
-            border-radius:12px;border:1.5px solid #93c5fd;background:#eff6ff;
-            color:#1e40af;font-size:11px;font-weight:500;cursor:pointer;white-space:nowrap;">
-          ${label}
-        </button>`;
+        return `<div style="display:inline-flex;flex-direction:column;margin:2px;border-radius:8px;
+            border:1.5px solid #93c5fd;background:#eff6ff;overflow:hidden;width:160px;flex-shrink:0;
+            vertical-align:top;">
+          <button class="rfq-quote-pill" id="pill_${q.id}"
+            onclick="toggleQuotePill('${rfqNum}','${q.id}',this)"
+            style="display:flex;flex-direction:column;align-items:flex-start;padding:5px 8px 4px;
+              background:transparent;border:none;cursor:pointer;width:100%;text-align:left;">
+            <span style="font-size:10px;font-weight:700;color:#1e40af;line-height:1.3;
+              white-space:nowrap;overflow:hidden;text-overflow:ellipsis;width:100%;display:block;"
+              title="${esc(q.vendor_name)}">
+              Q${q.sno} · ${esc(q.vendor_name)}
+            </span>
+            <span style="font-size:11px;font-weight:600;color:#1e3a5f;line-height:1.4;display:block;">
+              ${fmtINRSym(grand)}
+            </span>
+          </button>
+          <button onclick="event.stopPropagation();viewRFQQuote('${esc(q.id)}','${esc(q.rfq_number)}')"
+            style="border:none;border-top:1px solid #bfdbfe;background:#dbeafe;color:#1e40af;
+              font-size:10px;font-weight:600;padding:2px 0;cursor:pointer;width:100%;
+              text-align:center;letter-spacing:0.2px;">
+            View ↗
+          </button>
+        </div>`;
       }).join('');
     }
 
@@ -10098,18 +10091,18 @@ const _rfqQuoteSel = {};
 function toggleQuotePill(rfqNum, quoteId, btn) {
   if (!_rfqQuoteSel[rfqNum]) _rfqQuoteSel[rfqNum] = new Set();
   const sel = _rfqQuoteSel[rfqNum];
+  const card = btn.closest('div[style*="border-radius:8px"]') || btn;
   if (sel.has(quoteId)) {
     sel.delete(quoteId);
-    btn.style.background = '#eff6ff';
-    btn.style.borderColor = '#93c5fd';
-    btn.style.color = '#1e40af';
-    btn.style.fontWeight = '500';
+    card.style.background = '#eff6ff';
+    card.style.borderColor = '#93c5fd';
+    btn.style.color = '';
+    btn.querySelectorAll('span').forEach(s => s.style.color = '');
   } else {
     sel.add(quoteId);
-    btn.style.background = '#1e3a5f';
-    btn.style.borderColor = '#1e3a5f';
-    btn.style.color = '#fff';
-    btn.style.fontWeight = '700';
+    card.style.background = '#1e3a5f';
+    card.style.borderColor = '#1e3a5f';
+    btn.querySelectorAll('span').forEach(s => s.style.color = '#fff');
   }
   // Show/hide Compare button based on selection count and QC lock state
   const cmpBtn = document.getElementById(`compareBtn_${rfqNum}`);
@@ -10249,6 +10242,56 @@ async function saveRFQQuote(rfqNum, sno, itemCount) {
     await loadRFQList();  // reloads quotes + re-renders pills
   } catch(e){ toast('Error: '+e.message,'error'); }
   finally{ pbDone(); }
+}
+
+// ── VIEW INDIVIDUAL QUOTE DETAIL ─────────────────────────────────────────────
+async function viewRFQQuote(quoteId, rfqNum) {
+  pbShow('Loading quote…');
+  const [{data:q},{data:items}] = await Promise.all([
+    sb.from('pu_rfq_quotes').select('*').eq('id', quoteId).single(),
+    sb.from('pu_rfq_quote_items').select('*').eq('rfq_quote_id', quoteId),
+  ]);
+  pbDone();
+  if (!q) { toast('Quote not found','error'); return; }
+  const rows = (items||[]).map((it,i)=>`<tr>
+    <td>${i+1}</td>
+    <td style="font-size:12px;">${esc(it.material_name)}</td>
+    <td class="center">${esc(it.uom||'')}</td>
+    <td class="num">${fmtINR(it.qty_required)}</td>
+    <td class="num">${fmtINRSym(it.unit_rate)}</td>
+    <td class="num">${it.gst_pct||0}%</td>
+    <td class="num" style="font-weight:600;">${fmtINRSym(it.amount)}</td>
+  </tr>`).join('');
+  openModal(`
+    <h3 style="margin-bottom:4px;">Quote Q${q.sno} — ${esc(q.vendor_name)}</h3>
+    <div style="font-size:11px;color:var(--muted);margin-bottom:10px;">
+      RFQ: <strong>${esc(rfqNum)}</strong>
+      ${q.quote_ref ? ' &nbsp;|&nbsp; Ref: <strong>'+esc(q.quote_ref)+'</strong>' : ''}
+      ${q.delivery_days ? ' &nbsp;|&nbsp; Delivery: <strong>'+q.delivery_days+'d</strong>' : ''}
+    </div>
+    ${q.payment_terms||q.tech_specs ? `
+    <div style="display:flex;gap:10px;margin-bottom:10px;flex-wrap:wrap;">
+      ${q.payment_terms ? `<div style="font-size:11px;background:#f8fafc;padding:5px 9px;border-radius:4px;border:1px solid var(--border);">
+        <span style="color:var(--muted);font-weight:600;">Payment:</span> ${esc(q.payment_terms)}</div>` : ''}
+      ${q.tech_specs ? `<div style="font-size:11px;background:#f8fafc;padding:5px 9px;border-radius:4px;border:1px solid var(--border);">
+        <span style="color:var(--muted);font-weight:600;">Specs:</span> ${esc(q.tech_specs)}</div>` : ''}
+    </div>` : ''}
+    <div class="table-wrap">
+      <table>
+        <thead><tr>
+          <th>#</th><th>Material</th><th class="center">UOM</th>
+          <th class="num">Qty</th><th class="num">Rate (₹)</th>
+          <th class="num">GST%</th><th class="num">Amount (₹)</th>
+        </tr></thead>
+        <tbody>${rows||'<tr><td colspan="7" class="center muted">No items.</td></tr>'}</tbody>
+        <tfoot><tr style="background:#e6f4f1;font-weight:700;">
+          <td colspan="6" style="padding:7px 8px;">Grand Total (incl. GST)</td>
+          <td class="num" style="padding:7px 8px;font-size:13px;">${fmtINRSym(q.grand_total||0)}</td>
+        </tr></tfoot>
+      </table>
+    </div>
+    <div class="actions-row"><button class="btn btn-ghost" onclick="closeModal()">Close</button></div>
+  `);
 }
 
 // ── VIEW COMPARISON POPUP (from selected pills) ──────────────────────────────
@@ -10503,16 +10546,20 @@ async function submitQCFromSelection(rfqNum) {
         payment_terms:q.payment_terms||null, tech_specs:q.tech_specs||null,
         is_recommended: q.vendor_name===recName,
       }).select().single();
-      if (qve||!inserted) continue;
+      if (qve||!inserted) throw new Error('Failed to save vendor quote: '+(qve?.message||'unknown'));
       const qItems = items
         .filter(i=>i.rfq_quote_id===q.id)
-        .map(i=>({
+        .map((i, idx)=>({
           qc_number:qcNumber, quote_id:inserted.id,
-          rfq_item_sno:null, material_name:i.material_name, uom:i.uom,
+          rfq_item_sno: idx+1,
+          material_name:i.material_name, uom:i.uom,
           qty_required:i.qty_required, unit_rate:i.unit_rate, gst_pct:i.gst_pct,
           amount:i.amount,
         }));
-      if (qItems.length) await sb.from('pu_quote_items').insert(qItems);
+      if (qItems.length) {
+        const {error:iErr} = await sb.from('pu_quote_items').insert(qItems);
+        if (iErr) throw new Error('Failed to save quote items for '+q.vendor_name+': '+iErr.message);
+      }
     }
     // Update RFQ status to Comparison Ready
     await sb.from('pu_rfq').update({status:'Comparison Ready'}).eq('rfq_number',rfqNum);
@@ -10646,57 +10693,6 @@ async function directPOFromSelection(mirNum, selectedEls) {
   toast('PO pre-filled from MIR '+mirNum+' — select preferred vendor and enter rates. Save PO to confirm.','info',5000);
 }
 
-async function newRFQFromMIR(mirNum) {
-  switchPUTab('rfq');
-  // Load MIR items FIRST to let user select which items to include
-  pbShow('Loading MIR items…');
-  const {data:allItems} = await sb.from('pu_mir_items')
-    .select('*').eq('mir_number', mirNum).order('sno');
-  pbDone();
-
-  const pendingItems = (allItems||[]).filter(it => (it.item_status||'Pending') === 'Pending');
-  if (!pendingItems.length) {
-    toast('All items in this MIR already have RFQs raised — no pending items left','warn');
-    return;
-  }
-
-  // Show item selection modal
-  const checkList = pendingItems.map(it => `
-    <label style="display:flex;align-items:flex-start;gap:10px;padding:8px;border-bottom:1px solid var(--border);cursor:pointer;">
-      <input type="checkbox" class="mir_item_chk" value="${it.sno}"
-        data-mat="${esc(it.material_name)}" data-uom="${esc(it.uom)}"
-        data-qty="${it.qty_required}" data-spec="${esc(it.specification||'')}"
-        style="margin-top:3px;" checked>
-      <div>
-        <div style="font-weight:600;font-size:13px;">${esc(it.material_name)}</div>
-        <div style="font-size:11px;color:var(--muted);">
-          ${esc(it.uom)} &nbsp;·&nbsp; Qty: ${it.qty_required}
-          ${it.specification?' &nbsp;·&nbsp; '+esc(it.specification):''}
-        </div>
-      </div>
-    </label>`).join('');
-
-  openModal(`
-    <h3 style="margin-bottom:4px;">Select Items for RFQ — ${esc(mirNum)}</h3>
-    <div style="font-size:11px;color:var(--muted);margin-bottom:10px;">
-      ${pendingItems.length} pending item(s) available. Select which items to include in this RFQ.
-    </div>
-    <div style="margin-bottom:8px;">
-      <label style="font-size:12px;cursor:pointer;">
-        <input type="checkbox" id="mir_selectAll" checked onchange="
-          document.querySelectorAll('.mir_item_chk').forEach(c=>c.checked=this.checked)">
-        &nbsp;Select / Deselect All
-      </label>
-    </div>
-    <div style="max-height:320px;overflow-y:auto;border:1px solid var(--border);border-radius:6px;">
-      ${checkList}
-    </div>
-    <div class="actions-row">
-      <button class="btn btn-primary" onclick="confirmMIRItemSelection('${esc(mirNum)}')">Proceed to RFQ →</button>
-      <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
-    </div>
-  `);
-}
 
 async function confirmMIRItemSelection(mirNum, selectedEls) {
   // selectedEls can be array of checkbox elements or use _mirSelectedItems
@@ -10830,13 +10826,18 @@ async function viewRFQ(rfqNum) {
   ]);
   const permsRFQ = mergedPerms();
   const hasQC = puState.rfqWithQC?.has(rfqNum);
-  const rfqActionBtns = permsRFQ.canCreateQC && !hasQC && (h?.status==='Open'||h?.status==='Comparison Ready')
-    ? `<button class="btn btn-secondary" onclick="closeModal();newQCFromRFQ('${esc(rfqNum)}')">+ Compare Quotes</button>`
-    : hasQC
-      ? `<span style="font-size:12px;color:var(--muted);padding:6px 10px;background:#f1f5f9;border-radius:6px;">
-           🔒 Quote Comparison already raised
-         </span>`
-      : '';
+  const activeQC = (puState.qcList||[]).find(q=>q.rfq_number===rfqNum && q.status!=='Rejected');
+  let rfqActionBtns = '';
+  if (h?.status === 'Approved' || h?.status === 'PO Raised') {
+    rfqActionBtns = `<span style="font-size:12px;color:#16a34a;padding:6px 10px;background:#d1fae5;border-radius:6px;border:1px solid #6ee7b7;">
+      ✅ QC ${esc(activeQC?.qc_number||'')} Approved — create PO from the QC list</span>`;
+  } else if (activeQC && activeQC.status === 'Pending Approval') {
+    rfqActionBtns = `<span style="font-size:12px;color:#92400e;padding:6px 10px;background:#fef3c7;border-radius:6px;border:1px solid #fcd34d;">
+      🔒 ${esc(activeQC.qc_number)} pending PM approval</span>`;
+  } else if (activeQC && activeQC.status === 'PO Raised') {
+    rfqActionBtns = `<span style="font-size:12px;color:#1e40af;padding:6px 10px;background:#dbeafe;border-radius:6px;border:1px solid #93c5fd;">
+      📦 PO raised — ${esc(activeQC.qc_number)}</span>`;
+  }
   openModal(`
     <h3 style="margin-bottom:4px;">RFQ — ${esc(rfqNum)}</h3>
     <div style="font-size:11px;color:var(--muted);margin-bottom:8px;">
@@ -10865,8 +10866,6 @@ async function viewRFQ(rfqNum) {
 // ============================================================
 // QUOTE COMPARISON (QC)
 // ============================================================
-let _qcVendorCount=0, _qcRFQItems=[];
-
 async function loadQCList() {
   const {data}=await sb.from('pu_quote_comparison').select('*').order('created_at',{ascending:false});
   puState.qcList=data||[];
@@ -10882,7 +10881,9 @@ function renderQCList() {
   document.getElementById('qc_listBody').innerHTML=puState.qcList.map(q=>{
     const stCls=q.status.toLowerCase().replace(/\s/g,'-');
     let acts=`<button class="btn btn-ghost btn-sm" onclick="viewQC('${esc(q.qc_number)}')">View</button>`;
-    // Approve/Reject and Create PO handled inside viewQC popup
+    if (perms.canApproveQC && q.status === 'Pending Approval') {
+      acts += ` <button class="btn btn-primary btn-sm" onclick="approveQC('${esc(q.qc_number)}')">✓ Approve</button>`;
+    }
     return `<tr>
       <td class="mono">${esc(q.qc_number)}</td><td>${fmtDate(q.qc_date)}</td>
       <td class="mono">${esc(q.rfq_number||'—')}</td>
@@ -10892,262 +10893,8 @@ function renderQCList() {
   }).join('')||'<tr><td colspan="7" class="center muted">No quote comparisons.</td></tr>';
 }
 
-async function newQCFromRFQ(rfqNum) {
-  if(!hasPerm('canCreateQC')){toast('Only Procurement can create QC','error');return;}
-  document.getElementById('qcForm').style.display='block';
-  document.getElementById('rfqListCard').style.display='none';
-  document.getElementById('rfqForm').style.display='none';
-  document.getElementById('qcListCard').style.display='none';
-  document.getElementById('qc_date').value=today();
-  document.getElementById('qc_number').value='QC/'+currentFY()+'/—— (auto)';
-  document.getElementById('qc_preparedBy').value=state.userName;
-  ['qc_remarks','qc_recommendReason'].forEach(id=>{const e=document.getElementById(id);if(e)e.value='';});
-  document.getElementById('qc_vendorHeaders').innerHTML='';
-  document.getElementById('qc_comparisonGrid').innerHTML='';
-  _qcVendorCount=0; _qcRFQItems=[];
-  const sel=document.getElementById('qc_rfqLink');
-  sel.innerHTML=`<option value="${esc(rfqNum)}" selected>${esc(rfqNum)}</option>`;
-  await onQCRFQChange();
-  addQCVendorCol(); addQCVendorCol(); addQCVendorCol();
-  window.scrollTo(0,0);
-}
-
-async function onQCRFQChange() {
-  const rfqNum=document.getElementById('qc_rfqLink').value;
-  if(!rfqNum) return;
-  const {data:items}=await sb.from('pu_rfq_items').select('*').eq('rfq_number',rfqNum).order('sno');
-  _qcRFQItems=items||[];
-  renderQCGrid();
-}
-
-function addQCVendorCol() {
-  if(_qcVendorCount>=4){toast('Max 4 vendors','warn');return;}
-  const i=_qcVendorCount++;
-  const hdr=document.getElementById('qc_vendorHeaders');
-  const div=document.createElement('div');
-  div.style.cssText='background:#f0f5fb;border:1px solid var(--border);border-radius:6px;padding:8px;';
-  div.innerHTML=`
-    <div class="field"><label>Vendor ${i+1}</label>
-      <div style="position:relative;">
-        <input id="qcV_name_${i}" placeholder="Vendor name" style="width:100%;"
-          oninput="vendorTypeahead('qcV_name_${i}','qcV_results_${i}','qcV_code_${i}');updateQCRecommendDropdown()">
-        <div class="typeahead-results" id="qcV_results_${i}" style="position:absolute;top:100%;left:0;right:0;z-index:9999;"></div>
-      </div>
-      <input type="hidden" id="qcV_code_${i}">
-    </div>
-    <div class="field"><label style="font-size:11px;">Quote Ref</label><input id="qcV_ref_${i}" placeholder="Quote #" style="font-size:12px;"></div>
-    <div class="field"><label style="font-size:11px;">Delivery (days)</label><input type="number" id="qcV_days_${i}" placeholder="7"></div>
-    <div class="field"><label style="font-size:11px;">Payment Terms</label><input id="qcV_payTerms_${i}" placeholder="e.g. 30 days from invoice"></div>
-    <div class="field"><label style="font-size:11px;">Technical Specs / Remarks</label><textarea id="qcV_techSpecs_${i}" rows="2" placeholder="Grade, brand, standard, warranty…" style="font-size:12px;width:100%;"></textarea></div>
-    <div style="text-align:right;margin-top:4px;"><button class="btn btn-danger btn-sm" onclick="removeQCVendorCol(${i})">✕ Remove</button></div>`;
-  hdr.appendChild(div);
-  renderQCGrid();
-  updateQCRecommendDropdown();
-}
-
-function renderQCGrid() {
-  const grid=document.getElementById('qc_comparisonGrid');
-  if(!_qcRFQItems.length){grid.innerHTML='<p class="muted" style="padding:10px;">Select an RFQ to load materials.</p>';return;}
-  let html='<div class="table-wrap"><table><thead><tr><th>#</th><th>Material</th><th>UOM</th><th class="num">Qty Reqd</th>';
-  for(let v=0;v<_qcVendorCount;v++) html+=`<th class="num">V${v+1} Rate(₹)</th><th class="num">GST%</th><th class="num">V${v+1} Total</th>`;
-  html+='</tr></thead><tbody>';
-  _qcRFQItems.forEach((item,idx)=>{
-    html+=`<tr><td>${item.sno}</td><td>${esc(item.material_name)}</td><td>${esc(item.uom)}</td><td class="num">${item.qty_required}</td>`;
-    for(let v=0;v<_qcVendorCount;v++) html+=`
-      <td><input type="number" id="qcRate_${idx}_${v}" step="0.01" style="width:90px;text-align:right;"
-        oninput="calcQCTotal(${idx},${v},${item.qty_required})" placeholder="0.00"></td>
-      <td><input type="number" id="qcGST_${idx}_${v}" step="0.01" style="width:55px;text-align:right;" value="18"
-        oninput="calcQCTotal(${idx},${v},${item.qty_required})"></td>
-      <td class="num" id="qcTotal_${idx}_${v}">—</td>`;
-    html+='</tr>';
-  });
-  html+='<tr style="background:#e6f4f1;font-weight:700;"><td colspan="4" style="padding:8px;">Grand Total (incl. GST)</td>';
-  for(let v=0;v<_qcVendorCount;v++) html+=`<td colspan="3" class="num" id="qcGrandTotal_${v}">—</td>`;
-  html+='</tr>';
-  // Position row (L1/L2/L3) - populated by calcQCPositions()
-  html+='<tr><td colspan="4" style="padding:6px 8px;font-weight:700;background:#e8ecf2;color:#1e3a5f;">Position</td>';
-  for(let v=0;v<_qcVendorCount;v++) html+=`<td colspan="3" class="num" style="padding:6px 8px;font-weight:700;font-size:14px;" id="qcPosition_${v}">—</td>`;
-  html+='</tr>';
-  // % over L1 row
-  html+='<tr style="background:#f8fafc;font-size:11px;"><td colspan="4" style="padding:6px 8px;font-weight:600;color:#1e3a5f;">Premium over L1</td>';
-  for(let v=0;v<_qcVendorCount;v++) html+=`<td colspan="3" class="num" style="padding:6px 8px;" id="qcPremium_${v}">—</td>`;
-  html+='</tr>';
-  // Amount difference row
-  html+='<tr style="background:#f8fafc;font-size:11px;"><td colspan="4" style="padding:6px 8px;font-weight:600;color:#1e3a5f;">Difference over L1 (₹)</td>';
-  for(let v=0;v<_qcVendorCount;v++) html+=`<td colspan="3" class="num" style="padding:6px 8px;" id="qcDiffAmt_${v}">—</td>`;
-  html+='</tr></tbody></table></div>';
-  grid.innerHTML=html;
-}
-
-function calcQCTotal(rowIdx,vendorIdx,qty) {
-  const rate=parseFloat(document.getElementById(`qcRate_${rowIdx}_${vendorIdx}`)?.value)||0;
-  const gst=parseFloat(document.getElementById(`qcGST_${rowIdx}_${vendorIdx}`)?.value)||0;
-  const total=qty*rate*(1+gst/100);
-  const el=document.getElementById(`qcTotal_${rowIdx}_${vendorIdx}`);
-  if(el) el.textContent=fmtINR(total);
-  let grand=0;
-  _qcRFQItems.forEach((_,idx)=>{
-    const r=parseFloat(document.getElementById(`qcRate_${idx}_${vendorIdx}`)?.value)||0;
-    const g=parseFloat(document.getElementById(`qcGST_${idx}_${vendorIdx}`)?.value)||0;
-    grand+=_qcRFQItems[idx].qty_required*r*(1+g/100);
-  });
-  const gtEl=document.getElementById(`qcGrandTotal_${vendorIdx}`);
-  if(gtEl) gtEl.textContent=fmtINRSym(grand);
-  // Recalculate L positions after every change
-  calcQCPositions();
-}
-
-function calcQCPositions() {
-  // Gather grand totals for all vendors
-  const totals=[];
-  for(let v=0;v<_qcVendorCount;v++){
-    let grand=0;
-    _qcRFQItems.forEach((_,idx)=>{
-      const r=parseFloat(document.getElementById(`qcRate_${idx}_${v}`)?.value)||0;
-      const g=parseFloat(document.getElementById(`qcGST_${idx}_${v}`)?.value)||0;
-      grand+=_qcRFQItems[idx].qty_required*r*(1+g/100);
-    });
-    totals.push({v, grand});
-  }
-  // Sort to rank
-  const withGrand=totals.filter(t=>t.grand>0);
-  const sorted=[...withGrand].sort((a,b)=>a.grand-b.grand);
-  const l1=sorted[0]?.grand||0;
-  const rankMap={};
-  sorted.forEach((t,i)=>{ rankMap[t.v]='L'+(i+1); });
-
-  // Darker shades ensure sufficient contrast with #fff text at all font sizes
-  const bgMap={L1:'#166534',L2:'#92400e',L3:'#991b1b',L4:'#334155'};
-  totals.forEach(({v,grand})=>{
-    const pos=grand>0?(rankMap[v]||'—'):'—';
-    // Position cell
-    const posEl=document.getElementById(`qcPosition_${v}`);
-    if(posEl){
-      posEl.textContent=pos;
-      posEl.style.color='#fff';
-      posEl.style.background=bgMap[pos]||'#334155';
-    }
-    // Premium % cell
-    const premEl=document.getElementById(`qcPremium_${v}`);
-    if(premEl){
-      if(pos==='L1'){ premEl.textContent='Base (L1)'; premEl.style.color='#16a34a'; premEl.style.fontWeight='600'; }
-      else if(grand>0&&l1>0){
-        const pct=((grand-l1)/l1*100).toFixed(1);
-        premEl.textContent='+'+pct+'%';
-        premEl.style.color='#dc2626';
-        premEl.style.fontWeight='600';
-      } else { premEl.textContent='—'; premEl.style.color=''; }
-    }
-    // Amount difference cell
-    const diffEl=document.getElementById(`qcDiffAmt_${v}`);
-    if(diffEl){
-      if(pos==='L1'){ diffEl.textContent='Base (L1)'; diffEl.style.color='#16a34a'; diffEl.style.fontWeight='600'; }
-      else if(grand>0&&l1>0){
-        const diff=grand-l1;
-        diffEl.textContent='+'+fmtINRSym(diff);
-        diffEl.style.color='#dc2626';
-        diffEl.style.fontWeight='600';
-      } else { diffEl.textContent='—'; diffEl.style.color=''; }
-    }
-  });
-}
-
-function removeQCVendorCol(idx) {
-  // Remove vendor column at index idx from qc_vendorHeaders
-  const hdr = document.getElementById('qc_vendorHeaders');
-  if (!hdr) return;
-  const divs = Array.from(hdr.children);
-  if (divs[idx]) divs[idx].remove();
-  _qcVendorCount = Math.max(0, _qcVendorCount - 1);
-  renderQCGrid();
-  updateQCRecommendDropdown();
-}
-
-function updateQCRecommendDropdown() {
-  const sel=document.getElementById('qc_recommendedVendor');
-  if(!sel) return;
-  sel.innerHTML='<option value="">— Select after comparison —</option>';
-  for(let v=0;v<_qcVendorCount;v++){
-    const name=document.getElementById(`qcV_name_${v}`)?.value?.trim();
-    if(name) sel.innerHTML+=`<option value="${v}">${esc(name)}</option>`;
-  }
-}
-
-function closeQCForm() {
-  document.getElementById('qcForm').style.display='none';
-  document.getElementById('rfqListCard').style.display='block';
-  document.getElementById('qcListCard').style.display='block';
-  _qcVendorCount=0; _qcRFQItems=[];
-}
-
-async function saveQC() {
-  if(!hasPerm('canCreateQC')){toast('Only Procurement can create QC','error');return;}
-  const rfqNum=document.getElementById('qc_rfqLink').value;
-  const recV=document.getElementById('qc_recommendedVendor').value;
-  if(!rfqNum){toast('Select an RFQ','error');return;}
-  if(!recV||recV===''){
-    toast('Recommended Vendor is mandatory — please select a vendor','error');
-    document.getElementById('qc_recommendedVendor')?.focus();
-    return;
-  }
-  // Validate all vendor names are from vendor master
-  for(let v=0;v<_qcVendorCount;v++){
-    const vName=document.getElementById(`qcV_name_${v}`)?.value?.trim();
-    if(!vName) continue;
-    const vCode=document.getElementById(`qcV_code_${v}`)?.value?.trim();
-    if(!vCode){
-      toast(`Vendor ${v+1} "${vName}" is not from vendor master — please select from dropdown`,'error');
-      return;
-    }
-  }
-  pbShow('Saving QC…');
-  try {
-    const qcNumber=await nextPUDocNumber('QC');
-    const recIdx=parseInt(recV);
-    const recName=document.getElementById(`qcV_name_${recIdx}`)?.value?.trim()||'';
-    const recCode=document.getElementById(`qcV_code_${recIdx}`)?.value?.trim()||null;
-    const {error:qe}=await sb.from('pu_quote_comparison').insert({
-      qc_number:qcNumber, qc_date:document.getElementById('qc_date').value,
-      rfq_number:rfqNum, prepared_by:state.userName, prepared_by_id:state.userId,
-      recommended_vendor_code:recCode, recommended_vendor_name:recName,
-      recommended_remarks:document.getElementById('qc_recommendReason').value.trim()||null,
-      creator_remarks:document.getElementById('qc_recommendReason').value.trim()||null,
-      remarks:document.getElementById('qc_remarks').value.trim()||null,
-      status:'Pending Approval',
-    });
-    if(qe) throw new Error(qe.message);
-    for(let v=0;v<_qcVendorCount;v++){
-      const vName=document.getElementById(`qcV_name_${v}`)?.value?.trim();
-      if(!vName) continue;
-      const {data:quote,error:qve}=await sb.from('pu_quotes').insert({
-        qc_number:qcNumber, sno:v+1,
-        vendor_code:document.getElementById(`qcV_code_${v}`)?.value||null,
-        vendor_name:vName,
-        quote_ref:document.getElementById(`qcV_ref_${v}`)?.value?.trim()||null,
-        delivery_days:parseInt(document.getElementById(`qcV_days_${v}`)?.value)||null,
-        payment_terms:document.getElementById(`qcV_payTerms_${v}`)?.value?.trim()||null,
-        tech_specs:document.getElementById(`qcV_techSpecs_${v}`)?.value?.trim()||null,
-        is_recommended:v===recIdx,
-      }).select().single();
-      if(qve||!quote) continue;
-      const qItems=_qcRFQItems.map((item,idx)=>({
-        qc_number:qcNumber, quote_id:quote.id, rfq_item_sno:item.sno,
-        material_name:item.material_name, uom:item.uom, qty_required:item.qty_required,
-        unit_rate:parseFloat(document.getElementById(`qcRate_${idx}_${v}`)?.value)||null,
-        gst_pct:parseFloat(document.getElementById(`qcGST_${idx}_${v}`)?.value)||18,
-        amount:(item.qty_required||0)*(parseFloat(document.getElementById(`qcRate_${idx}_${v}`)?.value)||0),
-      }));
-      if(qItems.length) await sb.from('pu_quote_items').insert(qItems);
-    }
-    await sb.from('pu_rfq').update({status:'Comparison Ready'}).eq('rfq_number',rfqNum);
-    flashSuccess('QC '+qcNumber+' submitted for PM approval');
-    closeQCForm(); loadQCList(); loadRFQList();
-  } catch(e){toast('Error: '+e.message,'error');}
-  finally{pbDone();}
-}
-
 async function approveQC(qcNum) {
-  // Route through viewQC so PM can confirm/edit recommended vendor before approving
+  // Route through viewQC so PM can review recommended vendor before confirming
   await viewQC(qcNum);
 }
 
@@ -11599,6 +11346,14 @@ async function confirmApproveQC(qcNum) {
     approved_by_id:state.userId,
     approved_at:new Date().toISOString()
   }).eq('qc_number',qcNum);
+  // Update the parent RFQ status to Approved
+  if (!error) {
+    const {data:qcHeader} = await sb.from('pu_quote_comparison')
+      .select('rfq_number').eq('qc_number',qcNum).single();
+    if (qcHeader?.rfq_number) {
+      await sb.from('pu_rfq').update({status:'Approved'}).eq('rfq_number',qcHeader.rfq_number);
+    }
+  }
   pbDone();
   if(!error){ flashSuccess('QC '+qcNum+' Approved — '+recName+' selected'); loadQCList(); loadRFQList(); }
   else toast(error.message,'error');
@@ -12065,10 +11820,10 @@ async function viewPO(poNum) {
       </tr></thead>
       <tbody>${itemsHTML}</tbody>
     </table></div>
-    <div class="actions-row">${closeActions}<button class="btn btn-ghost" onclick="closeModal()">Close</button></div>`);
+    <div class="actions-row">${closeActions}<button class="btn btn-secondary" onclick="closeModal();printPO('${esc(h.po_number)}')">🖨 Print PO</button><button class="btn btn-ghost" onclick="closeModal()">Close</button></div>`);
 }
 
-async function printPOById() { toast('PO print module coming soon','info'); }
+async function printPOById(poNum) { await printPO(poNum); }
 
 // ── Shared helper: recompute MIR header status & item statuses after PO termination ──
 // Called after a PO is Cancelled or Short-Closed. Walks the MIR's POs and items,
@@ -13002,7 +12757,7 @@ function pobSelectAllGRNs(state) {
   onPOBGRNSelect();
 }
 
-function getServiceLocationOptions() {
+function _pobGetServiceLocationOptions() {
   return (state.masters.serviceLocations||[]).map(l=>
     `<option value="${esc(l['Location Code'])}" data-name="${esc(l['Location Name'])}">${esc(l['Location Name'])} (${esc(l['Category'])})</option>`
   ).join('');
@@ -14158,72 +13913,20 @@ async function confirmRejectDoc(docType, docNum) {
     if (itemErr) console.warn('MIR item-status cascade failed:', itemErr.message);
   }
 
-  // ── QC rejection: reopen the parent RFQ and back-populate pu_rfq_quotes ──────
+  // ── QC rejection: reopen the parent RFQ ──────────────────────────────────────
   // The rejected QC's quotes/quote-items remain in the DB for reference.
   // MIR items stay at 'RFQ Raised' — the RFQ itself was valid; only the
   // comparison was rejected, so procurement can re-compare on the same RFQ.
-  //
-  // KEY FIX: if the QC was created via the legacy manual QC form (saveQC),
-  // quotes were saved directly into pu_quotes and never written to pu_rfq_quotes.
-  // After rejection we back-populate pu_rfq_quotes from pu_quotes so the pills
-  // appear in the RFQ list and the team can immediately select & re-compare them.
   if (docType === 'QC') {
     const {data:qcH, error:qcHErr} = await sb.from('pu_quote_comparison')
       .select('rfq_number').eq('qc_number',docNum).single();
     if (qcHErr) { console.warn('QC cascade: could not read QC header:', qcHErr.message); }
     else if (qcH?.rfq_number) {
       const rfqNum = qcH.rfq_number;
-
-      // 1. Reopen the RFQ
       const {error:rfqErr} = await sb.from('pu_rfq')
         .update({status:'Open'}).eq('rfq_number',rfqNum);
       if (rfqErr) console.warn('QC cascade: RFQ reopen failed:', rfqErr.message);
-
-      // 2. Check whether pu_rfq_quotes already has rows for this RFQ.
-      //    If not (legacy saveQC path), copy from pu_quotes + pu_quote_items.
-      const [{data:existingRFQQuotes}, {data:qcQuotes}, {data:qcItems}] = await Promise.all([
-        sb.from('pu_rfq_quotes').select('id').eq('rfq_number',rfqNum),
-        sb.from('pu_quotes').select('*').eq('qc_number',docNum).order('sno'),
-        sb.from('pu_quote_items').select('*').eq('qc_number',docNum),
-      ]);
-
-      if ((!existingRFQQuotes || existingRFQQuotes.length === 0) && qcQuotes && qcQuotes.length) {
-        for (const q of qcQuotes) {
-          const qItems = (qcItems||[]).filter(i => i.quote_id === q.id);
-          const grand  = qItems.reduce((s,i) => s + (i.qty_required||0)*(i.unit_rate||0)*(1+(i.gst_pct||0)/100), 0);
-          const {data:newRQ, error:rqErr} = await sb.from('pu_rfq_quotes').insert({
-            rfq_number:    rfqNum,
-            sno:           q.sno,
-            vendor_name:   q.vendor_name,
-            vendor_code:   q.vendor_code   || null,
-            quote_ref:     q.quote_ref     || null,
-            delivery_days: q.delivery_days || null,
-            payment_terms: q.payment_terms || null,
-            tech_specs:    q.tech_specs    || null,
-            grand_total:   grand,
-            created_by:    state.userName,
-            created_by_id: state.userId,
-          }).select().single();
-          if (rqErr || !newRQ) { console.warn('QC cascade: pu_rfq_quotes insert failed:', rqErr?.message); continue; }
-          const rfqQItems = qItems.map(i => ({
-            rfq_quote_id:  newRQ.id,
-            rfq_number:    rfqNum,
-            material_name: i.material_name,
-            uom:           i.uom,
-            qty_required:  i.qty_required,
-            unit_rate:     i.unit_rate,
-            gst_pct:       i.gst_pct,
-            amount:        i.amount,
-          }));
-          if (rfqQItems.length) {
-            const {error:riErr} = await sb.from('pu_rfq_quote_items').insert(rfqQItems);
-            if (riErr) console.warn('QC cascade: pu_rfq_quote_items insert failed:', riErr.message);
-          }
-        }
-        toast('RFQ '+rfqNum+' reopened — previous quotes restored for re-comparison','info',5000);
-      } else {
-        toast('RFQ '+rfqNum+' reopened — quotes are ready to compare again','info',4000);
-      }
+      else toast('RFQ '+rfqNum+' reopened — quotes are ready to compare again','info',4000);
     }
   }
 
@@ -14482,285 +14185,6 @@ async function printRFQ(rfqNum) {
   </div>`);
 }
 
-async function printQC(qcNum) {
-  pbShow('Building print…');
-  const [{data:h},{data:quotes},{data:qItems}] = await Promise.all([
-    sb.from('pu_quote_comparison').select('*').eq('qc_number',qcNum).single(),
-    sb.from('pu_quotes').select('*').eq('qc_number',qcNum).order('sno'),
-    sb.from('pu_quote_items').select('*').eq('qc_number',qcNum),
-  ]);
-  pbDone();
-  if (!h) { toast('QC not found','error'); return; }
-  const mats = [...new Set((qItems||[]).map(qi=>qi.material_name))];
-  let thead = `<tr><th class="c">#</th><th>Material</th><th class="c">UOM</th><th class="r">Qty</th>`;
-  (quotes||[]).forEach(v => { thead += `<th class="r">${esc(v.vendor_name)}${v.is_recommended?' ★':''}<br><span style="font-weight:400;font-size:7.5pt;">${esc(v.quote_ref||'')}</span></th><th class="r">Total</th>`; });
-  thead += '</tr>';
-  const tbody = mats.map((mat,idx) => {
-    const sample = (qItems||[]).find(qi=>qi.material_name===mat);
-    let row = `<tr><td class="c">${idx+1}</td><td>${esc(mat)}</td><td class="c">${esc(sample?.uom||'')}</td><td class="r">${sample?.qty_required||0}</td>`;
-    (quotes||[]).forEach(v => {
-      const qi = (qItems||[]).find(qi=>qi.material_name===mat&&qi.quote_id===v.id);
-      const bg = v.is_recommended ? 'background:#d1fae5;' : '';
-      row += `<td class="r" style="${bg}">${qi?.unit_rate!=null?'₹ '+fmtINR(qi.unit_rate):'—'}</td>`;
-      row += `<td class="r" style="${bg}">${qi?.amount!=null?'₹ '+fmtINR(qi.amount):'—'}</td>`;
-    });
-    return row + '</tr>';
-  }).join('');
-  openPrintOverlay(`${printStyles()}
-  <div class="pd-top">
-    <div><div class="co-name">${CO_NAME}</div><div class="co-detail">${CO_ADDR}</div></div>
-    <div><div class="doc-title">QUOTE COMPARISON</div>
-      <table class="doc-meta"><tr><td>QC No.</td><td>${esc(qcNum)}</td></tr>
-      <tr><td>Date</td><td>${fmtDate(h.qc_date)}</td></tr>
-      ${h.rfq_number?`<tr><td>RFQ Ref</td><td>${esc(h.rfq_number)}</td></tr>`:''}
-      </table>
-    </div>
-  </div>
-  <table class="items"><thead>${thead}</thead><tbody>${tbody}</tbody></table>
-  <div class="footer-row">
-    <div class="footer-box"><div class="footer-hdr">Recommended Vendor</div><strong>${esc(h.recommended_vendor_name||'—')}</strong>${h.recommended_remarks?' — '+esc(h.recommended_remarks):''}</div>
-    ${h.payment_terms?`<div class="footer-box"><div class="footer-hdr">Payment Terms</div>${esc(h.payment_terms)}</div>`:''}
-    ${h.tech_specs?`<div class="footer-box"><div class="footer-hdr">Technical Specs</div>${esc(h.tech_specs)}</div>`:''}
-  </div>`);
-}
-
-async function printPO(poNum) {
-  pbShow('Loading PO…');
-  const [{data:h},{data:items}] = await Promise.all([
-    sb.from('pu_po_orders').select('*').eq('po_number',poNum).single(),
-    sb.from('pu_po_items').select('*').eq('po_number',poNum).order('sno'),
-  ]);
-  pbDone();
-  if(!h){ toast('PO not found','error'); return; }
-
-  const fi = n => (n||0).toLocaleString('en-IN',{minimumFractionDigits:2,maximumFractionDigits:2});
-
-  // Determine GST mode — check if any item has line-level GST
-  const hasLineGST = (items||[]).some(it=>it.cgst_pct||it.sgst_pct||it.igst_pct);
-
-  // Line items
-  const rows = (items||[]).map((it,i)=>`
-    <tr>
-      <td class="c">${it.sno||i+1}</td>
-      <td>${esc(it.material_name)}</td>
-      <td class="c">${esc(it.uom)}</td>
-      <td class="r">${fi(it.qty)}</td>
-      <td class="r">₹ ${fi(it.unit_rate)}</td>
-      <td class="r">₹ ${fi(it.base_amount||it.qty*it.unit_rate)}</td>
-      <td>${esc(it.remarks||'')}</td>
-    </tr>`).join('');
-
-  // Totals block
-  const cgstPct  = h.cgst_pct||((h.cgst_amount&&h.basic_value)?(h.cgst_amount/h.basic_value*100).toFixed(0):'');
-  const sgstPct  = h.sgst_pct||cgstPct;
-  // Compute GST percentages for labels
-  const igstPct = h.igst_pct || (h.igst_amount&&h.basic_value ? Math.round(h.igst_amount/h.basic_value*100) : '');
-  const totalsHTML = `
-    <tr><td>Sub Total</td><td class="r">₹ ${fi(h.basic_value)}</td></tr>
-    ${h.cgst_amount>0?`<tr><td>CGST${cgstPct?' ('+cgstPct+'%)':''}</td><td class="r">₹ ${fi(h.cgst_amount)}</td></tr>`:''}
-    ${h.sgst_amount>0?`<tr><td>SGST${sgstPct?' ('+sgstPct+'%)':''}</td><td class="r">₹ ${fi(h.sgst_amount)}</td></tr>`:''}
-    ${h.igst_amount>0?`<tr><td>IGST${igstPct?' ('+igstPct+'%)':''}</td><td class="r">₹ ${fi(h.igst_amount)}</td></tr>`:''}
-    ${h.round_off?`<tr><td>Round Off</td><td class="r">₹ ${fi(h.round_off)}</td></tr>`:''}
-    <tr class="gtrow"><td>TOTAL</td><td class="r">₹ ${fi(h.grand_total)}</td></tr>`;
-
-  // Amount in words helper
-  function amtWords(n){
-    const a=['','One','Two','Three','Four','Five','Six','Seven','Eight','Nine','Ten',
-      'Eleven','Twelve','Thirteen','Fourteen','Fifteen','Sixteen','Seventeen','Eighteen','Nineteen'];
-    const b=['','','Twenty','Thirty','Forty','Fifty','Sixty','Seventy','Eighty','Ninety'];
-    if(n===0) return 'Zero';
-    function words(num){
-      if(num<20) return a[num];
-      if(num<100) return b[Math.floor(num/10)]+(num%10?' '+a[num%10]:'');
-      if(num<1000) return a[Math.floor(num/100)]+' Hundred'+(num%100?' '+words(num%100):'');
-      if(num<100000) return words(Math.floor(num/1000))+' Thousand'+(num%1000?' '+words(num%1000):'');
-      if(num<10000000) return words(Math.floor(num/100000))+' Lakh'+(num%100000?' '+words(num%100000):'');
-      return words(Math.floor(num/10000000))+' Crore'+(num%10000000?' '+words(num%10000000):'');
-    }
-    const rupees=Math.floor(n);
-    const paise=Math.round((n-rupees)*100);
-    return 'Rupees '+words(rupees)+' Only'+(paise>0?' and '+words(paise)+' Paise':'');
-  }
-
-  const doc = `<!DOCTYPE html>
-<html><head>
-<meta charset="UTF-8">
-<title>Purchase Order — ${esc(poNum)}</title>
-<style>
-  @page { size:A4 portrait; margin:0mm 0mm 0mm 0mm; }
-  * { box-sizing:border-box; margin:0; padding:0; }
-  body {
-    font-family:Arial,Helvetica,sans-serif; font-size:9pt; color:#111;
-    -webkit-print-color-adjust:exact; print-color-adjust:exact;
-    padding:25mm 15mm 20mm 15mm;
-  }
-
-  /* ── TITLE ROW ── */
-  .title-row { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:10pt; }
-  .doc-title { font-size:20pt; font-weight:700; color:#1e3a5f; letter-spacing:1pt; }
-  .mt { border-collapse:collapse; }
-  .mt td { padding:2.5pt 8pt; font-size:8.5pt; border:.4pt solid #bbb; }
-  .mt .l { font-weight:700; background:#e8ecf2; color:#1e3a5f; min-width:45pt; }
-
-  /* ── ADDRESS BOXES ── */
-  .addr-row { display:flex; gap:6pt; margin-bottom:10pt; }
-  .addr-box { flex:1; border:.5pt solid #bbb; border-radius:2pt; padding:7pt; }
-  .addr-hdr { font-size:7pt; font-weight:700; text-transform:uppercase; color:#1e3a5f;
-              border-bottom:.5pt solid #dde; margin-bottom:5pt; padding-bottom:3pt; letter-spacing:.5pt; }
-  .addr-body { font-size:8.5pt; line-height:1.7; }
-  .addr-body strong { font-size:9pt; }
-
-  /* ── LINE ITEMS TABLE ── */
-  table.items { width:100%; border-collapse:collapse; margin-bottom:8pt; }
-  table.items thead tr { background:#1e3a5f; }
-  table.items th { color:#fff; padding:5pt 6pt; font-size:8pt; font-weight:700; text-align:left; border:.4pt solid #2d4f7c; }
-  table.items th.c, table.items td.c { text-align:center; }
-  table.items th.r, table.items td.r { text-align:right; }
-  table.items td { padding:5pt 6pt; font-size:8.5pt; border-bottom:.4pt solid #eee; vertical-align:top; }
-  table.items tr:nth-child(even) td { background:#f8fafc; }
-
-  /* ── TOTALS ── */
-  .bottom-row { display:flex; gap:10pt; margin-bottom:10pt; }
-  .bottom-left { flex:1; }
-  .bottom-right { flex:0 0 200pt; }
-  table.totals { width:100%; border-collapse:collapse; }
-  table.totals td { padding:4pt 8pt; font-size:8.5pt; border:.4pt solid #ccc; }
-  table.totals td:first-child { font-weight:600; background:#f0f5fb; color:#1e3a5f; }
-  table.totals td:last-child { text-align:right; }
-  table.totals tr.gtrow td { font-weight:700; background:#1e3a5f; color:#fff; font-size:10pt; }
-  .words { font-size:7.5pt; color:#555; font-style:italic; margin-top:4pt; padding:3pt 0; border-top:.4pt solid #ddd; }
-
-  /* ── FOOTER ── */
-  .footer-row { display:flex; gap:10pt; margin-top:10pt; border-top:.5pt solid #ccc; padding-top:8pt; }
-  .footer-box { flex:1; }
-  .footer-hdr { font-size:7pt; font-weight:700; text-transform:uppercase; color:#1e3a5f;
-                letter-spacing:.5pt; margin-bottom:4pt; }
-  .footer-val { font-size:8.5pt; line-height:1.6; }
-  .sign-area { text-align:right; min-width:110pt; }
-  .sign-line { border-top:.5pt solid #444; padding-top:4pt; font-size:8pt;
-               color:#333; line-height:1.7; margin-top:24pt; }
-
-  /* page break */
-  thead { display:table-header-group; }
-  tr    { page-break-inside:avoid; }
-</style>
-</head>
-<body>
-
-  <!-- TITLE ROW (no company name — on letterhead) -->
-  <div class="title-row">
-    <div></div>
-    <div style="text-align:right;">
-      <div class="doc-title">PURCHASE ORDER</div>
-      <table class="mt" style="margin-top:6pt;margin-left:auto;">
-        <tr><td class="l">DATE</td><td>${fmtDate(h.po_date)}</td></tr>
-        <tr><td class="l">PO #</td><td><strong>${esc(poNum)}</strong></td></tr>
-        ${h.project?`<tr><td class="l">Project</td><td>${esc(h.project)}</td></tr>`:''}
-      </table>
-    </div>
-  </div>
-
-  <!-- ADDRESS ROW -->
-  <div class="addr-row">
-    <div class="addr-box">
-      <div class="addr-hdr">Vendor</div>
-      <div class="addr-body">
-        <strong>${esc(h.vendor_name)}</strong><br>
-        ${h.vendor_address?esc(h.vendor_address).split('\n').join('<br>'):''}
-        ${h.vendor_gstin?'<br>GSTIN: <strong>'+esc(h.vendor_gstin)+'</strong>':''}
-      </div>
-    </div>
-    <div class="addr-box">
-      <div class="addr-hdr">Bill To</div>
-      <div class="addr-body">
-        <strong>URBAN EXCELLENCE LLP</strong><br>
-        76/1, Windchimes, Muthsandra Main Road, Bengaluru – 560087<br>
-        GSTIN: 29AAHFU0117D1ZH
-      </div>
-    </div>
-    <div class="addr-box">
-      <div class="addr-hdr">Ship To / Delivery Address</div>
-      <div class="addr-body">
-        ${h.delivery_address?esc(h.delivery_address).split('\n').join('<br>'):'Poetry of Earth, Sy.No.199, Varthur–Sarjapur Road, Opposite Vinayaka Theatre, Varthur, Bengaluru – 560087'}
-      </div>
-    </div>
-  </div>
-
-  <!-- LINE ITEMS -->
-  <table class="items">
-    <thead><tr>
-      <th class="c" style="width:28pt">ITEM #</th>
-      <th>DESCRIPTION</th>
-      <th class="c" style="width:38pt">UOM</th>
-      <th class="r" style="width:45pt">QTY</th>
-      <th class="r" style="width:58pt">UNIT PRICE</th>
-      <th class="r" style="width:70pt">SUB-TOTAL (₹)</th>
-      <th style="width:70pt">REMARKS</th>
-    </tr></thead>
-    <tbody>${rows}</tbody>
-  </table>
-
-  <!-- TOTALS BLOCK — right aligned, ABOVE footer table -->
-  <div style="display:flex;justify-content:flex-end;margin-top:8pt;">
-    <div style="width:230pt;">
-      <table class="totals">
-        ${totalsHTML}
-      </table>
-      <div class="words">${amtWords(h.grand_total||0)}</div>
-    </div>
-  </div>
-
-  <!-- FOOTER TABLE — Payment Terms, Contact, Transport, Prepared By, Comments -->
-  <table style="width:100%;border-collapse:collapse;margin-top:10pt;border:.5pt solid #bbb;">
-    <tr>
-      <td style="width:25%;padding:6pt 8pt;border:.5pt solid #bbb;vertical-align:top;">
-        <div class="footer-hdr">Payment Terms</div>
-        <div class="footer-val" style="margin-top:3pt;">${esc(h.payment_terms||'—')}</div>
-      </td>
-      <td style="width:25%;padding:6pt 8pt;border:.5pt solid #bbb;vertical-align:top;">
-        <div class="footer-hdr">Contact Person</div>
-        <div class="footer-val" style="margin-top:3pt;">${esc(h.contact_person||'Mr.Niteesh (7996631552) & Mr.Raghavendra (9901374170)')}</div>
-      </td>
-      <td style="width:20%;padding:6pt 8pt;border:.5pt solid #bbb;vertical-align:top;">
-        <div class="footer-hdr">Transportation</div>
-        <div class="footer-val" style="margin-top:3pt;">${esc(h.transport||'—')}</div>
-      </td>
-      <td style="width:30%;padding:6pt 8pt;border:.5pt solid #bbb;vertical-align:top;">
-        <div class="footer-hdr">Prepared By</div>
-        <div class="footer-val" style="margin-top:3pt;">${esc(h.prepared_by||'—')}</div>
-      </td>
-    </tr>
-    ${h.remarks?`<tr>
-      <td colspan="4" style="padding:6pt 8pt;border:.5pt solid #bbb;vertical-align:top;">
-        <div class="footer-hdr">Comments / Special Instructions</div>
-        <div class="footer-val" style="margin-top:3pt;line-height:1.6;">${esc(h.remarks)}</div>
-      </td>
-    </tr>`:''}
-  </table>
-
-  <!-- SIGNATURE — below footer table -->
-  <div style="display:flex;justify-content:flex-end;margin-top:20pt;">
-    <div class="sign-line">For URBAN EXCELLENCE LLP<br><br><br>Authorised Signatory</div>
-  </div>
-
-</body></html>`;
-
-  // Print via hidden iframe
-  const iframe = document.createElement('iframe');
-  iframe.style.cssText = 'position:fixed;top:-9999px;left:-9999px;width:0;height:0;border:0;';
-  document.body.appendChild(iframe);
-  iframe.contentDocument.open();
-  iframe.contentDocument.write(doc);
-  iframe.contentDocument.close();
-  iframe.onload = () => {
-    setTimeout(() => {
-      iframe.contentWindow.focus();
-      iframe.contentWindow.print();
-      setTimeout(() => { document.body.removeChild(iframe); }, 2000);
-    }, 500);
-  };
-}
-
 async function printPOB(billNum) {
   pbShow('Building print…');
   const [{data:h},{data:items}] = await Promise.all([
@@ -14810,34 +14234,6 @@ async function printPOB(billNum) {
     ${h.remarks?`<div class="footer-box"><div class="footer-hdr">Remarks</div>${esc(h.remarks)}</div>`:'<div></div>'}
     <div style="text-align:right;"><div class="sign-box">Verified By<br>${CO_NAME}</div></div>
   </div>`);
-}
-
-// ============================================================
-// DIRECT PO FROM MIR (Preferred Vendor — No QC required)
-// ============================================================
-async function newDirectPOFromMIR(mirNum) {
-  if (!hasPerm('canCreatePO')) { toast('Only Procurement can create POs','error'); return; }
-  switchPUTab('po');
-  await newPO();
-  // Pre-fill from MIR items
-  const {data:items} = await sb.from('pu_mir_items').select('*').eq('mir_number',mirNum).order('sno');
-  document.getElementById('poItemsBody').innerHTML=''; _poItemCount=0;
-  (items||[]).forEach(it => {
-    addPOItem();
-    const i = _poItemCount-1;
-    document.getElementById('poMat_'+i).value = it.material_name;
-    document.getElementById('poUom_'+i).value = it.uom;
-    document.getElementById('poQty_'+i).value = it.qty_required;
-    const specEl = document.getElementById('poRmk_'+i);
-    if (specEl && it.specification) specEl.value = it.specification;
-  });
-  recalcPOTotals();
-  // Tag this PO as directly from MIR
-  const qcRefEl = document.getElementById('po_qcRef');
-  if (qcRefEl) { qcRefEl.value = 'Direct from ' + mirNum; qcRefEl.readOnly = false; }
-  toast('PO pre-filled from MIR ' + mirNum + ' — select preferred vendor and enter rates. Save PO to confirm.','info',5000);
-  // Store mirNum on form — status updated ONLY after PO is saved successfully
-  document.getElementById('poForm').dataset.directMirNum = mirNum;
 }
 
 // ============================================================
@@ -15391,20 +14787,6 @@ function buildWBSElement(block, group, activity, subActivity, location) {
   return parts.join('/');
 }
 
-function onWBSInput() {
-  // Update preview element
-  const block      = document.getElementById('wbs_block')?.value?.trim()||'';
-  const group      = document.getElementById('wbs_group')?.value?.trim()||'';
-  const activity   = document.getElementById('wbs_activity')?.value?.trim()||'';
-  const subAct     = document.getElementById('wbs_sub_activity')?.value?.trim()||'';
-  const location   = document.getElementById('wbs_location')?.value?.trim()||'';
-  const element    = buildWBSElement(block, group, activity, subAct, location);
-  const prev       = document.getElementById('wbs_element_preview');
-  if (prev) prev.value = element || '—';
-  // Update cascading datalists
-  refreshWBSDataLists(block, group, activity, subAct);
-}
-
 function refreshWBSDataLists(selBlock='', selGroup='', selActivity='', selSubAct='') {
   const data = puState.wbsList || [];
   function unique(arr) { return [...new Set(arr.filter(Boolean))].sort(); }
@@ -15818,51 +15200,6 @@ async function confirmWBSBranchDelete(codesStr) {
   finally { pbDone(); }
 }
 
-async function saveWBSMaster() {
-  if (!hasRole('Admin')) {
-    toast('Only Admin can add WBS elements','error'); return;
-  }
-  const block    = document.getElementById('wbs_block')?.value?.trim();
-  const group    = document.getElementById('wbs_group')?.value?.trim();
-  const activity = document.getElementById('wbs_activity')?.value?.trim();
-  const subAct   = document.getElementById('wbs_sub_activity')?.value?.trim()||null;
-  const location = document.getElementById('wbs_location')?.value?.trim()||null;
-  if (!block)    { toast('Block is required','error'); return; }
-  if (!group)    { toast('WBS Group is required','error'); return; }
-  if (!activity) { toast('WBS Activity is required','error'); return; }
-  const element = buildWBSElement(block, group, activity, subAct, location);
-  // Duplicate check
-  const dup = (puState.wbsList||[]).find(w =>
-    w.block===block && w.wbs_group===group && w.wbs_activity===activity &&
-    (w.wbs_sub_activity||null)===(subAct||null) &&
-    (w.wbs_location||null)===(location||null)
-  );
-  if (dup) { toast('This WBS element already exists: '+dup.wbs_code,'error'); return; }
-  pbShow('Saving WBS…');
-  try {
-    // Generate code
-    const {data:last} = await sb.from('wbs_master')
-      .select('wbs_code').order('wbs_code',{ascending:false}).limit(1);
-    const lastNum = last?.length ? parseInt((last[0].wbs_code||'WBS0000').replace('WBS',''))||0 : 0;
-    const code    = 'WBS'+String(lastNum+1).padStart(4,'0');
-    const {error} = await sb.from('wbs_master').insert({
-      wbs_code: code, block, wbs_group: group, wbs_activity: activity,
-      wbs_sub_activity: subAct, wbs_location: location,
-      wbs_element: element, is_active: true
-    });
-    if (error) throw new Error(error.message);
-    flashSuccess('WBS element '+code+' added');
-    clearWBSForm();
-    await loadWBSMaster();
-  } catch(e){ toast('Error: '+e.message,'error'); }
-  finally{ pbDone(); }
-}
-
-function clearWBSForm() {
-  ['wbs_block','wbs_group','wbs_activity','wbs_sub_activity','wbs_location','wbs_element_preview'].forEach(id=>{
-    const el=document.getElementById(id); if(el) el.value='';
-  });
-}
 
 async function editWBS(code) {
   if (!hasRole('Admin')) {
