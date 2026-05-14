@@ -2032,15 +2032,17 @@ input[type="number"] {
     <div id="wbs-tab-gen" class="hidden">
       <div class="card">
         <h3>Generate WBS Elements</h3>
-        <div class="grid-2" style="gap:14px;">
-          <div class="field">
-            <label class="req">Sub-Activity</label>
-            <select id="gen_subact" onchange="onGenSubActChange()"
-              style="padding:7px;background:var(--input-bg);color:var(--text);border:1px solid var(--border);border-radius:4px;width:100%;">
-              <option value="">— select sub-activity —</option>
-            </select>
-            <div id="gen_subact_info" class="muted" style="font-size:11px;margin-top:6px;"></div>
-          </div>
+        <div class="field">
+          <label class="req">Sub-Activities (multi-select)</label>
+          <input id="gen_subact_search" placeholder="Type to filter sub-activities…" autocomplete="off"
+                 oninput="renderGenSubActPicker()"
+                 style="width:100%;padding:7px;background:var(--input-bg);color:var(--text);border:1px solid var(--border);border-radius:4px;margin-bottom:8px;">
+          <div id="gen_subact_picker"
+               style="max-height:260px;overflow:auto;border:1px solid var(--border);border-radius:4px;padding:8px;background:var(--input-bg);"></div>
+          <div id="gen_subact_info" class="muted" style="font-size:11px;margin-top:6px;"></div>
+        </div>
+
+        <div class="grid-2" style="gap:14px;margin-top:14px;">
           <div class="field">
             <label class="req">Blocks (multi-select)</label>
             <div id="gen_blocks_chips" class="chip-multi"
@@ -2050,17 +2052,16 @@ input[type="number"] {
               <button class="btn btn-ghost btn-sm" onclick="genSelectAllBlocks(false)">Clear</button>
             </div>
           </div>
-        </div>
-
-        <div class="field" id="gen_levels_wrap" style="margin-top:14px;">
-          <label>Levels (multi-select)</label>
-          <div id="gen_levels_chips" class="chip-multi"
-               style="min-height:60px;border:1px solid var(--border);border-radius:4px;padding:6px;display:flex;flex-wrap:wrap;gap:6px;background:var(--input-bg);"></div>
-          <div style="margin-top:6px;display:flex;gap:6px;flex-wrap:wrap;">
-            <button class="btn btn-ghost btn-sm" onclick="genSelectAllLevels(true)">Select All</button>
-            <button class="btn btn-ghost btn-sm" onclick="genSelectAllLevels(false)">Clear</button>
-            <button class="btn btn-ghost btn-sm" onclick="genSelectLevelKind('floor')">All Floors</button>
-            <button class="btn btn-ghost btn-sm" onclick="genSelectLevelKind('basement')">All Basements</button>
+          <div class="field" id="gen_levels_wrap">
+            <label>Levels (multi-select)</label>
+            <div id="gen_levels_chips" class="chip-multi"
+                 style="min-height:60px;border:1px solid var(--border);border-radius:4px;padding:6px;display:flex;flex-wrap:wrap;gap:6px;background:var(--input-bg);"></div>
+            <div style="margin-top:6px;display:flex;gap:6px;flex-wrap:wrap;">
+              <button class="btn btn-ghost btn-sm" onclick="genSelectAllLevels(true)">Select All</button>
+              <button class="btn btn-ghost btn-sm" onclick="genSelectAllLevels(false)">Clear</button>
+              <button class="btn btn-ghost btn-sm" onclick="genSelectLevelKind('floor')">All Floors</button>
+              <button class="btn btn-ghost btn-sm" onclick="genSelectLevelKind('basement')">All Basements</button>
+            </div>
           </div>
         </div>
 
@@ -2098,10 +2099,9 @@ input[type="number"] {
         </div>
         <div class="table-wrap">
           <table><thead><tr>
-            <th>Code</th><th>Block</th><th>Group</th><th>Activity</th>
-            <th>Sub Activity</th><th>Location</th><th>WBS Element</th><th>Actions</th>
+            <th style="padding:8px 12px;">WBS Hierarchy &nbsp;<span class="muted" style="font-weight:normal;font-size:11px;">(click ▶ to expand)</span></th>
           </tr></thead>
-          <tbody id="wbs_list"><tr><td colspan="8" class="center muted">No WBS elements yet. Use the Generate tab.</td></tr></tbody>
+          <tbody id="wbs_list"><tr><td class="center muted">No WBS elements yet. Use the Generate tab.</td></tr></tbody>
           </table>
         </div>
       </div>
@@ -9997,7 +9997,7 @@ let _rfqItemC = 0;
 async function loadRFQList() {
   const [{data:rfqs},{data:qcs},{data:rQuotes},{data:rQItems}] = await Promise.all([
     sb.from('pu_rfq').select('*').order('created_at',{ascending:false}),
-    sb.from('pu_quote_comparison').select('rfq_number,status'),
+    sb.from('pu_quote_comparison').select('qc_number,rfq_number,status').order('created_at',{ascending:false}),
     sb.from('pu_rfq_quotes').select('*').order('sno'),
     sb.from('pu_rfq_quote_items').select('*'),
   ]);
@@ -10007,6 +10007,9 @@ async function loadRFQList() {
   puState.rfqWithQC = new Set(
     (qcs||[]).filter(q=>q.status!=='Rejected').map(q=>q.rfq_number).filter(Boolean)
   );
+  // Keep qcList in sync so the lock badge in renderRFQList is never stale
+  // (loadQCList may not have run yet, or may have run before this fresh fetch).
+  puState.qcList        = qcs||[];
   puState.rfqQuotes     = rQuotes||[];
   puState.rfqQuoteItems = rQItems||[];
   renderRFQList();
@@ -11453,9 +11456,12 @@ async function viewQC(qcNum) {
       </div>
     </div>`:'';
 
-  // Negotiation entry panel
+  // Negotiation entry panel — visible to PM (canApproveQC) AND Procurement (canCreateQC)
+  // while QC is Pending Approval. Procurement often does the phone/email negotiation legwork;
+  // this lets them record revised rates before or after the PM reviews.
   let negPanel='';
-  if(isApproval){
+  const canNegotiate = h.status==='Pending Approval' && (perms.canApproveQC || perms.canCreateQC);
+  if(canNegotiate){
     negPanel=`<div class="card" style="background:#f0f5fb;border-color:#93c5fd;margin-top:8px;">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
         <h3 style="font-size:13px;margin:0;color:#1e3a5f;">Negotiation — Round ${maxRound+1}</h3>
@@ -11594,7 +11600,7 @@ async function confirmApproveQC(qcNum) {
     approved_at:new Date().toISOString()
   }).eq('qc_number',qcNum);
   pbDone();
-  if(!error){ flashSuccess('QC '+qcNum+' Approved — '+recName+' selected'); loadQCList(); }
+  if(!error){ flashSuccess('QC '+qcNum+' Approved — '+recName+' selected'); loadQCList(); loadRFQList(); }
   else toast(error.message,'error');
 }
 
@@ -14252,7 +14258,7 @@ async function confirmRejectDoc(docType, docNum) {
   }
 
   flashSuccess(docType+' '+docNum+' Rejected');
-  const reloadMap={MIR:loadMIRList,QC:loadQCList,PO:loadPOList,GRN:loadGRNList,POB:loadPOBList,MIS:loadMISList};
+  const reloadMap={MIR:loadMIRList,QC:()=>{loadQCList();loadRFQList();},PO:loadPOList,GRN:loadGRNList,POB:loadPOBList,MIS:loadMISList};
   if(reloadMap[docType]) reloadMap[docType]();
 }
 
@@ -15404,6 +15410,42 @@ function refreshWBSFilterDropdowns() {
   }
 }
 
+// Build a fast lookup of instance_label → type_code from the instance master.
+// Used by _classifyWBSLocation to group leaves by Location Type.
+function _buildInstanceLabelLookup() {
+  const lookup = [];
+  (puState.wbsLocInstances||[]).forEach(i => {
+    if (!i.instance_label) return;
+    lookup.push({ label: i.instance_label, type_code: i.type_code });
+  });
+  // Sort by label length descending so longer labels (e.g. "Pour-1") match before shorter ones ("1")
+  lookup.sort((a,b) => b.label.length - a.label.length);
+  return lookup;
+}
+
+// Given a wbs_location string, find which Location Type's instance it contains.
+// Returns type_code or null if no match (rows in "Other / Unmatched").
+function _classifyWBSLocation(loc, lookup) {
+  if (!loc) return null;
+  // Most labels are unique enough that whole-word containment works.
+  // Compare with normalized whitespace.
+  for (const { label, type_code } of lookup) {
+    // Match as a substring delimited by start/end or non-alphanumeric on either side
+    // (so "01" doesn't match "001"). Build a regex once per call would be slow; use indexOf with boundary check.
+    let i = loc.indexOf(label);
+    while (i !== -1) {
+      const before = i === 0 ? '' : loc[i-1];
+      const after  = i + label.length === loc.length ? '' : loc[i + label.length];
+      const boundaryBefore = !before || /[^A-Za-z0-9]/.test(before);
+      const boundaryAfter  = !after  || /[^A-Za-z0-9]/.test(after);
+      if (boundaryBefore && boundaryAfter) return type_code;
+      i = loc.indexOf(label, i + 1);
+    }
+  }
+  return null;
+}
+
+// ─── Grouped accordion: Block › Group › Activity › Sub-Activity › leaf rows ───
 function renderWBSMaster() {
   const q        = (document.getElementById('wbs_search')?.value||'').toLowerCase();
   const fBlock   = document.getElementById('wbs_filter_block')?.value||'';
@@ -15412,6 +15454,7 @@ function renderWBSMaster() {
   let rows       = puState.wbsList||[];
   if (fBlock) rows = rows.filter(w => w.block===fBlock);
   if (fGroup) rows = rows.filter(w => w.wbs_group===fGroup);
+  const searching = !!q;
   if (q) {
     const tokens = _fuzzyTokens(q);
     rows = rows.filter(w => {
@@ -15419,7 +15462,7 @@ function renderWBSMaster() {
       return _fuzzyMatch(hay, tokens);
     });
   }
-  // Show count
+  // Count
   const totalCount = (puState.wbsList||[]).length;
   const filteredCount = rows.length;
   const lbl = document.getElementById('wbs_count_label');
@@ -15428,32 +15471,294 @@ function renderWBSMaster() {
       ? `${filteredCount.toLocaleString()} of ${totalCount.toLocaleString()} elements`
       : `${totalCount.toLocaleString()} elements`;
   }
-  // Cap rendered rows for DOM perf (use search/filter to narrow further)
-  const RENDER_CAP = 500;
-  const trimmed = rows.length > RENDER_CAP ? rows.slice(0, RENDER_CAP) : rows;
   const tbody = document.getElementById('wbs_list');
   if (!tbody) return;
-  let html = trimmed.map(w=>`
-    <tr>
-      <td class="mono" style="font-size:10px;">${esc(w.wbs_code||'—')}</td>
-      <td><strong>${esc(w.block||'—')}</strong></td>
-      <td>${esc(w.wbs_group||'—')}</td>
-      <td>${esc(w.wbs_activity||'—')}</td>
-      <td>${esc(w.wbs_sub_activity||'—')}</td>
-      <td style="font-size:11px;">${esc(w.wbs_location||'—')}</td>
-      <td style="font-size:10px;color:var(--muted);max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"
-          title="${esc(w.wbs_element||'')}">${esc(w.wbs_element||'—')}</td>
-      ${isAdmin?`<td>
-        <button class="btn btn-ghost btn-sm" onclick="editWBS('${esc(w.wbs_code)}')">Edit</button>
-        <button class="btn btn-danger btn-sm" onclick="deleteWBS('${esc(w.wbs_code)}','${esc((w.wbs_element||w.wbs_activity||'').replace(/'/g,"\'"))}')">Delete</button>
-      </td>`:'<td></td>'}
-    </tr>`).join('');
-  if (rows.length > RENDER_CAP) {
-    html += `<tr><td colspan="8" class="center muted" style="padding:14px;font-size:12px;">
-      Showing first ${RENDER_CAP.toLocaleString()} of ${rows.length.toLocaleString()} rows — use Search or filters to narrow down. All elements remain available for selection in MIS/MIR/HOC/WOC typeaheads.
-    </td></tr>`;
+
+  if (!rows.length) {
+    tbody.innerHTML = '<tr><td class="center muted">No WBS elements found.</td></tr>';
+    return;
   }
-  tbody.innerHTML = html || '<tr><td colspan="8" class="center muted">No WBS elements found.</td></tr>';
+
+  // Build hierarchy: block → group → activity → subAct → [rows]
+  const tree = {};
+  rows.forEach(w => {
+    const blk = w.block || '—';
+    const grp = w.wbs_group || '—';
+    const act = w.wbs_activity || '—';
+    const sub = w.wbs_sub_activity || '—';
+    tree[blk]                       = tree[blk]                       || {};
+    tree[blk][grp]                  = tree[blk][grp]                  || {};
+    tree[blk][grp][act]             = tree[blk][grp][act]             || {};
+    tree[blk][grp][act][sub]        = tree[blk][grp][act][sub]        || [];
+    tree[blk][grp][act][sub].push(w);
+  });
+
+  // Cache the instance-label lookup once for this render pass (used in level 5)
+  const _instLabelLookupCache = _buildInstanceLabelLookup();
+
+  // Performance guard: count nested rows
+  const branchCountText = (n) => `<span style="display:inline-block;background:var(--input-bg);border:1px solid var(--border);border-radius:10px;padding:1px 7px;margin-left:6px;font-size:10px;color:var(--muted);">${n.toLocaleString()}</span>`;
+
+  const adminBtns = (level, path, count) => {
+    if (!isAdmin) return '';
+    const safePath = esc(JSON.stringify(path)).replace(/"/g,'&quot;');
+    return `
+      <span style="display:inline-flex;gap:4px;margin-left:8px;">
+        <button class="btn btn-ghost btn-sm" style="padding:2px 7px;font-size:10px;"
+                title="Generate more WBS under this branch"
+                onclick="event.stopPropagation();event.preventDefault();wbsBranchAdd('${level}', ${safePath})">+ Add</button>
+        <button class="btn btn-danger btn-sm" style="padding:2px 7px;font-size:10px;"
+                title="Delete all ${count} WBS elements under this branch"
+                onclick="event.stopPropagation();event.preventDefault();wbsBranchDelete('${level}', ${safePath}, ${count})">Delete branch</button>
+      </span>`;
+  };
+
+  // Auto-open if searching/filtering
+  const openAttr = searching || fBlock || fGroup ? 'open' : '';
+
+  // Build HTML — nested <details> for native collapsibles
+  const blockNames = Object.keys(tree).sort();
+  const html = blockNames.map(blk => {
+    const groups = tree[blk];
+    const blkCount = Object.values(groups).reduce((sum,g)=>sum + Object.values(g).reduce((s,a)=>s + Object.values(a).reduce((ss,r)=>ss+r.length,0),0),0);
+    const groupNames = Object.keys(groups).sort();
+    return `
+    <details ${openAttr} class="wbs-acc lvl-block" style="margin-bottom:6px;border:1px solid var(--border);border-radius:5px;background:var(--bg);">
+      <summary style="cursor:pointer;padding:10px 12px;font-weight:700;font-size:13px;color:var(--primary);display:flex;align-items:center;justify-content:space-between;">
+        <span>📦 ${esc(blk)} ${branchCountText(blkCount)}</span>
+        ${adminBtns('block', {block:blk}, blkCount)}
+      </summary>
+      <div style="padding:6px 10px 10px 22px;">
+        ${groupNames.map(grp => {
+          const acts = groups[grp];
+          const grpCount = Object.values(acts).reduce((sum,a)=>sum + Object.values(a).reduce((s,r)=>s+r.length,0),0);
+          const actNames = Object.keys(acts).sort();
+          return `
+          <details ${openAttr} class="wbs-acc lvl-group" style="margin-bottom:4px;border:1px solid var(--border);border-radius:4px;background:var(--input-bg);">
+            <summary style="cursor:pointer;padding:7px 10px;font-weight:600;font-size:12px;display:flex;align-items:center;justify-content:space-between;">
+              <span>📁 ${esc(grp)} ${branchCountText(grpCount)}</span>
+              ${adminBtns('group', {block:blk, group:grp}, grpCount)}
+            </summary>
+            <div style="padding:4px 8px 8px 18px;">
+              ${actNames.map(act => {
+                const subs = acts[act];
+                const actCount = Object.values(subs).reduce((sum,r)=>sum+r.length,0);
+                const subNames = Object.keys(subs).sort();
+                return `
+                <details ${openAttr} class="wbs-acc lvl-activity" style="margin-bottom:3px;border:1px solid var(--border);border-radius:4px;background:var(--bg);">
+                  <summary style="cursor:pointer;padding:6px 10px;font-size:12px;font-weight:500;display:flex;align-items:center;justify-content:space-between;">
+                    <span>🔧 ${esc(act)} ${branchCountText(actCount)}</span>
+                    ${adminBtns('activity', {block:blk, group:grp, activity:act}, actCount)}
+                  </summary>
+                  <div style="padding:4px 6px 6px 14px;">
+                    ${subNames.map(sub => {
+                      const leaves = subs[sub];
+
+                      // Group leaves by Location Type using instance master.
+                      const instLookup = _instLabelLookupCache;
+                      const byType = {};
+                      leaves.forEach(w => {
+                        const tc = _classifyWBSLocation(w.wbs_location||'', instLookup) || '__OTHER__';
+                        (byType[tc] = byType[tc] || []).push(w);
+                      });
+                      const typeKeys = Object.keys(byType);
+                      const onlyOneType = typeKeys.length === 1;
+                      const typeNameFor = (tc) => {
+                        if (tc === '__OTHER__') return 'Other / Unmatched';
+                        return (puState.wbsLocTypes||[]).find(t => t.type_code === tc)?.type_name || tc;
+                      };
+                      // Order types by display_order from master, "Other" last
+                      typeKeys.sort((a,b) => {
+                        if (a === '__OTHER__') return 1;
+                        if (b === '__OTHER__') return -1;
+                        const ta = (puState.wbsLocTypes||[]).find(t => t.type_code === a);
+                        const tb = (puState.wbsLocTypes||[]).find(t => t.type_code === b);
+                        return (ta?.display_order ?? 999) - (tb?.display_order ?? 999);
+                      });
+
+                      // Leaf table HTML factory
+                      const leafTableHTML = (rows) => `
+                        <table style="width:100%;font-size:11px;">
+                          <thead><tr style="background:var(--bg);">
+                            <th style="text-align:left;padding:4px 8px;">Code</th>
+                            <th style="text-align:left;padding:4px 8px;">Location</th>
+                            <th style="text-align:left;padding:4px 8px;">WBS Element</th>
+                            ${isAdmin?'<th style="width:140px;"></th>':''}
+                          </tr></thead>
+                          <tbody>
+                            ${rows.map(w=>`
+                              <tr>
+                                <td class="mono" style="padding:3px 8px;font-size:10px;">${esc(w.wbs_code||'—')}</td>
+                                <td style="padding:3px 8px;">${esc(w.wbs_location||'—')}</td>
+                                <td style="padding:3px 8px;font-size:10px;color:var(--muted);max-width:300px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"
+                                    title="${esc(w.wbs_element||'')}">${esc(w.wbs_element||'—')}</td>
+                                ${isAdmin?`<td style="padding:3px 8px;">
+                                  <button class="btn btn-ghost btn-sm" style="padding:2px 7px;font-size:10px;" onclick="editWBS('${esc(w.wbs_code)}')">Edit</button>
+                                  <button class="btn btn-danger btn-sm" style="padding:2px 7px;font-size:10px;" onclick="deleteWBS('${esc(w.wbs_code)}','${esc((w.wbs_element||w.wbs_activity||'').replace(/'/g,"\\'"))}')">Delete</button>
+                                </td>`:''}
+                              </tr>
+                            `).join('')}
+                          </tbody>
+                        </table>`;
+
+                      return `
+                      <details ${openAttr || (leaves.length<=20?'open':'')} class="wbs-acc lvl-sub" style="margin-bottom:2px;border:1px solid var(--border);border-radius:4px;background:var(--input-bg);">
+                        <summary style="cursor:pointer;padding:5px 9px;font-size:11.5px;display:flex;align-items:center;justify-content:space-between;">
+                          <span>📋 ${esc(sub)} ${branchCountText(leaves.length)}</span>
+                          ${adminBtns('subact', {block:blk, group:grp, activity:act, subAct:sub}, leaves.length)}
+                        </summary>
+                        <div style="padding:4px 6px;">
+                          ${typeKeys.map(tc => {
+                            const typeRows = byType[tc];
+                            const typeName = typeNameFor(tc);
+                            const typeIcon = tc === '__OTHER__' ? '⚠️' : '🏷️';
+                            // Auto-expand if it's the only type under this sub-activity, OR open globally on search
+                            const typeOpen = openAttr || onlyOneType || typeRows.length <= 20;
+                            return `
+                            <details ${typeOpen?'open':''} class="wbs-acc lvl-instype" style="margin-bottom:2px;border:1px solid var(--border);border-radius:4px;background:var(--bg);">
+                              <summary style="cursor:pointer;padding:4px 9px;font-size:11px;display:flex;align-items:center;justify-content:space-between;">
+                                <span>${typeIcon} ${esc(typeName)} ${branchCountText(typeRows.length)}</span>
+                                ${adminBtns('instype', {block:blk, group:grp, activity:act, subAct:sub, typeCode:tc}, typeRows.length)}
+                              </summary>
+                              <div style="padding:4px 6px;">
+                                ${leafTableHTML(typeRows)}
+                              </div>
+                            </details>`;
+                          }).join('')}
+                        </div>
+                      </details>`;
+                    }).join('')}
+                  </div>
+                </details>`;
+              }).join('')}
+            </div>
+          </details>`;
+        }).join('')}
+      </div>
+    </details>`;
+  }).join('');
+
+  // Inject into the wbs_list tbody as a single row containing the whole tree
+  tbody.innerHTML = `<tr><td style="padding:8px;background:transparent;">${html}</td></tr>`;
+}
+
+// ─── Branch actions ──────────────────────────────────────────────
+function wbsBranchAdd(level, pathStr) {
+  // pathStr arrives as a JS object via the safePath escaping; ensure it's an object
+  const path = typeof pathStr === 'string' ? JSON.parse(pathStr) : pathStr;
+  if (!hasRole('Admin')) { toast('Only Admin can add WBS elements','error'); return; }
+
+  // Switch to Generate tab
+  switchWBSTab('gen');
+  // Wait one tick for refreshGenerator to bootstrap, then pre-select
+  setTimeout(() => {
+    puState._genSelectedSubActIds = new Set();
+    let matched = 0;
+    (puState.wbsActivities||[]).forEach(a => {
+      let ok = true;
+      if (path.group    && a.wbs_group        !== path.group)    ok = false;
+      if (path.activity && a.wbs_activity     !== path.activity) ok = false;
+      if (path.subAct   && a.wbs_sub_activity !== path.subAct)   ok = false;
+      if (ok) { puState._genSelectedSubActIds.add(a.id); matched++; }
+    });
+    // Pre-select the block too if specified
+    if (path.block) {
+      const bWrap = document.getElementById('gen_blocks_chips');
+      if (bWrap) {
+        bWrap.querySelectorAll('.chip').forEach(c => {
+          if (c.dataset.val === path.block) {
+            const sel = new Set(JSON.parse(bWrap.dataset.selected||'[]'));
+            if (!sel.has(path.block)) toggleGenChip(c, 'gen_blocks_chips');
+          }
+        });
+      }
+    }
+    renderGenSubActPicker();
+    refreshGenInstancePanelsForSelection();
+
+    // If invoked from instance-type level, pre-select that type's instances
+    let instMsg = '';
+    if (path.typeCode && path.typeCode !== '__OTHER__') {
+      // refreshGenInstancePanelsForSelection() just rendered the panels; pre-tick chips
+      setTimeout(() => {
+        const panel = document.getElementById(`gen_inst_${path.typeCode}`);
+        if (panel) {
+          panel.querySelectorAll('.chip').forEach(c => {
+            const sel = new Set(JSON.parse(panel.dataset.selected||'[]'));
+            if (!sel.has(c.dataset.val)) toggleGenChip(c, `gen_inst_${path.typeCode}`);
+          });
+          const typeName = (puState.wbsLocTypes||[]).find(t=>t.type_code===path.typeCode)?.type_name || path.typeCode;
+          toast(`Pre-selected ${matched} sub-activit${matched===1?'y':'ies'} and ${typeName} instances — pick levels and generate`, 'info');
+        }
+      }, 50);
+      return; // toast handled above
+    }
+
+    updateGenPreview();
+    toast(`Pre-selected ${matched} sub-activit${matched===1?'y':'ies'} — pick blocks/levels/instances and generate`, 'info');
+  }, 100);
+}
+
+async function wbsBranchDelete(level, pathStr, count) {
+  const path = typeof pathStr === 'string' ? JSON.parse(pathStr) : pathStr;
+  if (!hasRole('Admin')) { toast('Only Admin can delete','error'); return; }
+  if (!count) { toast('Nothing to delete','info'); return; }
+
+  // Find matching rows. For typeCode, we also classify each row's location.
+  const lookup = path.typeCode ? _buildInstanceLabelLookup() : null;
+  const matches = (puState.wbsList||[]).filter(w => {
+    if (path.block    && w.block            !== path.block)    return false;
+    if (path.group    && w.wbs_group        !== path.group)    return false;
+    if (path.activity && w.wbs_activity     !== path.activity) return false;
+    if (path.subAct   && w.wbs_sub_activity !== path.subAct)   return false;
+    if (path.typeCode) {
+      const tc = _classifyWBSLocation(w.wbs_location||'', lookup);
+      if (path.typeCode === '__OTHER__') {
+        if (tc !== null) return false;
+      } else {
+        if (tc !== path.typeCode) return false;
+      }
+    }
+    return true;
+  });
+  if (!matches.length) { toast('No matching WBS rows found','info'); return; }
+
+  const sampleCodes = matches.slice(0,5).map(w => w.wbs_code).join(', ');
+  const pathDesc = ['block','group','activity','subAct']
+    .map(k => path[k]).filter(Boolean).join(' › ') +
+    (path.typeCode ? ` › ${path.typeCode === '__OTHER__' ? 'Other/Unmatched' : ((puState.wbsLocTypes||[]).find(t=>t.type_code===path.typeCode)?.type_name || path.typeCode)}` : '');
+
+  openModal(`
+    <h3>Delete WBS Branch</h3>
+    <div style="margin:12px 0;font-size:13px;">
+      Delete <strong>${matches.length}</strong> WBS element(s) under:<br>
+      <code style="background:var(--input-bg);padding:3px 7px;border-radius:3px;display:inline-block;margin:4px 0;">${esc(pathDesc)}</code><br>
+      <span style="color:var(--danger);font-size:12px;">This cannot be undone.</span><br>
+      <span class="muted" style="font-size:11px;">Sample codes: ${esc(sampleCodes)}${matches.length>5?', …':''}</span>
+    </div>
+    <div class="actions-row">
+      <button class="btn btn-danger" onclick="confirmWBSBranchDelete('${esc(JSON.stringify(matches.map(m=>m.wbs_code))).replace(/"/g,'&quot;')}')">Yes, Delete ${matches.length}</button>
+      <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+    </div>`);
+}
+
+async function confirmWBSBranchDelete(codesStr) {
+  const codes = JSON.parse(codesStr);
+  closeModal();
+  pbShow(`Deleting ${codes.length} WBS elements…`);
+  try {
+    // Delete in chunks (Supabase has request payload limits)
+    const chunk = 200;
+    for (let i=0; i<codes.length; i+=chunk) {
+      const slice = codes.slice(i, i+chunk);
+      const { error } = await sb.from('wbs_master').delete().in('wbs_code', slice);
+      if (error) throw new Error(error.message);
+    }
+    flashSuccess(`Deleted ${codes.length} WBS element(s)`);
+    await loadWBSMaster();
+    renderWBSMaster();
+  } catch(e) { toast('Delete error: '+e.message,'error'); }
+  finally { pbDone(); }
 }
 
 async function saveWBSMaster() {
@@ -16497,16 +16802,11 @@ async function saveLocationQuestionnaire() {
 // TAB 5 — GENERATOR (multi-granularity)
 // =====================================================================
 function refreshGenerator() {
-  // Sub-Activity dropdown
-  const sel = document.getElementById('gen_subact'); if (sel) {
-    const cur = sel.value;
-    sel.innerHTML = '<option value="">— select sub-activity —</option>' +
-      (puState.wbsActivities||[]).map(a => {
-        const g = Array.isArray(a.granularity_type_code) ? a.granularity_type_code : [];
-        const gTag = g.length ? ` [${g.join(', ')}]` : '';
-        return `<option value="${esc(a.id)}" ${a.id===cur?'selected':''}>${esc(a.wbs_group)} › ${esc(a.wbs_activity)} › ${esc(a.wbs_sub_activity)}${gTag}</option>`;
-      }).join('');
-  }
+  // Selection state for sub-activities (set of sub-activity IDs)
+  puState._genSelectedSubActIds = new Set();
+
+  renderGenSubActPicker();
+
   // Blocks chips — from wbs_block_master
   const bWrap = document.getElementById('gen_blocks_chips');
   if (bWrap) {
@@ -16524,8 +16824,156 @@ function refreshGenerator() {
       : '<span class="muted" style="font-size:12px;">No levels defined.</span>';
   }
   document.getElementById('gen_instance_panels').innerHTML = '';
-  document.getElementById('gen_preview_summary').textContent = 'Pick a sub-activity to start.';
+  document.getElementById('gen_preview_summary').textContent = 'Pick one or more sub-activities to start.';
   document.getElementById('gen_preview_list').innerHTML = '';
+}
+
+// ---------- Sub-activity picker (multi-select, grouped by Group › Activity) ----------
+function renderGenSubActPicker() {
+  const c = document.getElementById('gen_subact_picker'); if (!c) return;
+  const q = (document.getElementById('gen_subact_search')?.value||'').trim().toLowerCase();
+  const tokens = q ? _fuzzyTokens(q) : null;
+  const selectedIds = puState._genSelectedSubActIds || new Set();
+
+  // Build hierarchy: Group → Activity → [sub-activities]
+  const hierarchy = {};
+  (puState.wbsActivities||[]).forEach(a => {
+    const hay = ((a.wbs_group||'')+'|'+(a.wbs_activity||'')+'|'+(a.wbs_sub_activity||'')).toLowerCase();
+    if (tokens && !_fuzzyMatch(hay, tokens)) return;
+    const g = a.wbs_group || '—';
+    const act = a.wbs_activity || '—';
+    hierarchy[g]               = hierarchy[g]               || {};
+    hierarchy[g][act]          = hierarchy[g][act]          || [];
+    hierarchy[g][act].push(a);
+  });
+
+  const groupKeys = Object.keys(hierarchy).sort();
+  if (!groupKeys.length) {
+    c.innerHTML = '<span class="muted" style="font-size:12px;">No sub-activities match.</span>';
+    document.getElementById('gen_subact_info').innerHTML = '';
+    return;
+  }
+
+  c.innerHTML = groupKeys.map(g => {
+    const acts = hierarchy[g];
+    // Group-level select-all helper: collect all sub-act IDs under this group
+    const groupSubIds = Object.values(acts).flat().map(a=>a.id);
+    const allGroupSelected = groupSubIds.every(id => selectedIds.has(id));
+    return `
+    <details ${tokens ? 'open' : ''} style="margin-bottom:8px;border:1px solid var(--border);border-radius:4px;background:var(--bg);">
+      <summary style="cursor:pointer;padding:7px 10px;font-weight:600;font-size:12px;display:flex;justify-content:space-between;align-items:center;gap:8px;">
+        <span>${esc(g)} <span class="muted" style="font-weight:normal;font-size:10px;">(${groupSubIds.length})</span></span>
+        <span style="display:flex;gap:4px;">
+          <button class="btn btn-ghost btn-sm" style="padding:2px 6px;font-size:10px;"
+                  onclick="event.stopPropagation();event.preventDefault();genSelectGroup('${esc(g).replace(/'/g,"\\'")}', ${allGroupSelected?'false':'true'})">
+            ${allGroupSelected ? 'Clear group' : 'Select all in group'}
+          </button>
+        </span>
+      </summary>
+      <div style="padding:6px 10px 10px 10px;">
+        ${Object.keys(acts).sort().map(act => {
+          const subs = acts[act];
+          const actSubIds = subs.map(a=>a.id);
+          const allActSelected = actSubIds.every(id => selectedIds.has(id));
+          return `
+          <div style="margin-top:6px;">
+            <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:4px;">
+              <span style="font-size:11px;color:var(--muted);">${esc(act)} <span class="muted" style="font-size:10px;">(${actSubIds.length})</span></span>
+              <button class="btn btn-ghost btn-sm" style="padding:2px 6px;font-size:10px;"
+                      onclick="genSelectActivity('${esc(g).replace(/'/g,"\\'")}', '${esc(act).replace(/'/g,"\\'")}', ${allActSelected?'false':'true'})">
+                ${allActSelected ? 'Clear activity' : 'Select activity'}
+              </button>
+            </div>
+            <div style="display:flex;flex-wrap:wrap;gap:4px;">
+              ${subs.map(a => {
+                const on = selectedIds.has(a.id);
+                const grans = Array.isArray(a.granularity_type_code) ? a.granularity_type_code : [];
+                const tip = grans.length ? ` [${grans.join(', ')}]` : '';
+                return `<span class="chip" data-said="${esc(a.id)}" onclick="genToggleSubAct('${esc(a.id)}')"
+                  style="cursor:pointer;padding:4px 9px;border:1px solid var(--border);border-radius:14px;font-size:11px;user-select:none;
+                         background:${on?'var(--primary)':'var(--bg)'};color:${on?'#fff':'inherit'};">
+                  ${esc(a.wbs_sub_activity)}<span style="opacity:.7;font-size:10px;">${esc(tip)}</span>
+                </span>`;
+              }).join('')}
+            </div>
+          </div>`;
+        }).join('')}
+      </div>
+    </details>`;
+  }).join('');
+
+  updateGenSubActInfo();
+}
+
+function updateGenSubActInfo() {
+  const info = document.getElementById('gen_subact_info'); if (!info) return;
+  const selectedIds = puState._genSelectedSubActIds || new Set();
+  if (!selectedIds.size) { info.innerHTML = ''; return; }
+  // Aggregate granularity across selected
+  const granSet = new Set();
+  (puState.wbsActivities||[]).forEach(a => {
+    if (!selectedIds.has(a.id)) return;
+    (a.granularity_type_code||[]).forEach(c => granSet.add(c));
+  });
+  const granNames = [...granSet].map(c => (puState.wbsLocTypes||[]).find(t=>t.type_code===c)?.type_name || c);
+  info.innerHTML = `Selected: <strong>${selectedIds.size}</strong> sub-activit${selectedIds.size===1?'y':'ies'}` +
+    (granNames.length ? ` · Tracks at: <strong>${granNames.map(esc).join(' + ')}</strong>` :
+      ' · <span style="color:var(--warning,#d97706);">no granularity on any selected — generator will offer all types</span>');
+}
+
+function genToggleSubAct(id) {
+  const s = puState._genSelectedSubActIds = puState._genSelectedSubActIds || new Set();
+  if (s.has(id)) s.delete(id); else s.add(id);
+  // Toggle just this chip's appearance
+  document.querySelectorAll(`.chip[data-said="${id}"]`).forEach(el => {
+    const on = s.has(id);
+    el.style.background = on ? 'var(--primary)' : 'var(--bg)';
+    el.style.color = on ? '#fff' : 'inherit';
+  });
+  updateGenSubActInfo();
+  refreshGenInstancePanelsForSelection();
+  updateGenPreview();
+}
+
+function genSelectGroup(group, on) {
+  const s = puState._genSelectedSubActIds = puState._genSelectedSubActIds || new Set();
+  (puState.wbsActivities||[]).forEach(a => {
+    if (a.wbs_group === group) { if (on) s.add(a.id); else s.delete(a.id); }
+  });
+  renderGenSubActPicker();
+  refreshGenInstancePanelsForSelection();
+  updateGenPreview();
+}
+
+function genSelectActivity(group, activity, on) {
+  const s = puState._genSelectedSubActIds = puState._genSelectedSubActIds || new Set();
+  (puState.wbsActivities||[]).forEach(a => {
+    if (a.wbs_group === group && a.wbs_activity === activity) {
+      if (on) s.add(a.id); else s.delete(a.id);
+    }
+  });
+  renderGenSubActPicker();
+  refreshGenInstancePanelsForSelection();
+  updateGenPreview();
+}
+
+// Show instance panels for the UNION of granularity types across all selected sub-activities.
+function refreshGenInstancePanelsForSelection() {
+  const selectedIds = puState._genSelectedSubActIds || new Set();
+  if (!selectedIds.size) { document.getElementById('gen_instance_panels').innerHTML = ''; return; }
+  const granSet = new Set();
+  let anySubActHasNoGran = false;
+  (puState.wbsActivities||[]).forEach(a => {
+    if (!selectedIds.has(a.id)) return;
+    const g = a.granularity_type_code;
+    if (!Array.isArray(g) || !g.length) { anySubActHasNoGran = true; return; }
+    g.forEach(c => granSet.add(c));
+  });
+  // If any selected sub-act has no granularity, offer ALL types (fallback behaviour)
+  const granCodes = anySubActHasNoGran && !granSet.size
+    ? (puState.wbsLocTypes||[]).map(t=>t.type_code)
+    : [...granSet];
+  renderGenInstancePanels(granCodes);
 }
 
 function renderGenChip(val, wrapId) {
@@ -16561,36 +17009,32 @@ function toggleGenChip(el, wrapId) {
 }
 
 function onGenSubActChange() {
-  const id = document.getElementById('gen_subact')?.value;
-  const a  = (puState.wbsActivities||[]).find(x=>x.id===id);
-  const info = document.getElementById('gen_subact_info');
-  let granCodes = Array.isArray(a?.granularity_type_code) ? a.granularity_type_code : [];
-  // Fallback: if no granularity, offer ALL types
-  if (!granCodes.length && a) granCodes = (puState.wbsLocTypes||[]).map(t=>t.type_code);
-
-  if (info && a) {
-    const names = granCodes.map(c => (puState.wbsLocTypes||[]).find(t=>t.type_code===c)?.type_name || c);
-    info.innerHTML = a && Array.isArray(a.granularity_type_code) && a.granularity_type_code.length
-      ? `Tracks at: <strong>${names.map(esc).join(' + ')}</strong>`
-      : `<span style="color:var(--warning,#d97706);">⚠ No granularity set — generator offering all location types.</span>`;
-  } else if (info) info.innerHTML='';
-
-  renderGenInstancePanels(granCodes);
+  // Legacy single-select handler — no longer used; selection is via chip picker.
+  refreshGenInstancePanelsForSelection();
   updateGenPreview();
 }
 
 function renderGenInstancePanels(granCodes) {
   const c = document.getElementById('gen_instance_panels'); if (!c) return;
   if (!granCodes.length) { c.innerHTML=''; return; }
+  // Preserve any previously-selected instances when re-rendering
+  const prevSel = {};
+  c.querySelectorAll('[id^="gen_inst_"]').forEach(d => {
+    try { prevSel[d.dataset.typecode] = JSON.parse(d.dataset.selected||'[]'); } catch(e){}
+  });
   c.innerHTML = '<label style="font-weight:600;font-size:12px;display:block;margin-bottom:8px;">Instances (multi-select per type)</label>' +
     granCodes.map(code => {
       const t = (puState.wbsLocTypes||[]).find(x=>x.type_code===code);
       if (!t) return '';
       const insts = (puState.wbsLocInstances||[]).filter(i => i.type_code === code);
+      const prev = new Set(prevSel[code] || []);
       const chipsHTML = insts.length ? insts.map(i => {
         const tip = i.level_restriction?.length ? ` (only: ${i.level_restriction.join(',')})` : '';
-        return `<span class="chip" data-val="${esc(i.instance_label + tip)}" onclick="toggleGenChip(this,'gen_inst_${esc(code)}')"
-          style="cursor:pointer;padding:5px 10px;border:1px solid var(--border);border-radius:14px;font-size:11px;background:var(--bg);">${esc(i.instance_label)}${esc(tip)}</span>`;
+        const val = i.instance_label + tip;
+        const on = prev.has(val);
+        return `<span class="chip" data-val="${esc(val)}" onclick="toggleGenChip(this,'gen_inst_${esc(code)}')"
+          style="cursor:pointer;padding:5px 10px;border:1px solid var(--border);border-radius:14px;font-size:11px;
+                 background:${on?'var(--primary)':'var(--bg)'};color:${on?'#fff':'inherit'};">${esc(i.instance_label)}${esc(tip)}</span>`;
       }).join('') : '<span class="muted" style="font-size:11px;">No instances of this type defined.</span>';
       return `<div style="margin-bottom:10px;padding:10px;border:1px solid var(--border);border-radius:6px;background:var(--input-bg);">
         <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:6px;">
@@ -16600,7 +17044,7 @@ function renderGenInstancePanels(granCodes) {
             <button class="btn btn-ghost btn-sm" onclick="genSelectAllChipsIn('gen_inst_${esc(code)}',false)">Clear</button>
           </div>
         </div>
-        <div id="gen_inst_${esc(code)}" class="chip-multi" data-selected="[]" data-typecode="${esc(code)}"
+        <div id="gen_inst_${esc(code)}" class="chip-multi" data-selected='${esc(JSON.stringify([...prev]))}' data-typecode="${esc(code)}"
              style="display:flex;flex-wrap:wrap;gap:6px;background:var(--bg);padding:6px;border-radius:4px;border:1px solid var(--border);">
           ${chipsHTML}
         </div>
@@ -16632,15 +17076,15 @@ function genSelectLevelKind(kind) {
 }
 
 function genComputeCombinations() {
-  const a = (puState.wbsActivities||[]).find(x=>x.id===document.getElementById('gen_subact')?.value);
-  if (!a) return { combos:[], a:null };
+  const selectedIds = puState._genSelectedSubActIds || new Set();
+  if (!selectedIds.size) return { combos:[], breakdown:{}, selectedSubActs:[] };
 
   const blocks = [...getChipSet('gen_blocks_chips')];
-  if (!blocks.length) return { combos:[], a };
+  if (!blocks.length) return { combos:[], breakdown:{}, selectedSubActs:[] };
 
   const selLevels = [...getChipSet('gen_levels_chips')];
 
-  // Collect instances grouped by type — from the rendered instance panels
+  // Read selected instances per type from rendered panels
   const panelDivs = [...document.querySelectorAll('#gen_instance_panels [id^="gen_inst_"]')];
   const stripHint = s => s.replace(/\s*\(only:[^)]*\)\s*$/, '');
   const instByType = {};
@@ -16650,52 +17094,77 @@ function genComputeCombinations() {
     if (sel.length) instByType[code] = sel;
   });
 
+  // Pre-build instance lookup for restriction enforcement
+  const lookupByTypeLabel = {}; // typeCode -> { label -> instObj }
+  (puState.wbsLocInstances||[]).forEach(i => {
+    lookupByTypeLabel[i.type_code] = lookupByTypeLabel[i.type_code] || {};
+    lookupByTypeLabel[i.type_code][i.instance_label] = i;
+  });
+
   const combos = [];
-  // For each granularity type with selected instances → produce its combos
-  const granCodes = Object.keys(instByType);
-  if (!granCodes.length) {
-    // No instance selected anywhere — at least produce block × level rows (single-style)
-    if (!selLevels.length) {
-      blocks.forEach(blk => combos.push(buildCombo(blk, a, '', '', '{level}')));
-    } else {
-      blocks.forEach(blk => selLevels.forEach(lvl => combos.push(buildCombo(blk, a, lvl, '', '{level}'))));
-    }
-    return { combos, a };
-  }
+  const breakdown = {};
+  const selectedSubActs = (puState.wbsActivities||[]).filter(a => selectedIds.has(a.id));
 
-  granCodes.forEach(code => {
-    const t = (puState.wbsLocTypes||[]).find(x=>x.type_code===code);
-    if (!t) return;
-    const fmt = t.label_format || '{level}-{instance}';
-    const instances = instByType[code];
-    // look up instance objects for restriction enforcement
-    const lookupByLabel = {};
-    (puState.wbsLocInstances||[]).forEach(i => { if (i.type_code===code) lookupByLabel[i.instance_label]=i; });
+  selectedSubActs.forEach(a => {
+    const subActKey = `${a.wbs_group} › ${a.wbs_activity} › ${a.wbs_sub_activity}`;
+    breakdown[subActKey] = 0;
+    let granCodes = Array.isArray(a.granularity_type_code) ? a.granularity_type_code : [];
+    if (!granCodes.length) granCodes = (puState.wbsLocTypes||[]).map(t=>t.type_code); // fallback
 
-    if (t.instance_scope === 'vertical') {
-      blocks.forEach(blk => {
-        instances.forEach(lbl => {
-          const inst = lookupByLabel[lbl]; if (!inst) return;
-          if (inst.block_restriction?.length && !inst.block_restriction.includes(blk)) return;
-          combos.push(buildCombo(blk, a, '', lbl, fmt));
+    // Filter to types the user actually has instances selected for
+    const usableTypes = granCodes.filter(c => instByType[c] && instByType[c].length);
+
+    if (!usableTypes.length) {
+      // No instance picks intersect this sub-activity's granularity.
+      // Emit block × level rows only (or just block rows if no levels picked).
+      if (!selLevels.length) {
+        blocks.forEach(blk => {
+          const combo = buildCombo(blk, a, '', '', '{level}');
+          combos.push(combo); breakdown[subActKey]++;
         });
-      });
-    } else {
-      // per_floor
-      if (!selLevels.length) return;
-      blocks.forEach(blk => {
-        selLevels.forEach(lvl => {
+      } else {
+        blocks.forEach(blk => selLevels.forEach(lvl => {
+          const combo = buildCombo(blk, a, lvl, '', '{level}');
+          combos.push(combo); breakdown[subActKey]++;
+        }));
+      }
+      return;
+    }
+
+    usableTypes.forEach(code => {
+      const t = (puState.wbsLocTypes||[]).find(x=>x.type_code===code);
+      if (!t) return;
+      const fmt = t.label_format || '{level}-{instance}';
+      const instances = instByType[code];
+      const lookup = lookupByTypeLabel[code] || {};
+
+      if (t.instance_scope === 'vertical') {
+        blocks.forEach(blk => {
           instances.forEach(lbl => {
-            const inst = lookupByLabel[lbl]; if (!inst) return;
-            if (inst.level_restriction?.length && !inst.level_restriction.includes(lvl)) return;
+            const inst = lookup[lbl]; if (!inst) return;
             if (inst.block_restriction?.length && !inst.block_restriction.includes(blk)) return;
-            combos.push(buildCombo(blk, a, lvl, lbl, fmt));
+            combos.push(buildCombo(blk, a, '', lbl, fmt));
+            breakdown[subActKey]++;
           });
         });
-      });
-    }
+      } else {
+        if (!selLevels.length) return;
+        blocks.forEach(blk => {
+          selLevels.forEach(lvl => {
+            instances.forEach(lbl => {
+              const inst = lookup[lbl]; if (!inst) return;
+              if (inst.level_restriction?.length && !inst.level_restriction.includes(lvl)) return;
+              if (inst.block_restriction?.length && !inst.block_restriction.includes(blk)) return;
+              combos.push(buildCombo(blk, a, lvl, lbl, fmt));
+              breakdown[subActKey]++;
+            });
+          });
+        });
+      }
+    });
   });
-  return { combos, a };
+
+  return { combos, breakdown, selectedSubActs };
 }
 
 function buildCombo(block, a, level, instance, fmt) {
@@ -16714,12 +17183,16 @@ function buildCombo(block, a, level, instance, fmt) {
 }
 
 function updateGenPreview() {
-  const { combos, a } = genComputeCombinations();
+  const { combos, breakdown, selectedSubActs } = genComputeCombinations();
   const sum  = document.getElementById('gen_preview_summary');
   const list = document.getElementById('gen_preview_list');
   if (!sum || !list) return;
 
-  if (!a) { sum.innerHTML = 'Pick a sub-activity to start.'; list.innerHTML=''; return; }
+  if (!selectedSubActs.length) {
+    sum.innerHTML = 'Pick one or more sub-activities to start.';
+    list.innerHTML='';
+    return;
+  }
   if (!combos.length) {
     sum.innerHTML = '<span style="color:var(--danger);">No combinations yet — pick blocks, levels, and instances.</span>';
     list.innerHTML=''; return;
@@ -16727,9 +17200,25 @@ function updateGenPreview() {
   const existKeys = new Set((puState.wbsList||[]).map(w => keyOf(w)));
   const dupCount  = combos.filter(c => existKeys.has(keyOf(c))).length;
   const newCount  = combos.length - dupCount;
-  sum.innerHTML = `Will generate <strong>${combos.length}</strong> combination(s) — `+
+
+  // Build per-sub-activity new/dup breakdown
+  const subActStats = {};
+  Object.keys(breakdown).forEach(k => subActStats[k] = { total: breakdown[k], dup: 0, fresh: 0 });
+  combos.forEach(c => {
+    const k = `${c.wbs_group} › ${c.wbs_activity} › ${c.wbs_sub_activity}`;
+    if (!subActStats[k]) subActStats[k] = { total: 0, dup: 0, fresh: 0 };
+    if (existKeys.has(keyOf(c))) subActStats[k].dup++; else subActStats[k].fresh++;
+  });
+
+  const breakdownHTML = Object.entries(subActStats).map(([k,s]) =>
+    `<div style="font-size:11px;padding:2px 0;">• <strong>${esc(k)}</strong> — ${s.total} total, <span style="color:var(--success);">${s.fresh} new</span>${s.dup?`, <span class="muted">${s.dup} skipped</span>`:''}</div>`
+  ).join('');
+
+  sum.innerHTML = `Will generate <strong>${combos.length}</strong> WBS element(s) across <strong>${selectedSubActs.length}</strong> sub-activit${selectedSubActs.length===1?'y':'ies'} — `+
     `<span style="color:var(--success);">${newCount} new</span>, `+
-    `<span style="color:var(--muted);">${dupCount} already exist (skipped)</span>.`;
+    `<span style="color:var(--muted);">${dupCount} already exist (skipped)</span>.` +
+    `<div style="margin-top:8px;padding-top:8px;border-top:1px dashed var(--border);">${breakdownHTML}</div>`;
+
   const limit = 200;
   const shown = combos.slice(0, limit);
   list.innerHTML = shown.map(c => {
@@ -16811,7 +17300,7 @@ function applyRoleTabVisibility() {
     'ho':       ['Procurement','Planning/ QS','Project Manager','Site Manager','Admin'],
     'wo':       ['Procurement','Planning/ QS','Project Manager','Site Manager','Admin'],
     'payments': ['Planning/ QS','Project Manager','Admin'],
-    'masters':  ['Planning/ QS','Admin'],
+    'masters':  ['Procurement','Store Executive','Site Manager','Planning/ QS','Project Manager','Admin'],
     'purchase': ['Procurement','Store Executive','Site Manager','Planning/ QS','Project Manager','Admin'],
     'users':    ['Admin'],
   };
