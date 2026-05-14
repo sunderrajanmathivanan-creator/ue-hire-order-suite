@@ -1931,13 +1931,7 @@ input[type="number"] {
             <option value="">All Groups</option>
           </select>
         </div>
-        <div class="table-wrap">
-          <table><thead><tr>
-            <th>Group</th><th>Activity</th><th>Sub Activity</th><th>Granularity</th><th style="width:160px;">Actions</th>
-          </tr></thead>
-          <tbody id="wam_list"><tr><td colspan="5" class="center muted">No sub-activities yet.</td></tr></tbody>
-          </table>
-        </div>
+        <div id="wam_tree_wrap"></div>
       </div>
     </div>
 
@@ -15943,6 +15937,9 @@ async function bulkDeleteWBSSelected() {
   const cbs   = [...document.querySelectorAll('.wbs-sel-cb:checked')];
   const codes = cbs.map(cb => cb.dataset.code).filter(Boolean);
   if (!codes.length) { toast('No elements selected','error'); return; }
+  // Stash codes on window so the confirm button can access them without
+  // embedding a JSON array inside an HTML attribute (which breaks on double-quotes).
+  window._pendingBulkWBSCodes = codes;
   openModal(`
     <h3>Delete ${codes.length} WBS Element${codes.length>1?'s':''}</h3>
     <div style="margin:16px 0;font-size:14px;">
@@ -15951,13 +15948,16 @@ async function bulkDeleteWBSSelected() {
       <span class="muted" style="font-size:11px;">Sample: ${codes.slice(0,5).join(', ')}${codes.length>5?', …':''}</span>
     </div>
     <div class="actions-row">
-      <button class="btn btn-danger" onclick="confirmBulkDeleteWBS(${JSON.stringify(codes).replace(/'/g,'&apos;')})">Yes, Delete ${codes.length}</button>
+      <button class="btn btn-danger" onclick="confirmBulkDeleteWBS()">Yes, Delete ${codes.length}</button>
       <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
     </div>
   `);
 }
 
-async function confirmBulkDeleteWBS(codes) {
+async function confirmBulkDeleteWBS() {
+  const codes = window._pendingBulkWBSCodes || [];
+  if (!codes.length) { toast('No codes to delete','error'); return; }
+  window._pendingBulkWBSCodes = [];
   closeModal();
   pbShow('Deleting '+codes.length+' WBS elements…');
   try {
@@ -15970,7 +15970,6 @@ async function confirmBulkDeleteWBS(codes) {
     flashSuccess('Deleted '+codes.length+' WBS element(s)');
     await loadWBSMaster();
     renderWBSMaster();
-    // Hide the bulk button since selection is now stale
     const btn = document.getElementById('wbs_bulk_delete_btn');
     if (btn) btn.style.display = 'none';
   } catch(e) { toast('Delete error: '+e.message,'error'); }
@@ -16230,36 +16229,158 @@ function refreshActivityGroupDatalists() {
 }
 
 function renderWBSActivities() {
-  const tbody = document.getElementById('wam_list'); if (!tbody) return;
-  const q  = (document.getElementById('wam_search')?.value||'').toLowerCase();
-  const fG = document.getElementById('wam_filter_group')?.value||'';
+  const wrap = document.getElementById('wam_tree_wrap'); if (!wrap) return;
+  const q    = (document.getElementById('wam_search')?.value||'').toLowerCase();
+  const fG   = document.getElementById('wam_filter_group')?.value||'';
+  const admin = wbsIsAdmin();
+  const typeName = (code) => (puState.wbsLocTypes||[]).find(t=>t.type_code===code)?.type_name || code;
+
   let rows = puState.wbsActivities||[];
-  if (fG) rows = rows.filter(r=>r.wbs_group===fG);
+  if (fG) rows = rows.filter(r => r.wbs_group===fG);
   if (q)  rows = rows.filter(r =>
     (r.wbs_group||'').toLowerCase().includes(q) ||
     (r.wbs_activity||'').toLowerCase().includes(q) ||
     (r.wbs_sub_activity||'').toLowerCase().includes(q)
   );
-  if (!rows.length) { tbody.innerHTML='<tr><td colspan="5" class="center muted">No sub-activities.</td></tr>'; return; }
-  const admin = wbsIsAdmin();
-  const typeName = (code) => (puState.wbsLocTypes||[]).find(t=>t.type_code===code)?.type_name || code;
-  tbody.innerHTML = rows.map(r => {
-    const gCodes = Array.isArray(r.granularity_type_code) ? r.granularity_type_code : [];
-    const gPills = gCodes.length
-      ? gCodes.map(c=>`<span style="display:inline-block;background:var(--input-bg);border:1px solid var(--border);border-radius:10px;padding:1px 8px;margin:1px;font-size:10px;">${esc(typeName(c))}</span>`).join('')
-      : '<span class="muted" style="font-size:11px;">—</span>';
+
+  if (!rows.length) {
+    wrap.innerHTML = '<div class="muted" style="padding:16px;font-size:13px;">No sub-activities found.</div>';
+    return;
+  }
+
+  // Build 2-level tree: Group -> Activity -> [sub-activity rows]
+  const tree = {};
+  rows.forEach(r => {
+    const grp = r.wbs_group    || '\u2014';
+    const act = r.wbs_activity || '\u2014';
+    tree[grp]      = tree[grp]      || {};
+    tree[grp][act] = tree[grp][act] || [];
+    tree[grp][act].push(r);
+  });
+
+  const searching = !!(q || fG);
+  const openAttr  = searching ? 'open' : '';
+
+  const branchCount = (n) =>
+    `<span style="display:inline-block;background:var(--input-bg);border:1px solid var(--border);` +
+    `border-radius:10px;padding:1px 7px;margin-left:6px;font-size:10px;color:var(--muted);">${n}</span>`;
+
+  const groupNames = Object.keys(tree).sort();
+  const html = groupNames.map(grp => {
+    const acts = tree[grp];
+    const grpTotal = Object.values(acts).reduce((s,a) => s + a.length, 0);
+    const grpIds   = rows.filter(r => r.wbs_group===grp).map(r => r.id);
+    const actNames = Object.keys(acts).sort();
+
+    const actHtml = actNames.map(act => {
+      const leaves = acts[act];
+      const actIds = leaves.map(r => r.id);
+
+      const leafRows = leaves.map(r => {
+        const gCodes = Array.isArray(r.granularity_type_code) ? r.granularity_type_code : [];
+        const gPills = gCodes.length
+          ? gCodes.map(c =>
+              `<span style="display:inline-block;background:var(--input-bg);border:1px solid var(--border);` +
+              `border-radius:10px;padding:1px 8px;margin:1px;font-size:10px;">${esc(typeName(c))}</span>`
+            ).join('')
+          : '<span class="muted" style="font-size:11px;">\u2014</span>';
+        return `<tr>
+          <td style="padding:5px 10px;font-weight:600;font-size:12px;">${esc(r.wbs_sub_activity||'\u2014')}</td>
+          <td style="padding:5px 10px;">${gPills}</td>
+          ${admin ? `<td style="padding:5px 10px;white-space:nowrap;">
+            <button class="btn btn-ghost btn-sm" onclick="editWBSActivity('${esc(r.id)}')">Edit</button>
+            <button class="btn btn-danger btn-sm" onclick="deleteWBSActivity('${esc(r.id)}')">Delete</button>
+          </td>` : ''}
+        </tr>`;
+      }).join('');
+
+      const actBranchBtn = admin
+        ? `<button class="btn btn-danger btn-sm" style="padding:2px 7px;font-size:10px;margin-left:6px;"
+             onclick="event.stopPropagation();wamBranchDelete(window._wamIds['act_${grp}_${act}'],${leaves.length},'${esc(act)}')"
+             title="Delete all ${leaves.length} sub-activities in this activity">Delete branch</button>`
+        : '';
+
+      return `
+      <details ${openAttr} class="wbs-acc" style="margin-bottom:3px;border:1px solid var(--border);border-radius:4px;background:var(--bg);">
+        <summary style="cursor:pointer;padding:6px 10px;font-size:12px;font-weight:500;display:flex;align-items:center;justify-content:space-between;">
+          <span>&#128295; ${esc(act)} ${branchCount(leaves.length)}</span>
+          <span>${actBranchBtn}</span>
+        </summary>
+        <div style="padding:4px 8px 8px 14px;">
+          <table style="width:100%;font-size:12px;">
+            <thead><tr style="background:var(--bg);">
+              <th style="text-align:left;padding:4px 8px;">Sub-Activity</th>
+              <th style="text-align:left;padding:4px 8px;">Granularity</th>
+              ${admin ? '<th style="width:160px;"></th>' : ''}
+            </tr></thead>
+            <tbody>${leafRows}</tbody>
+          </table>
+        </div>
+      </details>`;
+    }).join('');
+
+    const grpBranchBtn = admin
+      ? `<button class="btn btn-danger btn-sm" style="padding:2px 7px;font-size:10px;margin-left:6px;"
+           onclick="event.stopPropagation();wamBranchDelete(window._wamIds['grp_${grp}'],${grpTotal},'${esc(grp)}')"
+           title="Delete all ${grpTotal} sub-activities in this group">Delete branch</button>`
+      : '';
+
     return `
-    <tr>
-      <td>${esc(r.wbs_group||'—')}</td>
-      <td>${esc(r.wbs_activity||'—')}</td>
-      <td><strong>${esc(r.wbs_sub_activity||'—')}</strong></td>
-      <td>${gPills}</td>
-      <td>${admin?`
-        <button class="btn btn-ghost btn-sm" onclick="editWBSActivity('${esc(r.id)}')">Edit</button>
-        <button class="btn btn-danger btn-sm" onclick="deleteWBSActivity('${esc(r.id)}')">Delete</button>`:''}
-      </td>
-    </tr>`;
+    <details ${openAttr} class="wbs-acc" style="margin-bottom:6px;border:1px solid var(--border);border-radius:5px;background:var(--bg);">
+      <summary style="cursor:pointer;padding:10px 12px;font-weight:700;font-size:13px;display:flex;align-items:center;justify-content:space-between;">
+        <span>&#128193; ${esc(grp)} ${branchCount(grpTotal)}</span>
+        <span>${grpBranchBtn}</span>
+      </summary>
+      <div style="padding:6px 10px 10px 22px;">${actHtml}</div>
+    </details>`;
   }).join('');
+
+  // Store branch ID arrays on window so branch-delete buttons can access them
+  // without embedding arrays in HTML onclick attributes (double-quote breakage).
+  window._wamIds = window._wamIds || {};
+  groupNames.forEach(grp => {
+    const grpIds = rows.filter(r => r.wbs_group===grp).map(r => r.id);
+    window._wamIds['grp_'+grp] = grpIds;
+    Object.keys(tree[grp]).forEach(act => {
+      window._wamIds['act_'+grp+'_'+act] = tree[grp][act].map(r => r.id);
+    });
+  });
+
+  wrap.innerHTML = html;
+}
+
+// Branch delete for sub-activities
+function wamBranchDelete(ids, count, label) {
+  if (!ids || !ids.length) { toast('No items to delete','error'); return; }
+  window._pendingWamBranchIds = ids;
+  openModal(
+    `<h3>Delete Branch: ${esc(label)}</h3>
+    <div style="margin:16px 0;font-size:14px;">
+      Delete <strong>${count}</strong> sub-activit${count===1?'y':'ies'} in this branch?<br>
+      <span style="color:var(--danger);font-size:12px;">This cannot be undone.</span>
+    </div>
+    <div class="actions-row">
+      <button class="btn btn-danger" onclick="confirmWamBranchDelete()">Yes, Delete ${count}</button>
+      <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+    </div>`
+  );
+}
+
+async function confirmWamBranchDelete() {
+  const ids = window._pendingWamBranchIds || [];
+  if (!ids.length) return;
+  window._pendingWamBranchIds = [];
+  closeModal();
+  pbShow('Deleting ' + ids.length + ' sub-activit' + (ids.length===1?'y':'ies') + '\u2026');
+  try {
+    for (const id of ids) {
+      const { error } = await sb.from('wbs_activity_master').update({is_active:false}).eq('id', id);
+      if (error) throw new Error(error.message);
+    }
+    flashSuccess('Deleted ' + ids.length + ' sub-activit' + (ids.length===1?'y':'ies'));
+    await loadWBSAll();
+  } catch(e) { toast('Error: ' + e.message, 'error'); }
+  finally { pbDone(); }
 }
 
 async function saveWBSActivity() {
