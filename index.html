@@ -176,7 +176,7 @@ td input, td select { padding: 5px 6px; background: var(--input-bg); color: var(
   .print-doc { display: block !important; padding: 0 !important; }
 
   /* Top block */
-  .pd-top { display: flex !important; flex-direction: column !important; border-bottom: 1.5pt solid #1e3a5f !important; padding-bottom: 6pt !important; margin-bottom: 8pt !important; }
+  .pd-top { display: flex !important; flex-direction: row !important; justify-content: space-between !important; align-items: flex-start !important; border-bottom: 1.5pt solid #1e3a5f !important; padding-bottom: 6pt !important; margin-bottom: 8pt !important; }
   .pd-title-row { display: flex !important; justify-content: space-between !important; align-items: baseline !important; margin-bottom: 3pt !important; }
   .pd-co-name { font-size: 14pt !important; font-weight: 700 !important; color: #1e3a5f !important; }
   .pd-doc-title { font-size: 13pt !important; font-weight: 700 !important; color: #1e3a5f !important; }
@@ -390,19 +390,25 @@ th.sortable.desc::after { content:' ↓'; opacity:.9; }
 .pdo-close { position:fixed; top:14px; right:130px; z-index:99991; background:#64748b; color:#fff; border:none; border-radius:6px; padding:8px 20px; cursor:pointer; font-size:13px; font-family:inherit; }
 .pdo-print { position:fixed; top:14px; right:20px; z-index:99991; background:#16a34a; color:#fff; border:none; border-radius:6px; padding:8px 20px; cursor:pointer; font-size:13px; font-family:inherit; }
 @media print {
-  /* Hide everything except the print content div */
-  body * { visibility:hidden !important; }
-  #printOverlayContent, #printOverlayContent * { visibility:visible !important; }
-  #printOverlayContent {
-    position:absolute !important;
-    top:0 !important; left:0 !important;
+  /* When overlay is active: hide entire app, show only printOverlayContent */
+  body.printing > *:not(#printOverlay) { display:none !important; }
+  body.printing #printOverlay {
+    display:block !important;
+    position:static !important;
+    overflow:visible !important;
+    padding:0 !important;
+    background:#fff !important;
+  }
+  body.printing #printOverlayContent {
+    display:block !important;
+    position:static !important;
     width:100% !important;
-    height:auto !important;
     overflow:visible !important;
     padding:0 !important;
     margin:0 !important;
   }
-  .pdo-close, .pdo-print { display:none !important; visibility:hidden !important; }
+  body.printing .pdo-close,
+  body.printing .pdo-print { display:none !important; }
 }
 
 /* Hide native increment/decrement spinner arrows on all number inputs (global).
@@ -3487,15 +3493,15 @@ async function apiLoadMasters() {
   if (hit) { Object.assign(state.masters, hit); return { ok: true }; }
   pbShow('Loading masters\u2026');
   try {
-    const [v, a, b, l] = await Promise.all([
+    const [v, a, b, l, ctr] = await Promise.all([
       sb.from('ho_vendors').select('*').order('vendor_name'),
       sb.from('ho_activities').select('*').order('activity_description'),
       sb.from('ho_boq_items').select('*').order('level').order('boq_name'),
-      sb.from('ho_locations').select('*').order('category').order('location_name')
+      sb.from('ho_locations').select('*').order('category').order('location_name'),
+      sb.from('wo_contractors').select('*').eq('is_active',true).order('contractor_name'),
     ]);
     state.masters.vendors          = (v.data||[]).map(mapVendor);
-    // Load contractors
-    const ctr = await sb.from('wo_contractors').select('*').eq('is_active',true).order('contractor_name');
+    // contractors loaded in parallel above
     state.masters.contractors      = (ctr.data||[]).map(r=>({
       'Contractor Code': r.contractor_code,
       'Contractor Name': r.contractor_name,
@@ -5219,12 +5225,13 @@ async function initApp() {
   });
 
   try {
-    await apiLoadMasters();
-    await apiLoadMaterials();   // load material master for Purchase module typeaheads
+    // Bug fix: all 5 startup fetches are independent — run in parallel
     await Promise.all([
-      loadHOList().catch(e  => console.error('HOList:', e)),
-      loadWOList().catch(e  => console.error('WOList:', e)),
-      loadWBSMaster().catch(e => console.error('WBSMaster:', e))  // populate puState.wbsList for MIS/MIR/HOC/WOC typeaheads
+      apiLoadMasters().catch(e  => console.error('Masters:', e)),
+      apiLoadMaterials().catch(e => console.error('Materials:', e)),
+      loadHOList().catch(e      => console.error('HOList:', e)),
+      loadWOList().catch(e      => console.error('WOList:', e)),
+      loadWBSMaster().catch(e   => console.error('WBSMaster:', e)),
     ]);
     renderAllMasters();
     // Ensure only HO Orders sub-tab visible on initial load
@@ -11813,6 +11820,232 @@ async function viewPO(poNum) {
 
 async function printPOById(poNum) { await printPO(poNum); }
 
+async function printPO(poNum) {
+  pbShow('Loading PO\u2026');
+  const [{data:h},{data:items}] = await Promise.all([
+    sb.from('pu_po_orders').select('*').eq('po_number',poNum).single(),
+    sb.from('pu_po_items').select('*').eq('po_number',poNum).order('sno'),
+  ]);
+  pbDone();
+  if(!h){ toast('PO not found','error'); return; }
+
+  const fi = function(n){ return (n||0).toLocaleString('en-IN',{minimumFractionDigits:2,maximumFractionDigits:2}); };
+
+  // Line items
+  const rows = (items||[]).map(function(it,i){
+    return '<tr>' +
+      '<td class="c">'+(it.sno||i+1)+'</td>' +
+      '<td>'+esc(it.material_name)+'</td>' +
+      '<td class="c">'+esc(it.uom)+'</td>' +
+      '<td class="r">'+fi(it.qty)+'</td>' +
+      '<td class="r">\u20b9 '+fi(it.unit_rate)+'</td>' +
+      '<td class="r">\u20b9 '+fi(it.base_amount||it.qty*it.unit_rate)+'</td>' +
+      '<td>'+esc(it.remarks||'')+'</td>' +
+    '</tr>';
+  }).join('');
+
+  // Totals block
+  const cgstPct = h.cgst_pct||((h.cgst_amount&&h.basic_value)?(h.cgst_amount/h.basic_value*100).toFixed(0):'');
+  const sgstPct = h.sgst_pct||cgstPct;
+  const igstPct = h.igst_pct||(h.igst_amount&&h.basic_value?Math.round(h.igst_amount/h.basic_value*100):'');
+  var totalsHTML = '<tr><td>Sub Total</td><td class="r">\u20b9 '+fi(h.basic_value)+'</td></tr>';
+  if(h.cgst_amount>0) totalsHTML += '<tr><td>CGST'+(cgstPct?' ('+cgstPct+'%)':'')+'</td><td class="r">\u20b9 '+fi(h.cgst_amount)+'</td></tr>';
+  if(h.sgst_amount>0) totalsHTML += '<tr><td>SGST'+(sgstPct?' ('+sgstPct+'%)':'')+'</td><td class="r">\u20b9 '+fi(h.sgst_amount)+'</td></tr>';
+  if(h.igst_amount>0) totalsHTML += '<tr><td>IGST'+(igstPct?' ('+igstPct+'%)':'')+'</td><td class="r">\u20b9 '+fi(h.igst_amount)+'</td></tr>';
+  if(h.round_off)     totalsHTML += '<tr><td>Round Off</td><td class="r">\u20b9 '+fi(h.round_off)+'</td></tr>';
+  totalsHTML += '<tr class="gtrow"><td>TOTAL</td><td class="r">\u20b9 '+fi(h.grand_total)+'</td></tr>';
+
+  // Amount in words
+  var wordsLine = '';
+  try { wordsLine = numToWordsINR(h.grand_total||0); } catch(e){}
+
+  // Meta rows — MIR/QC ref only if present
+  var metaExtra = '';
+  if(h.project)       metaExtra += '<tr><td class="l">Project</td><td>'+esc(h.project)+'</td></tr>';
+  if(h.mir_number)    metaExtra += '<tr><td class="l">MIR Ref</td><td>'+esc(h.mir_number)+'</td></tr>';
+  if(h.qc_number)     metaExtra += '<tr><td class="l">QC Ref</td><td>'+esc(h.qc_number)+'</td></tr>';
+  if(h.delivery_date) metaExtra += '<tr><td class="l">Deliver By</td><td>'+fmtDate(h.delivery_date)+'</td></tr>';
+
+  // Remarks row in footer (only if present)
+  var remarksRow = h.remarks
+    ? '<tr><td colspan="4" style="padding:6pt 8pt;border:.5pt solid #bbb;vertical-align:top;">' +
+        '<div class="footer-hdr">Comments / Special Instructions</div>' +
+        '<div class="footer-val" style="margin-top:3pt;line-height:1.6;">'+esc(h.remarks)+'</div>' +
+      '</td></tr>'
+    : '';
+
+  var vendorAddr = h.vendor_address ? esc(h.vendor_address).split('\n').join('<br>') : '';
+  var deliveryAddr = h.delivery_address
+    ? esc(h.delivery_address).split('\n').join('<br>')
+    : 'Poetry of Earth, Sy.No.199, Varthur\u2013Sarjapur Road, Opposite Vinayaka Theatre, Varthur, Bengaluru \u2013 560087';
+
+  const doc = '<!DOCTYPE html>' +
+'<html><head>' +
+'<meta charset="UTF-8">' +
+'<title>Purchase Order \u2014 '+esc(poNum)+'</title>' +
+'<style>' +
+// Page — zero margin; body handles padding for page 1;
+// page 2+ gets top margin via @page :left/:right or padding-top on a pseudo rule
+'@page { size:A4 portrait; margin:0mm; }' +
+'@page :first { margin:0mm; }' +
+'* { box-sizing:border-box; margin:0; padding:0; }' +
+'body {' +
+  'font-family:Arial,Helvetica,sans-serif; font-size:9pt; color:#111;' +
+  '-webkit-print-color-adjust:exact; print-color-adjust:exact;' +
+  'padding:25mm 15mm 20mm 15mm;' +
+'}' +
+// Subsequent pages need 30mm top — achieved by a top-margin block that repeats
+'.page-margin-top { display:block; height:30mm; }' +
+// Title row
+'.title-row { display:flex; justify-content:flex-end; align-items:flex-start; margin-bottom:10pt; }' +
+'.doc-title { font-size:20pt; font-weight:700; color:#1e3a5f; letter-spacing:1pt; }' +
+'.mt { border-collapse:collapse; margin-top:6pt; margin-left:auto; }' +
+'.mt td { padding:2.5pt 8pt; font-size:8.5pt; border:.4pt solid #bbb; }' +
+'.mt .l { font-weight:700; background:#1e3a5f; color:#fff; min-width:55pt; text-align:right; }' +
+// Address boxes
+'.addr-row { display:flex; gap:6pt; margin-bottom:10pt; }' +
+'.addr-box { flex:1; border:.5pt solid #bbb; border-radius:2pt; padding:7pt; }' +
+'.addr-hdr { font-size:7pt; font-weight:700; text-transform:uppercase; color:#1e3a5f;' +
+            'border-bottom:.5pt solid #dde; margin-bottom:5pt; padding-bottom:3pt; letter-spacing:.5pt; }' +
+'.addr-body { font-size:8.5pt; line-height:1.7; }' +
+'.addr-body strong { font-size:9pt; }' +
+// Line items table
+'table.items { width:100%; border-collapse:collapse; margin-bottom:8pt; }' +
+'table.items thead tr { background:#1e3a5f; }' +
+'table.items th { color:#fff; padding:5pt 6pt; font-size:8pt; font-weight:700; text-align:left; border:.4pt solid #2d4f7c; }' +
+'table.items th.c, table.items td.c { text-align:center; }' +
+'table.items th.r, table.items td.r { text-align:right; }' +
+'table.items td { padding:5pt 6pt; font-size:8.5pt; border:.4pt solid #ddd; vertical-align:top; }' +
+'table.items tr:nth-child(even) td { background:#f8fafc; }' +
+// Totals
+'table.totals { width:100%; border-collapse:collapse; }' +
+'table.totals td { padding:4pt 8pt; font-size:8.5pt; border:.4pt solid #ccc; }' +
+'table.totals td:first-child { font-weight:600; background:#f0f5fb; color:#1e3a5f; }' +
+'table.totals td:last-child { text-align:right; }' +
+'table.totals tr.gtrow td { font-weight:700; background:#1e3a5f; color:#fff; font-size:10pt; }' +
+'.words { font-size:7.5pt; color:#555; font-style:italic; margin-top:4pt; padding:3pt 0; border-top:.4pt solid #ddd; }' +
+// Footer
+'.footer-hdr { font-size:7pt; font-weight:700; text-transform:uppercase; color:#1e3a5f; letter-spacing:.5pt; margin-bottom:4pt; }' +
+'.footer-val { font-size:8.5pt; line-height:1.6; }' +
+'.sign-line { border-top:.5pt solid #444; padding-top:4pt; font-size:8pt; color:#333; line-height:1.7; margin-top:24pt; }' +
+// Page break rules — thead repeats, rows don't split; totals/footer stay intact
+'thead { display:table-header-group; }' +
+'tr { page-break-inside:avoid; }' +
+'.totals-wrap { page-break-inside:avoid; }' +
+'.footer-table { page-break-inside:avoid; }' +
+'.sign-wrap { page-break-inside:avoid; }' +
+// Second page top margin — pad the body on subsequent pages via @page margin
+// We use a named page approach: body padding handles p1; @page sets margin for p2+
+'@media print {' +
+  '@page { margin:30mm 15mm 20mm 15mm; }' +
+  '@page :first { margin:0mm 0mm 0mm 0mm; }' +
+  'body { padding:25mm 15mm 20mm 15mm; }' +
+'}' +
+'</style></head><body>' +
+
+'<div class="title-row">' +
+  '<div style="text-align:right;">' +
+    '<div class="doc-title">PURCHASE ORDER</div>' +
+    '<table class="mt">' +
+      '<tr><td class="l">DATE</td><td>'+fmtDate(h.po_date)+'</td></tr>' +
+      '<tr><td class="l">PO #</td><td><strong>'+esc(poNum)+'</strong></td></tr>' +
+      metaExtra +
+    '</table>' +
+  '</div>' +
+'</div>' +
+
+'<div class="addr-row">' +
+  '<div class="addr-box">' +
+    '<div class="addr-hdr">Vendor</div>' +
+    '<div class="addr-body">' +
+      '<strong>'+esc(h.vendor_name)+'</strong>' +
+      (vendorAddr ? '<br>'+vendorAddr : '') +
+      (h.vendor_gstin ? '<br>GSTIN: <strong>'+esc(h.vendor_gstin)+'</strong>' : '') +
+      (h.contact_person ? '<br>'+esc(h.contact_person) : '') +
+    '</div>' +
+  '</div>' +
+  '<div class="addr-box">' +
+    '<div class="addr-hdr">Bill To</div>' +
+    '<div class="addr-body">' +
+      '<strong>'+CO_NAME+'</strong><br>' +
+      CO_ADDR+'<br>' +
+      'GSTIN: '+CO_GSTIN +
+    '</div>' +
+  '</div>' +
+  '<div class="addr-box">' +
+    '<div class="addr-hdr">Ship To / Delivery Address</div>' +
+    '<div class="addr-body">'+deliveryAddr+'</div>' +
+  '</div>' +
+'</div>' +
+
+'<table class="items">' +
+  '<thead><tr>' +
+    '<th class="c" style="width:28pt">ITEM #</th>' +
+    '<th>DESCRIPTION</th>' +
+    '<th class="c" style="width:38pt">UOM</th>' +
+    '<th class="r" style="width:45pt">QTY</th>' +
+    '<th class="r" style="width:58pt">UNIT PRICE</th>' +
+    '<th class="r" style="width:70pt">SUB-TOTAL (\u20b9)</th>' +
+    '<th style="width:70pt">REMARKS</th>' +
+  '</tr></thead>' +
+  '<tbody>'+rows+'</tbody>' +
+'</table>' +
+
+'<div class="totals-wrap" style="display:flex;justify-content:flex-end;margin-top:8pt;">' +
+  '<div style="width:230pt;">' +
+    '<table class="totals">'+totalsHTML+'</table>' +
+    (wordsLine ? '<div class="words">'+wordsLine+'</div>' : '') +
+  '</div>' +
+'</div>' +
+
+'<table class="footer-table" style="width:100%;border-collapse:collapse;margin-top:10pt;border:.5pt solid #bbb;">' +
+  '<tr>' +
+    '<td style="width:25%;padding:6pt 8pt;border:.5pt solid #bbb;vertical-align:top;">' +
+      '<div class="footer-hdr">Payment Terms</div>' +
+      '<div class="footer-val" style="margin-top:3pt;">'+esc(h.payment_terms||'\u2014')+'</div>' +
+    '</td>' +
+    '<td style="width:25%;padding:6pt 8pt;border:.5pt solid #bbb;vertical-align:top;">' +
+      '<div class="footer-hdr">Contact Person</div>' +
+      '<div class="footer-val" style="margin-top:3pt;">'+esc(h.contact_person||'\u2014')+'</div>' +
+    '</td>' +
+    '<td style="width:20%;padding:6pt 8pt;border:.5pt solid #bbb;vertical-align:top;">' +
+      '<div class="footer-hdr">Transportation</div>' +
+      '<div class="footer-val" style="margin-top:3pt;">'+esc(h.transport||'\u2014')+'</div>' +
+    '</td>' +
+    '<td style="width:30%;padding:6pt 8pt;border:.5pt solid #bbb;vertical-align:top;">' +
+      '<div class="footer-hdr">Prepared By</div>' +
+      '<div class="footer-val" style="margin-top:3pt;">'+esc(h.prepared_by||'\u2014')+'</div>' +
+    '</td>' +
+  '</tr>' +
+  remarksRow +
+'</table>' +
+
+'<div class="sign-wrap" style="display:flex;justify-content:flex-end;margin-top:20pt;">' +
+  '<div class="sign-line">For '+CO_NAME+'<br><br><br>Authorised Signatory</div>' +
+'</div>' +
+
+'</body></html>';
+
+  // Print via hidden iframe — most reliable cross-browser approach
+  const iframe = document.createElement('iframe');
+  iframe.style.cssText = 'position:fixed;top:-9999px;left:-9999px;width:0;height:0;border:0;';
+  document.body.appendChild(iframe);
+  iframe.contentDocument.open();
+  iframe.contentDocument.write(doc);
+  iframe.contentDocument.close();
+  iframe.onload = function() {
+    setTimeout(function() {
+      iframe.contentWindow.focus();
+      iframe.contentWindow.print();
+      setTimeout(function() {
+        if(document.body.contains(iframe)) document.body.removeChild(iframe);
+      }, 3000);
+    }, 500);
+  };
+}
+
+
+
 // ── Shared helper: recompute MIR header status & item statuses after PO termination ──
 // Called after a PO is Cancelled or Short-Closed. Walks the MIR's POs and items,
 // flips MIR.status to 'Cancelled' if every PO is Cancelled and no other procurement is active.
@@ -13235,15 +13468,32 @@ async function saveCashPOB() {
 
 async function approvePOB(billNum) {
   if(!hasPerm('canApprovePOB')){toast('Only PM can approve bills','error');return;}
-  await sb.from('pu_po_bills').update({
-    status:'Unpaid', approved_by:state.userName, approved_by_id:state.userId, approved_at:new Date().toISOString()
-  }).eq('bill_number',billNum);
-  const {data:bill}=await sb.from('pu_po_bills').select('grn_numbers').eq('bill_number',billNum).single();
-  if(bill?.grn_numbers){
-    const gnums=bill.grn_numbers.split(',').map(s=>s.trim()).filter(Boolean);
-    await sb.from('pu_grn').update({status:'Billed'}).in('grn_number',gnums);
-  }
-  flashSuccess('POB '+billNum+' Approved — available in PRR'); loadPOBList();
+  pbShow('Approving POB\u2026');
+  try {
+    const {error:billErr} = await sb.from('pu_po_bills').update({
+      status:'Unpaid', approved_by:state.userName, approved_by_id:state.userId, approved_at:new Date().toISOString()
+    }).eq('bill_number',billNum);
+    if(billErr) throw new Error('Bill update failed: '+billErr.message);
+    const {data:bill, error:readErr} = await sb.from('pu_po_bills').select('grn_numbers').eq('bill_number',billNum).single();
+    if(readErr) throw new Error('Could not read bill after approval: '+readErr.message);
+    if(bill?.grn_numbers){
+      const gnums = bill.grn_numbers.split(',').map(function(s){return s.trim();}).filter(Boolean);
+      if(gnums.length){
+        console.log('[approvePOB] Updating GRNs to Billed:', gnums);
+        const {error:grnErr} = await sb.from('pu_grn').update({status:'Billed'}).in('grn_number',gnums);
+        if(grnErr){
+          console.error('[approvePOB] GRN update blocked:', grnErr);
+          throw new Error('GRN status update failed: '+grnErr.message);
+        }
+        console.log('[approvePOB] GRN Billed update succeeded for:', gnums);
+      }
+    }
+    flashSuccess('POB '+billNum+' Approved \u2014 available in PRR');
+    loadPOBList();
+  } catch(e){
+    toast('Approval error: '+e.message,'error');
+    console.error('approvePOB error:', e);
+  } finally { pbDone(); }
 }
 
 async function viewPOB(billNum) {
@@ -14089,8 +14339,8 @@ function openPrintOverlay(content) {
     ov.id = 'printOverlay';
     ov.className = 'print-doc-overlay';
     ov.innerHTML = `
-      <button class="pdo-close" onclick="closePrintOverlay()">✕ Close</button>
-      <button class="pdo-print" onclick="window.print()">🖨 Print</button>
+      <button class="pdo-close" onclick="closePrintOverlay()">&#x2715; Close</button>
+      <button class="pdo-print" onclick="triggerPrint()">&#x1F5A8; Print</button>
       <div id="printOverlayContent"></div>`;
     document.body.appendChild(ov);
   }
@@ -14099,6 +14349,21 @@ function openPrintOverlay(content) {
 }
 function closePrintOverlay() {
   document.getElementById('printOverlay')?.classList.remove('show');
+  document.body.classList.remove('printing');
+}
+function triggerPrint() {
+  document.body.classList.add('printing');
+  setTimeout(function() {
+    window.print();
+    // Remove class after print dialog closes (afterprint fires in modern browsers)
+    var cleanup = function() {
+      document.body.classList.remove('printing');
+      window.removeEventListener('afterprint', cleanup);
+    };
+    window.addEventListener('afterprint', cleanup);
+    // Fallback: remove after 3s in case afterprint doesn't fire
+    setTimeout(function() { document.body.classList.remove('printing'); }, 3000);
+  }, 80);
 }
 
 const CO_NAME = 'URBAN EXCELLENCE LLP';
@@ -14126,11 +14391,12 @@ function printStyles() {
     table.items th.c, table.items td.c{text-align:center;}
     table.items td{font-size:8.5pt;padding:4pt 6pt;border-bottom:0.5pt solid #eee;}
     table.items tr:nth-child(even) td{background:#f8fafc;}
-    .totals{margin-left:auto;width:260pt;border-collapse:collapse;margin-bottom:10pt;}
+    .totals{margin-left:auto;width:260pt;border-collapse:collapse;margin-bottom:10pt;break-inside:avoid;page-break-inside:avoid;}
+    .totals-wrap{display:flex;justify-content:flex-end;break-inside:avoid;page-break-inside:avoid;}
     .totals td{padding:3pt 6pt;font-size:8.5pt;border:0.5pt solid #ddd;}
     .totals td:first-child{font-weight:600;background:#f0f5fb;}
     .totals tr.grand td{font-weight:700;background:#1e3a5f;color:#fff;font-size:10pt;}
-    .footer-row{display:flex;gap:12pt;margin-top:10pt;border-top:0.5pt solid #ccc;padding-top:8pt;}
+    .footer-row{display:flex;gap:12pt;margin-top:10pt;border-top:0.5pt solid #ccc;padding-top:8pt;break-inside:avoid;page-break-inside:avoid;}
     .footer-box{flex:1;font-size:8pt;}
     .footer-hdr{font-weight:700;color:#1e3a5f;margin-bottom:3pt;}
     .sign-box{width:120pt;border-top:0.5pt solid #333;padding-top:3pt;font-size:8pt;text-align:center;margin-top:30pt;}
@@ -14217,7 +14483,7 @@ async function printPOB(billNum) {
     <th class="c">#</th><th>GRN No.</th><th>Material</th><th class="c">UOM</th>
     <th class="r">Qty</th><th class="r">Rate</th><th class="r">Amount (₹)</th>
   </tr></thead><tbody>${rows}</tbody></table>
-  <div style="display:flex;justify-content:flex-end;"><table class="totals">${totals}</table></div>
+  <div class="totals-wrap"><table class="totals">${totals}</table></div>
   <div class="footer-row">
     ${h.remarks?`<div class="footer-box"><div class="footer-hdr">Remarks</div>${esc(h.remarks)}</div>`:'<div></div>'}
     <div style="text-align:right;"><div class="sign-box">Verified By<br>${CO_NAME}</div></div>
@@ -16896,7 +17162,15 @@ function applyPurchaseSubTabVisibility() {
   });
 }
 
-async function loadDashboard() {
+let _dashLastLoaded = 0;
+async function loadDashboard(force) {
+  const now = Date.now();
+  // Debounce: skip full reload if dashboard was loaded less than 10s ago (tab flicker etc.)
+  if (!force && now - _dashLastLoaded < 10000) {
+    loadDashPendingCards(); // cards are cheap — always refresh counts
+    return;
+  }
+  _dashLastLoaded = now;
   await Promise.all([
     loadDashPendingCards(),
     loadTrackerA(),
@@ -16906,6 +17180,7 @@ async function loadDashboard() {
 
 const DASH_CARD_DEFS = {
   'Site Manager': [
+    // ── Approval queue ──────────────────────────────────────────────────────────
     { id:'sm_mir',    label:'MIRs to Approve',   sub:'Material indents waiting',   cls:'urgent', nav:function(){navDash('purchase','mir','Pending Approval');},
       query: function(){return sb.from('pu_mir').select('mir_number',{count:'exact',head:true}).eq('status','Pending Approval');} },
     { id:'sm_grn',    label:'GRNs to Verify',    sub:'Receipts needing sign-off',  cls:'warn',   nav:function(){navDash('purchase','grn','Pending Verification');},
@@ -16918,6 +17193,7 @@ const DASH_CARD_DEFS = {
       query: function(){return sb.from('pu_mis').select('mis_number',{count:'exact',head:true}).eq('status','Pending Approval');} },
   ],
   'Procurement': [
+    // ── Approval queue ──────────────────────────────────────────────────────────
     { id:'pr_ho',     label:'HOs Pending',       sub:'Hire orders to submit',      cls:'info',   nav:function(){navDash('ho','orders','Pending Approval');},
       query: function(){return sb.from('ho_orders').select('ho_number',{count:'exact',head:true}).eq('status','Pending Approval');} },
     { id:'pr_wo',     label:'WOs Pending',       sub:'Work orders to submit',      cls:'info',   nav:function(){navDash('wo','orders','Pending Approval');},
@@ -16934,24 +17210,51 @@ const DASH_CARD_DEFS = {
       } },
     { id:'pr_po_corr',label:'POs for Correction',sub:'Returned for revision',      cls:'urgent', nav:function(){navDash('purchase','po','Rejected');},
       query: function(){return sb.from('pu_po_orders').select('po_number',{count:'exact',head:true}).in('status',['Rejected','Rejected - Correction']);} },
+    // ── Follow-on: next step for Procurement ───────────────────────────────────
+    { id:'pr_mir_rdy', label:'MIRs Awaiting RFQ', sub:'Approved indents — raise RFQ or PO', cls:'warn', nav:function(){navDash('purchase','mir','');},
+      query: function(){return sb.from('pu_mir').select('mir_number',{count:'exact',head:true}).in('status',['Approved','Partial RFQ']);} },
+    { id:'pr_qc_rdy',  label:'QCs Approved → PO', sub:'Quote approved — create PO now',     cls:'warn', nav:function(){navDash('purchase','po','');},
+      query: function(){return sb.from('pu_quote_comparison').select('qc_number',{count:'exact',head:true}).eq('status','Approved');} },
   ],
   'Store Executive': [
+    // ── Approval queue ──────────────────────────────────────────────────────────
     { id:'se_grn',    label:'Open POs for GRN',  sub:'Receipts to record',         cls:'warn',   nav:function(){navDash('purchase','grn','');},
       query: function(){return sb.from('pu_po_orders').select('po_number',{count:'exact',head:true}).in('status',['Open','Partial Receipt']);} },
     { id:'se_mis',    label:'MIS Pending',       sub:'Issues awaiting approval',   cls:'info',   nav:function(){navDash('purchase','mis','Pending Approval');},
       query: function(){return sb.from('pu_mis').select('mis_number',{count:'exact',head:true}).eq('status','Pending Approval');} },
   ],
   'Planning/ QS': [
-    { id:'qs_hob',    label:'HOBs Pending',      sub:'HO bills to approve',        cls:'urgent', nav:function(){navDash('ho','billing','Pending Approval');},
+    // ── Approval queue ──────────────────────────────────────────────────────────
+    { id:'qs_hob',    label:'HOBs Pending',      sub:'HO bills to create',         cls:'urgent', nav:function(){navDash('ho','billing','Pending Approval');},
       query: function(){return sb.from('ho_bills').select('bill_number',{count:'exact',head:true}).eq('status','Pending Approval');} },
-    { id:'qs_wob',    label:'WOBs Pending',      sub:'WO bills to approve',        cls:'urgent', nav:function(){navDash('wo','billing','Pending Approval');},
+    { id:'qs_wob',    label:'WOBs Pending',      sub:'WO bills to create',         cls:'urgent', nav:function(){navDash('wo','billing','Pending Approval');},
       query: function(){return sb.from('wo_bills').select('bill_number',{count:'exact',head:true}).eq('status','Pending Approval');} },
-    { id:'qs_pob',    label:'POBs Pending',      sub:'GRN bills to create',        cls:'warn',   nav:function(){navDash('purchase','pob','Pending Approval');},
+    { id:'qs_pob',    label:'POBs Pending',      sub:'GRN bills pending approval', cls:'warn',   nav:function(){navDash('purchase','pob','Pending Approval');},
       query: function(){return sb.from('pu_po_bills').select('bill_number',{count:'exact',head:true}).eq('status','Pending Approval');} },
-    { id:'qs_pay',    label:'Payments to Confirm',sub:'Outstanding releases',      cls:'info',   nav:function(){navDash('payments','confirm','');},
-      query: async function(){ const r=await sb.from('ho_prr').select('prr_number',{count:'exact',head:true}).in('status',['Unpaid','Partial']); return r; } },
+    // ── Follow-on: next step for QS after upstream docs are ready ──────────────
+    // HOC: 'Unbilled' = cert approved, HOB not yet created
+    //      'Pending Billing' = HOB created but awaiting PM approval — still in QS's court
+    //      Card clears only when HOB is approved → status becomes 'Billed'
+    { id:'qs_hoc_unbilled', label:'HOCs to Bill',      sub:'Approved certs — create / pending HOB', cls:'warn', nav:function(){navDash('ho','billing','');},
+      query: function(){return sb.from('ho_certifications').select('hoc_number',{count:'exact',head:true}).in('status',['Unbilled','Pending Billing']);} },
+    // WOC: same lifecycle as HOC
+    { id:'qs_woc_unbilled', label:'WOCs to Bill',      sub:'Approved certs — create / pending WOB', cls:'warn', nav:function(){navDash('wo','billing','');},
+      query: function(){return sb.from('wo_certifications').select('woc_number',{count:'exact',head:true}).in('status',['Unbilled','Pending Billing']);} },
+    // GRN: 'Verified'        = GRN verified, no POB started yet
+    //      'Partially Billed' = included in a POB that is pending PM approval — still in QS's court
+    //      Card clears only when POB is approved → GRN status becomes 'Billed'
+    { id:'qs_grn_unbilled', label:'GRNs to Bill (POB)', sub:'Verified GRNs — create / pending POB', cls:'warn', nav:function(){navDash('purchase','pob','');},
+      query: function(){return sb.from('pu_grn').select('grn_number',{count:'exact',head:true}).in('status',['Verified','Partially Billed']);} },
+    // ── Follow-on: PRR raised → confirm payment ────────────────────────────────
+    { id:'qs_pay',    label:'Payments to Confirm', sub:'PRRs raised — confirm payment', cls:'info', nav:function(){navDash('payments','confirm','');},
+      query: async function(){
+        // Count across all bill types using the single ho_prr table
+        const r = await sb.from('ho_prr').select('prr_number',{count:'exact',head:true}).in('status',['Unpaid','Partial']);
+        return r;
+      } },
   ],
   'Project Manager': [
+    // ── Approval queue ──────────────────────────────────────────────────────────
     { id:'pm_ho',     label:'HOs to Approve',    sub:'Hire orders pending',        cls:'urgent', nav:function(){navDash('ho','orders','Pending Approval');},
       query: function(){return sb.from('ho_orders').select('ho_number',{count:'exact',head:true}).eq('status','Pending Approval');} },
     { id:'pm_wo',     label:'WOs to Approve',    sub:'Work orders pending',        cls:'urgent', nav:function(){navDash('wo','orders','Pending Approval');},
@@ -16974,6 +17277,36 @@ const DASH_CARD_DEFS = {
       query: function(){return sb.from('pu_po_bills').select('bill_number',{count:'exact',head:true}).eq('status','Pending Approval');} },
     { id:'pm_mis',    label:'MIS to Approve',    sub:'Material issues',            cls:'info',   nav:function(){navDash('purchase','mis','Pending Approval');},
       query: function(){return sb.from('pu_mis').select('mis_number',{count:'exact',head:true}).eq('status','Pending Approval');} },
+    // ── Follow-on: approved bills → PM raises PRR ──────────────────────────────
+    // NOTE: All bill types use 'Unpaid' as the post-approval status (not 'Approved').
+    //       We exclude bills already referenced in a PRR item to avoid double-counting.
+    { id:'pm_hob_prr', label:'HOBs → Raise PRR', sub:'Approved HO bills awaiting PRR', cls:'warn', nav:function(){navDash('payments','prr','');},
+      query: async function(){
+        const [{data:bills},{data:prrItems}] = await Promise.all([
+          sb.from('ho_bills').select('bill_number').eq('status','Unpaid'),
+          sb.from('ho_prr_items').select('bill_number').eq('bill_type','HOB'),
+        ]);
+        const inPRR = new Set((prrItems||[]).map(function(i){return i.bill_number;}));
+        return {count:(bills||[]).filter(function(b){return !inPRR.has(b.bill_number);}).length, error:null};
+      } },
+    { id:'pm_wob_prr', label:'WOBs → Raise PRR', sub:'Approved WO bills awaiting PRR', cls:'warn', nav:function(){navDash('payments','prr','');},
+      query: async function(){
+        const [{data:bills},{data:prrItems}] = await Promise.all([
+          sb.from('wo_bills').select('bill_number').eq('status','Unpaid'),
+          sb.from('ho_prr_items').select('bill_number').eq('bill_type','WOB'),
+        ]);
+        const inPRR = new Set((prrItems||[]).map(function(i){return i.bill_number;}));
+        return {count:(bills||[]).filter(function(b){return !inPRR.has(b.bill_number);}).length, error:null};
+      } },
+    { id:'pm_pob_prr', label:'POBs → Raise PRR', sub:'Approved GRN bills awaiting PRR', cls:'warn', nav:function(){navDash('payments','prr','');},
+      query: async function(){
+        const [{data:bills},{data:prrItems}] = await Promise.all([
+          sb.from('pu_po_bills').select('bill_number').eq('status','Unpaid'),
+          sb.from('ho_prr_items').select('bill_number').eq('bill_type','POB'),
+        ]);
+        const inPRR = new Set((prrItems||[]).map(function(i){return i.bill_number;}));
+        return {count:(bills||[]).filter(function(b){return !inPRR.has(b.bill_number);}).length, error:null};
+      } },
   ],
 };
 DASH_CARD_DEFS['Admin'] = DASH_CARD_DEFS['Project Manager'].slice();
