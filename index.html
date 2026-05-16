@@ -688,7 +688,7 @@ input[type="number"] {
     </div>
 
     <div class="actions-row">
-      <button class="btn btn-primary" onclick="saveHO_direct()" style="font-size:14px;padding:11px 22px;">💾 Save Hire Order</button>
+      <button class="btn btn-primary" onclick="guardedSave(saveHO_direct, this)" style="font-size:14px;padding:11px 22px;">💾 Save Hire Order</button>
       <button class="btn btn-ghost" onclick="closeHOForm()">Close</button>
     </div>
   </div>
@@ -800,7 +800,7 @@ input[type="number"] {
     </div>
 
     <div class="actions-row">
-      <button class="btn btn-primary" onclick="saveHOC_direct()" style="font-size:14px;padding:11px 22px;">💾 Save Certification</button>
+      <button class="btn btn-primary" onclick="guardedSave(saveHOC_direct, this)" style="font-size:14px;padding:11px 22px;">💾 Save Certification</button>
       <button class="btn btn-ghost" onclick="closeHOCForm()">Close</button>
     </div>
   </div>
@@ -991,7 +991,7 @@ input[type="number"] {
     </div>
 
     <div class="actions-row">
-      <button class="btn btn-primary" onclick="saveHOB_direct()" style="font-size:14px;padding:11px 22px;">💾 Save Bill</button>
+      <button class="btn btn-primary" onclick="guardedSave(saveHOB_direct, this)" style="font-size:14px;padding:11px 22px;">💾 Save Bill</button>
       <button class="btn btn-ghost" onclick="closeHOBForm()">Close</button>
     </div>
   </div>
@@ -1115,7 +1115,7 @@ input[type="number"] {
     </div>
     <div style="margin-top:10px;"><button class="btn btn-ghost btn-sm" onclick="addWOItem()">+ Add Line Item</button></div>
     <div class="actions-row">
-      <button class="btn btn-primary" onclick="saveWO_direct()" style="font-size:14px;padding:11px 22px;">💾 Save Work Order</button>
+      <button class="btn btn-primary" onclick="guardedSave(saveWO_direct, this)" style="font-size:14px;padding:11px 22px;">💾 Save Work Order</button>
       <button class="btn btn-ghost" onclick="closeWOForm()">Close</button>
     </div>
   </div>
@@ -1203,7 +1203,7 @@ input[type="number"] {
       </table>
     </div>
     <div class="actions-row">
-      <button class="btn btn-primary" onclick="saveWOC_direct()" style="font-size:14px;padding:11px 22px;">💾 Save Certification</button>
+      <button class="btn btn-primary" onclick="guardedSave(saveWOC_direct, this)" style="font-size:14px;padding:11px 22px;">💾 Save Certification</button>
       <button class="btn btn-ghost" onclick="closeWOCForm()">Close</button>
     </div>
   </div>
@@ -1357,7 +1357,7 @@ input[type="number"] {
       <label>Remarks</label><textarea id="wob_remarks" rows="2" placeholder="Notes, references…"></textarea>
     </div>
     <div class="actions-row">
-      <button class="btn btn-primary" onclick="saveWOB_direct()" style="font-size:14px;padding:11px 22px;">💾 Save RA Bill</button>
+      <button class="btn btn-primary" onclick="guardedSave(saveWOB_direct, this)" style="font-size:14px;padding:11px 22px;">💾 Save RA Bill</button>
       <button class="btn btn-ghost" onclick="closeWOBForm()">Close</button>
     </div>
   </div>
@@ -1475,7 +1475,7 @@ input[type="number"] {
       </div>
       <div style="margin-top:10px;color:var(--muted);font-size:12px;">Total Selected: <strong id="prr_selectedTotal" style="color:var(--accent);">₹ 0.00</strong></div>
       <div class="actions-row">
-        <button class="btn btn-primary" onclick="savePRR()">Submit PRR</button>
+        <button class="btn btn-primary" onclick="guardedSave(savePRR, this)">Submit PRR</button>
         <button class="btn btn-ghost" onclick="closePRRForm()">Cancel</button>
       </div>
     </div>
@@ -1516,12 +1516,28 @@ input[type="number"] {
         </div>
       </div>
       <div class="grid-3" style="margin-top:12px;">
+        <div class="field">
+          <label class="req">Order Type</label>
+          <select id="arr_orderType" onchange="onARROrderTypeChange()">
+            <option value="">— Select —</option>
+            <option value="PO">Purchase Order (PO)</option>
+            <option value="HO">Hire Order (HO)</option>
+            <option value="WO">Work Order (WO)</option>
+          </select>
+        </div>
+        <div class="field typeahead">
+          <label class="req">Order Number</label>
+          <input id="arr_orderNumber" placeholder="Type to search…" autocomplete="off" oninput="arrOrderTypeahead()" disabled>
+          <div class="typeahead-results" id="arr_orderResults"></div>
+        </div>
         <div class="field typeahead">
           <label class="req">Vendor</label>
-          <input id="arr_vendor" placeholder="Type to search vendor…" autocomplete="off" oninput="vendorTypeahead('arr_vendor','arr_vendorResults','arr_vendorCode')">
+          <input id="arr_vendor" placeholder="Auto-filled from order…" autocomplete="off" readonly style="opacity:.7;">
           <input type="hidden" id="arr_vendorCode">
           <div class="typeahead-results" id="arr_vendorResults"></div>
         </div>
+      </div>
+      <div class="grid-3" style="margin-top:12px;">
         <div class="field">
           <label class="req">Advance Amount (₹)</label>
           <input type="number" id="arr_amount" step="0.01" placeholder="0.00">
@@ -1530,9 +1546,10 @@ input[type="number"] {
           <label>Remarks</label>
           <input id="arr_remarks" placeholder="Purpose of advance…">
         </div>
+        <div class="field"></div>
       </div>
       <div class="actions-row">
-        <button class="btn btn-primary" onclick="saveARR()">Submit Advance Request</button>
+        <button class="btn btn-primary" onclick="guardedSave(saveARR, this)">Submit Advance Request</button>
         <button class="btn btn-ghost" onclick="closeARRForm()">Cancel</button>
       </div>
     </div>
@@ -1589,7 +1606,7 @@ input[type="number"] {
           <input id="hrr_remarks" placeholder="Reason for hold release…">
         </div>
         <div class="actions-row">
-          <button class="btn btn-primary" onclick="saveHRR()">Submit Hold Release Request</button>
+          <button class="btn btn-primary" onclick="guardedSave(saveHRR, this)">Submit Hold Release Request</button>
           <button class="btn btn-ghost" onclick="document.getElementById('hrr_form').style.display='none'">Cancel</button>
         </div>
       </div>
@@ -1654,7 +1671,7 @@ input[type="number"] {
           <label>Remarks</label><input id="rrr_remarks" placeholder="Reason for retention release…">
         </div>
         <div class="actions-row">
-          <button class="btn btn-primary" onclick="saveRRR()">Submit Retention Release Request</button>
+          <button class="btn btn-primary" onclick="guardedSave(saveRRR, this)">Submit Retention Release Request</button>
           <button class="btn btn-ghost" onclick="document.getElementById('rrr_form').style.display='none'">Cancel</button>
         </div>
       </div>
@@ -1779,7 +1796,7 @@ input[type="number"] {
         </div>
       </div>
       <div class="actions-row">
-        <button class="btn btn-primary" onclick="savePaymentConfirmation()">✔ Confirm Payment</button>
+        <button class="btn btn-primary" onclick="guardedSave(savePaymentConfirmation, this)">✔ Confirm Payment</button>
       </div>
     </div>
 
@@ -1850,6 +1867,10 @@ input[type="number"] {
     </div>
     <div class="card">
       <h3>Vendor List</h3>
+      <div style="margin-bottom:10px;">
+        <input id="mv_search" placeholder="🔍 Search vendors…" oninput="filterMasterTable('mv_search','mv_list')"
+          style="padding:7px 10px;background:var(--input-bg);color:var(--text);border:1px solid var(--border);border-radius:4px;width:260px;">
+      </div>
       <div class="table-wrap">
         <table><thead><tr><th>Code</th><th>Name</th><th>Trade</th><th>GSTIN</th><th>Contact</th><th>Phone</th></tr></thead>
         <tbody id="mv_list"><tr><td colspan="6" class="center muted">No vendors.</td></tr></tbody></table>
@@ -1874,6 +1895,10 @@ input[type="number"] {
     </div>
     <div class="card">
       <h3>Activity List</h3>
+      <div style="margin-bottom:10px;">
+        <input id="ma_search" placeholder="🔍 Search activities…" oninput="filterMasterTable('ma_search','ma_list')"
+          style="padding:7px 10px;background:var(--input-bg);color:var(--text);border:1px solid var(--border);border-radius:4px;width:260px;">
+      </div>
       <div class="table-wrap">
         <table><thead><tr><th>Code</th><th>Description</th><th>UOM</th><th>Category</th><th class="num">Default Rate</th></tr></thead>
         <tbody id="ma_list"><tr><td colspan="5" class="center muted">No activities.</td></tr></tbody></table>
@@ -2315,7 +2340,7 @@ input[type="number"] {
       <div class="field" style="margin-top:12px;max-width:600px;"><label>Remarks</label><textarea id="mir_remarks" rows="2"></textarea></div>
       <div class="field" style="margin-top:8px;max-width:300px;"><label>Raised By</label><input id="mir_raisedBy" readonly style="opacity:.6;"></div>
       <div class="actions-row">
-        <button class="btn btn-primary" onclick="saveMIR()">Submit MIR</button>
+        <button class="btn btn-primary" onclick="guardedSave(saveMIR, this)">Submit MIR</button>
         <button class="btn btn-ghost" onclick="closeMIRForm()">Cancel</button>
       </div>
     </div>
@@ -2384,7 +2409,7 @@ input[type="number"] {
       </div>
       <div class="field" style="margin-top:12px;max-width:600px;"><label>Remarks</label><textarea id="rfq_remarks" rows="2"></textarea></div>
       <div class="actions-row">
-        <button class="btn btn-primary" onclick="saveRFQ()">Save RFQ</button>
+        <button class="btn btn-primary" onclick="guardedSave(saveRFQ, this)">Save RFQ</button>
         <button class="btn btn-ghost" onclick="closeRFQForm()">Cancel</button>
       </div>
     </div>
@@ -2519,7 +2544,7 @@ input[type="number"] {
         <div class="field"><label>Prepared By</label><input id="po_preparedBy" readonly style="opacity:.6;"></div>
       </div>
       <div class="actions-row">
-        <button class="btn btn-primary" onclick="savePO()">Submit PO for Approval</button>
+        <button class="btn btn-primary" onclick="guardedSave(savePO, this)">Submit PO for Approval</button>
 
         <button class="btn btn-ghost" onclick="closePOForm()">Cancel</button>
       </div>
@@ -2555,6 +2580,14 @@ input[type="number"] {
 
   <!-- ── GRN ── -->
   <div id="puTab-grn" style="display:none;">
+    <!-- Banner shown only when navigating from dashboard 'GRNs to Bill' card -->
+    <div id="grn_toBillBanner" style="display:none;margin:12px 0;padding:12px 16px;background:#fffbeb;border:1px solid #fcd34d;border-radius:6px;display:flex;align-items:center;justify-content:space-between;gap:12px;">
+      <div>
+        <div style="font-size:12px;font-weight:700;color:#92400e;margin-bottom:3px;">📋 These GRNs are verified and ready for billing</div>
+        <div style="font-size:12px;color:#78350f;">Click <strong>View</strong> on any GRN below, then use the <strong>Create POB</strong> button to raise a PO Bill against it.</div>
+      </div>
+      <button class="btn btn-ghost btn-sm" onclick="document.getElementById('grn_toBillBanner').style.display='none';puState._grnToBillMode=false;" style="flex-shrink:0;">✕ Dismiss</button>
+    </div>
     <div class="row" style="justify-content:space-between;margin:16px 0;">
       <div>
         <div class="section-title">Goods Receipt Notes</div>
@@ -2600,7 +2633,7 @@ input[type="number"] {
       </div>
       <div class="field" style="margin-top:12px;max-width:600px;"><label>Remarks</label><textarea id="grn_remarks" rows="2"></textarea></div>
       <div class="actions-row">
-        <button class="btn btn-primary" onclick="saveGRN()">Save GRN</button>
+        <button class="btn btn-primary" onclick="guardedSave(saveGRN, this)">Save GRN</button>
         <button class="btn btn-ghost" onclick="closeGRNForm()">Cancel</button>
       </div>
     </div>
@@ -2656,7 +2689,7 @@ input[type="number"] {
       </div>
       <div class="field" style="margin-top:12px;max-width:600px;"><label>Remarks</label><textarea id="cgrn_remarks" rows="2"></textarea></div>
       <div class="actions-row">
-        <button class="btn btn-primary" onclick="saveCashGRN()">💾 Save Direct Purchase GRN</button>
+        <button class="btn btn-primary" onclick="guardedSave(saveCashGRN, this)">💾 Save Direct Purchase GRN</button>
         <button class="btn btn-ghost" onclick="closeCashGRNForm()">Cancel</button>
       </div>
     </div>
@@ -2790,7 +2823,7 @@ input[type="number"] {
           <div class="field"><label>Remarks</label><textarea id="pob_remarks" rows="2"></textarea></div>
         </div>
         <div class="actions-row">
-          <button class="btn btn-primary" onclick="savePOB()">Submit for PM Approval</button>
+          <button class="btn btn-primary" onclick="guardedSave(savePOB, this)">Submit for PM Approval</button>
           <button class="btn btn-ghost" onclick="closePOBForm()">Cancel</button>
         </div>
       </div>
@@ -2912,7 +2945,7 @@ input[type="number"] {
           <div class="field"><label>Remarks</label><textarea id="cpob_remarks" rows="2"></textarea></div>
         </div>
         <div class="actions-row">
-          <button class="btn btn-primary" onclick="saveCashPOB()">💾 Submit Cash Bill for PM Approval</button>
+          <button class="btn btn-primary" onclick="guardedSave(saveCashPOB, this)">💾 Submit Cash Bill for PM Approval</button>
           <button class="btn btn-ghost" onclick="closeCashPOBForm()">Cancel</button>
         </div>
       </div>
@@ -3005,7 +3038,7 @@ input[type="number"] {
         <button class="btn btn-ghost btn-sm" style="margin-top:8px;" onclick="addMISItem()">+ Add Row</button>
       </div>
       <div class="actions-row">
-        <button class="btn btn-primary" onclick="saveMIS()">Save &amp; Issue</button>
+        <button class="btn btn-primary" onclick="guardedSave(saveMIS, this)">Save &amp; Issue</button>
         <button class="btn btn-ghost" onclick="closeMISForm()">Cancel</button>
       </div>
     </div>
@@ -3113,6 +3146,366 @@ input[type="number"] {
 
 <script>
 // ============================================================
+// GLOBAL SUBMISSION GUARD — prevents duplicate saves
+// Wraps every async save function: disables the triggering
+// button immediately on first click, re-enables on completion.
+// Also enforces a global _saveLock flag so rapid programmatic
+// calls cannot fire two saves concurrently.
+// ============================================================
+let _saveLock = false;
+
+async function guardedSave(fn, triggerEl) {
+  if (_saveLock) {
+    console.warn('Save already in progress — ignoring duplicate call');
+    return;
+  }
+  // Disable the triggering button immediately
+  let btn = null;
+  if (triggerEl instanceof HTMLElement) {
+    btn = triggerEl;
+  } else if (typeof triggerEl === 'string') {
+    btn = document.getElementById(triggerEl);
+  } else {
+    // Find the active focused button as fallback
+    btn = document.activeElement instanceof HTMLButtonElement ? document.activeElement : null;
+  }
+  const originalText = btn ? btn.innerHTML : null;
+  if (btn) { btn.disabled = true; btn.innerHTML = '⏳ Saving…'; }
+  _saveLock = true;
+  try {
+    await fn();
+  } finally {
+    _saveLock = false;
+    if (btn) { btn.disabled = false; btn.innerHTML = originalText; }
+  }
+}
+
+// ============================================================
+// Helper: format remarks as numbered lines for print output
+// ============================================================
+function formatRemarksNumbered(text) {
+  if (!text) return '—';
+  const lines = text.split(/\n/).map(l => l.trim()).filter(Boolean);
+  if (lines.length <= 1) return esc(text);
+  return lines.map((l, i) => `${i+1}. ${esc(l)}`).join('<br>');
+}
+
+// ============================================================
+// Shared print layout engine for PO / HO / WO
+// Produces a consistent A4 document across all three doc types
+// ============================================================
+async function _printOrderDoc(docType, docNumber, h, items, vmOverride) {
+  // vmOverride: { name, address, gstin, contact, phone } from vendor master
+  // h: raw DB row (po_orders / ho_orders / wo_orders)
+  // items: array of line item rows (already mapped)
+
+  const fi = n => (n||0).toLocaleString('en-IN',{minimumFractionDigits:2,maximumFractionDigits:2});
+
+  // Resolve vendor block from master
+  let vm = vmOverride || null;
+  const vCode = h.vendor_code || h['Vendor Code'];
+  const vName  = h.vendor_name || h['Vendor Name'];
+  if (!vm) {
+    if (vCode) {
+      const { data: r } = await sb.from('ho_vendors').select('vendor_name,address,gstin,contact_person,phone').eq('vendor_code', vCode).maybeSingle();
+      vm = r;
+    }
+    if (!vm && vName) {
+      const { data: r } = await sb.from('ho_vendors').select('vendor_name,address,gstin,contact_person,phone').eq('vendor_name', vName).maybeSingle();
+      vm = r;
+    }
+  }
+  const vmName    = vm ? (vm.vendor_name    || vName) : vName;
+  const vmAddr    = vm ? (vm.address        || '')    : '';
+  const vmGSTIN   = vm ? (vm.gstin          || '')    : '';
+  const vmContact = vm ? (vm.contact_person || '')    : '';
+  const vmPhone   = vm ? (vm.phone          || '')    : '';
+
+  // Doc-type specific fields
+  const isPO = docType === 'PO';
+  const isHO = docType === 'HO';
+  const isWO = docType === 'WO';
+
+  const docTitle  = isPO ? 'PURCHASE ORDER' : isHO ? 'HIRE ORDER' : 'WORK ORDER';
+  const docDate   = h.po_date || h['HO Date raw'] || h['WO Date raw'] || h.ho_date || h.wo_date || '';
+  const docStatus = h.status || h['Status'] || '';
+  const docRemarks = h.remarks || h['Remarks'] || '';
+  const paymentTerms = h.payment_terms || h['Payment Terms'] || '';
+  const transport    = h.transport || '';
+  const contactPerson = h.contact_person || h['Contact Person'] || '';
+
+  // Delivery/site address (PO only)
+  const deliveryAddr = isPO
+    ? (h.delivery_address
+        ? esc(h.delivery_address).split('\n').join('<br>')
+        : 'Poetry of Earth, Sy.No.199, Varthur–Sarjapur Road, Opposite Vinayaka Theatre, Varthur, Bengaluru – 560087')
+    : '';
+
+  // Meta table extra rows
+  let metaExtra = '';
+  if (isPO) {
+    if (h.project)       metaExtra += `<tr><td class="l">Project</td><td>${esc(h.project)}</td></tr>`;
+    if (h.mir_number)    metaExtra += `<tr><td class="l">MIR Ref</td><td>${esc(h.mir_number)}</td></tr>`;
+    if (h.qc_number)     metaExtra += `<tr><td class="l">QC Ref</td><td>${esc(h.qc_number)}</td></tr>`;
+    if (h.delivery_date) metaExtra += `<tr><td class="l">Deliver By</td><td>${fmtDate(h.delivery_date)}</td></tr>`;
+  }
+  if (isHO) {
+    if (h['Project']||h.project) metaExtra += `<tr><td class="l">Project</td><td>${esc(h['Project']||h.project)}</td></tr>`;
+    if (h['Location']||h.location) metaExtra += `<tr><td class="l">Location</td><td>${esc(h['Location']||h.location)}</td></tr>`;
+    if (h['Start Date']||h.start_date) metaExtra += `<tr><td class="l">Start Date</td><td>${fmtDate(h['Start Date']||h.start_date)}</td></tr>`;
+    if (h['End Date']||h.end_date)     metaExtra += `<tr><td class="l">End Date</td><td>${fmtDate(h['End Date']||h.end_date)}</td></tr>`;
+  }
+  if (isWO) {
+    if (h['Project']||h.project) metaExtra += `<tr><td class="l">Project</td><td>${esc(h['Project']||h.project)}</td></tr>`;
+    if (h['Start Date']||h.start_date) metaExtra += `<tr><td class="l">Start Date</td><td>${fmtDate(h['Start Date']||h.start_date)}</td></tr>`;
+    if (h['End Date']||h.end_date)     metaExtra += `<tr><td class="l">End Date</td><td>${fmtDate(h['End Date']||h.end_date)}</td></tr>`;
+    if (h['Cert Mode']||h.cert_mode) metaExtra += `<tr><td class="l">Cert Mode</td><td>${esc(h['Cert Mode']||h.cert_mode)}</td></tr>`;
+  }
+
+  // Line items rows
+  let rowsHTML = '';
+  let grandTotal = 0;
+  (items||[]).forEach((it, i) => {
+    let desc, uom, qty, rate, amount;
+    if (isPO) {
+      desc = it.material_name; uom = it.uom; qty = it.qty;
+      rate = it.unit_rate; amount = it.base_amount || (it.qty * it.unit_rate);
+    } else {
+      desc = it['Description'] || it.description;
+      uom  = it['UOM'] || it.uom;
+      qty  = it['Qty'] || it.qty;
+      rate = it['Unit Rate'] || it.unit_rate;
+      amount = it['Amount'] || it.amount;
+    }
+    grandTotal += num(amount);
+    rowsHTML += `<tr>
+      <td class="c">${(it.sno||it['S.No']||i+1)}</td>
+      <td>${esc(desc||'')}</td>
+      <td class="c">${esc(uom||'')}</td>
+      <td class="r">${fi(qty)}</td>
+      <td class="r">₹ ${fi(rate)}</td>
+      <td class="r">₹ ${fi(amount)}</td>
+      <td>${esc((isPO ? it.remarks : '') ||'')}</td>
+    </tr>`;
+  });
+
+  // Totals block
+  let totalsHTML = '';
+  if (isPO) {
+    totalsHTML = `<tr><td>Sub Total</td><td class="r">₹ ${fi(h.basic_value)}</td></tr>`;
+    const cgstPct = h.cgst_pct||((h.cgst_amount&&h.basic_value)?(h.cgst_amount/h.basic_value*100).toFixed(0):'');
+    const sgstPct = h.sgst_pct||cgstPct;
+    const igstPct = h.igst_pct||(h.igst_amount&&h.basic_value?Math.round(h.igst_amount/h.basic_value*100):'');
+    if(h.cgst_amount>0) totalsHTML += `<tr><td>CGST${cgstPct?' ('+cgstPct+'%)':''}</td><td class="r">₹ ${fi(h.cgst_amount)}</td></tr>`;
+    if(h.sgst_amount>0) totalsHTML += `<tr><td>SGST${sgstPct?' ('+sgstPct+'%)':''}</td><td class="r">₹ ${fi(h.sgst_amount)}</td></tr>`;
+    if(h.igst_amount>0) totalsHTML += `<tr><td>IGST${igstPct?' ('+igstPct+'%)':''}</td><td class="r">₹ ${fi(h.igst_amount)}</td></tr>`;
+    if(h.round_off)     totalsHTML += `<tr><td>Round Off</td><td class="r">₹ ${fi(h.round_off)}</td></tr>`;
+    totalsHTML += `<tr class="gtrow"><td>TOTAL</td><td class="r">₹ ${fi(h.grand_total)}</td></tr>`;
+    grandTotal = h.grand_total;
+  } else {
+    const gstAmt  = num(h['GST Amount']||h.gst_amount||0);
+    const grossAmt = num(h['Gross Amount']||h.gross_amount||0);
+    const totalAmt = num(h['Total Amount']||h.total_amount||0);
+    const gstPct   = num(h['GST %']||h.gst_pct||0);
+    totalsHTML = `<tr><td>Gross Amount</td><td class="r">₹ ${fi(grossAmt)}</td></tr>`;
+    if(gstAmt>0) totalsHTML += `<tr><td>GST${gstPct?' ('+gstPct+'%)':''}</td><td class="r">₹ ${fi(gstAmt)}</td></tr>`;
+    totalsHTML += `<tr class="gtrow"><td>TOTAL</td><td class="r">₹ ${fi(totalAmt)}</td></tr>`;
+    grandTotal = totalAmt;
+  }
+
+  // Amount in words
+  let wordsLine = '';
+  try { wordsLine = numToWordsINR(grandTotal||0); } catch(e) {}
+
+  // Numbered remarks
+  const remarksFormatted = formatRemarksNumbered(docRemarks);
+  const remarksRow = docRemarks
+    ? `<tr><td colspan="4" style="padding:6pt 8pt;border:.5pt solid #bbb;vertical-align:top;">
+        <div class="footer-hdr">Comments / Special Instructions</div>
+        <div class="footer-val" style="margin-top:3pt;line-height:1.8;">${remarksFormatted}</div>
+       </td></tr>`
+    : '';
+
+  // Address boxes
+  // PO: 3 cards (Vendor | Bill To | Ship To)
+  // HO/WO: 2 cards only (Vendor/Contractor | Scope of Work) — no Bill To
+  const vendorHdr = isWO ? 'Contractor' : 'Vendor';
+  const addrRow = isPO ? `
+    <div class="addr-row">
+      <div class="addr-box">
+        <div class="addr-hdr">Vendor</div>
+        <div class="addr-body">
+          <strong>${esc(vmName)}</strong>
+          ${vmAddr    ? '<br>'+esc(vmAddr).split('\n').join('<br>') : ''}
+          ${vmGSTIN   ? '<br>GSTIN: <strong>'+esc(vmGSTIN)+'</strong>' : ''}
+          ${vmContact ? '<br>'+esc(vmContact) : ''}
+          ${vmPhone   ? '<br>'+esc(vmPhone)   : ''}
+        </div>
+      </div>
+      <div class="addr-box">
+        <div class="addr-hdr">Bill To</div>
+        <div class="addr-body">
+          <strong>${CO_NAME}</strong><br>${CO_ADDR}<br>GSTIN: ${CO_GSTIN}
+        </div>
+      </div>
+      <div class="addr-box">
+        <div class="addr-hdr">Ship To / Delivery Address</div>
+        <div class="addr-body">${deliveryAddr}</div>
+      </div>
+    </div>` : `
+    <div class="addr-row">
+      <div class="addr-box" style="flex:1;">
+        <div class="addr-hdr">${vendorHdr}</div>
+        <div class="addr-body">
+          <strong>${esc(vmName)}</strong>
+          ${vmAddr    ? '<br>'+esc(vmAddr).split('\n').join('<br>') : ''}
+          ${vmGSTIN   ? '<br>GSTIN: <strong>'+esc(vmGSTIN)+'</strong>' : ''}
+          ${vmContact ? '<br>'+esc(vmContact) : ''}
+          ${vmPhone   ? '<br>'+esc(vmPhone)   : ''}
+        </div>
+      </div>
+      <div class="addr-box" style="flex:1;">
+        <div class="addr-hdr">Site / Scope of Work</div>
+        <div class="addr-body">
+          <strong>${CO_NAME}</strong><br>
+          ${SITE_ADDR}<br>
+          GSTIN: ${CO_GSTIN}
+          ${(h['Scope']||h.scope) ? '<br><br><strong>Scope:</strong> '+esc(h['Scope']||h.scope||'') : ''}
+        </div>
+      </div>
+    </div>`;
+
+  const doc = `<!DOCTYPE html><html><head>
+<meta charset="UTF-8">
+<title>${docTitle} — ${esc(docNumber)}</title>
+<style>
+@page { size:A4 portrait; margin:0mm; }
+@page :first { margin:0mm; }
+* { box-sizing:border-box; margin:0; padding:0; }
+body { font-family:Arial,Helvetica,sans-serif; font-size:9pt; color:#111;
+  -webkit-print-color-adjust:exact; print-color-adjust:exact;
+  padding:25mm 15mm 20mm 15mm; }
+.page-margin-top { display:block; height:30mm; }
+.title-row { display:flex; justify-content:flex-end; align-items:flex-start; margin-bottom:10pt; }
+.doc-title { font-size:20pt; font-weight:700; color:#1e3a5f; letter-spacing:1pt; }
+.mt { border-collapse:collapse; margin-top:6pt; margin-left:auto; }
+.mt td { padding:2.5pt 8pt; font-size:8.5pt; border:.4pt solid #bbb; }
+.mt .l { font-weight:700; background:#1e3a5f; color:#fff; min-width:55pt; text-align:right; }
+.addr-row { display:flex; gap:6pt; margin-bottom:10pt; }
+.addr-box { flex:1; border:.5pt solid #bbb; border-radius:2pt; padding:7pt; }
+.addr-hdr { font-size:7pt; font-weight:700; text-transform:uppercase; color:#1e3a5f;
+            border-bottom:.5pt solid #dde; margin-bottom:5pt; padding-bottom:3pt; letter-spacing:.5pt; }
+.addr-body { font-size:8.5pt; line-height:1.7; }
+.addr-body strong { font-size:9pt; }
+table.items { width:100%; border-collapse:collapse; margin-bottom:8pt; }
+table.items thead tr { background:#1e3a5f; }
+table.items th { color:#fff; padding:5pt 6pt; font-size:8pt; font-weight:700; text-align:left; border:.4pt solid #2d4f7c; }
+table.items th.c, table.items td.c { text-align:center; }
+table.items th.r, table.items td.r { text-align:right; }
+table.items td { padding:5pt 6pt; font-size:8.5pt; border:.4pt solid #ddd; vertical-align:top; }
+table.items tr:nth-child(even) td { background:#f8fafc; }
+table.totals { width:100%; border-collapse:collapse; }
+table.totals td { padding:4pt 8pt; font-size:8.5pt; border:.4pt solid #ccc; }
+table.totals td:first-child { font-weight:600; background:#f0f5fb; color:#1e3a5f; }
+table.totals td:last-child { text-align:right; }
+table.totals tr.gtrow td { font-weight:700; background:#1e3a5f; color:#fff; font-size:10pt; }
+.words { font-size:7.5pt; color:#555; font-style:italic; margin-top:4pt; padding:3pt 0; border-top:.4pt solid #ddd; }
+.footer-hdr { font-size:7pt; font-weight:700; text-transform:uppercase; color:#1e3a5f; letter-spacing:.5pt; margin-bottom:4pt; }
+.footer-val { font-size:8.5pt; line-height:1.6; }
+.sign-line { border-top:.5pt solid #444; padding-top:4pt; font-size:8pt; color:#333; line-height:1.7; margin-top:24pt; }
+thead { display:table-header-group; }
+tr { page-break-inside:avoid; }
+.totals-wrap { page-break-inside:avoid; }
+.footer-table { page-break-inside:avoid; }
+.sign-wrap { page-break-inside:avoid; }
+@media print {
+  @page { margin:30mm 15mm 20mm 15mm; }
+  @page :first { margin:0mm 0mm 0mm 0mm; }
+  body { padding:25mm 15mm 20mm 15mm; }
+}
+</style></head><body>
+
+<div class="title-row">
+  <div style="text-align:right;">
+    <div class="doc-title">${docTitle}</div>
+    <table class="mt">
+      <tr><td class="l">DATE</td><td>${fmtDate(docDate)}</td></tr>
+      <tr><td class="l">${docType} #</td><td><strong>${esc(docNumber)}</strong></td></tr>
+      ${metaExtra}
+      <tr><td class="l">Status</td><td>${esc(docStatus)}</td></tr>
+    </table>
+  </div>
+</div>
+
+${addrRow}
+
+<table class="items">
+  <thead><tr>
+    <th class="c" style="width:28pt">ITEM #</th>
+    <th>DESCRIPTION</th>
+    <th class="c" style="width:38pt">UOM</th>
+    <th class="r" style="width:45pt">QTY</th>
+    <th class="r" style="width:58pt">UNIT RATE</th>
+    <th class="r" style="width:70pt">AMOUNT (₹)</th>
+    <th style="width:70pt">REMARKS</th>
+  </tr></thead>
+  <tbody>${rowsHTML}</tbody>
+</table>
+
+<div class="totals-wrap" style="display:flex;justify-content:flex-end;margin-top:8pt;">
+  <div style="width:230pt;">
+    <table class="totals">${totalsHTML}</table>
+    ${wordsLine ? `<div class="words">${wordsLine}</div>` : ''}
+  </div>
+</div>
+
+<table class="footer-table" style="width:100%;border-collapse:collapse;margin-top:10pt;border:.5pt solid #bbb;">
+  <tr>
+    <td style="width:25%;padding:6pt 8pt;border:.5pt solid #bbb;vertical-align:top;">
+      <div class="footer-hdr">Payment Terms</div>
+      <div class="footer-val" style="margin-top:3pt;">${esc(paymentTerms||'—')}</div>
+    </td>
+    <td style="width:25%;padding:6pt 8pt;border:.5pt solid #bbb;vertical-align:top;">
+      <div class="footer-hdr">Contact Person</div>
+      <div class="footer-val" style="margin-top:3pt;">${esc(contactPerson||'—')}</div>
+    </td>
+    <td style="width:20%;padding:6pt 8pt;border:.5pt solid #bbb;vertical-align:top;">
+      <div class="footer-hdr">Transportation</div>
+      <div class="footer-val" style="margin-top:3pt;">${esc(transport||'—')}</div>
+    </td>
+    <td style="width:30%;padding:6pt 8pt;border:.5pt solid #bbb;vertical-align:top;">
+      <div class="footer-hdr">Prepared By</div>
+      <div class="footer-val" style="margin-top:3pt;">${esc(h.prepared_by||h['Created By']||'—')}</div>
+    </td>
+  </tr>
+  ${remarksRow}
+</table>
+
+<div class="sign-wrap" style="display:flex;justify-content:flex-end;margin-top:20pt;">
+  <div class="sign-line">For ${CO_NAME}<br><br><br>Authorised Signatory</div>
+</div>
+
+</body></html>`;
+
+  // Print via hidden iframe
+  const iframe = document.createElement('iframe');
+  iframe.style.cssText = 'position:fixed;top:-9999px;left:-9999px;width:0;height:0;border:0;';
+  document.body.appendChild(iframe);
+  iframe.contentDocument.open();
+  iframe.contentDocument.write(doc);
+  iframe.contentDocument.close();
+  iframe.onload = function() {
+    setTimeout(function() {
+      iframe.contentWindow.focus();
+      iframe.contentWindow.print();
+      setTimeout(function() {
+        if(document.body.contains(iframe)) document.body.removeChild(iframe);
+      }, 3000);
+    }, 500);
+  };
+}
+
+// ============================================================
 // SUPABASE CONFIG
 // ============================================================
 const SUPABASE_URL  = 'https://lrpwfqqnljknonermltr.supabase.co';
@@ -3184,6 +3577,7 @@ var puState = {
   rfqQuotes: [],      // pu_rfq_quotes rows — keyed by rfq_number at runtime
   rfqQuoteItems: [],  // pu_rfq_quote_items rows
   poList: [], grnList: [], pobList: [],
+  _grnToBillMode: false, // set true when arriving from dashboard 'GRNs to Bill' card
   misList: [], misLedger: [], stockBalance: [],
   qcVendorCols: [], qcRFQItems: [],
 };
@@ -3967,6 +4361,7 @@ async function apiSaveARR(data) {
     if (numEl) numEl.value = data.arrNumber;
     const r = await dbInsert('ho_arr', {
       arr_number: data.arrNumber, arr_date: data.arrDate, vendor: data.vendor,
+      order_type: data.orderType||null, order_number: data.orderNumber||null,
       requested_by: data.requestedBy, requested_by_id: state.userId,
       amount: data.amount, paid_amount: 0, remarks: data.remarks||null, status: 'Unpaid'
     }, ['arrList','allRequests']);
@@ -5352,6 +5747,19 @@ function renderAllMasters() {
     </tr>`).join('') || `<tr><td colspan="${isAdmin?6:5}" class="center muted">No service locations.</td></tr>`);
 }
 
+// Fuzzy search filter for vendor and activity master tables
+function filterMasterTable(inputId, tbodyId) {
+  const q = document.getElementById(inputId).value.toLowerCase().trim();
+  const rows = document.getElementById(tbodyId).querySelectorAll('tr');
+  rows.forEach(tr => {
+    if (!q) { tr.style.display = ''; return; }
+    const text = tr.textContent.toLowerCase();
+    // Fuzzy: all tokens must appear somewhere in the row text
+    const tokens = q.split(/\s+/).filter(Boolean);
+    tr.style.display = tokens.every(t => text.includes(t)) ? '' : 'none';
+  });
+}
+
 function populateBOQL1Dropdown() {
   const l1s = (state.masters.boqItems||[]).filter(b => b['Level'] === 1);
   const sel = document.getElementById('mb_parentCode');
@@ -5911,22 +6319,7 @@ function renderHOList() {
   tbody.innerHTML = rows.map(o => {
     const st = o['Status'] || 'Open';
     const stClass = st.toLowerCase().replace(/\s/g,'-').replace(/-closed/,'');
-    let actionBtns = `<button class="btn btn-ghost btn-sm" onclick="viewHO('${esc(o['HO Number'])}')">View</button>
-      <button class="btn btn-ghost btn-sm" onclick="printHOById('${esc(o['HO Number'])}')">Print</button>`;
-    if (perms.canApproveHO && st === 'Pending Approval') {
-      actionBtns += `<button class="btn btn-primary btn-sm" onclick="approveHO('${esc(o['HO Number'])}')">Approve</button>
-        <button class="btn btn-warn btn-sm" onclick="promptRejectHO('${esc(o['HO Number'])}','correction')">Return for Correction</button>
-        <button class="btn btn-danger btn-sm" onclick="promptRejectHO('${esc(o['HO Number'])}','outright')">Reject</button>`;
-    }
-    if (perms.canCreateHO && st === 'Rejected - Correction') {
-      actionBtns += `<button class="btn btn-warn btn-sm" onclick="reviseHO('${esc(o['HO Number'])}')">✎ Revise &amp; Resubmit</button>`;
-    }
-    if (perms.canShortCloseHO && (st === 'Open' || st === 'Active')) {
-      actionBtns += `<button class="btn btn-warn btn-sm" onclick="shortCloseHO('${esc(o['HO Number'])}')">Short-Close</button>`;
-    }
-    if (perms.canShortCloseHO && st === 'Open') {
-      actionBtns += `<button class="btn btn-danger btn-sm" onclick="cancelHO('${esc(o['HO Number'])}')">Cancel</button>`;
-    }
+    const actionBtns = `<button class="btn btn-ghost btn-sm" onclick="viewHO('${esc(o['HO Number'])}')">View</button>`;
     return `<tr>
       <td class="mono" data-sort="${esc(o['HO Number'])}" style="font-weight:600;">${esc(o['HO Number'])}</td>
       <td data-sort="${esc(o['HO Date'])}">${fmtDate(o['HO Date'])}</td>
@@ -6235,42 +6628,83 @@ async function viewHO(hoNum) {
   const r = await apiGetHODetails(hoNum);
   if (!r.ok) { toast(r.error,'error'); return; }
   const h = r.header; const items = r.items || [];
-  let html = `<h3>${esc(h['HO Number'])}</h3>
+  const st = h['Status'] || '';
+  const perms = mergedPerms();
+  const stClass = st.toLowerCase().replace(/[\s-]+/g,'-');
+
+  // Approval banner
+  const approvalBanner = (perms.canApproveHO && st === 'Pending Approval') ? `
+    <div style="margin-bottom:12px;padding:12px;background:#fffbeb;border:1px solid #fde68a;border-radius:6px;display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;">
+      <div>
+        <div style="font-size:11px;font-weight:700;color:#92400e;text-transform:uppercase;margin-bottom:2px;">Pending Your Approval</div>
+        <div style="font-size:12px;color:#1f2937;">Review the line items and totals before approving.</div>
+      </div>
+      <div style="display:flex;gap:6px;flex-shrink:0;">
+        <button class="btn btn-primary" onclick="closeModal();approveHO('${esc(hoNum)}')">✓ Approve HO</button>
+        <button class="btn btn-warn" onclick="closeModal();promptRejectHO('${esc(hoNum)}','correction')">Return for Correction</button>
+        <button class="btn btn-danger" onclick="closeModal();promptRejectHO('${esc(hoNum)}','outright')">✕ Reject</button>
+      </div>
+    </div>` : '';
+
+  // Rejection/closure banner
+  const closureBanner = (st === 'Rejected' || st === 'Rejected - Correction') ? `
+    <div style="margin-bottom:10px;padding:10px;background:#fef2f2;border:1px solid #fca5a5;border-radius:6px;">
+      <div style="font-size:11px;font-weight:700;color:#991b1b;text-transform:uppercase;margin-bottom:4px;">${esc(st)}</div>
+      ${h['Rejection Reason'] ? `<div style="font-size:12px;color:#1f2937;"><strong>Reason:</strong> ${esc(h['Rejection Reason'])}</div>` : ''}
+    </div>` : '';
+
+  // Bottom action buttons
+  let actionBtns = '';
+  if (perms.canCreateHO && st === 'Rejected - Correction') {
+    actionBtns += `<button class="btn btn-warn" onclick="closeModal();reviseHO('${esc(hoNum)}')">✎ Revise &amp; Resubmit</button> `;
+  }
+  if (perms.canShortCloseHO && (st === 'Open' || st === 'Active')) {
+    actionBtns += `<button class="btn btn-warn" onclick="closeModal();shortCloseHO('${esc(hoNum)}')">Short-Close</button> `;
+  }
+  if (perms.canShortCloseHO && st === 'Open') {
+    actionBtns += `<button class="btn btn-danger" onclick="closeModal();cancelHO('${esc(hoNum)}')">Cancel HO</button> `;
+  }
+
+  openModal(`<h3>HO — ${esc(h['HO Number'])}</h3>
+    ${approvalBanner}
+    ${closureBanner}
     <div class="grid-3" style="font-size:13px;margin-bottom:12px;">
-      <div><b>Date:</b> ${fmtDate(h['HO Date'])}</div>
-      <div><b>Vendor:</b> ${esc(h['Vendor Name'])}</div>
-      <div><b>Status:</b> <span class="status ${(h['Status']||'').toLowerCase().replace(' ','-')}">${esc(h['Status'])}</span></div>
-      <div><b>Scope:</b> ${esc(h['Scope']||'—')}</div>
-      <div><b>GST:</b> ${h['GST %']}%</div>
+      <div><label class="muted" style="font-size:11px;">VENDOR</label><div><strong>${esc(h['Vendor Name'])}</strong></div></div>
+      <div><label class="muted" style="font-size:11px;">DATE</label><div>${fmtDate(h['HO Date'])}</div></div>
+      <div><label class="muted" style="font-size:11px;">STATUS</label><div><span class="status ${stClass}">${esc(st)}</span></div></div>
+      <div><label class="muted" style="font-size:11px;">SCOPE</label><div>${esc(h['Scope']||'—')}</div></div>
+      <div><label class="muted" style="font-size:11px;">GST</label><div>${h['GST %']}%</div></div>
+      <div><label class="muted" style="font-size:11px;">TOTAL VALUE</label><div style="font-weight:700;color:var(--accent);">${fmtINRSym(h['Total Amount'])}</div></div>
     </div>
     <div class="table-wrap"><table>
       <thead><tr><th>#</th><th>Description</th><th>UOM</th><th class="num">Qty</th><th class="num">Rate</th><th class="num">Amount</th></tr></thead>
       <tbody>${items.map((it,i) => `<tr>
-        <td class="center">${i+1}</td>
+        <td class="center">${it['S.No']||i+1}</td>
         <td>${esc(it['Description'])}</td><td>${esc(it['UOM'])}</td>
         <td class="num mono">${fmtINR(it['Qty'])}</td>
         <td class="num mono">${fmtINR(it['Unit Rate'])}</td>
         <td class="num mono">${fmtINR(it['Amount'])}</td>
       </tr>`).join('')}</tbody>
     </table></div>
-    <div class="grid-3" style="margin-top:12px;font-size:13px;">
-      <div><b>Gross:</b> <span class="mono">${fmtINRSym(h['Gross Amount'])}</span></div>
-      <div><b>GST:</b> <span class="mono">${fmtINRSym(h['GST Amount'])}</span></div>
-      <div style="color:var(--accent);"><b>Total:</b> <span class="mono">${fmtINRSym(h['Total Amount'])}</span></div>
+    <div style="display:flex;justify-content:flex-end;margin-top:8px;gap:8px;">
+      <div style="text-align:right;font-size:13px;">
+        <div>Gross: <strong>${fmtINRSym(h['Gross Amount'])}</strong></div>
+        <div>GST (${h['GST %']}%): <strong>${fmtINRSym(h['GST Amount'])}</strong></div>
+        <div style="color:var(--accent);font-size:15px;margin-top:4px;">Total: <strong>${fmtINRSym(h['Total Amount'])}</strong></div>
+      </div>
     </div>
+    ${h['Remarks'] ? `<div style="margin-top:10px;padding:8px 12px;background:var(--panel-2);border-radius:4px;font-size:12px;"><strong>Remarks:</strong> ${esc(h['Remarks'])}</div>` : ''}
     <div class="actions-row">
-      <button class="btn btn-secondary" onclick="printHOById('${esc(hoNum)}')">Print / PDF</button>
+      ${actionBtns}
+      <button class="btn btn-secondary" onclick="closeModal();printHOById('${esc(hoNum)}')">🖨 Print HO</button>
       <button class="btn btn-ghost" onclick="closeModal()">Close</button>
-    </div>`;
-  openModal(html);
+    </div>`);
 }
 
 async function printHOById(hoNum) {
   const r = await apiGetHODetails(hoNum);
   if (!r.ok) { toast(r.error,'error'); return; }
-  state.printPayload = { kind: 'HO', data: { ...r.header, items: r.items } };
-  closeModal();
-  setTimeout(() => window.print(), 200);
+  await _printOrderDoc('HO', hoNum, r.header, r.items||[], null);
 }
 
 // ============================================================
@@ -7064,20 +7498,7 @@ function renderWOList() {
   tbody.innerHTML = rows.map(o => {
     const st = o['Status'] || 'Open';
     const stClass = st.toLowerCase().replace(/[\s-]+/g,'-');
-    let actionBtns = `<button class="btn btn-ghost btn-sm" onclick="viewWO('${esc(o['WO Number'])}')">View</button>
-      <button class="btn btn-ghost btn-sm" onclick="printWOById('${esc(o['WO Number'])}')">Print</button>`;
-    if (perms.canApproveWO && st === 'Pending Approval') {
-      actionBtns += `<button class="btn btn-primary btn-sm" onclick="approveWO('${esc(o['WO Number'])}')">Approve</button>
-        <button class="btn btn-warn btn-sm" onclick="promptRejectWO('${esc(o['WO Number'])}','correction')">Return for Correction</button>
-        <button class="btn btn-danger btn-sm" onclick="promptRejectWO('${esc(o['WO Number'])}','outright')">Reject</button>`;
-    }
-    if (perms.canApproveWO && (st === 'Open' || st === 'Active')) {
-      actionBtns += `<button class="btn btn-warn btn-sm" onclick="shortCloseWO('${esc(o['WO Number'])}')">Short-Close</button>
-        <button class="btn btn-danger btn-sm" onclick="terminateWO('${esc(o['WO Number'])}')">Terminate</button>`;
-    }
-    if (perms.canCreateWO && st === 'Rejected - Correction') {
-      actionBtns += `<button class="btn btn-warn btn-sm" onclick="reviseWO('${esc(o['WO Number'])}')">✎ Revise &amp; Resubmit</button>`;
-    }
+    const actionBtns = `<button class="btn btn-ghost btn-sm" onclick="viewWO('${esc(o['WO Number'])}')">View</button>`;
     return `<tr>
       <td class="mono" style="font-weight:600;">${esc(o['WO Number'])}</td>
       <td>${fmtDate(o['WO Date'])}</td>
@@ -7374,32 +7795,80 @@ async function viewWO(woNum) {
   const r = await apiGetWODetails(woNum);
   if (!r.ok) { toast(r.error,'error'); return; }
   const h = r.header; const items = r.items||[];
-  openModal(`<h3>${esc(h['WO Number'])}</h3>
+  const st = h['Status'] || '';
+  const perms = mergedPerms();
+  const stClass = st.toLowerCase().replace(/[\s-]+/g,'-');
+
+  // Approval banner
+  const approvalBanner = (perms.canApproveWO && st === 'Pending Approval') ? `
+    <div style="margin-bottom:12px;padding:12px;background:#fffbeb;border:1px solid #fde68a;border-radius:6px;display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;">
+      <div>
+        <div style="font-size:11px;font-weight:700;color:#92400e;text-transform:uppercase;margin-bottom:2px;">Pending Your Approval</div>
+        <div style="font-size:12px;color:#1f2937;">Review the line items and totals before approving.</div>
+      </div>
+      <div style="display:flex;gap:6px;flex-shrink:0;">
+        <button class="btn btn-primary" onclick="closeModal();approveWO('${esc(woNum)}')">✓ Approve WO</button>
+        <button class="btn btn-warn" onclick="closeModal();promptRejectWO('${esc(woNum)}','correction')">Return for Correction</button>
+        <button class="btn btn-danger" onclick="closeModal();promptRejectWO('${esc(woNum)}','outright')">✕ Reject</button>
+      </div>
+    </div>` : '';
+
+  // Rejection/closure banner
+  const closureBanner = (st === 'Rejected' || st === 'Rejected - Correction') ? `
+    <div style="margin-bottom:10px;padding:10px;background:#fef2f2;border:1px solid #fca5a5;border-radius:6px;">
+      <div style="font-size:11px;font-weight:700;color:#991b1b;text-transform:uppercase;margin-bottom:4px;">${esc(st)}</div>
+      ${h['Rejection Reason'] ? `<div style="font-size:12px;color:#1f2937;"><strong>Reason:</strong> ${esc(h['Rejection Reason'])}</div>` : ''}
+      ${h['Termination Notice'] ? `<div style="font-size:12px;color:#1f2937;"><strong>Notice:</strong> ${esc(h['Termination Notice'])}</div>` : ''}
+    </div>` : '';
+
+  // Bottom action buttons
+  let actionBtns = '';
+  if (perms.canCreateWO && st === 'Rejected - Correction') {
+    actionBtns += `<button class="btn btn-warn" onclick="closeModal();reviseWO('${esc(woNum)}')">✎ Revise &amp; Resubmit</button> `;
+  }
+  if (perms.canApproveWO && (st === 'Open' || st === 'Active')) {
+    actionBtns += `<button class="btn btn-warn" onclick="closeModal();shortCloseWO('${esc(woNum)}')">Short-Close</button> `;
+    actionBtns += `<button class="btn btn-danger" onclick="closeModal();terminateWO('${esc(woNum)}')">Terminate</button> `;
+  }
+
+  openModal(`<h3>WO — ${esc(h['WO Number'])}</h3>
+    ${approvalBanner}
+    ${closureBanner}
     <div class="grid-3" style="font-size:13px;margin-bottom:12px;">
-      <div><b>Date:</b> ${fmtDate(h['WO Date'])}</div>
-      <div><b>Vendor:</b> ${esc(h['Vendor Name'])}</div>
-      <div><b>Status:</b> <span class="status ${(h['Status']||'').toLowerCase().replace(/[\s-]+/g,'-')}">${esc(h['Status'])}</span></div>
-      <div><b>Cert Mode:</b> ${esc(h['Cert Mode'])}</div>
-      <div><b>Retention:</b> ${h['Retention %']}%</div>
-      <div><b>Total Value:</b> ${fmtINRSym(h['Total Amount'])}</div>
+      <div><label class="muted" style="font-size:11px;">CONTRACTOR</label><div><strong>${esc(h['Vendor Name'])}</strong></div></div>
+      <div><label class="muted" style="font-size:11px;">DATE</label><div>${fmtDate(h['WO Date'])}</div></div>
+      <div><label class="muted" style="font-size:11px;">STATUS</label><div><span class="status ${stClass}">${esc(st)}</span></div></div>
+      <div><label class="muted" style="font-size:11px;">CERT MODE</label><div>${esc(h['Cert Mode']||'—')}</div></div>
+      <div><label class="muted" style="font-size:11px;">RETENTION</label><div>${h['Retention %']}%</div></div>
+      <div><label class="muted" style="font-size:11px;">TOTAL VALUE</label><div style="font-weight:700;color:var(--accent);">${fmtINRSym(h['Total Amount'])}</div></div>
     </div>
     <div class="table-wrap"><table>
       <thead><tr><th>#</th><th>Description</th><th>UOM</th><th class="num">Qty</th><th class="num">Rate</th><th class="num">Amount</th></tr></thead>
       <tbody>${items.map((it,i) => `<tr>
-        <td class="center">${i+1}</td><td>${esc(it['Description'])}</td><td>${esc(it['UOM'])}</td>
+        <td class="center">${it['S.No']||i+1}</td><td>${esc(it['Description'])}</td><td>${esc(it['UOM'])}</td>
         <td class="num mono">${fmtINR(it['Qty'])}</td><td class="num mono">${fmtINR(it['Unit Rate'])}</td>
         <td class="num mono">${fmtINR(it['Amount'])}</td>
       </tr>`).join('')}</tbody>
     </table></div>
-    <div class="actions-row"><button class="btn btn-secondary" onclick="printWOById('${esc(woNum)}')">Print</button>
-    <button class="btn btn-ghost" onclick="closeModal()">Close</button></div>`);
+    <div style="display:flex;justify-content:flex-end;margin-top:8px;gap:8px;">
+      <div style="text-align:right;font-size:13px;">
+        <div>Gross: <strong>${fmtINRSym(h['Gross Amount'])}</strong></div>
+        <div>GST (${h['GST %']}%): <strong>${fmtINRSym(h['GST Amount'])}</strong></div>
+        <div style="color:var(--accent);font-size:15px;margin-top:4px;">Total: <strong>${fmtINRSym(h['Total Amount'])}</strong></div>
+      </div>
+    </div>
+    ${h['Remarks'] ? `<div style="margin-top:10px;padding:8px 12px;background:var(--panel-2);border-radius:4px;font-size:12px;"><strong>Remarks:</strong> ${esc(h['Remarks'])}</div>` : ''}
+    <div class="actions-row">
+      ${actionBtns}
+      <button class="btn btn-secondary" onclick="closeModal();printWOById('${esc(woNum)}')">🖨 Print WO</button>
+      <button class="btn btn-ghost" onclick="closeModal()">Close</button>
+    </div>`);
 }
 
 async function printWOById(woNum) {
   const r = await apiGetWODetails(woNum);
   if (!r.ok) { toast(r.error,'error'); return; }
-  state.printPayload = { kind: 'WO', data: { ...r.header, items: r.items } };
-  closeModal(); setTimeout(() => window.print(), 200);
+  await _printOrderDoc('WO', woNum, r.header, r.items||[], null);
 }
 
 // ── WO CERTIFICATION UI ───────────────────────────────────────
@@ -8437,25 +8906,90 @@ async function newARR() {
   document.getElementById('arr_form').style.display = 'block';
   document.getElementById('arr_date').value = today();
   document.getElementById('arr_requestedBy').value = state.userName;
+  document.getElementById('arr_orderType').value = '';
+  document.getElementById('arr_orderNumber').value = '';
+  document.getElementById('arr_orderNumber').disabled = true;
+  document.getElementById('arr_orderResults').innerHTML = '';
   document.getElementById('arr_vendor').value = '';
   document.getElementById('arr_vendorCode').value = '';
   document.getElementById('arr_amount').value = '';
   document.getElementById('arr_remarks').value = '';
-  document.getElementById('arr_number').value = 'ARR/' + currentFY() + '/\u2014\u2014\u2014 (auto)';
+  document.getElementById('arr_number').value = 'ARR/' + currentFY() + '/——— (auto)';
+}
+
+
+// Order type/number typeahead for ARR form
+function onARROrderTypeChange() {
+  const type = document.getElementById('arr_orderType').value;
+  const inp  = document.getElementById('arr_orderNumber');
+  inp.value = '';
+  inp.disabled = !type;
+  inp.placeholder = type ? 'Type to search ' + type + ' number…' : 'Select order type first';
+  document.getElementById('arr_vendor').value = '';
+  document.getElementById('arr_vendorCode').value = '';
+  document.getElementById('arr_orderResults').innerHTML = '';
+}
+
+async function arrOrderTypeahead() {
+  const type = document.getElementById('arr_orderType').value;
+  const q    = document.getElementById('arr_orderNumber').value.toLowerCase().trim();
+  const res  = document.getElementById('arr_orderResults');
+  if (!type || q.length < 2) { res.innerHTML = ''; res.style.display = 'none'; return; }
+
+  // Fetch matching open orders from DB
+  let data = [], tbl = '', numCol = '', vendorCol = '';
+  if (type === 'PO') {
+    tbl = 'pu_po_orders'; numCol = 'po_number'; vendorCol = 'vendor_name';
+    const { data: rows } = await sb.from(tbl).select(numCol + ',' + vendorCol)
+      .in('status', ['Approved','Open','Partial Receipt']).ilike(numCol, '%' + q + '%').limit(10);
+    data = rows || [];
+  } else if (type === 'HO') {
+    tbl = 'ho_orders'; numCol = 'ho_number'; vendorCol = 'vendor_name';
+    const { data: rows } = await sb.from(tbl).select(numCol + ',' + vendorCol)
+      .in('status', ['Open','Active']).ilike(numCol, '%' + q + '%').limit(10);
+    data = rows || [];
+  } else if (type === 'WO') {
+    tbl = 'wo_orders'; numCol = 'wo_number'; vendorCol = 'vendor_name';
+    const { data: rows } = await sb.from(tbl).select(numCol + ',' + vendorCol)
+      .in('status', ['Open','Active']).ilike(numCol, '%' + q + '%').limit(10);
+    data = rows || [];
+  }
+
+  if (!data.length) { res.innerHTML = '<div class="typeahead-item muted" style="padding:8px;">No results</div>'; res.style.display = 'block'; return; }
+  res.innerHTML = data.map(r => {
+    const num = r[numCol]; const vendor = r[vendorCol] || '';
+    return `<div class="typeahead-item" onmousedown="event.preventDefault();selectARROrder('${esc(num)}','${esc(vendor)}')">
+      <div style="font-weight:600;">${esc(num)}</div>
+      <div style="font-size:11px;color:var(--muted);">${esc(vendor)}</div>
+    </div>`;
+  }).join('');
+  res.style.display = 'block';
+}
+
+function selectARROrder(orderNum, vendorName) {
+  document.getElementById('arr_orderNumber').value = orderNum;
+  document.getElementById('arr_vendor').value = vendorName;
+  document.getElementById('arr_orderResults').innerHTML = '';
+  document.getElementById('arr_orderResults').style.display = 'none';
 }
 
 function closeARRForm() { document.getElementById('arr_form').style.display = 'none'; }
 
 async function saveARR() {
-  const date   = document.getElementById('arr_date').value;
-  const vendor = document.getElementById('arr_vendor').value.trim();
-  const amount = num(document.getElementById('arr_amount').value);
-  if (!date)   { toast('Date required','error'); return; }
-  if (!vendor) { toast('Vendor required','error'); return; }
-  if (amount <= 0) { toast('Amount must be > 0','error'); return; }
+  const date      = document.getElementById('arr_date').value;
+  const vendor    = document.getElementById('arr_vendor').value.trim();
+  const orderType = document.getElementById('arr_orderType').value;
+  const orderNum  = document.getElementById('arr_orderNumber').value.trim();
+  const amount    = num(document.getElementById('arr_amount').value);
+  if (!date)      { toast('Date required','error'); return; }
+  if (!orderType) { toast('Order Type required','error'); return; }
+  if (!orderNum)  { toast('Order Number required','error'); return; }
+  if (!vendor)    { toast('Vendor required','error'); return; }
+  if (amount <= 0){ toast('Amount must be > 0','error'); return; }
 
   const r = await apiSaveARR({
     arrDate: date, vendor,
+    orderType, orderNumber: orderNum,
     requestedBy: document.getElementById('arr_requestedBy').value,
     amount, remarks: document.getElementById('arr_remarks').value
   });
@@ -10075,9 +10609,10 @@ function renderRFQList() {
       <td><button class="btn btn-ghost btn-sm" onclick="viewRFQ('${esc(rfqNum)}')">View</button></td>
     </tr>`;
 
-    return mainRow + quotesRow;
-  }).join('')||'<tr><td colspan="7" class="center muted">No RFQs.</td></tr>';
-  setTimeout(() => { const t=document.getElementById('rfq_listBody')?.closest('table'); if(t) makeSortable(t); }, 50);
+    // Wrap each RFQ + its sub-row in a tbody so table sorting cannot split them
+    return `<tbody class="rfq-group">${mainRow}${quotesRow}</tbody>`;
+  }).join('')||'<tbody><tr><td colspan="7" class="center muted">No RFQs.</td></tr></tbody>';
+  // Do not apply makeSortable to RFQ table — groups must stay paired
   // Re-init any persisted selections (after re-render, selections are cleared — that's intentional)
 }
 
@@ -10176,7 +10711,7 @@ async function newRFQQuote(rfqNum) {
     </div>
     <div class="actions-row" style="margin-top:12px;">
       <button class="btn btn-primary"
-        onclick="saveRFQQuote('${rfqNum}',${nextSno},${rfqItems.length})">💾 Save Quote</button>
+        onclick="guardedSave(()=>saveRFQQuote('${rfqNum}',${nextSno},${rfqItems.length}), this)">💾 Save Quote</button>
       <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
     </div>
   `, 'large');
@@ -10453,7 +10988,7 @@ async function viewQuoteComparison(rfqNum) {
     </div>
     <div class="actions-row" style="margin-top:12px;">
       <button class="btn btn-secondary" onclick="printRFQComparison('${rfqNum}')">🖨 Print</button>
-      <button class="btn btn-primary" onclick="submitQCFromSelection('${rfqNum}')">📤 Submit for Approval</button>
+      <button class="btn btn-primary" onclick="guardedSave(()=>submitQCFromSelection('${rfqNum}'), this)">📤 Submit for Approval</button>
       <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
     </div>
   `, 'large');
@@ -10888,6 +11423,7 @@ function renderQCList() {
       <td>${esc(q.prepared_by||'—')}</td>
       <td><span class="status ${stCls}">${q.status}</span></td><td>${acts}</td></tr>`;
   }).join('')||'<tr><td colspan="7" class="center muted">No quote comparisons.</td></tr>';
+  setTimeout(() => { const t=document.getElementById('qc_listBody')?.closest('table'); if(t) makeSortable(t); }, 50);
 }
 
 async function approveQC(qcNum) {
@@ -11375,8 +11911,7 @@ function renderPOList() {
   if(sf) rows=rows.filter(p=>p.status===sf);
   document.getElementById('po_listBody').innerHTML=rows.map(p=>{
     const stCls=p.status.toLowerCase().replace(/[\s/]+/g,'-');
-    const acts=`<button class="btn btn-ghost btn-sm" onclick="viewPO('${esc(p.po_number)}')">View</button>
-              <button class="btn btn-ghost btn-sm" onclick="printPO('${esc(p.po_number)}')">🖨</button>`;
+    const acts=`<button class="btn btn-ghost btn-sm" onclick="viewPO('${esc(p.po_number)}')">View</button>`;
     return `<tr>
       <td class="mono">${esc(p.po_number)}</td><td>${fmtDate(p.po_date)}</td>
       <td>${esc(p.vendor_name)}</td><td class="mono">${esc(p.qc_number||'—')}</td>
@@ -11815,233 +12350,41 @@ async function viewPO(poNum) {
       </tr></thead>
       <tbody>${itemsHTML}</tbody>
     </table></div>
+    <div style="margin-top:14px;border:.5px solid var(--border);border-radius:6px;overflow:hidden;">
+      <div style="padding:7px 12px;background:var(--panel-2);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);">Terms &amp; Conditions</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:0;border-top:.5px solid var(--border);">
+        <div style="padding:8px 12px;border-right:.5px solid var(--border);">
+          <div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;margin-bottom:3px;">Payment Terms</div>
+          <div style="font-size:12px;">${esc(h.payment_terms||'—')}</div>
+        </div>
+        <div style="padding:8px 12px;border-right:.5px solid var(--border);">
+          <div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;margin-bottom:3px;">Transportation</div>
+          <div style="font-size:12px;">${esc(h.transport||'—')}</div>
+        </div>
+        <div style="padding:8px 12px;">
+          <div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;margin-bottom:3px;">Contact Person</div>
+          <div style="font-size:12px;">${esc(h.contact_person||'—')}</div>
+        </div>
+      </div>
+      ${h.remarks ? `<div style="padding:8px 12px;border-top:.5px solid var(--border);">
+        <div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;margin-bottom:3px;">Comments / Special Instructions</div>
+        <div style="font-size:12px;white-space:pre-line;">${esc(h.remarks)}</div>
+      </div>` : ''}
+    </div>
     <div class="actions-row">${closeActions}<button class="btn btn-secondary" onclick="closeModal();printPO('${esc(h.po_number)}')">🖨 Print PO</button><button class="btn btn-ghost" onclick="closeModal()">Close</button></div>`);
 }
 
 async function printPOById(poNum) { await printPO(poNum); }
 
 async function printPO(poNum) {
-  pbShow('Loading PO\u2026');
+  pbShow('Loading PO…');
   const [{data:h},{data:items}] = await Promise.all([
     sb.from('pu_po_orders').select('*').eq('po_number',poNum).single(),
     sb.from('pu_po_items').select('*').eq('po_number',poNum).order('sno'),
   ]);
   pbDone();
   if(!h){ toast('PO not found','error'); return; }
-
-  const fi = function(n){ return (n||0).toLocaleString('en-IN',{minimumFractionDigits:2,maximumFractionDigits:2}); };
-
-  // Line items
-  const rows = (items||[]).map(function(it,i){
-    return '<tr>' +
-      '<td class="c">'+(it.sno||i+1)+'</td>' +
-      '<td>'+esc(it.material_name)+'</td>' +
-      '<td class="c">'+esc(it.uom)+'</td>' +
-      '<td class="r">'+fi(it.qty)+'</td>' +
-      '<td class="r">\u20b9 '+fi(it.unit_rate)+'</td>' +
-      '<td class="r">\u20b9 '+fi(it.base_amount||it.qty*it.unit_rate)+'</td>' +
-      '<td>'+esc(it.remarks||'')+'</td>' +
-    '</tr>';
-  }).join('');
-
-  // Totals block
-  const cgstPct = h.cgst_pct||((h.cgst_amount&&h.basic_value)?(h.cgst_amount/h.basic_value*100).toFixed(0):'');
-  const sgstPct = h.sgst_pct||cgstPct;
-  const igstPct = h.igst_pct||(h.igst_amount&&h.basic_value?Math.round(h.igst_amount/h.basic_value*100):'');
-  var totalsHTML = '<tr><td>Sub Total</td><td class="r">\u20b9 '+fi(h.basic_value)+'</td></tr>';
-  if(h.cgst_amount>0) totalsHTML += '<tr><td>CGST'+(cgstPct?' ('+cgstPct+'%)':'')+'</td><td class="r">\u20b9 '+fi(h.cgst_amount)+'</td></tr>';
-  if(h.sgst_amount>0) totalsHTML += '<tr><td>SGST'+(sgstPct?' ('+sgstPct+'%)':'')+'</td><td class="r">\u20b9 '+fi(h.sgst_amount)+'</td></tr>';
-  if(h.igst_amount>0) totalsHTML += '<tr><td>IGST'+(igstPct?' ('+igstPct+'%)':'')+'</td><td class="r">\u20b9 '+fi(h.igst_amount)+'</td></tr>';
-  if(h.round_off)     totalsHTML += '<tr><td>Round Off</td><td class="r">\u20b9 '+fi(h.round_off)+'</td></tr>';
-  totalsHTML += '<tr class="gtrow"><td>TOTAL</td><td class="r">\u20b9 '+fi(h.grand_total)+'</td></tr>';
-
-  // Amount in words
-  var wordsLine = '';
-  try { wordsLine = numToWordsINR(h.grand_total||0); } catch(e){}
-
-  // Meta rows — MIR/QC ref only if present
-  var metaExtra = '';
-  if(h.project)       metaExtra += '<tr><td class="l">Project</td><td>'+esc(h.project)+'</td></tr>';
-  if(h.mir_number)    metaExtra += '<tr><td class="l">MIR Ref</td><td>'+esc(h.mir_number)+'</td></tr>';
-  if(h.qc_number)     metaExtra += '<tr><td class="l">QC Ref</td><td>'+esc(h.qc_number)+'</td></tr>';
-  if(h.delivery_date) metaExtra += '<tr><td class="l">Deliver By</td><td>'+fmtDate(h.delivery_date)+'</td></tr>';
-
-  // Remarks row in footer (only if present)
-  var remarksRow = h.remarks
-    ? '<tr><td colspan="4" style="padding:6pt 8pt;border:.5pt solid #bbb;vertical-align:top;">' +
-        '<div class="footer-hdr">Comments / Special Instructions</div>' +
-        '<div class="footer-val" style="margin-top:3pt;line-height:1.6;">'+esc(h.remarks)+'</div>' +
-      '</td></tr>'
-    : '';
-
-  var vendorAddr = h.vendor_address ? esc(h.vendor_address).split('\n').join('<br>') : '';
-  var deliveryAddr = h.delivery_address
-    ? esc(h.delivery_address).split('\n').join('<br>')
-    : 'Poetry of Earth, Sy.No.199, Varthur\u2013Sarjapur Road, Opposite Vinayaka Theatre, Varthur, Bengaluru \u2013 560087';
-
-  const doc = '<!DOCTYPE html>' +
-'<html><head>' +
-'<meta charset="UTF-8">' +
-'<title>Purchase Order \u2014 '+esc(poNum)+'</title>' +
-'<style>' +
-// Page — zero margin; body handles padding for page 1;
-// page 2+ gets top margin via @page :left/:right or padding-top on a pseudo rule
-'@page { size:A4 portrait; margin:0mm; }' +
-'@page :first { margin:0mm; }' +
-'* { box-sizing:border-box; margin:0; padding:0; }' +
-'body {' +
-  'font-family:Arial,Helvetica,sans-serif; font-size:9pt; color:#111;' +
-  '-webkit-print-color-adjust:exact; print-color-adjust:exact;' +
-  'padding:25mm 15mm 20mm 15mm;' +
-'}' +
-// Subsequent pages need 30mm top — achieved by a top-margin block that repeats
-'.page-margin-top { display:block; height:30mm; }' +
-// Title row
-'.title-row { display:flex; justify-content:flex-end; align-items:flex-start; margin-bottom:10pt; }' +
-'.doc-title { font-size:20pt; font-weight:700; color:#1e3a5f; letter-spacing:1pt; }' +
-'.mt { border-collapse:collapse; margin-top:6pt; margin-left:auto; }' +
-'.mt td { padding:2.5pt 8pt; font-size:8.5pt; border:.4pt solid #bbb; }' +
-'.mt .l { font-weight:700; background:#1e3a5f; color:#fff; min-width:55pt; text-align:right; }' +
-// Address boxes
-'.addr-row { display:flex; gap:6pt; margin-bottom:10pt; }' +
-'.addr-box { flex:1; border:.5pt solid #bbb; border-radius:2pt; padding:7pt; }' +
-'.addr-hdr { font-size:7pt; font-weight:700; text-transform:uppercase; color:#1e3a5f;' +
-            'border-bottom:.5pt solid #dde; margin-bottom:5pt; padding-bottom:3pt; letter-spacing:.5pt; }' +
-'.addr-body { font-size:8.5pt; line-height:1.7; }' +
-'.addr-body strong { font-size:9pt; }' +
-// Line items table
-'table.items { width:100%; border-collapse:collapse; margin-bottom:8pt; }' +
-'table.items thead tr { background:#1e3a5f; }' +
-'table.items th { color:#fff; padding:5pt 6pt; font-size:8pt; font-weight:700; text-align:left; border:.4pt solid #2d4f7c; }' +
-'table.items th.c, table.items td.c { text-align:center; }' +
-'table.items th.r, table.items td.r { text-align:right; }' +
-'table.items td { padding:5pt 6pt; font-size:8.5pt; border:.4pt solid #ddd; vertical-align:top; }' +
-'table.items tr:nth-child(even) td { background:#f8fafc; }' +
-// Totals
-'table.totals { width:100%; border-collapse:collapse; }' +
-'table.totals td { padding:4pt 8pt; font-size:8.5pt; border:.4pt solid #ccc; }' +
-'table.totals td:first-child { font-weight:600; background:#f0f5fb; color:#1e3a5f; }' +
-'table.totals td:last-child { text-align:right; }' +
-'table.totals tr.gtrow td { font-weight:700; background:#1e3a5f; color:#fff; font-size:10pt; }' +
-'.words { font-size:7.5pt; color:#555; font-style:italic; margin-top:4pt; padding:3pt 0; border-top:.4pt solid #ddd; }' +
-// Footer
-'.footer-hdr { font-size:7pt; font-weight:700; text-transform:uppercase; color:#1e3a5f; letter-spacing:.5pt; margin-bottom:4pt; }' +
-'.footer-val { font-size:8.5pt; line-height:1.6; }' +
-'.sign-line { border-top:.5pt solid #444; padding-top:4pt; font-size:8pt; color:#333; line-height:1.7; margin-top:24pt; }' +
-// Page break rules — thead repeats, rows don't split; totals/footer stay intact
-'thead { display:table-header-group; }' +
-'tr { page-break-inside:avoid; }' +
-'.totals-wrap { page-break-inside:avoid; }' +
-'.footer-table { page-break-inside:avoid; }' +
-'.sign-wrap { page-break-inside:avoid; }' +
-// Second page top margin — pad the body on subsequent pages via @page margin
-// We use a named page approach: body padding handles p1; @page sets margin for p2+
-'@media print {' +
-  '@page { margin:30mm 15mm 20mm 15mm; }' +
-  '@page :first { margin:0mm 0mm 0mm 0mm; }' +
-  'body { padding:25mm 15mm 20mm 15mm; }' +
-'}' +
-'</style></head><body>' +
-
-'<div class="title-row">' +
-  '<div style="text-align:right;">' +
-    '<div class="doc-title">PURCHASE ORDER</div>' +
-    '<table class="mt">' +
-      '<tr><td class="l">DATE</td><td>'+fmtDate(h.po_date)+'</td></tr>' +
-      '<tr><td class="l">PO #</td><td><strong>'+esc(poNum)+'</strong></td></tr>' +
-      metaExtra +
-    '</table>' +
-  '</div>' +
-'</div>' +
-
-'<div class="addr-row">' +
-  '<div class="addr-box">' +
-    '<div class="addr-hdr">Vendor</div>' +
-    '<div class="addr-body">' +
-      '<strong>'+esc(h.vendor_name)+'</strong>' +
-      (vendorAddr ? '<br>'+vendorAddr : '') +
-      (h.vendor_gstin ? '<br>GSTIN: <strong>'+esc(h.vendor_gstin)+'</strong>' : '') +
-      (h.contact_person ? '<br>'+esc(h.contact_person) : '') +
-    '</div>' +
-  '</div>' +
-  '<div class="addr-box">' +
-    '<div class="addr-hdr">Bill To</div>' +
-    '<div class="addr-body">' +
-      '<strong>'+CO_NAME+'</strong><br>' +
-      CO_ADDR+'<br>' +
-      'GSTIN: '+CO_GSTIN +
-    '</div>' +
-  '</div>' +
-  '<div class="addr-box">' +
-    '<div class="addr-hdr">Ship To / Delivery Address</div>' +
-    '<div class="addr-body">'+deliveryAddr+'</div>' +
-  '</div>' +
-'</div>' +
-
-'<table class="items">' +
-  '<thead><tr>' +
-    '<th class="c" style="width:28pt">ITEM #</th>' +
-    '<th>DESCRIPTION</th>' +
-    '<th class="c" style="width:38pt">UOM</th>' +
-    '<th class="r" style="width:45pt">QTY</th>' +
-    '<th class="r" style="width:58pt">UNIT PRICE</th>' +
-    '<th class="r" style="width:70pt">SUB-TOTAL (\u20b9)</th>' +
-    '<th style="width:70pt">REMARKS</th>' +
-  '</tr></thead>' +
-  '<tbody>'+rows+'</tbody>' +
-'</table>' +
-
-'<div class="totals-wrap" style="display:flex;justify-content:flex-end;margin-top:8pt;">' +
-  '<div style="width:230pt;">' +
-    '<table class="totals">'+totalsHTML+'</table>' +
-    (wordsLine ? '<div class="words">'+wordsLine+'</div>' : '') +
-  '</div>' +
-'</div>' +
-
-'<table class="footer-table" style="width:100%;border-collapse:collapse;margin-top:10pt;border:.5pt solid #bbb;">' +
-  '<tr>' +
-    '<td style="width:25%;padding:6pt 8pt;border:.5pt solid #bbb;vertical-align:top;">' +
-      '<div class="footer-hdr">Payment Terms</div>' +
-      '<div class="footer-val" style="margin-top:3pt;">'+esc(h.payment_terms||'\u2014')+'</div>' +
-    '</td>' +
-    '<td style="width:25%;padding:6pt 8pt;border:.5pt solid #bbb;vertical-align:top;">' +
-      '<div class="footer-hdr">Contact Person</div>' +
-      '<div class="footer-val" style="margin-top:3pt;">'+esc(h.contact_person||'\u2014')+'</div>' +
-    '</td>' +
-    '<td style="width:20%;padding:6pt 8pt;border:.5pt solid #bbb;vertical-align:top;">' +
-      '<div class="footer-hdr">Transportation</div>' +
-      '<div class="footer-val" style="margin-top:3pt;">'+esc(h.transport||'\u2014')+'</div>' +
-    '</td>' +
-    '<td style="width:30%;padding:6pt 8pt;border:.5pt solid #bbb;vertical-align:top;">' +
-      '<div class="footer-hdr">Prepared By</div>' +
-      '<div class="footer-val" style="margin-top:3pt;">'+esc(h.prepared_by||'\u2014')+'</div>' +
-    '</td>' +
-  '</tr>' +
-  remarksRow +
-'</table>' +
-
-'<div class="sign-wrap" style="display:flex;justify-content:flex-end;margin-top:20pt;">' +
-  '<div class="sign-line">For '+CO_NAME+'<br><br><br>Authorised Signatory</div>' +
-'</div>' +
-
-'</body></html>';
-
-  // Print via hidden iframe — most reliable cross-browser approach
-  const iframe = document.createElement('iframe');
-  iframe.style.cssText = 'position:fixed;top:-9999px;left:-9999px;width:0;height:0;border:0;';
-  document.body.appendChild(iframe);
-  iframe.contentDocument.open();
-  iframe.contentDocument.write(doc);
-  iframe.contentDocument.close();
-  iframe.onload = function() {
-    setTimeout(function() {
-      iframe.contentWindow.focus();
-      iframe.contentWindow.print();
-      setTimeout(function() {
-        if(document.body.contains(iframe)) document.body.removeChild(iframe);
-      }, 3000);
-    }, 500);
-  };
+  await _printOrderDoc('PO', poNum, h, items||[], null);
 }
 
 
@@ -12828,6 +13171,12 @@ async function viewGRN(grnNum) {
         <tbody>${(items||[]).map(it=>`<tr><td>${it.sno}</td><td>${esc(it.material_name)}</td><td>${esc(it.uom)}</td><td class="num">${fmtINR(it.po_qty)}</td><td class="num">${fmtINR(it.prev_received_qty)}</td><td class="num">${fmtINR(it.this_grn_qty)}</td><td class="num">${fmtINR(it.balance_qty)}</td><td class="num">${fmtINR(it.unit_rate)}</td><td class="num">${fmtINR(it.base_amount)}</td></tr>`).join('')}
         <tr style="background:#e6f4f1;font-weight:700;"><td colspan="8" style="text-align:right;padding:6px 8px;">Total</td><td class="num">${fmtINRSym(total)}</td></tr>
         </tbody></table></div>`;
+  // Show "Create POB" only for Verified non-cash GRNs and users with POB permission
+  const canCreatePOBFromGRN = hasPerm('canCreatePOB') && h?.status === 'Verified' && !isCash;
+  const createPOBBtn = canCreatePOBFromGRN
+    ? `<button class="btn btn-primary" onclick="closeModal();newPOBFromGRN('${esc(grnNum)}','${esc(h?.po_number||'')}')">📄 Create POB</button>`
+    : '';
+
   openModal(`<h3>GRN — ${esc(grnNum)}${cashBadge}</h3>
     <div class="grid-3" style="margin-bottom:10px;">
       ${refField}
@@ -12838,13 +13187,49 @@ async function viewGRN(grnNum) {
       <div><label class="muted" style="font-size:11px;">STATUS</label><div>${esc(h?.status||'')}</div></div>
     </div>
     ${itemTable}
-    <div class="actions-row"><button class="btn btn-ghost" onclick="closeModal()">Close</button></div>`);
+    <div class="actions-row">
+      ${createPOBBtn}
+      <button class="btn btn-ghost" onclick="closeModal()">Close</button>
+    </div>`);
 }
 
 // ============================================================
 // POB — GRN BILLING
 // ============================================================
 let _pobExtraCount=0, _pobSelectedGRNs=[], _pobLineItems=[], _pobGSTInfo={};
+
+// Smart navigation: open POB form pre-filled with a specific GRN
+// Called from viewGRN popup "Create POB" button
+async function newPOBFromGRN(grnNum, poNum) {
+  if (!hasPerm('canCreatePOB')) { toast('Only Planning/QS can create bills','error'); return; }
+  // Switch to POB tab
+  switchPUTab('pob');
+  await loadPOBList();
+  // Open the POB form
+  await newPOB();
+  // Pre-select the PO
+  const sel = document.getElementById('pob_poSelect');
+  if (sel && poNum) {
+    sel.value = poNum;
+    await onPOBPOChange();
+    // Now tick the specific GRN checkbox
+    await new Promise(r => setTimeout(r, 400)); // wait for GRN checkboxes to render
+    const chk = document.querySelector(`.pob_grnChk[value="${poNum ? grnNum : ''}"]`) ||
+                 [...document.querySelectorAll('.pob_grnChk')].find(c => c.value === grnNum);
+    if (chk) {
+      chk.checked = true;
+      await onPOBGRNSelect();
+      toast(`GRN ${grnNum} pre-selected — fill invoice details and submit`, 'info', 4000);
+    } else {
+      toast(`PO selected — please tick GRN ${grnNum} from the list`, 'info', 4000);
+    }
+  }
+  // Dismiss the billing banner if visible
+  const banner = document.getElementById('grn_toBillBanner');
+  if (banner) banner.style.display = 'none';
+  puState._grnToBillMode = false;
+  window.scrollTo(0, 0);
+}
 
 async function loadPOBList() {
   // Reset to list-only view (Refresh should always return user to the list)
@@ -17243,7 +17628,7 @@ const DASH_CARD_DEFS = {
     // GRN: 'Verified'        = GRN verified, no POB started yet
     //      'Partially Billed' = included in a POB that is pending PM approval — still in QS's court
     //      Card clears only when POB is approved → GRN status becomes 'Billed'
-    { id:'qs_grn_unbilled', label:'GRNs to Bill (POB)', sub:'Verified GRNs — create / pending POB', cls:'warn', nav:function(){navDash('purchase','pob','');},
+    { id:'qs_grn_unbilled', label:'GRNs to Bill (POB)', sub:'Verified GRNs — ready to create POB', cls:'warn', nav:function(){navDash('purchase','grn','Verified'); puState._grnToBillMode=true; setTimeout(()=>{ const b=document.getElementById('grn_toBillBanner'); if(b) b.style.display=''; },300);},
       query: function(){return sb.from('pu_grn').select('grn_number',{count:'exact',head:true}).in('status',['Verified','Partially Billed']);} },
     // ── Follow-on: PRR raised → confirm payment ────────────────────────────────
     { id:'qs_pay',    label:'Payments to Confirm', sub:'PRRs raised — confirm payment', cls:'info', nav:function(){navDash('payments','confirm','');},
