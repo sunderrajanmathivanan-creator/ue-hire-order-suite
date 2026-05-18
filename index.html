@@ -2142,6 +2142,28 @@ input[type="number"] {
 
   <!-- MATERIAL MASTER -->
   <div id="master-materials" class="hidden">
+
+    <!-- ── Manage Categories card (Admin only) ── -->
+    <div class="card" id="masterMatCatCard" style="display:none;">
+      <h3>Manage Material Categories</h3>
+      <div class="row" style="gap:10px;align-items:flex-end;flex-wrap:wrap;">
+        <div class="field" style="flex:1;min-width:220px;margin:0;">
+          <label class="req">Category Name</label>
+          <input id="mc_catName" placeholder="e.g. Structural, Landscaping, Safety" autocomplete="off" style="width:100%;">
+        </div>
+        <div class="field" style="flex:1;min-width:220px;margin:0;">
+          <label>Description <span style="color:var(--muted);font-weight:400;">(optional)</span></label>
+          <input id="mc_catDesc" placeholder="Brief description of this category" style="width:100%;">
+        </div>
+        <button class="btn btn-primary" onclick="saveMatCategory()" style="align-self:flex-end;white-space:nowrap;">+ Add Category</button>
+      </div>
+      <div class="table-wrap" style="margin-top:16px;">
+        <table><thead><tr><th>Category</th><th>Description</th><th>Materials</th><th style="width:80px;"></th></tr></thead>
+        <tbody id="mc_catList"><tr><td colspan="4" class="center muted">Loading…</td></tr></tbody></table>
+      </div>
+    </div>
+
+    <!-- ── Add Material card ── -->
     <div class="card" id="masterAddMaterialCard">
       <h3>Add Material</h3>
       <div class="grid-3">
@@ -2157,11 +2179,6 @@ input[type="number"] {
           <label class="req">Category</label>
           <select id="mm_category">
             <option value="">— Select —</option>
-            <option value="Civil">Civil</option>
-            <option value="MEP">MEP</option>
-            <option value="Finishing">Finishing</option>
-            <option value="Consumable">Consumable</option>
-            <option value="Equipment">Equipment</option>
           </select>
         </div>
         <div class="field"><label>Sub Category</label><input id="mm_subcat" placeholder="e.g. Structural Steel, Plumbing"></div>
@@ -2170,19 +2187,18 @@ input[type="number"] {
       </div>
       <div class="actions-row"><button class="btn btn-primary" onclick="saveMaterialMaster()">+ Add Material</button></div>
     </div>
+
+    <!-- ── Material List card ── -->
     <div class="card">
       <h3>Material List</h3>
       <div class="row" style="margin-bottom:10px;">
         <select id="mm_catFilter" style="padding:7px;background:var(--input-bg);color:var(--text);border:1px solid var(--border);border-radius:4px;" onchange="renderMaterialMaster()">
           <option value="">All Categories</option>
-          <option value="Civil">Civil</option><option value="MEP">MEP</option>
-          <option value="Finishing">Finishing</option><option value="Consumable">Consumable</option>
-          <option value="Equipment">Equipment</option>
         </select>
         <input id="mm_search" placeholder="Search materials…" style="padding:7px;background:var(--input-bg);color:var(--text);border:1px solid var(--border);border-radius:4px;width:220px;" oninput="renderMaterialMaster()">
       </div>
       <div class="table-wrap">
-        <table><thead><tr><th>Code</th><th>Name</th><th>Category</th><th>Sub Category</th><th>UOM</th><th>HSN</th><th>Specification</th></tr></thead>
+        <table><thead><tr id="mm_thead"><th style="cursor:pointer;user-select:none;" onclick="_mmSortBy('material_code')">Code ⇅</th><th style="cursor:pointer;user-select:none;" onclick="_mmSortBy('material_name')">Name ⇅</th><th style="cursor:pointer;user-select:none;" onclick="_mmSortBy('category')">Category ⇅</th><th style="cursor:pointer;user-select:none;" onclick="_mmSortBy('sub_category')">Sub Category ⇅</th><th style="cursor:pointer;user-select:none;" onclick="_mmSortBy('uom')">UOM ⇅</th><th style="cursor:pointer;user-select:none;" onclick="_mmSortBy('hsn_code')">HSN ⇅</th><th style="cursor:pointer;user-select:none;" onclick="_mmSortBy('specification')">Specification ⇅</th><th style="width:70px;"></th></tr></thead>
         <tbody id="mm_list"><tr><td colspan="7" class="center muted">No materials.</td></tr></tbody></table>
       </div>
     </div>
@@ -3562,6 +3578,7 @@ const ROLE_PERMS = {
 // ── Purchase module state (defined early so initApp can call apiLoadMaterials) ──
 var puState = {
   materials: [],
+  matCategories: [],   // rows from pu_material_categories
   wbsList: [],   // full WBS master list (generated rows in wbs_master table)
   // ---- WBS redesign state ----
   wbsActivities: [],    // wbs_activity_master rows
@@ -4174,7 +4191,7 @@ async function apiGetHOBDetails(billNumber) {
 
 async function apiGetAdvanceOutstanding(vendor) {
   const [arrs, bills] = await Promise.all([
-    sb.from('ho_arr').select('paid_amount').eq('vendor', vendor).in('status',['Paid','Partial Paid']),
+    sb.from('ho_arr').select('paid_amount').eq('vendor', vendor).in('status',['Unpaid','Partial Paid','Paid']),
     sb.from('ho_bills').select('advance_recovery').eq('vendor_name', vendor).neq('status','Rejected')
   ]);
   const totalAdv = (arrs.data||[]).reduce((s,r) => s + num(r.paid_amount), 0);
@@ -5595,7 +5612,13 @@ function switchMasterTab(tab) {
     if (stab) stab.classList.toggle('active', t === tab);
   });
   if (tab === 'wbs') { loadWBSAll(); }
-  if (tab === 'materials') { apiLoadMaterials().then(renderMaterialMaster); }
+  if (tab === 'materials') {
+    Promise.all([apiLoadMatCategories(), apiLoadMaterials()]).then(() => {
+      populateMatCategoryDropdowns();
+      renderMatCategories();
+      renderMaterialMaster();
+    });
+  }
   if (tab === 'contractors') { renderContractorMaster(); }
 }
 
@@ -5624,11 +5647,14 @@ async function initApp() {
     await Promise.all([
       apiLoadMasters().catch(e  => console.error('Masters:', e)),
       apiLoadMaterials().catch(e => console.error('Materials:', e)),
+      apiLoadMatCategories().catch(e => console.error('MatCategories:', e)),
       loadHOList().catch(e      => console.error('HOList:', e)),
       loadWOList().catch(e      => console.error('WOList:', e)),
       loadWBSMaster().catch(e   => console.error('WBSMaster:', e)),
     ]);
     renderAllMasters();
+    populateMatCategoryDropdowns();
+    renderMatCategories();
     // Ensure only HO Orders sub-tab visible on initial load
     _resetSubTabs();
     // Dashboard activated by onSignedIn override — no default sub-tab switch here
@@ -6618,6 +6644,17 @@ async function cancelHO(hoNum) {
 async function confirmCancelHO(hoNum) {
   const reason = (document.getElementById('hoActionReason')?.value || '').trim();
   if (!reason) { toast('Reason is mandatory','error'); return; }
+  // Advance guard — check for any Paid/Partial Paid ARR against this HO
+  const { data: advRows } = await sb.from('ho_arr')
+    .select('arr_number')
+    .eq('order_type', 'HO')
+    .eq('order_number', hoNum)
+    .in('status', ['Unpaid', 'Partial Paid', 'Paid']);
+  if ((advRows||[]).length > 0) {
+    const refs = advRows.map(r => r.arr_number).join(', ');
+    toast(`Cannot cancel — advance release request exists (${refs}). Cancel the ARR or recover the advance before cancelling this HO.`, 'error');
+    return;
+  }
   closeModal();
   const r = await apiUpdateHOStatus(hoNum, 'Cancelled', reason);
   if (r.ok) { flashSuccess('HO ' + hoNum + ' Cancelled'); state.hireOrders = []; loadHOList(); }
@@ -7785,6 +7822,17 @@ async function terminateWO(woNum) {
 async function confirmTerminateWO(woNum) {
   const notice = (document.getElementById('woTermNotice')?.value||'').trim();
   if (!notice) { toast('Termination notice is mandatory','error'); return; }
+  // Advance guard — check for any Paid/Partial Paid ARR against this WO
+  const { data: advRows } = await sb.from('ho_arr')
+    .select('arr_number')
+    .eq('order_type', 'WO')
+    .eq('order_number', woNum)
+    .in('status', ['Unpaid', 'Partial Paid', 'Paid']);
+  if ((advRows||[]).length > 0) {
+    const refs = advRows.map(r => r.arr_number).join(', ');
+    toast(`Cannot terminate — advance release request exists (${refs}). Cancel the ARR or recover the advance before terminating this WO.`, 'error');
+    return;
+  }
   closeModal();
   const r = await apiUpdateWOStatus(woNum, 'Terminated', '', notice);
   if (r.ok) { flashSuccess('WO '+woNum+' Terminated'); state.workOrders=[]; loadWOList(); }
@@ -9846,14 +9894,206 @@ async function apiLoadMaterials() {
   return { ok: !error };
 }
 
+// ── Material Category functions ────────────────────────────────
+async function apiLoadMatCategories() {
+  const { data, error } = await sb.from('pu_material_categories')
+    .select('*').eq('is_active', true).order('category_name');
+  if (!error) puState.matCategories = data || [];
+  return { ok: !error };
+}
+
+function populateMatCategoryDropdowns() {
+  const cats = puState.matCategories;
+  // Add form dropdown
+  const addSel = document.getElementById('mm_category');
+  if (addSel) {
+    const cur = addSel.value;
+    addSel.innerHTML = '<option value="">— Select —</option>' +
+      cats.map(c => `<option value="${esc(c.category_name)}">${esc(c.category_name)}</option>`).join('');
+    if (cur) addSel.value = cur;
+  }
+  // Filter dropdown
+  const filtSel = document.getElementById('mm_catFilter');
+  if (filtSel) {
+    const cur2 = filtSel.value;
+    filtSel.innerHTML = '<option value="">All Categories</option>' +
+      cats.map(c => `<option value="${esc(c.category_name)}">${esc(c.category_name)}</option>`).join('');
+    if (cur2) filtSel.value = cur2;
+  }
+}
+
+function renderMatCategories() {
+  const isAdmin = hasRole('Admin');
+  // Show/hide manage card
+  const card = document.getElementById('masterMatCatCard');
+  if (card) card.style.display = isAdmin ? '' : 'none';
+  if (!isAdmin) return;
+
+  const cats = puState.matCategories;
+  const mats = puState.materials;
+  const tbody = document.getElementById('mc_catList');
+  if (!tbody) return;
+
+  if (!cats.length) {
+    tbody.innerHTML = '<tr><td colspan="4" class="center muted">No categories yet. Add one above.</td></tr>';
+    return;
+  }
+  tbody.innerHTML = cats.map(c => {
+    const count = mats.filter(m => m.category === c.category_name).length;
+    const canDelete = count === 0;
+    return `<tr>
+      <td><strong>${esc(c.category_name)}</strong></td>
+      <td class="muted">${esc(c.description||'—')}</td>
+      <td>${count} material${count !== 1 ? 's' : ''}</td>
+      <td>${canDelete
+        ? `<button class="btn btn-ghost btn-sm" style="color:var(--danger);" onclick="deleteMatCategory(${c.id}, '${esc(c.category_name)}')">Delete</button>`
+        : `<span class="muted" title="Cannot delete — category has materials">In use</span>`
+      }</td>
+    </tr>`;
+  }).join('');
+}
+
+async function saveMatCategory() {
+  if (!hasRole('Admin')) { toast('Only Admin can manage categories','error'); return; }
+  const name = (document.getElementById('mc_catName')?.value || '').trim();
+  const desc = (document.getElementById('mc_catDesc')?.value || '').trim();
+  if (!name) { toast('Category name is required','error'); return; }
+  const dup = puState.matCategories.find(c => c.category_name.toLowerCase() === name.toLowerCase());
+  if (dup) { toast(`Category "${name}" already exists`,'error'); return; }
+  pbShow('Saving category…');
+  try {
+    const { error } = await sb.from('pu_material_categories').insert({
+      category_name: name,
+      description: desc || null,
+      created_by: state.userId,
+      created_by_name: state.userName,
+    });
+    if (error) throw new Error(error.message);
+    flashSuccess(`Category "${name}" added`);
+    document.getElementById('mc_catName').value = '';
+    document.getElementById('mc_catDesc').value = '';
+    await apiLoadMatCategories();
+    populateMatCategoryDropdowns();
+    renderMatCategories();
+  } catch(e) { toast('Error: ' + e.message, 'error'); }
+  finally { pbDone(); }
+}
+
+async function deleteMatCategory(id, name) {
+  if (!hasRole('Admin')) { toast('Only Admin can delete categories','error'); return; }
+  const inUse = puState.materials.some(m => m.category === name);
+  if (inUse) { toast(`Cannot delete — "${name}" is used by existing materials`,'error'); return; }
+  if (!confirm(`Delete category "${name}"?`)) return;
+  pbShow('Deleting…');
+  try {
+    const { error } = await sb.from('pu_material_categories').update({ is_active: false }).eq('id', id);
+    if (error) throw new Error(error.message);
+    flashSuccess(`Category "${name}" deleted`);
+    await apiLoadMatCategories();
+    populateMatCategoryDropdowns();
+    renderMatCategories();
+  } catch(e) { toast('Error: ' + e.message, 'error'); }
+  finally { pbDone(); }
+}
+// ──────────────────────────────────────────────────────────────
+
+// ── Material Master sort state ─────────────────────────────────
+var _mmSort = { col: 'material_name', dir: 1 }; // dir: 1=asc, -1=desc
+function _mmSortBy(col) {
+  if (_mmSort.col === col) _mmSort.dir *= -1;
+  else { _mmSort.col = col; _mmSort.dir = 1; }
+  renderMaterialMaster();
+}
+function _mmSortIndicator(col) {
+  if (_mmSort.col !== col) return '<span style="color:#cbd5e1;margin-left:4px;">⇅</span>';
+  return _mmSort.dir === 1
+    ? '<span style="color:var(--accent);margin-left:4px;">↑</span>'
+    : '<span style="color:var(--accent);margin-left:4px;">↓</span>';
+}
+// ──────────────────────────────────────────────────────────────
+
+// ── Fuzzy search scorer ───────────────────────────────────────
+// Returns a score > 0 if query chars appear in order in target.
+// Higher score = better match. 0 = no match.
+function _fuzzyScore(target, query) {
+  if (!query) return 1;
+  const t = target.toLowerCase();
+  const q = query.toLowerCase().trim();
+  if (!q) return 1;
+  // Exact substring = highest score
+  if (t.includes(q)) return 100 + (1 / (t.length + 1));
+  // Word-boundary match (query matches start of any word)
+  const words = t.split(/[\s\-\/,]+/);
+  for (const w of words) {
+    if (w.startsWith(q)) return 80 + (1 / (t.length + 1));
+  }
+  // Sequential character match (all query chars appear in order)
+  let ti = 0, qi = 0, consecutive = 0, score = 0;
+  while (ti < t.length && qi < q.length) {
+    if (t[ti] === q[qi]) {
+      qi++;
+      consecutive++;
+      score += consecutive * 2;
+    } else {
+      consecutive = 0;
+    }
+    ti++;
+  }
+  return qi === q.length ? score : 0;
+}
+// ──────────────────────────────────────────────────────────────
+
 function renderMaterialMaster() {
-  const q   = (document.getElementById('mm_search')?.value || '').toLowerCase();
+  const q   = (document.getElementById('mm_search')?.value || '').trim();
   const cat = document.getElementById('mm_catFilter')?.value || '';
   let rows = puState.materials;
   if (cat) rows = rows.filter(m => m.category === cat);
-  if (q)   rows = rows.filter(m =>
-    m.material_name.toLowerCase().includes(q) ||
-    (m.sub_category||'').toLowerCase().includes(q));
+
+  // Fuzzy search across name, sub_category, material_code, uom
+  if (q) {
+    rows = rows.map(m => {
+      const score = Math.max(
+        _fuzzyScore(m.material_name    || '', q),
+        _fuzzyScore(m.sub_category     || '', q) * 0.8,
+        _fuzzyScore(m.material_code    || '', q) * 0.9,
+        _fuzzyScore(m.uom              || '', q) * 0.6,
+        _fuzzyScore(m.specification    || '', q) * 0.5
+      );
+      return { m, score };
+    }).filter(x => x.score > 0)
+      .sort((a, b) => b.score - a.score)
+      .map(x => x.m);
+  }
+
+  // Sort (only when no search query — search results sorted by relevance)
+  if (!q) {
+    const col = _mmSort.col;
+    const dir = _mmSort.dir;
+    rows = [...rows].sort((a, b) => {
+      const av = (a[col] || '').toString().toLowerCase();
+      const bv = (b[col] || '').toString().toLowerCase();
+      return av < bv ? -dir : av > bv ? dir : 0;
+    });
+  }
+
+  // Sortable header
+  const cols = [
+    { key: 'material_code',  label: 'Code' },
+    { key: 'material_name',  label: 'Name' },
+    { key: 'category',       label: 'Category' },
+    { key: 'sub_category',   label: 'Sub Category' },
+    { key: 'uom',            label: 'UOM' },
+    { key: 'hsn_code',       label: 'HSN' },
+    { key: 'specification',  label: 'Specification' },
+  ];
+  const thStyle = 'cursor:pointer;user-select:none;white-space:nowrap;';
+  const thead = document.getElementById('mm_thead');
+  if (thead) {
+    thead.innerHTML = cols.map(c =>
+      `<th style="${thStyle}" onclick="_mmSortBy('${c.key}')">${c.label}${q ? '' : _mmSortIndicator(c.key)}</th>`
+    ).join('') + '<th style="width:70px;"></th>';
+  }
+
   document.getElementById('mm_list').innerHTML = rows.map(m => `
     <tr>
       <td class="mono">${esc(m.material_code)}</td>
@@ -9863,8 +10103,118 @@ function renderMaterialMaster() {
       <td>${esc(m.uom)}</td>
       <td>${esc(m.hsn_code||'—')}</td>
       <td>${esc(m.specification||'—')}</td>
-    </tr>`).join('') || '<tr><td colspan="7" class="center muted">No materials.</td></tr>';
+      ${hasRole('Admin') ? `<td style="white-space:nowrap;">
+        <button class="btn btn-ghost btn-sm" onclick="openMatEdit('${esc(m.material_code)}')">✏</button>
+        <button class="btn btn-ghost btn-sm" style="color:var(--danger);" onclick="deleteMatItem('${esc(m.material_code)}','${esc(m.material_name).replace(/'/g,"\\'")}')">🗑</button>
+      </td>` : '<td></td>'}
+    </tr>`).join('') || '<tr><td colspan="8" class="center muted">No materials found.</td></tr>';
 }
+
+// ── Material Delete (Admin only, downstream-safe) ─────────────
+async function deleteMatItem(code, name) {
+  if (!hasRole('Admin')) { toast('Only Admin can delete materials','error'); return; }
+  pbShow('Checking downstream usage…');
+  try {
+    // Check all downstream tables that store material_name
+    const [mir, rfq, po, grn, mis, stock] = await Promise.all([
+      sb.from('pu_mir_items').select('mir_number', { count: 'exact', head: true }).eq('material_name', name),
+      sb.from('pu_rfq_items').select('rfq_number', { count: 'exact', head: true }).eq('material_name', name),
+      sb.from('pu_po_items').select('po_number',  { count: 'exact', head: true }).eq('material_name', name),
+      sb.from('pu_grn_items').select('grn_number', { count: 'exact', head: true }).eq('material_name', name),
+      sb.from('pu_mis_items').select('mis_number', { count: 'exact', head: true }).eq('material_name', name),
+      sb.from('pu_stock_balance').select('material_name', { count: 'exact', head: true }).eq('material_name', name),
+    ]);
+    pbDone();
+
+    const usages = [
+      { label: 'MIR',   count: mir.count   || 0 },
+      { label: 'RFQ',   count: rfq.count   || 0 },
+      { label: 'PO',    count: po.count    || 0 },
+      { label: 'GRN',   count: grn.count   || 0 },
+      { label: 'MIS',   count: mis.count   || 0 },
+      { label: 'Stock', count: stock.count || 0 },
+    ].filter(u => u.count > 0);
+
+    if (usages.length > 0) {
+      const lines = usages.map(u => `<li>${u.label}: ${u.count} record${u.count > 1 ? 's' : ''}</li>`).join('');
+      openModal(`
+        <h3 style="color:var(--danger);">Cannot Delete — Material In Use</h3>
+        <p style="margin-bottom:12px;font-size:13px;color:var(--text);">
+          <strong>${esc(name)}</strong> (${esc(code)}) is referenced in the following:
+        </p>
+        <ul style="margin:0 0 16px 18px;font-size:13px;color:var(--text);line-height:1.8;">${lines}</ul>
+        <p style="font-size:12px;color:var(--muted);">
+          Materials with downstream records cannot be deleted. You can deactivate them instead to hide them from new entries.
+        </p>
+        <div class="actions-row" style="margin-top:16px;">
+          <button class="btn btn-warn" onclick="deactivateMatItem('${esc(code)}','${esc(name).replace(/'/g,"\\'")}');closeModal();">Deactivate Instead</button>
+          <button class="btn btn-ghost" onclick="closeModal()">Close</button>
+        </div>`);
+      return;
+    }
+
+    // Safe to delete — confirm
+    openModal(`
+      <h3 style="color:var(--danger);">Delete Material</h3>
+      <p style="font-size:13px;margin-bottom:16px;">
+        <strong>${esc(name)}</strong> (${esc(code)}) has no downstream records.<br>
+        This will permanently remove it from the Material Master.
+      </p>
+      <div class="actions-row">
+        <button class="btn btn-danger" onclick="confirmDeleteMatItem('${esc(code)}','${esc(name).replace(/'/g,"\\'")}')">Confirm Delete</button>
+        <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+      </div>`);
+  } catch(e) { pbDone(); toast('Error checking usage: ' + e.message,'error'); }
+}
+
+async function confirmDeleteMatItem(code, name) {
+  pbShow('Deleting…');
+  try {
+    const { error } = await sb.from('pu_material_master')
+      .update({ is_active: false, updated_by: state.userId, updated_by_name: state.userName, updated_at: new Date().toISOString() })
+      .eq('material_code', code);
+    if (error) throw new Error(error.message);
+    // Log the deletion
+    await sb.from('pu_material_edit_log').insert({
+      material_code: code, material_name: name,
+      changed_fields: JSON.stringify({ is_active: { from: true, to: false } }),
+      before_snapshot: JSON.stringify({ material_code: code, material_name: name }),
+      after_snapshot: JSON.stringify({ is_active: false }),
+      edit_reason: 'Deleted by Admin — no downstream usage',
+      edited_by: state.userId, edited_by_name: state.userName,
+      edited_at: new Date().toISOString(),
+    });
+    closeModal();
+    flashSuccess(`Material ${code} deleted`);
+    await apiLoadMaterials();
+    renderMaterialMaster();
+  } catch(e) { toast('Error: ' + e.message,'error'); }
+  finally { pbDone(); }
+}
+
+async function deactivateMatItem(code, name) {
+  pbShow('Deactivating…');
+  try {
+    const { error } = await sb.from('pu_material_master')
+      .update({ is_active: false, updated_by: state.userId, updated_by_name: state.userName, updated_at: new Date().toISOString() })
+      .eq('material_code', code);
+    if (error) throw new Error(error.message);
+    await sb.from('pu_material_edit_log').insert({
+      material_code: code, material_name: name,
+      changed_fields: JSON.stringify({ is_active: { from: true, to: false } }),
+      before_snapshot: JSON.stringify({ material_code: code, material_name: name, is_active: true }),
+      after_snapshot: JSON.stringify({ is_active: false }),
+      edit_reason: 'Deactivated by Admin — material in use downstream, hidden from new entries',
+      edited_by: state.userId, edited_by_name: state.userName,
+      edited_at: new Date().toISOString(),
+    });
+    flashSuccess(`Material ${code} deactivated — hidden from new entries`);
+    await apiLoadMaterials();
+    renderMaterialMaster();
+  } catch(e) { toast('Error: ' + e.message,'error'); }
+  finally { pbDone(); }
+}
+// ──────────────────────────────────────────────────────────────
 
 async function saveMaterialMaster() {
   if (!hasRole('Admin') && !hasRole('Planning/ QS')) {
@@ -9910,7 +10260,143 @@ async function saveMaterialMaster() {
   finally { pbDone(); }
 }
 
-// Live duplicate / similar-match check on the Add Material form.
+// ── Material Edit (Admin only) ─────────────────────────────────
+function openMatEdit(code) {
+  if (!hasRole('Admin')) { toast('Only Admin can edit materials','error'); return; }
+  const m = puState.materials.find(x => x.material_code === code);
+  if (!m) { toast('Material not found','error'); return; }
+
+  const catOptions = puState.matCategories.map(c =>
+    `<option value="${esc(c.category_name)}" ${m.category === c.category_name ? 'selected' : ''}>${esc(c.category_name)}</option>`
+  ).join('');
+
+  const html = `
+    <h3 style="color:var(--accent);margin-bottom:4px;">Edit Material — <span class="mono" style="font-size:14px;">${esc(m.material_code)}</span></h3>
+    <p style="color:var(--muted);font-size:12px;margin-bottom:18px;">All changes are logged with your name and timestamp in Supabase.</p>
+    <div class="grid-3" style="margin-bottom:12px;">
+      <div class="field" style="grid-column:1/3;">
+        <label class="req">Material Name</label>
+        <input id="me_name" value="${esc(m.material_name)}" autocomplete="off" style="width:100%;">
+      </div>
+      <div class="field">
+        <label class="req">UOM</label>
+        <input id="me_uom" value="${esc(m.uom)}" style="width:100%;">
+      </div>
+    </div>
+    <div class="grid-4" style="margin-bottom:18px;">
+      <div class="field">
+        <label class="req">Category</label>
+        <select id="me_category" style="width:100%;">
+          <option value="">— Select —</option>
+          ${catOptions}
+        </select>
+      </div>
+      <div class="field">
+        <label>Sub Category</label>
+        <input id="me_subcat" value="${esc(m.sub_category||'')}" style="width:100%;">
+      </div>
+      <div class="field">
+        <label>HSN Code</label>
+        <input id="me_hsn" value="${esc(m.hsn_code||'')}" style="width:100%;">
+      </div>
+      <div class="field">
+        <label>Specification</label>
+        <input id="me_spec" value="${esc(m.specification||'')}" style="width:100%;">
+      </div>
+    </div>
+    <div class="field" style="margin-bottom:18px;">
+      <label class="req">Reason for Edit <span style="color:var(--muted);font-weight:400;">(mandatory — recorded in audit log)</span></label>
+      <input id="me_reason" placeholder="e.g. Corrected UOM from MT to Bags, Updated HSN code" style="width:100%;">
+    </div>
+    <div style="display:flex;gap:10px;justify-content:flex-end;">
+      <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="updateMaterialMaster('${esc(m.material_code)}')">💾 Save Changes</button>
+    </div>`;
+
+  openModal(html);
+}
+
+async function updateMaterialMaster(code) {
+  if (!hasRole('Admin')) { toast('Only Admin can edit materials','error'); return; }
+
+  const name   = (document.getElementById('me_name')?.value   || '').trim();
+  const uom    = (document.getElementById('me_uom')?.value    || '').trim();
+  const cat    = (document.getElementById('me_category')?.value || '');
+  const subcat = (document.getElementById('me_subcat')?.value  || '').trim();
+  const hsn    = (document.getElementById('me_hsn')?.value     || '').trim();
+  const spec   = (document.getElementById('me_spec')?.value    || '').trim();
+  const reason = (document.getElementById('me_reason')?.value  || '').trim();
+
+  if (!name)   { toast('Material name is required','error'); return; }
+  if (!uom)    { toast('UOM is required','error'); return; }
+  if (!cat)    { toast('Category is required','error'); return; }
+  if (!reason) { toast('Reason for edit is required','error'); return; }
+
+  // Duplicate check — same name+UOM on a different material code
+  const nameKey = _normKey(name);
+  const uomKey  = _normKey(uom);
+  const dup = puState.materials.find(m =>
+    m.material_code !== code &&
+    _normKey(m.material_name) === nameKey && _normKey(m.uom) === uomKey
+  );
+  if (dup) {
+    toast(`"${name}" with UOM "${uom}" already exists (${dup.material_code})`,'error');
+    return;
+  }
+
+  // Build before-snapshot from current puState
+  const before = puState.materials.find(m => m.material_code === code) || {};
+  const now    = new Date().toISOString();
+
+  pbShow('Saving changes…');
+  try {
+    // 1. Update the material row
+    const { error: updErr } = await sb.from('pu_material_master').update({
+      material_name: name,
+      uom,
+      category:      cat,
+      sub_category:  subcat || null,
+      hsn_code:      hsn    || null,
+      specification: spec   || null,
+      updated_by:      state.userId,
+      updated_by_name: state.userName,
+      updated_at:      now,
+    }).eq('material_code', code);
+    if (updErr) throw new Error(updErr.message);
+
+    // 2. Write audit log row
+    const changes = {};
+    if (before.material_name !== name)          changes.material_name  = { from: before.material_name,          to: name };
+    if (before.uom           !== uom)           changes.uom            = { from: before.uom,                    to: uom };
+    if ((before.category||'') !== cat)          changes.category       = { from: before.category||'',           to: cat };
+    if ((before.sub_category||'') !== subcat)   changes.sub_category   = { from: before.sub_category||'',       to: subcat };
+    if ((before.hsn_code||'') !== hsn)          changes.hsn_code       = { from: before.hsn_code||'',           to: hsn };
+    if ((before.specification||'') !== spec)    changes.specification  = { from: before.specification||'',      to: spec };
+
+    const { error: logErr } = await sb.from('pu_material_edit_log').insert({
+      material_code:    code,
+      material_name:    name,
+      changed_fields:   JSON.stringify(changes),
+      before_snapshot:  JSON.stringify({
+        material_name: before.material_name, uom: before.uom, category: before.category,
+        sub_category: before.sub_category, hsn_code: before.hsn_code, specification: before.specification,
+      }),
+      after_snapshot:   JSON.stringify({ material_name: name, uom, category: cat, sub_category: subcat, hsn_code: hsn, specification: spec }),
+      edit_reason:      reason,
+      edited_by:        state.userId,
+      edited_by_name:   state.userName,
+      edited_at:        now,
+    });
+    if (logErr) throw new Error('Saved but audit log failed: ' + logErr.message);
+
+    closeModal();
+    flashSuccess(`Material ${code} updated`);
+    await apiLoadMaterials();
+    renderMaterialMaster();
+  } catch(e) { toast('Error: ' + e.message,'error'); }
+  finally { pbDone(); }
+}
+// ──────────────────────────────────────────────────────────────
 // Shows: exact match (same name + UOM) as red block; close matches as amber warning.
 // =====================================================================
 // MASTER DUPLICATE-CHECK HELPERS
@@ -12443,13 +12929,18 @@ async function _rollupMIRAfterPOTermination(mirNum, terminatedPONum, action /* '
 async function cancelPO(poNum) {
   if(!hasPerm('canCancelPO')){toast('Not permitted','error');return;}
   // Re-validate: zero GRNs and status Open
-  const [{data:h},{data:grns}]=await Promise.all([
+  const [{data:h},{data:grns},{data:advRows}]=await Promise.all([
     sb.from('pu_po_orders').select('status').eq('po_number',poNum).single(),
     sb.from('pu_grn').select('grn_number').eq('po_number',poNum),
+    sb.from('ho_arr').select('arr_number').eq('order_type','PO').eq('order_number',poNum).in('status',['Unpaid','Partial Paid','Paid']),
   ]);
   if(!h){toast('PO not found','error');return;}
   if(h.status!=='Open'){toast('Only Open POs can be cancelled (current: '+h.status+')','error');return;}
   if((grns||[]).length>0){toast('Cannot cancel — GRN(s) already raised against this PO. Use Short Close instead.','error');return;}
+  if((advRows||[]).length>0){
+    const refs=(advRows||[]).map(r=>r.arr_number).join(', ');
+    toast(`Cannot cancel — advance release request exists (${refs}). Cancel the ARR or recover the advance before cancelling this PO.`,'error');return;
+  }
   closeModal();
   setTimeout(()=>{
     openModal(`<h3>Cancel PO — ${esc(poNum)}</h3>
@@ -12467,9 +12958,16 @@ async function cancelPO(poNum) {
 async function confirmCancelPO(poNum) {
   const reason=(document.getElementById('poActionReason')?.value||'').trim();
   if(!reason){toast('Reason is mandatory','error');return;}
-  // Race-guard: re-check just before update
-  const {data:grns}=await sb.from('pu_grn').select('grn_number').eq('po_number',poNum);
+  // Race-guard: re-check GRNs and advance just before update
+  const [{data:grns},{data:advRows}]=await Promise.all([
+    sb.from('pu_grn').select('grn_number').eq('po_number',poNum),
+    sb.from('ho_arr').select('arr_number').eq('order_type','PO').eq('order_number',poNum).in('status',['Unpaid','Partial Paid','Paid']),
+  ]);
   if((grns||[]).length>0){toast('Cannot cancel — GRN already exists for this PO','error');closeModal();return;}
+  if((advRows||[]).length>0){
+    const refs=(advRows||[]).map(r=>r.arr_number).join(', ');
+    toast(`Cannot cancel — advance release request exists (${refs}). Cancel the ARR or recover the advance before cancelling this PO.`,'error');closeModal();return;
+  }
   pbShow('Cancelling PO…');
   // Capture MIR number BEFORE update so we can roll up after
   const {data:poHdr}=await sb.from('pu_po_orders').select('mir_number,qc_number').eq('po_number',poNum).single();
