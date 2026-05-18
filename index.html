@@ -12397,7 +12397,9 @@ function renderPOList() {
   if(sf) rows=rows.filter(p=>p.status===sf);
   document.getElementById('po_listBody').innerHTML=rows.map(p=>{
     const stCls=p.status.toLowerCase().replace(/[\s/]+/g,'-');
-    const acts=`<button class="btn btn-ghost btn-sm" onclick="viewPO('${esc(p.po_number)}')">View</button>`;
+    const canRevise = hasPerm('canCreatePO') && p.status === 'Rejected - Correction';
+    const acts=`<button class="btn btn-ghost btn-sm" onclick="viewPO('${esc(p.po_number)}')">View</button>`
+      + (canRevise ? `<button class="btn btn-warn btn-sm" style="margin-left:4px;" onclick="revisePO('${esc(p.po_number)}')">✎ Revise</button>` : '');
     return `<tr>
       <td class="mono">${esc(p.po_number)}</td><td>${fmtDate(p.po_date)}</td>
       <td>${esc(p.vendor_name)}</td><td class="mono">${esc(p.qc_number||'—')}</td>
@@ -12635,6 +12637,33 @@ async function savePO() {
   items.forEach(it=>{basic+=it.base_amount;cgst+=it.cgst_amount;sgst+=it.sgst_amount;igst+=it.igst_amount;});
   const round=parseFloat(document.getElementById('po_roundOff').value)||0;
   const grand=basic+cgst+sgst+igst+round;
+
+  // ── Revision path ──────────────────────────────────────────
+  const revisingPO = document.getElementById('poForm')?.dataset?.revisingPO;
+  if(revisingPO) {
+    const r = await apiRevisePO(revisingPO, {
+      date, vendor, vendorCode:document.getElementById('po_vendorCode').value||null,
+      vendorAddress:document.getElementById('po_vendorAddress').value.trim()||null,
+      vendorGSTIN:document.getElementById('po_vendorGSTIN').value.trim()||null,
+      contactPerson:document.getElementById('po_contactPerson').value.trim()||null,
+      paymentTerms:document.getElementById('po_paymentTerms').value.trim()||null,
+      transport:document.getElementById('po_transport').value,
+      deliveryAddress:document.getElementById('po_deliveryAddr').value.trim()||null,
+      billingAddress:document.getElementById('po_billingAddr').value.trim()||null,
+      deliveryDate:document.getElementById('po_deliveryDate').value||null,
+      gstMode:_gstMode, basicValue:basic, cgstAmount:cgst, sgstAmount:sgst,
+      igstAmount:igst, totalTax:cgst+sgst+igst, roundOff:round, grandTotal:grand,
+      remarks:document.getElementById('po_remarks').value.trim()||null,
+      project:document.getElementById('po_project').value, items,
+    });
+    if(r.ok){
+      delete document.getElementById('poForm').dataset.revisingPO;
+      flashSuccess('PO '+revisingPO+' revised and resubmitted for approval.');
+      closePOForm(); loadPOList();
+    } else { toast('Error: '+r.error,'error'); }
+    return;
+  }
+  // ── New PO path ────────────────────────────────────────────
   pbShow('Saving PO…');
   try {
     const poNumber=await nextPUDocNumber('PO');
@@ -12725,6 +12754,139 @@ async function approvePO(poNum) {
   flashSuccess('PO '+poNum+' Approved'); loadPOList();
 }
 
+// ── PO Return for Correction ───────────────────────────────────
+function promptRejectPO(poNum, mode) {
+  if(!hasPerm('canApprovePO')){toast('Only PM can reject POs','error');return;}
+  const isCorrection = mode === 'correction';
+  const title  = isCorrection ? 'Return for Correction' : 'Outright Rejection';
+  const colour = isCorrection ? 'var(--warn)' : 'var(--danger)';
+  const btnCls = isCorrection ? 'btn-warn' : 'btn-danger';
+  const desc   = isCorrection
+    ? 'The PO creator will be able to edit and resubmit this Purchase Order after making corrections.'
+    : 'This is a permanent rejection. The PO cannot be resubmitted. A new PO must be created if required.';
+  openModal(`
+    <h3 style="color:${colour};">${title} — ${esc(poNum)}</h3>
+    <p style="color:var(--muted);font-size:13px;margin-bottom:14px;">${desc}</p>
+    <div class="field" style="margin-bottom:16px;">
+      <label class="req">Reason</label>
+      <textarea id="poRejectReason" rows="3"
+        placeholder="${isCorrection ? 'Describe what needs to be corrected…' : 'State the reason for outright rejection…'}"
+        style="width:100%;padding:9px;border:1px solid var(--border);border-radius:4px;font-family:inherit;font-size:13px;resize:vertical;"></textarea>
+    </div>
+    <div class="actions-row">
+      <button class="btn ${btnCls}" onclick="confirmRejectPO('${esc(poNum)}','${mode}')">Confirm ${title}</button>
+      <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+    </div>`);
+  setTimeout(() => document.getElementById('poRejectReason')?.focus(), 100);
+}
+
+async function confirmRejectPO(poNum, mode) {
+  const reason = (document.getElementById('poRejectReason')?.value || '').trim();
+  if(!reason){toast('Please enter a reason','error');return;}
+  closeModal();
+  const newStatus = mode === 'correction' ? 'Rejected - Correction' : 'Rejected';
+  const {error} = await sb.from('pu_po_orders').update({
+    status: newStatus, rejection_reason: reason, updated_at: new Date().toISOString()
+  }).eq('po_number', poNum);
+  if(error){toast(error.message,'error');return;}
+  flashSuccess('PO ' + poNum + ' — ' + (mode === 'correction' ? 'Returned for Correction' : 'Rejected'));
+  loadPOList();
+}
+
+async function revisePO(poNum) {
+  if(!hasPerm('canCreatePO')){toast('Not permitted','error');return;}
+  pbShow('Loading PO…');
+  const [{data:h},{data:items}] = await Promise.all([
+    sb.from('pu_po_orders').select('*').eq('po_number',poNum).single(),
+    sb.from('pu_po_items').select('*').eq('po_number',poNum).order('sno'),
+  ]);
+  pbDone();
+  if(!h){toast('PO not found','error');return;}
+  if(h.status !== 'Rejected - Correction'){toast('Only POs returned for correction can be revised','error');return;}
+
+  // Open the PO form in revision mode
+  await newPO();  // resets form
+  document.getElementById('po_formTitle') && (document.getElementById('po_formTitle').textContent = 'Revise Purchase Order — ' + poNum);
+  document.getElementById('poForm').dataset.revisingPO = poNum;
+
+  // Pre-fill header
+  document.getElementById('po_date').value            = h.po_date || today();
+  document.getElementById('po_project').value         = h.project || '';
+  document.getElementById('po_vendor').value          = h.vendor_name || '';
+  document.getElementById('po_vendorCode').value      = h.vendor_code || '';
+  document.getElementById('po_vendorAddress').value   = h.vendor_address || '';
+  document.getElementById('po_vendorGSTIN').value     = h.vendor_gstin || '';
+  document.getElementById('po_contactPerson').value   = h.contact_person || '';
+  document.getElementById('po_paymentTerms').value    = h.payment_terms || '';
+  document.getElementById('po_transport').value       = h.transport || 'Supplier\'s Scope';
+  document.getElementById('po_deliveryAddr').value    = h.delivery_address || '';
+  document.getElementById('po_billingAddr').value     = h.billing_address || '';
+  document.getElementById('po_deliveryDate').value    = h.delivery_date || '';
+  document.getElementById('po_remarks').value         = h.remarks || '';
+  if(h.qc_number) document.getElementById('po_qcRef') && (document.getElementById('po_qcRef').value = h.qc_number);
+  if(h.mir_number){ document.getElementById('poForm').dataset.poMirNum = h.mir_number; }
+  if(h.vendor_name){ po_vendor_locked = true; lockMasterField && lockMasterField('po_vendor','po_vendor_clear'); }
+
+  // Show PM rejection note
+  if(h.rejection_reason){
+    const notice = document.createElement('div');
+    notice.style.cssText = 'margin:8px 0 12px;padding:10px 14px;background:#fffbeb;border:1px solid #fde68a;border-radius:6px;font-size:13px;color:#92400e;';
+    notice.innerHTML = `<strong>PM Note:</strong> ${esc(h.rejection_reason)}`;
+    document.getElementById('po_formTitle')?.parentNode?.insertBefore(notice, document.getElementById('po_formTitle')?.nextSibling);
+  }
+
+  // Pre-fill line items
+  document.getElementById('poItemsBody').innerHTML = '';
+  _poItemCount = 0;
+  (items||[]).forEach(it => {
+    addPOItem && addPOItem();
+    const i = _poItemCount - 1;
+    const row = document.getElementById('poItem_' + i);
+    if(!row) return;
+    row.querySelector('.po_mat')    && (row.querySelector('.po_mat').value    = it.material_name || '');
+    row.querySelector('.po_spec')   && (row.querySelector('.po_spec').value   = it.specification || '');
+    row.querySelector('.po_uom')    && (row.querySelector('.po_uom').value    = it.uom || '');
+    row.querySelector('.po_qty')    && (row.querySelector('.po_qty').value    = it.qty || '');
+    row.querySelector('.po_rate')   && (row.querySelector('.po_rate').value   = it.unit_rate || '');
+    row.querySelector('.po_cgstPct') && (row.querySelector('.po_cgstPct').value = it.cgst_pct || '');
+    row.querySelector('.po_sgstPct') && (row.querySelector('.po_sgstPct').value = it.sgst_pct || '');
+    row.querySelector('.po_igstPct') && (row.querySelector('.po_igstPct').value = it.igst_pct || '');
+    row.querySelector('.po_hsn')    && (row.querySelector('.po_hsn').value    = it.hsn_code || '');
+    // Trigger calc if available
+    row.querySelector('.po_qty')?.dispatchEvent(new Event('input'));
+  });
+}
+
+async function apiRevisePO(poNum, data) {
+  pbShow('Saving revised PO…');
+  try {
+    // 1. Update PO header — status back to Pending Approval, clear rejection
+    const {error:he} = await sb.from('pu_po_orders').update({
+      po_date: data.date, vendor_name: data.vendor, vendor_code: data.vendorCode||null,
+      vendor_address: data.vendorAddress||null, vendor_gstin: data.vendorGSTIN||null,
+      contact_person: data.contactPerson||null, payment_terms: data.paymentTerms||null,
+      transport: data.transport, delivery_address: data.deliveryAddress||null,
+      billing_address: data.billingAddress||null, delivery_date: data.deliveryDate||null,
+      gst_mode: data.gstMode, basic_value: data.basicValue,
+      cgst_amount: data.cgstAmount, sgst_amount: data.sgstAmount, igst_amount: data.igstAmount,
+      total_tax: data.totalTax, round_off: data.roundOff, grand_total: data.grandTotal,
+      remarks: data.remarks||null, project: data.project,
+      status: 'Pending Approval', rejection_reason: null,
+      updated_at: new Date().toISOString(),
+    }).eq('po_number', poNum);
+    if(he) return {ok:false, error:he.message};
+
+    // 2. Replace line items
+    await sb.from('pu_po_items').delete().eq('po_number', poNum);
+    const {error:ie} = await sb.from('pu_po_items').insert(data.items.map(it=>({...it, po_number:poNum})));
+    if(ie) return {ok:false, error:ie.message};
+
+    return {ok:true};
+  } catch(e){ return {ok:false, error:e.message}; }
+  finally{ pbDone(); }
+}
+// ──────────────────────────────────────────────────────────────
+
 async function viewPO(poNum) {
   pbShow('Loading…');
   const [{data:h},{data:items},{data:grnsForPO}]=await Promise.all([
@@ -12771,11 +12933,12 @@ async function viewPO(poNum) {
       </div>
       <div style="display:flex;gap:6px;flex-shrink:0;">
         <button class="btn btn-primary" onclick="closeModal();approvePO('${esc(h.po_number)}')">✓ Approve PO</button>
-        <button class="btn btn-danger" onclick="closeModal();rejectDoc('PO','${esc(h.po_number)}')">✕ Reject</button>
+        <button class="btn btn-warn"    onclick="closeModal();promptRejectPO('${esc(h.po_number)}','correction')">↩ Return for Correction</button>
+        <button class="btn btn-danger"  onclick="closeModal();rejectDoc('PO','${esc(h.po_number)}')">✕ Reject</button>
       </div>
     </div>` : '';
 
-  // Closure-info banner if PO is already terminated
+  // Closure-info banner if PO is rejected / returned
   const closureBanner = (h.status==='Cancelled' || h.status==='Short-Closed') ? `
     <div style="margin-bottom:10px;padding:10px;background:#fef2f2;border:1px solid #fca5a5;border-radius:6px;">
       <div style="font-size:11px;font-weight:700;color:#991b1b;text-transform:uppercase;margin-bottom:4px;">${esc(h.status)}</div>
@@ -12784,6 +12947,19 @@ async function viewPO(poNum) {
         ${h.closed_at?'<strong>On:</strong> '+esc(new Date(h.closed_at).toLocaleString('en-IN',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit',hour12:true}))+'<br>':''}
         ${h.close_reason?'<strong>Reason:</strong> '+esc(h.close_reason):''}
       </div>
+    </div>` :
+  (h.status==='Rejected - Correction') ? `
+    <div style="margin-bottom:10px;padding:10px;background:#fffbeb;border:1px solid #fde68a;border-radius:6px;">
+      <div style="font-size:11px;font-weight:700;color:#92400e;text-transform:uppercase;margin-bottom:4px;">Returned for Correction</div>
+      <div style="font-size:12px;color:#1f2937;">
+        ${h.rejection_reason?'<strong>PM Note:</strong> '+esc(h.rejection_reason):''}
+      </div>
+      ${hasPerm('canCreatePO')?`<button class="btn btn-warn btn-sm" style="margin-top:8px;" onclick="closeModal();revisePO('${esc(h.po_number)}')">✎ Revise &amp; Resubmit</button>`:''}
+    </div>` :
+  (h.status==='Rejected') ? `
+    <div style="margin-bottom:10px;padding:10px;background:#fef2f2;border:1px solid #fca5a5;border-radius:6px;">
+      <div style="font-size:11px;font-weight:700;color:#991b1b;text-transform:uppercase;margin-bottom:4px;">Rejected</div>
+      <div style="font-size:12px;color:#1f2937;">${h.rejection_reason?'<strong>Reason:</strong> '+esc(h.rejection_reason):''}</div>
     </div>` : '';
 
   // Line items with received/pending columns + per-GRN footnote
