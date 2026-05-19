@@ -18268,10 +18268,14 @@ const DASH_CARD_DEFS = {
       } },
     { id:'pr_po_corr',label:'POs for Correction',sub:'Returned for revision',      cls:'urgent', nav:function(){navDash('purchase','po','Rejected - Correction');},
       query: function(){return sb.from('pu_po_orders').select('po_number',{count:'exact',head:true}).eq('status','Rejected - Correction');} },
+    { id:'pr_ho_corr',label:'HOs for Correction',sub:'Hire orders returned for revision', cls:'urgent', nav:function(){navDash('ho','orders','Rejected - Correction');},
+      query: function(){return sb.from('ho_orders').select('ho_number',{count:'exact',head:true}).eq('status','Rejected - Correction');} },
+    { id:'pr_wo_corr',label:'WOs for Correction',sub:'Work orders returned for revision', cls:'urgent', nav:function(){navDash('wo','orders','Rejected - Correction');},
+      query: function(){return sb.from('wo_orders').select('wo_number',{count:'exact',head:true}).eq('status','Rejected - Correction');} },
     // ── Follow-on: next step for Procurement ───────────────────────────────────
     { id:'pr_mir_rdy', label:'MIRs Awaiting RFQ', sub:'Approved indents — raise RFQ or PO', cls:'warn', nav:function(){navDash('purchase','mir','');},
       query: function(){return sb.from('pu_mir').select('mir_number',{count:'exact',head:true}).in('status',['Approved','Partial RFQ']);} },
-    { id:'pr_qc_rdy',  label:'QCs Approved → PO', sub:'Quote approved — create PO now',     cls:'warn', nav:function(){navDash('purchase','po','');},
+    { id:'pr_qc_rdy',  label:'QCs Approved → PO', sub:'Quote approved — create PO now',     cls:'warn', nav:function(){navDash('purchase','rfq','');},
       query: function(){return sb.from('pu_quote_comparison').select('qc_number',{count:'exact',head:true}).eq('status','Approved');} },
   ],
   'Store Executive': [
