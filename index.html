@@ -678,6 +678,13 @@ input[type="number"] {
     </div>
     <div style="margin-top:10px;"><button class="btn btn-ghost btn-sm" onclick="addHOItem()">+ Add Line Item</button></div>
 
+    <!-- Contact Person -->
+    <div class="grid-3" style="margin-top:12px;">
+      <div class="field">
+        <label>Contact Person</label>
+        <input id="ho_contactPerson" placeholder="Name and mobile number">
+      </div>
+    </div>
     <!-- Terms & Conditions — full width, multi-line -->
     <div class="field" style="margin-top:20px;">
       <label>Terms &amp; Conditions / Remarks</label>
@@ -1092,6 +1099,12 @@ input[type="number"] {
       <div class="field" style="grid-column:3/5;"><label>Remarks / Terms</label></div>
     </div>
     <div class="field" style="margin-top:4px;">
+      <div class="grid-3" style="margin-bottom:12px;">
+        <div class="field">
+          <label>Contact Person</label>
+          <input id="wo_contactPerson" placeholder="Name and mobile number">
+        </div>
+      </div>
       <textarea id="wo_remarks" placeholder="Terms and conditions, payment terms, special conditions…&#10;Each point on a new line."
         style="min-height:120px;width:100%;resize:vertical;font-size:13px;line-height:1.6;white-space:pre-wrap;"></textarea>
     </div>
@@ -3223,13 +3236,17 @@ async function _printOrderDoc(docType, docNumber, h, items, vmOverride) {
   const vCode = h.vendor_code || h['Vendor Code'];
   const vName  = h.vendor_name || h['Vendor Name'];
   if (!vm) {
+    const vendorTable = isWO ? 'wo_contractors' : 'ho_vendors';
+    const codeCol     = isWO ? 'contractor_code' : 'vendor_code';
+    const nameCol     = isWO ? 'contractor_name' : 'vendor_name';
+    const selectCols  = isWO ? 'contractor_name,address,gstin,contact_person,phone' : 'vendor_name,address,gstin,contact_person,phone';
     if (vCode) {
-      const { data: r } = await sb.from('ho_vendors').select('vendor_name,address,gstin,contact_person,phone').eq('vendor_code', vCode).maybeSingle();
-      vm = r;
+      const { data: r } = await sb.from(vendorTable).select(selectCols).eq(codeCol, vCode).maybeSingle();
+      if (r) vm = isWO ? { vendor_name: r.contractor_name, address: r.address, gstin: r.gstin, contact_person: r.contact_person, phone: r.phone } : r;
     }
     if (!vm && vName) {
-      const { data: r } = await sb.from('ho_vendors').select('vendor_name,address,gstin,contact_person,phone').eq('vendor_name', vName).maybeSingle();
-      vm = r;
+      const { data: r } = await sb.from(vendorTable).select(selectCols).eq(nameCol, vName).maybeSingle();
+      if (r) vm = isWO ? { vendor_name: r.contractor_name, address: r.address, gstin: r.gstin, contact_person: r.contact_person, phone: r.phone } : r;
     }
   }
   const vmName    = vm ? (vm.vendor_name    || vName) : vName;
@@ -3388,6 +3405,7 @@ async function _printOrderDoc(docType, docNumber, h, items, vmOverride) {
           ${SITE_ADDR}<br>
           GSTIN: ${CO_GSTIN}
           ${(h['Scope']||h.scope) ? '<br><br><strong>Scope:</strong> '+esc(h['Scope']||h.scope||'') : ''}
+          ${contactPerson ? '<br><strong>Contact Person:</strong> '+esc(contactPerson) : ''}
         </div>
       </div>
     </div>`;
@@ -3436,9 +3454,9 @@ tr { page-break-inside:avoid; }
 .footer-table { page-break-inside:avoid; }
 .sign-wrap { page-break-inside:avoid; }
 @media print {
-  @page { margin:30mm 15mm 20mm 15mm; }
+  @page { margin:30mm 15mm 50mm 15mm; }
   @page :first { margin:0mm 0mm 0mm 0mm; }
-  body { padding:25mm 15mm 20mm 15mm; }
+  body { padding:25mm 15mm 50mm 15mm; }
 }
 </style></head><body>
 
@@ -3476,7 +3494,7 @@ ${addrRow}
   </div>
 </div>
 
-<table class="footer-table" style="width:100%;border-collapse:collapse;margin-top:10pt;border:.5pt solid #bbb;">
+${isPO ? `<table class="footer-table" style="width:100%;border-collapse:collapse;margin-top:10pt;border:.5pt solid #bbb;">
   <tr>
     <td style="width:25%;padding:6pt 8pt;border:.5pt solid #bbb;vertical-align:top;">
       <div class="footer-hdr">Payment Terms</div>
@@ -3496,7 +3514,7 @@ ${addrRow}
     </td>
   </tr>
   ${remarksRow}
-</table>
+</table>` : remarksRow ? `<table class="footer-table" style="width:100%;border-collapse:collapse;margin-top:10pt;border:.5pt solid #bbb;">${remarksRow}</table>` : ''}
 
 <div class="sign-wrap" style="display:flex;justify-content:flex-end;margin-top:20pt;">
   <div class="sign-line">For ${CO_NAME}<br><br><br>Authorised Signatory</div>
@@ -3635,7 +3653,8 @@ function mapHO(r) {
     'GST %': r.gst_pct, 'Gross Amount': r.gross_amount, 'GST Amount': r.gst_amount,
     'Total Amount': r.total_amount, 'Remarks': r.remarks,
     'Rejection Reason': r.rejection_reason,
-    'Status': r.status, 'Created By': r.created_by_name, 'HO Date raw': r.ho_date
+    'Status': r.status, 'Created By': r.created_by_name, 'HO Date raw': r.ho_date,
+    'Contact Person': r.contact_person
   };
 }
 function mapHOItem(r) {
@@ -3983,7 +4002,8 @@ async function apiSaveHO(data) {
       location: data.location||null, start_date: data.startDate||null,
       end_date: data.endDate||null, gst_pct: data.gstPct,
       gross_amount: data.grossAmount, gst_amount: data.gstAmount, total_amount: data.totalAmount,
-      remarks: data.remarks||null, status: 'Pending Approval',
+      remarks: data.remarks||null, contact_person: data.contactPerson||null,
+      status: 'Pending Approval',
       created_by: state.userId, created_by_name: state.userName
     };
     const { error: he } = await sb.from('ho_orders').insert(row);
@@ -4023,6 +4043,7 @@ async function apiReviseHO(hoNumber, data) {
       end_date: data.endDate||null, gst_pct: data.gstPct,
       gross_amount: data.grossAmount, gst_amount: data.gstAmount,
       total_amount: data.totalAmount, remarks: data.remarks||null,
+      contact_person: data.contactPerson||null,
       project: data.project, status: 'Pending Approval',
       rejection_reason: null, updated_at: new Date().toISOString()
     }).eq('ho_number', hoNumber);
@@ -4698,7 +4719,8 @@ function mapWO(r) {
     'Cert Mode': r.cert_mode, 'Retention %': r.retention_pct,
     'Mob Advance %': r.mob_advance_pct, 'Mob Advance Amount': r.mob_advance_amount,
     'Termination Notice': r.termination_notice,
-    'Status': r.status, 'Created By': r.created_by_name, 'WO Date raw': r.wo_date
+    'Status': r.status, 'Created By': r.created_by_name, 'WO Date raw': r.wo_date,
+    'Contact Person': r.contact_person
   };
 }
 
@@ -4737,7 +4759,8 @@ async function apiSaveWO(data) {
       start_date: data.startDate||null, end_date: data.endDate||null,
       gst_pct: data.gstPct, gross_amount: data.grossAmount,
       gst_amount: data.gstAmount, total_amount: data.totalAmount,
-      remarks: data.remarks||null, cert_mode: data.certMode||'QTY',
+      remarks: data.remarks||null, contact_person: data.contactPerson||null,
+      cert_mode: data.certMode||'QTY',
       retention_pct: data.retentionPct||5,
       mob_advance_pct: data.mobAdvPct||null, mob_advance_amount: data.mobAdvAmt||null,
       status: 'Pending Approval', created_by: state.userId, created_by_name: state.userName
@@ -4767,7 +4790,8 @@ async function apiReviseWO(woNumber, data) {
       start_date: data.startDate||null, end_date: data.endDate||null,
       gst_pct: data.gstPct, gross_amount: data.grossAmount,
       gst_amount: data.gstAmount, total_amount: data.totalAmount,
-      remarks: data.remarks||null, project: data.project,
+      remarks: data.remarks||null, contact_person: data.contactPerson||null,
+      project: data.project,
       mob_advance_pct: data.mobAdvPct||null, mob_advance_amount: data.mobAdvAmt||null,
       status: 'Pending Approval', rejection_reason: null,
       updated_at: new Date().toISOString()
@@ -6478,10 +6502,11 @@ function getHOFormData() {
     startDate:  document.getElementById('ho_startDate').value,
     endDate:    document.getElementById('ho_endDate').value,
     gstPct, grossAmount: gross, gstAmount: gstAmt, totalAmount: total,
-    remarks:    document.getElementById('ho_remarks').value,
-    project:    document.getElementById('ho_project').value,
-    createdBy:  state.userName,
-    status:     'Pending Approval',
+    remarks:       document.getElementById('ho_remarks').value,
+    project:       document.getElementById('ho_project').value,
+    contactPerson: document.getElementById('ho_contactPerson')?.value?.trim()||null,
+    createdBy:     state.userName,
+    status:        'Pending Approval',
     items
   };
 }
@@ -6579,6 +6604,8 @@ async function reviseHO(hoNum) {
   document.getElementById('ho_project').value   = h['Project'] || 'PoE, Ph-01';
   document.getElementById('ho_startDate').value = h['Start Date'] || '';
   document.getElementById('ho_endDate').value   = h['End Date'] || '';
+  const hoContactEl = document.getElementById('ho_contactPerson');
+  if (hoContactEl) hoContactEl.value = h['Contact Person'] || '';
 
   document.getElementById('hoItemsBody').innerHTML = '';
   _hoItemCount = 0;
@@ -7688,9 +7715,10 @@ function getWOFormData() {
     mobAdvPct:   num(document.getElementById('wo_mobAdvPct').value)||null,
     mobAdvAmt:   num(document.getElementById('wo_mobAdvAmt').value)||null,
     project:     document.getElementById('wo_project').value,
-    startDate:   document.getElementById('wo_startDate').value,
-    endDate:     document.getElementById('wo_endDate').value,
-    remarks:     document.getElementById('wo_remarks').value,
+    startDate:     document.getElementById('wo_startDate').value,
+    endDate:       document.getElementById('wo_endDate').value,
+    remarks:       document.getElementById('wo_remarks').value,
+    contactPerson: document.getElementById('wo_contactPerson')?.value?.trim()||null,
     items
   };
 }
@@ -11804,19 +11832,22 @@ async function saveRFQ() {
         // Use material_name list as the filter (most reliable cross-DB identifier)
         const mirMatsStr = document.getElementById('rfqForm')?.dataset?.mirMats||'';
         const mirMats = mirMatsStr ? mirMatsStr.split('|||').filter(Boolean) : [];
-        if (mirMats.length) {
+        if (mirSnos.length) {
           const { error: updErr } = await sb.from('pu_mir_items').update({
             item_status: 'RFQ Raised', rfq_number: rfqNumber
-          }).eq('mir_number', mirNum).in('material_name', mirMats);
+          }).eq('mir_number', mirNum).in('sno', mirSnos);
           if (updErr) {
-            console.error('MIR item update error (material_name):', updErr.message);
-            // Fallback to sno batch
-            if (mirSnos.length) {
+            console.error('MIR item update error (sno):', updErr.message);
+            if (mirMats.length) {
               await sb.from('pu_mir_items').update({
                 item_status: 'RFQ Raised', rfq_number: rfqNumber
-              }).eq('mir_number', mirNum).in('sno', mirSnos);
+              }).eq('mir_number', mirNum).in('material_name', mirMats);
             }
           }
+        } else if (mirMats.length) {
+          await sb.from('pu_mir_items').update({
+            item_status: 'RFQ Raised', rfq_number: rfqNumber
+          }).eq('mir_number', mirNum).in('material_name', mirMats);
         }
       }
       // Check if all items are now processed — update MIR header status
@@ -12716,19 +12747,19 @@ async function savePO() {
       const snos = directSnos ? directSnos.split(',').map(Number).filter(Boolean) : [];
       const directMatsStr = document.getElementById('poForm')?.dataset?.directMirMats||'';
       const directMats = directMatsStr ? directMatsStr.split('|||').filter(Boolean) : [];
-      if(directMats.length) {
+      if(snos.length) {
         const {error:dmErr} = await sb.from('pu_mir_items').update({item_status:'PO Raised', po_number:poNumber})
-          .eq('mir_number',directMir).in('material_name', directMats);
+          .eq('mir_number',directMir).in('sno', snos);
         if(dmErr) {
-          // Fallback to sno batch
-          if (snos.length) {
+          console.error('Direct PO MIR item update (sno) failed:', dmErr.message);
+          if(directMats.length) {
             await sb.from('pu_mir_items').update({item_status:'PO Raised', po_number:poNumber})
-              .eq('mir_number',directMir).in('sno', snos);
+              .eq('mir_number',directMir).in('material_name', directMats);
           }
         }
-      } else if(snos.length) {
+      } else if(directMats.length) {
         await sb.from('pu_mir_items').update({item_status:'PO Raised', po_number:poNumber})
-          .eq('mir_number',directMir).in('sno', snos);
+          .eq('mir_number',directMir).in('material_name', directMats);
       }
       // Check if all MIR items are now PO Raised
       const {data:allMirItems} = await sb.from('pu_mir_items').select('item_status').eq('mir_number',directMir);
@@ -15205,7 +15236,7 @@ async function confirmRejectDoc(docType, docNum) {
   // ── MIR rejection: cascade item_status to Rejected ──────────────────────────
   if (docType === 'MIR') {
     const {error: itemErr} = await sb.from('pu_mir_items')
-      .update({item_status:'Rejected'}).eq('mir_number',docNum);
+      .update({item_status:'Pending', rfq_number:null, po_number:null}).eq('mir_number',docNum);
     if (itemErr) console.warn('MIR item-status cascade failed:', itemErr.message);
   }
 
