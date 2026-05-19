@@ -2577,6 +2577,7 @@ input[type="number"] {
           <option value="Fully Received">Fully Received</option>
           <option value="Closed">Closed</option>
           <option value="Rejected">Rejected</option>
+          <option value="Rejected - Correction">Returned for Correction</option>
           <option value="Cancelled">Cancelled</option>
           <option value="Short-Closed">Short-Closed</option>
         </select>
@@ -6516,7 +6517,7 @@ async function saveHO_direct() {
 
 async function approveHO(hoNum) {
   if (!hasPerm('canApproveHO')) { toast('Only Project Manager can approve','error'); return; }
-  const r = await apiUpdateHOStatus(hoNum, 'Open', '');
+  const r = await apiUpdateHOStatus(hoNum, 'Active', '');
   if (r.ok) { flashSuccess('HO ' + hoNum + ' Approved'); state.hireOrders = []; loadHOList(); }
   else toast(r.error || 'Update failed','error');
 }
@@ -6695,10 +6696,10 @@ async function viewHO(hoNum) {
   if (perms.canCreateHO && st === 'Rejected - Correction') {
     actionBtns += `<button class="btn btn-warn" onclick="closeModal();reviseHO('${esc(hoNum)}')">✎ Revise &amp; Resubmit</button> `;
   }
-  if (perms.canShortCloseHO && (st === 'Open' || st === 'Active')) {
+  if (perms.canShortCloseHO && st === 'Active') {
     actionBtns += `<button class="btn btn-warn" onclick="closeModal();shortCloseHO('${esc(hoNum)}')">Short-Close</button> `;
   }
-  if (perms.canShortCloseHO && st === 'Open') {
+  if (perms.canShortCloseHO && st === 'Active') {
     actionBtns += `<button class="btn btn-danger" onclick="closeModal();cancelHO('${esc(hoNum)}')">Cancel HO</button> `;
   }
 
@@ -7716,7 +7717,7 @@ async function saveWO_direct() {
 
 async function approveWO(woNum) {
   if (!hasPerm('canApproveWO')) { toast('Not permitted','error'); return; }
-  const r = await apiUpdateWOStatus(woNum, 'Open', '');
+  const r = await apiUpdateWOStatus(woNum, 'Active', '');
   if (r.ok) { flashSuccess('WO ' + woNum + ' Approved'); state.workOrders=[]; loadWOList(); }
   else toast(r.error||'Update failed','error');
 }
@@ -7874,7 +7875,7 @@ async function viewWO(woNum) {
   if (perms.canCreateWO && st === 'Rejected - Correction') {
     actionBtns += `<button class="btn btn-warn" onclick="closeModal();reviseWO('${esc(woNum)}')">✎ Revise &amp; Resubmit</button> `;
   }
-  if (perms.canApproveWO && (st === 'Open' || st === 'Active')) {
+  if (perms.canApproveWO && st === 'Active') {
     actionBtns += `<button class="btn btn-warn" onclick="closeModal();shortCloseWO('${esc(woNum)}')">Short-Close</button> `;
     actionBtns += `<button class="btn btn-danger" onclick="closeModal();terminateWO('${esc(woNum)}')">Terminate</button> `;
   }
@@ -12843,16 +12844,14 @@ async function revisePO(poNum) {
     const i = _poItemCount - 1;
     const row = document.getElementById('poItem_' + i);
     if(!row) return;
-    row.querySelector('.po_mat')    && (row.querySelector('.po_mat').value    = it.material_name || '');
-    row.querySelector('.po_spec')   && (row.querySelector('.po_spec').value   = it.specification || '');
-    row.querySelector('.po_uom')    && (row.querySelector('.po_uom').value    = it.uom || '');
-    row.querySelector('.po_qty')    && (row.querySelector('.po_qty').value    = it.qty || '');
-    row.querySelector('.po_rate')   && (row.querySelector('.po_rate').value   = it.unit_rate || '');
-    row.querySelector('.po_cgstPct') && (row.querySelector('.po_cgstPct').value = it.cgst_pct || '');
-    row.querySelector('.po_sgstPct') && (row.querySelector('.po_sgstPct').value = it.sgst_pct || '');
-    row.querySelector('.po_igstPct') && (row.querySelector('.po_igstPct').value = it.igst_pct || '');
-    row.querySelector('.po_hsn')    && (row.querySelector('.po_hsn').value    = it.hsn_code || '');
-    // Trigger calc if available
+    row.querySelector('.po_material') && (row.querySelector('.po_material').value = it.material_name || '');
+    row.querySelector('.po_uom')      && (row.querySelector('.po_uom').value      = it.uom || '');
+    row.querySelector('.po_qty')      && (row.querySelector('.po_qty').value      = it.qty || '');
+    row.querySelector('.po_rate')     && (row.querySelector('.po_rate').value     = it.unit_rate || '');
+    if(it.cgst_pct) { const el=document.getElementById('poCGST_'+i); if(el) el.value=it.cgst_pct; }
+    if(it.sgst_pct) { const el=document.getElementById('poSGST_'+i); if(el) el.value=it.sgst_pct; }
+    if(it.igst_pct) { const el=document.getElementById('poIGST_'+i); if(el) el.value=it.igst_pct; }
+    const rmk=document.getElementById('poRmk_'+i); if(rmk && it.remarks) rmk.value=it.remarks;
     row.querySelector('.po_qty')?.dispatchEvent(new Event('input'));
   });
 }
@@ -18267,8 +18266,8 @@ const DASH_CARD_DEFS = {
         const withQC = new Set((activeQCs||[]).map(q=>q.rfq_number));
         return {count:(openRFQs||[]).filter(r=>!withQC.has(r.rfq_number)).length, error:null};
       } },
-    { id:'pr_po_corr',label:'POs for Correction',sub:'Returned for revision',      cls:'urgent', nav:function(){navDash('purchase','po','Rejected');},
-      query: function(){return sb.from('pu_po_orders').select('po_number',{count:'exact',head:true}).in('status',['Rejected','Rejected - Correction']);} },
+    { id:'pr_po_corr',label:'POs for Correction',sub:'Returned for revision',      cls:'urgent', nav:function(){navDash('purchase','po','Rejected - Correction');},
+      query: function(){return sb.from('pu_po_orders').select('po_number',{count:'exact',head:true}).eq('status','Rejected - Correction');} },
     // ── Follow-on: next step for Procurement ───────────────────────────────────
     { id:'pr_mir_rdy', label:'MIRs Awaiting RFQ', sub:'Approved indents — raise RFQ or PO', cls:'warn', nav:function(){navDash('purchase','mir','');},
       query: function(){return sb.from('pu_mir').select('mir_number',{count:'exact',head:true}).in('status',['Approved','Partial RFQ']);} },
