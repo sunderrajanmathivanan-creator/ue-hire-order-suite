@@ -12454,17 +12454,17 @@ async function newPOFromQC(qcNum) {
   ]);
   // If PM changed the vendor (approved_vendor_name differs), use that
   const approvedName = qc?.approved_vendor_name || qc?.recommended_vendor_name;
+  document.getElementById('po_qcRef').value=qcNum;
+  if(qc?.rfq_number) {
+    const {data:rfqH0}=await sb.from('pu_rfq').select('mir_number').eq('rfq_number',qc.rfq_number).single();
+    if(rfqH0?.mir_number) {
+      document.getElementById('po_mirRef').value=rfqH0.mir_number;
+      document.getElementById('poForm').dataset.poMirNum=rfqH0.mir_number;
+    }
+  }
   if(recQuote) {
     const {data:qItems}=await sb.from('pu_quote_items').select('*').eq('qc_number',qcNum).eq('quote_id',recQuote.id).order('rfq_item_sno');
     document.getElementById('po_qcRef').value=qcNum;
-    // Trace MIR number: QC → RFQ → MIR
-    if(qc?.rfq_number) {
-      const {data:rfqH}=await sb.from('pu_rfq').select('mir_number').eq('rfq_number',qc.rfq_number).single();
-      if(rfqH?.mir_number) {
-        document.getElementById('po_mirRef').value=rfqH.mir_number;
-        document.getElementById('poForm').dataset.poMirNum=rfqH.mir_number;
-      }
-    }
     document.getElementById('po_vendor').value=recQuote ? recQuote.vendor_name : (approvedName||'');
     document.getElementById('po_vendorCode').value=recQuote.vendor_code||'';
     _poVendorLocked=true;
@@ -15306,6 +15306,18 @@ async function confirmRejectDoc(docType, docNum) {
           if (mirStErr) console.warn('PO cascade: MIR header recompute failed:', mirStErr.message);
         }
       }
+    }
+  }
+
+  // ── POB rejection: roll GRNs back to Verified so a new POB can be raised ──────
+  if (docType === 'POB') {
+    const {data:pobH} = await sb.from('pu_po_bills').select('grn_numbers').eq('bill_number',docNum).maybeSingle();
+    const gnums = pobH?.grn_numbers || [];
+    if (gnums.length) {
+      const {error:grnRollErr} = await sb.from('pu_grn')
+        .update({status:'Verified'}).in('grn_number', gnums);
+      if (grnRollErr) console.warn('POB rejection: GRN rollback failed:', grnRollErr.message);
+      else toast('GRNs rolled back to Verified — create a new POB','info',4000);
     }
   }
 
