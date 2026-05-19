@@ -422,6 +422,32 @@ input[type="number"] {
   -moz-appearance: textfield;
   appearance: textfield;
 }
+
+/* ── T&C Rich Editor ─────────────────────────────────────────────────────── */
+.tc-editor {
+  border: 1px solid var(--border); border-radius: 4px;
+  background: var(--input-bg); min-height: 180px;
+  padding: 4px 0; font-size: 13px; line-height: 1.6;
+  overflow-y: auto; max-height: 400px;
+}
+.tc-row {
+  display: flex; align-items: flex-start; gap: 0;
+  padding: 1px 0; position: relative;
+}
+.tc-row:focus-within { background: var(--hover-bg, rgba(0,0,0,0.03)); }
+.tc-num {
+  min-width: 38px; text-align: right; padding: 4px 8px 4px 4px;
+  font-size: 11px; color: var(--muted); user-select: none;
+  border-right: 1px solid var(--border); flex-shrink: 0;
+  font-family: monospace; line-height: 1.6; margin-top: 1px;
+}
+.tc-input {
+  flex: 1; border: none; background: transparent; outline: none;
+  font-size: 13px; line-height: 1.6; color: var(--text);
+  padding: 3px 8px; resize: none; overflow: hidden;
+  font-family: inherit; min-height: 26px;
+}
+.tc-toolbar { margin-top: 6px; }
 </style>
 </head>
 <body>
@@ -685,13 +711,19 @@ input[type="number"] {
         <input id="ho_contactPerson" placeholder="Name and mobile number">
       </div>
     </div>
-    <!-- Terms & Conditions — full width, multi-line -->
+    <!-- Terms & Conditions Rich Editor -->
     <div class="field" style="margin-top:20px;">
       <label>Terms &amp; Conditions / Remarks</label>
-      <textarea id="ho_remarks"
-        placeholder="Enter terms and conditions, payment terms, special conditions…&#10;Each point on a new line."
-        style="min-height:180px;width:100%;resize:vertical;font-size:13px;line-height:1.6;white-space:pre-wrap;"></textarea>
-      <small style="color:var(--muted);">Press Enter for a new line. All text will appear as entered in the printed HO.</small>
+      <div id="ho_tc_editor" class="tc-editor"></div>
+      <input type="hidden" id="ho_remarks">
+      <div class="tc-toolbar" style="margin-top:6px;display:flex;gap:6px;flex-wrap:wrap;">
+        <button type="button" class="btn btn-ghost btn-sm" onclick="tcAddRow('ho_tc_editor')">+ Row</button>
+        <button type="button" class="btn btn-ghost btn-sm" onclick="tcAddSubRow('ho_tc_editor')">+ Sub-row</button>
+        <button type="button" class="btn btn-ghost btn-sm" onclick="tcIndent('ho_tc_editor')">→ Indent</button>
+        <button type="button" class="btn btn-ghost btn-sm" onclick="tcOutdent('ho_tc_editor')">← Outdent</button>
+        <button type="button" class="btn btn-ghost btn-sm" onclick="tcDeleteRow('ho_tc_editor')">✕ Delete</button>
+      </div>
+      <small style="color:var(--muted);">Tab = indent · Shift+Tab = outdent · Enter = new row · Backspace on empty = delete</small>
     </div>
 
     <div class="actions-row">
@@ -1105,8 +1137,16 @@ input[type="number"] {
           <input id="wo_contactPerson" placeholder="Name and mobile number">
         </div>
       </div>
-      <textarea id="wo_remarks" placeholder="Terms and conditions, payment terms, special conditions…&#10;Each point on a new line."
-        style="min-height:120px;width:100%;resize:vertical;font-size:13px;line-height:1.6;white-space:pre-wrap;"></textarea>
+      <div id="wo_tc_editor" class="tc-editor"></div>
+      <input type="hidden" id="wo_remarks">
+      <div class="tc-toolbar" style="margin-top:6px;display:flex;gap:6px;flex-wrap:wrap;">
+        <button type="button" class="btn btn-ghost btn-sm" onclick="tcAddRow('wo_tc_editor')">+ Row</button>
+        <button type="button" class="btn btn-ghost btn-sm" onclick="tcAddSubRow('wo_tc_editor')">+ Sub-row</button>
+        <button type="button" class="btn btn-ghost btn-sm" onclick="tcIndent('wo_tc_editor')">→ Indent</button>
+        <button type="button" class="btn btn-ghost btn-sm" onclick="tcOutdent('wo_tc_editor')">← Outdent</button>
+        <button type="button" class="btn btn-ghost btn-sm" onclick="tcDeleteRow('wo_tc_editor')">✕ Delete</button>
+      </div>
+      <small style="color:var(--muted);">Tab = indent · Shift+Tab = outdent · Enter = new row · Backspace on empty = delete</small>
     </div>
 
     <h3 style="margin-top:20px;">Work Order Line Items</h3>
@@ -1540,7 +1580,7 @@ input[type="number"] {
         </div>
         <div class="field typeahead">
           <label class="req">Order Number</label>
-          <input id="arr_orderNumber" placeholder="Type to search…" autocomplete="off" oninput="arrOrderTypeahead()" disabled>
+          <input id="arr_orderNumber" placeholder="Search order # or vendor name…" autocomplete="off" oninput="arrOrderTypeahead()" onfocus="arrOrderTypeahead()" disabled>
           <div class="typeahead-results" id="arr_orderResults"></div>
         </div>
         <div class="field typeahead">
@@ -3215,9 +3255,19 @@ async function guardedSave(fn, triggerEl) {
 // ============================================================
 function formatRemarksNumbered(text) {
   if (!text) return '—';
-  const lines = text.split(/\n/).map(l => l.trim()).filter(Boolean);
-  if (lines.length <= 1) return esc(text);
-  return lines.map((l, i) => `${i+1}. ${esc(l)}`).join('<br>');
+  // Try JSON structured format from tc editor
+  try {
+    const rows = JSON.parse(text);
+    if (Array.isArray(rows)) {
+      return rows.map(r => {
+        const pad = '&nbsp;&nbsp;&nbsp;&nbsp;'.repeat(r.level||0);
+        const prefix = r.level > 0 ? '– ' : '';
+        return pad + prefix + esc(r.text||'');
+      }).filter(s => s.trim() !== '&nbsp;&nbsp;&nbsp;&nbsp;'.repeat(99).trim()).join('<br>');
+    }
+  } catch(e) {}
+  // Fallback: plain text, no auto-numbering
+  return text.split(/\n/).map(l => esc(l)).join('<br>');
 }
 
 // ============================================================
@@ -3228,6 +3278,10 @@ async function _printOrderDoc(docType, docNumber, h, items, vmOverride) {
   // vmOverride: { name, address, gstin, contact, phone } from vendor master
   // h: raw DB row (po_orders / ho_orders / wo_orders)
   // items: array of line item rows (already mapped)
+
+  const isPO = docType === 'PO';
+  const isHO = docType === 'HO';
+  const isWO = docType === 'WO';
 
   const fi = n => (n||0).toLocaleString('en-IN',{minimumFractionDigits:2,maximumFractionDigits:2});
 
@@ -3256,10 +3310,6 @@ async function _printOrderDoc(docType, docNumber, h, items, vmOverride) {
   const vmPhone   = vm ? (vm.phone          || '')    : '';
 
   // Doc-type specific fields
-  const isPO = docType === 'PO';
-  const isHO = docType === 'HO';
-  const isWO = docType === 'WO';
-
   const docTitle  = isPO ? 'PURCHASE ORDER' : isHO ? 'HIRE ORDER' : 'WORK ORDER';
   const docDate   = h.po_date || h['HO Date raw'] || h['WO Date raw'] || h.ho_date || h.wo_date || '';
   const docStatus = h.status || h['Status'] || '';
@@ -6380,6 +6430,7 @@ async function newHO() {
   document.getElementById('ho_remarks').value = '';
   document.getElementById('ho_project').value = 'PoE, Ph-01';
   document.getElementById('hoItemsBody').innerHTML = '';
+  document.getElementById('ho_tc_editor').innerHTML = ''; tcInitEmpty('ho_tc_editor');
   document.getElementById('ho_grossAmt').textContent = '0.00';
   document.getElementById('ho_gstAmt').textContent = '0.00';
   document.getElementById('ho_totalAmt').textContent = '0.00';
@@ -6482,7 +6533,7 @@ function getHOFormData() {
     startDate:  document.getElementById('ho_startDate').value,
     endDate:    document.getElementById('ho_endDate').value,
     gstPct, grossAmount: gross, gstAmount: gstAmt, totalAmount: total,
-    remarks:       document.getElementById('ho_remarks').value,
+    remarks:       tcSerialize('ho_tc_editor'),
     project:       document.getElementById('ho_project').value,
     contactPerson: document.getElementById('ho_contactPerson')?.value?.trim()||null,
     createdBy:     state.userName,
@@ -6576,7 +6627,7 @@ async function reviseHO(hoNum) {
   document.getElementById('ho_number').value   = hoNum;
   document.getElementById('ho_date').value     = h['HO Date raw'] || h['HO Date'] || today();
   document.getElementById('ho_scope').value    = h['Scope'] || '';
-  document.getElementById('ho_remarks').value  = h['Remarks'] || '';
+  tcDeserialize('ho_tc_editor', h['Remarks'] || '');
   document.getElementById('ho_gstPct').value   = h['GST %'] || 18;
   document.getElementById('ho_vendor').value   = h['Vendor Name'] || '';
   document.getElementById('ho_vendorCode').value = h['Vendor Code'] || '';
@@ -7588,6 +7639,7 @@ async function newWO() {
   document.getElementById('wo_totalAmt').textContent = '0.00';
   document.getElementById('woItemsBody').innerHTML = '';
   _woItemCount = 0;
+  document.getElementById('wo_tc_editor').innerHTML = ''; tcInitEmpty('wo_tc_editor');
   document.getElementById('woForm').dataset.revisingWO = '';
   wo_vendor_locked = false;
   addWOItem(); window.scrollTo(0,0);
@@ -7697,7 +7749,7 @@ function getWOFormData() {
     project:     document.getElementById('wo_project').value,
     startDate:     document.getElementById('wo_startDate').value,
     endDate:       document.getElementById('wo_endDate').value,
-    remarks:       document.getElementById('wo_remarks').value,
+    remarks:       tcSerialize('wo_tc_editor'),
     contactPerson: document.getElementById('wo_contactPerson')?.value?.trim()||null,
     items
   };
@@ -7768,7 +7820,7 @@ async function reviseWO(woNum) {
   document.getElementById('wo_number').value    = woNum;
   document.getElementById('wo_date').value      = h['WO Date raw']||h['WO Date']||today();
   document.getElementById('wo_scope').value     = h['Scope']||'';
-  document.getElementById('wo_remarks').value   = h['Remarks']||'';
+  tcDeserialize('wo_tc_editor', h['Remarks']||'');
   document.getElementById('wo_gstPct').value    = h['GST %']||18;
   document.getElementById('wo_retentionPct').value = h['Retention %']||5;
   document.getElementById('wo_mobAdvPct').value  = h['Mob Advance %']||'';
@@ -8991,38 +9043,78 @@ async function arrOrderTypeahead() {
   const type = document.getElementById('arr_orderType').value;
   const q    = document.getElementById('arr_orderNumber').value.toLowerCase().trim();
   const res  = document.getElementById('arr_orderResults');
-  if (!type || q.length < 2) { res.innerHTML = ''; res.style.display = 'none'; return; }
+  if (!type) { res.innerHTML = ''; res.style.display = 'none'; return; }
 
-  // Fetch matching open orders from DB
-  let data = [], tbl = '', numCol = '', vendorCol = '';
+  // Fetch all active orders, fuzzy-filter client-side on order# + vendor + scope
+  let allData = [], numCol = '', vendorCol = '';
   if (type === 'PO') {
-    tbl = 'pu_po_orders'; numCol = 'po_number'; vendorCol = 'vendor_name';
-    const { data: rows } = await sb.from(tbl).select(numCol + ',' + vendorCol)
-      .in('status', ['Approved','Open','Partial Receipt']).ilike(numCol, '%' + q + '%').limit(10);
-    data = rows || [];
+    numCol = 'po_number'; vendorCol = 'vendor_name';
+    const { data: rows } = await sb.from('pu_po_orders')
+      .select('po_number,vendor_name,status')
+      .in('status', ['Open','Partial Receipt'])
+      .order('po_number', { ascending: false });
+    allData = rows || [];
   } else if (type === 'HO') {
-    tbl = 'ho_orders'; numCol = 'ho_number'; vendorCol = 'vendor_name';
-    const { data: rows } = await sb.from(tbl).select(numCol + ',' + vendorCol)
-      .in('status', ['Open','Active']).ilike(numCol, '%' + q + '%').limit(10);
-    data = rows || [];
+    numCol = 'ho_number'; vendorCol = 'vendor_name';
+    const { data: rows } = await sb.from('ho_orders')
+      .select('ho_number,vendor_name,status,scope')
+      .in('status', ['Active','Open'])
+      .order('ho_number', { ascending: false });
+    allData = rows || [];
   } else if (type === 'WO') {
-    tbl = 'wo_orders'; numCol = 'wo_number'; vendorCol = 'vendor_name';
-    const { data: rows } = await sb.from(tbl).select(numCol + ',' + vendorCol)
-      .in('status', ['Open','Active']).ilike(numCol, '%' + q + '%').limit(10);
-    data = rows || [];
+    numCol = 'wo_number'; vendorCol = 'vendor_name';
+    const { data: rows } = await sb.from('wo_orders')
+      .select('wo_number,vendor_name,status,scope')
+      .in('status', ['Active','Open'])
+      .order('wo_number', { ascending: false });
+    allData = rows || [];
   }
 
-  if (!data.length) { res.innerHTML = '<div class="typeahead-item muted" style="padding:8px;">No results</div>'; res.style.display = 'block'; return; }
-  res.innerHTML = data.map(r => {
-    const num = r[numCol]; const vendor = r[vendorCol] || '';
-    return `<div class="typeahead-item" onmousedown="event.preventDefault();selectARROrder('${esc(num)}','${esc(vendor)}')">
-      <div style="font-weight:600;">${esc(num)}</div>
-      <div style="font-size:11px;color:var(--muted);">${esc(vendor)}</div>
-    </div>`;
+  function fuzzyScore(row) {
+    if (!q) return 1;
+    const num    = (row[numCol]    || '').toLowerCase();
+    const vendor = (row[vendorCol] || '').toLowerCase();
+    const scope  = (row.scope      || '').toLowerCase();
+    if (num.startsWith(q))    return 4;
+    if (num.includes(q))      return 3;
+    if (vendor.includes(q))   return 2;
+    if (scope.includes(q))    return 1;
+    const words = q.split(/\s+/);
+    if (words.length > 1 && words.every(w => vendor.includes(w) || num.includes(w))) return 1;
+    return 0;
+  }
+
+  function hl(text, q) {
+    if (!q || !text) return esc(text||'');
+    const idx = text.toLowerCase().indexOf(q.toLowerCase());
+    if (idx === -1) return esc(text);
+    return esc(text.slice(0,idx)) + '<strong style="color:var(--accent);">' + esc(text.slice(idx,idx+q.length)) + '</strong>' + esc(text.slice(idx+q.length));
+  }
+
+  const filtered = allData
+    .map(r => ({ r, score: fuzzyScore(r) }))
+    .filter(x => x.score > 0)
+    .sort((a,b) => b.score - a.score)
+    .slice(0, 12).map(x => x.r);
+
+  if (!filtered.length) {
+    res.innerHTML = '<div style="padding:8px 12px;font-size:12px;color:var(--muted);">No matching orders</div>';
+    res.style.display = 'block'; return;
+  }
+
+  res.innerHTML = filtered.map(r => {
+    const num = r[numCol]||'', vendor = r[vendorCol]||'', scope = r.scope||'', status = r.status||'';
+    return '<div class="typeahead-item" onmousedown="event.preventDefault();selectARROrder(\'' + esc(num) + '\',\'' + esc(vendor) + '\')">' +
+      '<div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px;">' +
+        '<span style="font-weight:600;">' + hl(num,q) + '</span>' +
+        '<span style="font-size:10px;color:var(--muted);">' + esc(status) + '</span>' +
+      '</div>' +
+      '<div style="font-size:11px;color:var(--muted);">' + hl(vendor,q) + '</div>' +
+      (scope ? '<div style="font-size:11px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:320px;">' + hl(scope,q) + '</div>' : '') +
+    '</div>';
   }).join('');
   res.style.display = 'block';
 }
-
 function selectARROrder(orderNum, vendorName) {
   document.getElementById('arr_orderNumber').value = orderNum;
   document.getElementById('arr_vendor').value = vendorName;
@@ -19195,6 +19287,215 @@ setInterval(function() {
     loadDashPendingCards();
   }
 }, 60000);
+
+
+// ============================================================
+// T&C RICH EDITOR  (HO / WO Terms & Conditions)
+// ============================================================
+// Data model: [{level:0,text:''}, {level:1,text:''}, ...]
+// Serialised as JSON in the hidden #ho_remarks / #wo_remarks input
+
+function tcGetRows(editorId) {
+  return [...document.querySelectorAll('#'+editorId+' .tc-row')];
+}
+
+function tcRowData(editorId) {
+  return tcGetRows(editorId).map(r => ({
+    level: parseInt(r.dataset.level||'0'),
+    text:  r.querySelector('.tc-input').value
+  }));
+}
+
+function tcSerialize(editorId) {
+  const data = tcRowData(editorId).filter(r => r.text.trim() !== '');
+  return data.length ? JSON.stringify(data) : '';
+}
+
+function tcDeserialize(editorId, value) {
+  const el = document.getElementById(editorId);
+  if (!el) return;
+  el.innerHTML = '';
+  let rows = [];
+  if (value) {
+    try { rows = JSON.parse(value); } catch(e) {
+      // plain text fallback
+      rows = value.split('\n').filter(Boolean).map(t => ({level:0, text:t}));
+    }
+  }
+  if (!rows.length) rows = [{level:0, text:''}];
+  rows.forEach((r,i) => tcRenderRow(editorId, r.level, r.text, i+1));
+  tcRenumber(editorId);
+}
+
+function tcRenderRow(editorId, level, text, num) {
+  const el = document.getElementById(editorId);
+  const row = document.createElement('div');
+  row.className = 'tc-row';
+  row.dataset.level = level;
+
+  const numEl = document.createElement('div');
+  numEl.className = 'tc-num';
+
+  const inp = document.createElement('textarea');
+  inp.className = 'tc-input';
+  inp.value = text;
+  inp.rows = 1;
+  inp.style.paddingLeft = (8 + level * 20) + 'px';
+  inp.addEventListener('input', () => { tcAutoResize(inp); });
+  inp.addEventListener('keydown', e => tcKeyDown(e, editorId));
+  inp.addEventListener('focus', () => row.dataset.focused = '1');
+  inp.addEventListener('blur',  () => delete row.dataset.focused);
+
+  row.appendChild(numEl);
+  row.appendChild(inp);
+  el.appendChild(row);
+  tcAutoResize(inp);
+  return row;
+}
+
+function tcAutoResize(inp) {
+  inp.style.height = 'auto';
+  inp.style.height = inp.scrollHeight + 'px';
+}
+
+function tcRenumber(editorId) {
+  const rows = tcGetRows(editorId);
+  const counters = [0,0,0,0,0];
+  rows.forEach(row => {
+    const lvl = parseInt(row.dataset.level||'0');
+    counters[lvl]++;
+    for (let i = lvl+1; i < counters.length; i++) counters[i] = 0;
+    const numEl = row.querySelector('.tc-num');
+    if (lvl === 0) {
+      numEl.textContent = counters[0] + '.';
+    } else {
+      // sub-row: show parent.child notation
+      const parent = counters[0];
+      numEl.textContent = Array.from({length: lvl}, (_,i) => counters[i]).join('.') + '.' + counters[lvl];
+    }
+  });
+}
+
+function tcFocusedRow(editorId) {
+  return tcGetRows(editorId).find(r => r.dataset.focused) ||
+         tcGetRows(editorId).find(r => r.querySelector('.tc-input') === document.activeElement);
+}
+
+function tcKeyDown(e, editorId) {
+  const inp = e.target;
+  const row = inp.closest('.tc-row');
+
+  if (e.key === 'Enter') {
+    e.preventDefault();
+    const rows = tcGetRows(editorId);
+    const idx  = rows.indexOf(row);
+    const lvl  = parseInt(row.dataset.level||'0');
+    const newRow = tcRenderRow(editorId, lvl, '', 0);
+    // Insert after current row
+    if (idx < rows.length - 1) {
+      rows[idx+1].before(newRow);
+    }
+    tcRenumber(editorId);
+    newRow.querySelector('.tc-input').focus();
+  }
+
+  if (e.key === 'Tab') {
+    e.preventDefault();
+    if (e.shiftKey) tcOutdentRow(row, editorId);
+    else tcIndentRow(row, editorId);
+  }
+
+  if (e.key === 'Backspace' && inp.value === '') {
+    e.preventDefault();
+    const rows = tcGetRows(editorId);
+    const idx  = rows.indexOf(row);
+    if (rows.length > 1) {
+      row.remove();
+      tcRenumber(editorId);
+      const prev = tcGetRows(editorId)[Math.max(0, idx-1)];
+      if (prev) {
+        const prevInp = prev.querySelector('.tc-input');
+        prevInp.focus();
+        prevInp.selectionStart = prevInp.selectionEnd = prevInp.value.length;
+      }
+    }
+  }
+
+  if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
+    const rows = tcGetRows(editorId);
+    const idx  = rows.indexOf(row);
+    const target = e.key === 'ArrowUp' ? rows[idx-1] : rows[idx+1];
+    if (target) { e.preventDefault(); target.querySelector('.tc-input').focus(); }
+  }
+}
+
+function tcIndentRow(row, editorId) {
+  const lvl = parseInt(row.dataset.level||'0');
+  if (lvl < 4) {
+    row.dataset.level = lvl + 1;
+    row.querySelector('.tc-input').style.paddingLeft = (8 + (lvl+1)*20) + 'px';
+    tcRenumber(editorId);
+  }
+}
+
+function tcOutdentRow(row, editorId) {
+  const lvl = parseInt(row.dataset.level||'0');
+  if (lvl > 0) {
+    row.dataset.level = lvl - 1;
+    row.querySelector('.tc-input').style.paddingLeft = (8 + (lvl-1)*20) + 'px';
+    tcRenumber(editorId);
+  }
+}
+
+function tcAddRow(editorId) {
+  const rows = tcGetRows(editorId);
+  const focused = tcFocusedRow(editorId);
+  const lvl = focused ? parseInt(focused.dataset.level||'0') : 0;
+  const newRow = tcRenderRow(editorId, 0, '', 0);
+  if (focused) focused.after(newRow);
+  tcRenumber(editorId);
+  newRow.querySelector('.tc-input').focus();
+}
+
+function tcAddSubRow(editorId) {
+  const focused = tcFocusedRow(editorId);
+  const lvl = focused ? Math.min(4, parseInt(focused.dataset.level||'0') + 1) : 1;
+  const newRow = tcRenderRow(editorId, lvl, '', 0);
+  if (focused) focused.after(newRow);
+  else document.getElementById(editorId).appendChild(newRow);
+  tcRenumber(editorId);
+  newRow.querySelector('.tc-input').focus();
+}
+
+function tcIndent(editorId) {
+  const row = tcFocusedRow(editorId);
+  if (row) tcIndentRow(row, editorId);
+}
+
+function tcOutdent(editorId) {
+  const row = tcFocusedRow(editorId);
+  if (row) tcOutdentRow(row, editorId);
+}
+
+function tcDeleteRow(editorId) {
+  const row = tcFocusedRow(editorId);
+  const rows = tcGetRows(editorId);
+  if (row && rows.length > 1) {
+    const idx = rows.indexOf(row);
+    row.remove();
+    tcRenumber(editorId);
+    const next = tcGetRows(editorId)[Math.max(0, idx-1)];
+    if (next) next.querySelector('.tc-input').focus();
+  }
+}
+
+function tcInitEmpty(editorId) {
+  const el = document.getElementById(editorId);
+  if (el && el.children.length === 0) {
+    tcRenderRow(editorId, 0, '', 1);
+    tcRenumber(editorId);
+  }
+}
 
 </script>
 </body>
