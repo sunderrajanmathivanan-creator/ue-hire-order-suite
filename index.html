@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Penguin-Procurement Suite — Urban Excellence LLP · Poetry of Earth</title>
+<title>Penguin-Procurement Suite v40 — Urban Excellence LLP · Poetry of Earth</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
 /* ============================================================
@@ -25,6 +25,15 @@
   --navy-print: #1e3a5f;
 }
 body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; font-size: 14px; }
+
+/* Toggle Switch */
+.toggle-switch{position:relative;display:inline-block;width:44px;height:24px;}
+.toggle-switch input{opacity:0;width:0;height:0;}
+.toggle-slider{position:absolute;cursor:pointer;inset:0;background:#cbd5e1;border-radius:24px;transition:.3s;}
+.toggle-slider:before{position:absolute;content:"";height:18px;width:18px;left:3px;bottom:3px;background:white;border-radius:50%;transition:.3s;}
+.toggle-switch input:checked + .toggle-slider{background:#0d9488;}
+.toggle-switch input:checked + .toggle-slider:before{transform:translateX(20px);}
+.rmc-badge{display:inline-block;padding:2px 7px;background:#d1fae5;color:#065f46;border-radius:99px;font-size:10px;font-weight:700;margin-left:6px;}
 
 /* Auth */
 #authGate { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; background: linear-gradient(135deg, #c7d2e8 0%, #dde3ef 100%); z-index: 1000; }
@@ -922,19 +931,7 @@ input[type="number"] {
         <input type="date" id="hob_invPayDue" readonly style="background:#f0fdf9;">
       </div>
     </div>
-    <div class="grid-3" style="margin-top:12px;">
-      <div class="field typeahead">
-        <label class="req">BOQ Item</label>
-        <div style="display:flex;gap:4px;align-items:center;">
-          <input id="hob_boqItem" placeholder="Type to search BOQ item…" autocomplete="off"
-            oninput="hob_boq_locked=false;boqTypeahead('hob_boqItem','hob_boqResults','hob_boqCode')"
-            style="flex:1;">
-          <button type="button" class="btn btn-ghost btn-sm" id="hob_boq_clear"
-            style="display:none;padding:5px 8px;flex-shrink:0;" onclick="clearMasterField('hob_boqItem','hob_boqCode','hob_boqResults','hob_boq_clear')">✕</button>
-        </div>
-        <input type="hidden" id="hob_boqCode">
-        <div class="typeahead-results" id="hob_boqResults"></div>
-      </div>
+    <div class="grid-2" style="margin-top:12px;">
       <div class="field">
         <label>GST %</label>
         <input type="number" id="hob_gstPct" value="18" step="0.01" oninput="recalcHOBTotals()">
@@ -1027,6 +1024,44 @@ input[type="number"] {
     <div class="field" style="margin-top:12px;">
       <label>Remarks</label>
       <textarea id="hob_remarks" rows="2" placeholder="Notes, references…"></textarea>
+    </div>
+
+    <!-- RMC OPEX Toggle -->
+    <div style="margin-top:14px;padding:12px 16px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;">
+      <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;">
+        <div style="display:flex;align-items:center;gap:10px;">
+          <label style="font-size:12px;font-weight:600;color:#166534;">🏗 RMC Plant OPEX</label>
+          <label class="toggle-switch">
+            <input type="checkbox" id="hob_isRmcOpex" onchange="toggleHOBRmcFields()">
+            <span class="toggle-slider"></span>
+          </label>
+          <span style="font-size:11px;color:#166534;">Tag this bill as RMC Plant operational expense</span>
+        </div>
+        <div id="hob_rmcFields" style="display:none;gap:12px;flex-wrap:wrap;align-items:center;">
+          <div class="field" style="min-width:160px;margin:0;">
+            <label style="font-size:11px;">OPEX Category</label>
+            <select id="hob_rmcCategory" onchange="toggleHOBAmcFields()" style="font-size:12px;padding:6px;">
+              <option value="">— Select —</option>
+              <option value="AMC">AMC (Annual Contract)</option>
+              <option value="Maintenance">Maintenance</option>
+              <option value="Operations">Operations</option>
+              <option value="Labour">Labour</option>
+              <option value="Other">Other</option>
+            </select>
+          </div>
+          <div id="hob_amcFields" style="display:none;gap:10px;align-items:center;">
+            <div class="field" style="min-width:130px;margin:0;">
+              <label style="font-size:11px;">AMC Start Month</label>
+              <input type="month" id="hob_amcStart" style="font-size:12px;padding:6px;" oninput="calcHOBAmcSlice()">
+            </div>
+            <div class="field" style="min-width:130px;margin:0;">
+              <label style="font-size:11px;">AMC End Month</label>
+              <input type="month" id="hob_amcEnd" style="font-size:12px;padding:6px;" oninput="calcHOBAmcSlice()">
+            </div>
+            <div style="font-size:11px;color:#166534;background:#dcfce7;padding:6px 10px;border-radius:4px;white-space:nowrap;" id="hob_amcSlice"></div>
+          </div>
+        </div>
+      </div>
     </div>
 
     <div class="actions-row">
@@ -1316,18 +1351,7 @@ input[type="number"] {
       <div class="field"><label>Credit Period (days)</label><input type="number" id="wob_creditPeriod" value="30" min="0" oninput="calcWOBInvPayDue()"></div>
       <div class="field"><label>Invoice Payment Due</label><input type="date" id="wob_invPayDue" readonly style="background:#f0fdf9;"></div>
     </div>
-    <div class="grid-4" style="margin-top:12px;">
-      <div class="field typeahead">
-        <label class="req">BOQ Item</label>
-        <div style="display:flex;gap:4px;align-items:center;">
-          <input id="wob_boqItem" placeholder="Type to search BOQ item…" autocomplete="off"
-            oninput="wob_boq_locked=false;boqTypeahead('wob_boqItem','wob_boqResults','wob_boqCode')" style="flex:1;">
-          <button type="button" class="btn btn-ghost btn-sm" id="wob_boq_clear"
-            style="display:none;padding:5px 8px;" onclick="clearMasterField('wob_boqItem','wob_boqCode','wob_boqResults','wob_boq_clear')">✕</button>
-        </div>
-        <input type="hidden" id="wob_boqCode">
-        <div class="typeahead-results" id="wob_boqResults"></div>
-      </div>
+    <div class="grid-3" style="margin-top:12px;">
       <div class="field"><label>GST %</label><input type="number" id="wob_gstPct" value="18" step="0.01" oninput="recalcWOBTotals()"></div>
       <div class="field"><label>Retention %</label><input type="number" id="wob_retentionPct" value="5" readonly style="background:#f0fdf9;"></div>
       <div class="field"><label>Prepared By</label><input id="wob_preparedBy" readonly></div>
@@ -1409,6 +1433,45 @@ input[type="number"] {
     <div class="field" style="margin-top:12px;">
       <label>Remarks</label><textarea id="wob_remarks" rows="2" placeholder="Notes, references…"></textarea>
     </div>
+
+    <!-- RMC OPEX Toggle -->
+    <div style="margin-top:14px;padding:12px 16px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;">
+      <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;">
+        <div style="display:flex;align-items:center;gap:10px;">
+          <label style="font-size:12px;font-weight:600;color:#166534;">🏗 RMC Plant OPEX</label>
+          <label class="toggle-switch">
+            <input type="checkbox" id="wob_isRmcOpex" onchange="toggleWOBRmcFields()">
+            <span class="toggle-slider"></span>
+          </label>
+          <span style="font-size:11px;color:#166534;">Tag this bill as RMC Plant operational expense</span>
+        </div>
+        <div id="wob_rmcFields" style="display:none;gap:12px;flex-wrap:wrap;align-items:center;">
+          <div class="field" style="min-width:160px;margin:0;">
+            <label style="font-size:11px;">OPEX Category</label>
+            <select id="wob_rmcCategory" onchange="toggleWOBAmcFields()" style="font-size:12px;padding:6px;">
+              <option value="">— Select —</option>
+              <option value="AMC">AMC (Annual Contract)</option>
+              <option value="Maintenance">Maintenance</option>
+              <option value="Operations">Operations</option>
+              <option value="Labour">Labour</option>
+              <option value="Other">Other</option>
+            </select>
+          </div>
+          <div id="wob_amcFields" style="display:none;gap:10px;align-items:center;">
+            <div class="field" style="min-width:130px;margin:0;">
+              <label style="font-size:11px;">AMC Start Month</label>
+              <input type="month" id="wob_amcStart" style="font-size:12px;padding:6px;" oninput="calcWOBAmcSlice()">
+            </div>
+            <div class="field" style="min-width:130px;margin:0;">
+              <label style="font-size:11px;">AMC End Month</label>
+              <input type="month" id="wob_amcEnd" style="font-size:12px;padding:6px;" oninput="calcWOBAmcSlice()">
+            </div>
+            <div style="font-size:11px;color:#166534;background:#dcfce7;padding:6px 10px;border-radius:4px;white-space:nowrap;" id="wob_amcSlice"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <div class="actions-row">
       <button class="btn btn-primary" onclick="guardedSave(saveWOB_direct, this)" style="font-size:14px;padding:11px 22px;">💾 Save RA Bill</button>
       <button class="btn btn-ghost" onclick="closeWOBForm()">Close</button>
@@ -4269,7 +4332,6 @@ async function apiSaveHOB(data) {
       hoc_number: data.hocNumber, ho_number: data.hoNumber, vendor_name: data.vendor,
       vendor_inv_no: data.vendorInvNo||null, vendor_inv_date: data.vendorInvDate||null,
       credit_period: data.creditPeriod||30, inv_pay_due: data.invPayDue||null,
-      boq_item: data.boqItem||null, boq_item_code: data.boqItemCode||null,
       gross_amount: data.grossAmount, extra_before_gst: data.extraBefore||0,
       gst_pct: data.gstPct, gst_amount: data.gstAmount, extra_after_gst: data.extraAfter||0,
       invoice_value: data.invoiceValue, advance_recovery: data.advanceRecovery||0,
@@ -4277,7 +4339,11 @@ async function apiSaveHOB(data) {
       hold_amount: data.holdAmount||0, hold_description: data.holdDescription||null,
       net_payable: data.netPayable, prepared_by: state.userName,
       prepared_by_id: state.userId, remarks: data.remarks||null,
-      status: 'Pending Approval', rejection_reason: null
+      status: 'Pending Approval', rejection_reason: null,
+      is_rmc_opex: data.isRmcOpex||false,
+      rmc_opex_category: data.isRmcOpex ? (data.rmcOpexCategory||null) : null,
+      amc_start_month: data.amcStartMonth||null,
+      amc_end_month: data.amcEndMonth||null
     };
 
     if (data.isRevision) {
@@ -5036,7 +5102,6 @@ async function apiSaveWOB(data) {
       woc_number: data.wocNumber, wo_number: data.woNumber, vendor_name: data.vendor,
       vendor_inv_no: data.vendorInvNo||null, vendor_inv_date: data.vendorInvDate||null,
       credit_period: data.creditPeriod||30, inv_pay_due: data.invPayDue||null,
-      boq_item: data.boqItem||null, boq_item_code: data.boqItemCode||null,
       gross_amount: data.grossAmount, extra_before_gst: data.extraBefore||0,
       gst_pct: data.gstPct, gst_amount: data.gstAmount, extra_after_gst: data.extraAfter||0,
       invoice_value: data.invoiceValue, mob_advance_recovery: data.mobAdvRecovery||0,
@@ -5044,7 +5109,11 @@ async function apiSaveWOB(data) {
       retention_pct: data.retentionPct||5, retention_amount: data.retentionAmount||0,
       hold_amount: data.holdAmount||0, hold_description: data.holdDescription||null,
       net_payable: data.netPayable, prepared_by: state.userName, prepared_by_id: state.userId,
-      remarks: data.remarks||null, status: 'Pending Approval', rejection_reason: null
+      remarks: data.remarks||null, status: 'Pending Approval', rejection_reason: null,
+      is_rmc_opex: data.isRmcOpex||false,
+      rmc_opex_category: data.isRmcOpex ? (data.rmcOpexCategory||null) : null,
+      amc_start_month: data.amcStartMonth||null,
+      amc_end_month: data.amcEndMonth||null
     };
     if (data.isRevision) {
       const { error: ue } = await sb.from('wo_bills').update({ ...billRow, rejection_reason: null }).eq('bill_number', data.billNumber);
@@ -7184,8 +7253,8 @@ async function newHOB() {
   document.getElementById('hob_vendorInvDate').value = '';
   document.getElementById('hob_creditPeriod').value = '30';
   document.getElementById('hob_invPayDue').value = '';
-  document.getElementById('hob_boqItem').value = '';
-  document.getElementById('hob_boqCode').value = '';
+  if(document.getElementById('hob_boqItem')) document.getElementById('hob_boqItem').value = '';
+  if(document.getElementById('hob_boqCode')) document.getElementById('hob_boqCode').value = '';
   document.getElementById('hob_advRecovery').value = '0';
   document.getElementById('hob_tdsPct').value = '2';
   document.getElementById('hob_holdAmt').value = '0';
@@ -7206,6 +7275,7 @@ async function newHOB() {
 }
 
 function closeHOBForm() {
+  const cb=document.getElementById('hob_isRmcOpex');if(cb){cb.checked=false;toggleHOBRmcFields();}
   document.getElementById('hobForm').style.display = 'none';
   document.getElementById('hobListCard').style.display = 'block';
   document.getElementById('hobForm').dataset.revising = '';
@@ -7399,8 +7469,6 @@ function getHOBFormData() {
     vendorInvDate: document.getElementById('hob_vendorInvDate').value,
     creditPeriod:  num(document.getElementById('hob_creditPeriod').value),
     invPayDue:     document.getElementById('hob_invPayDue').value,
-    boqItem:       document.getElementById('hob_boqItem').value,
-    boqItemCode:   document.getElementById('hob_boqCode').value,
     grossAmount:   gross, extraBefore, gstPct, gstAmount: gstAmt,
     extraAfter, invoiceValue: invoice,
     advanceRecovery: advRec, tdsPct: num(document.getElementById('hob_tdsPct').value),
@@ -7409,7 +7477,13 @@ function getHOBFormData() {
     netPayable: net, status: 'Pending Approval',
     preparedBy: state.userName,
     remarks:    document.getElementById('hob_remarks').value,
-    items, extraLines, missingWBS
+    items, extraLines, missingWBS,
+    isRmcOpex:       document.getElementById('hob_isRmcOpex')?.checked||false,
+    rmcOpexCategory: document.getElementById('hob_rmcCategory')?.value||null,
+    amcStartMonth:   (document.getElementById('hob_isRmcOpex')?.checked&&document.getElementById('hob_rmcCategory')?.value==='AMC'&&document.getElementById('hob_amcStart')?.value)
+                       ? document.getElementById('hob_amcStart').value+'-01' : null,
+    amcEndMonth:     (document.getElementById('hob_isRmcOpex')?.checked&&document.getElementById('hob_rmcCategory')?.value==='AMC'&&document.getElementById('hob_amcEnd')?.value)
+                       ? document.getElementById('hob_amcEnd').value+'-01' : null
   };
 }
 
@@ -7419,7 +7493,6 @@ async function saveHOB_direct() {
   if (!data.billDate)   { toast('Bill date required','error'); return; }
   if (!data.vendorInvDate) { toast('Vendor Invoice Date is mandatory','error'); return; }
   if (!data.items.length) { toast('No items loaded — select a certification first','error'); return; }
-  if (!data.boqItem || !hob_boq_locked) { toast('BOQ Item is mandatory — select from the master list','error'); return; }
   if (data.missingWBS) { toast('WBS Sub Activity is mandatory for all line items','error'); return; }
   if (data.netPayable <= 0) { toast('Net Payable is zero or negative. Reduce deductions before saving.','error'); return; }
 
@@ -8311,8 +8384,8 @@ async function newWOB() {
   document.getElementById('wob_vendorInvDate').value = '';
   document.getElementById('wob_creditPeriod').value = '30';
   document.getElementById('wob_invPayDue').value = '';
-  document.getElementById('wob_boqItem').value = '';
-  document.getElementById('wob_boqCode').value = '';
+  if(document.getElementById('wob_boqItem')) document.getElementById('wob_boqItem').value = '';
+  if(document.getElementById('wob_boqCode')) document.getElementById('wob_boqCode').value = '';
   document.getElementById('wob_mobAdvRecovery').value = '0';
   document.getElementById('wob_advRecovery').value = '0';
   document.getElementById('wob_tdsPct').value = '2';
@@ -8333,6 +8406,7 @@ async function newWOB() {
 }
 
 function closeWOBForm() {
+  const cb=document.getElementById('wob_isRmcOpex');if(cb){cb.checked=false;toggleWOBRmcFields();}
   document.getElementById('wobForm').style.display = 'none';
   document.getElementById('wobListCard').style.display = 'block';
   document.getElementById('wobForm').dataset.revising = '';
@@ -8462,7 +8536,6 @@ async function saveWOB_direct() {
   if (!wocNum) { toast('Select a certification','error'); return; }
   if (!document.getElementById('wob_date').value) { toast('Bill date required','error'); return; }
   if (!document.getElementById('wob_vendorInvDate').value) { toast('Vendor Invoice Date is mandatory','error'); return; }
-  if (!document.getElementById('wob_boqItem').value||!wob_boq_locked) { toast('BOQ Item is mandatory — select from master','error'); return; }
 
   // Validate all items have WBS Sub Activity
   const items = [];
@@ -8506,6 +8579,10 @@ async function saveWOB_direct() {
   const net=invoice-mobAdv-adv-tds-retention-hold;
 
   const isRevision = document.getElementById('wobForm').dataset.revising;
+  const isWobRmcOpex = document.getElementById('wob_isRmcOpex')?.checked||false;
+  const wobRmcCat    = document.getElementById('wob_rmcCategory')?.value||null;
+  const wobAmcS      = document.getElementById('wob_amcStart')?.value||null;
+  const wobAmcE      = document.getElementById('wob_amcEnd')?.value||null;
   const r = await apiSaveWOB({
     billNumber: document.getElementById('wob_number').value,
     billDate:document.getElementById('wob_date').value,
@@ -8514,15 +8591,17 @@ async function saveWOB_direct() {
     vendorInvDate:document.getElementById('wob_vendorInvDate').value,
     creditPeriod:num(document.getElementById('wob_creditPeriod').value),
     invPayDue:document.getElementById('wob_invPayDue').value,
-    boqItem:document.getElementById('wob_boqItem').value,
-    boqItemCode:document.getElementById('wob_boqCode').value,
     grossAmount:gross, extraBefore, gstPct, gstAmount:gstAmt, extraAfter,
     invoiceValue:invoice, mobAdvRecovery:mobAdv, advanceRecovery:adv,
     tdsPct:num(document.getElementById('wob_tdsPct').value), tdsAmount:tds,
     retentionPct:retPct, retentionAmount:retention,
     holdAmount:hold, holdDescription:document.getElementById('wob_holdDesc').value,
     netPayable:net, remarks:document.getElementById('wob_remarks').value,
-    items, extraLines, isRevision:!!isRevision
+    items, extraLines, isRevision:!!isRevision,
+    isRmcOpex: isWobRmcOpex,
+    rmcOpexCategory: isWobRmcOpex ? wobRmcCat : null,
+    amcStartMonth: (isWobRmcOpex&&wobRmcCat==='AMC'&&wobAmcS) ? wobAmcS+'-01' : null,
+    amcEndMonth:   (isWobRmcOpex&&wobRmcCat==='AMC'&&wobAmcE) ? wobAmcE+'-01' : null
   });
   if (r.ok) {
     flashSuccess((isRevision?'Revised bill':'Bill')+' '+(r.billNumber||'')+ ' saved — pending approval.');
@@ -14717,8 +14796,10 @@ function renderMISList() {
       : '<span style="color:#94a3b8;font-size:11px;font-style:italic;">—</span>';
     // View button only — Approve/Reject moved into the popup
     const acts=`<button class="btn btn-ghost btn-sm" onclick="viewMIS('${esc(m.mis_number)}')">View</button>`;
+    const rmcBadge = (m.issued_to||'').toLowerCase().includes('rmc plant')
+      ? ' <span class="rmc-badge">RMC</span>' : '';
     return `<tr>
-      <td class="mono">${esc(m.mis_number)}${cashBadge}</td><td>${fmtDate(m.issue_date)}</td>
+      <td class="mono">${esc(m.mis_number)}${cashBadge}${rmcBadge}</td><td>${fmtDate(m.issue_date)}</td>
       <td>${esc(m.issued_to)}</td>
       <td>${esc(m.issued_by||'—')}</td>
       <td>${wbsDisplay}</td>
@@ -19595,6 +19676,79 @@ function tcInitEmpty(editorId) {
   if (el && el.children.length === 0) {
     tcRenderRow(editorId, 0, '', 1);
     tcRenumber(editorId);
+  }
+}
+
+
+// ============================================================
+// RMC OPEX TOGGLE — HOB + WOB
+// ============================================================
+function toggleHOBRmcFields(){
+  const checked=document.getElementById('hob_isRmcOpex')?.checked;
+  const f=document.getElementById('hob_rmcFields');
+  if(f) f.style.display=checked?'flex':'none';
+  if(!checked){
+    const c=document.getElementById('hob_rmcCategory');if(c) c.value='';
+    const a=document.getElementById('hob_amcFields');if(a) a.style.display='none';
+    const s=document.getElementById('hob_amcSlice');if(s) s.textContent='';
+  }
+}
+function toggleHOBAmcFields(){
+  const cat=document.getElementById('hob_rmcCategory')?.value;
+  const a=document.getElementById('hob_amcFields');
+  if(a) a.style.display=cat==='AMC'?'flex':'none';
+}
+function calcHOBAmcSlice(){
+  const s=document.getElementById('hob_amcStart')?.value;
+  const e=document.getElementById('hob_amcEnd')?.value;
+  const el=document.getElementById('hob_amcSlice');
+  if(!s||!e||!el) return;
+  const ms=new Date(s+'-01'),me=new Date(e+'-01');
+  const months=(me.getFullYear()-ms.getFullYear())*12+(me.getMonth()-ms.getMonth())+1;
+  el.textContent=months>0?months+' months':'Invalid range';
+}
+function toggleWOBRmcFields(){
+  const checked=document.getElementById('wob_isRmcOpex')?.checked;
+  const f=document.getElementById('wob_rmcFields');
+  if(f) f.style.display=checked?'flex':'none';
+  if(!checked){
+    const c=document.getElementById('wob_rmcCategory');if(c) c.value='';
+    const a=document.getElementById('wob_amcFields');if(a) a.style.display='none';
+    const s=document.getElementById('wob_amcSlice');if(s) s.textContent='';
+  }
+}
+function toggleWOBAmcFields(){
+  const cat=document.getElementById('wob_rmcCategory')?.value;
+  const a=document.getElementById('wob_amcFields');
+  if(a) a.style.display=cat==='AMC'?'flex':'none';
+}
+function calcWOBAmcSlice(){
+  const s=document.getElementById('wob_amcStart')?.value;
+  const e=document.getElementById('wob_amcEnd')?.value;
+  const el=document.getElementById('wob_amcSlice');
+  if(!s||!e||!el) return;
+  const ms=new Date(s+'-01'),me=new Date(e+'-01');
+  const months=(me.getFullYear()-ms.getFullYear())*12+(me.getMonth()-ms.getMonth())+1;
+  el.textContent=months>0?months+' months':'Invalid range';
+}
+function prefillHOBRmcFields(isRmc,cat,amcS,amcE){
+  const cb=document.getElementById('hob_isRmcOpex');if(!cb)return;
+  cb.checked=!!isRmc;toggleHOBRmcFields();
+  if(isRmc&&cat){const c=document.getElementById('hob_rmcCategory');if(c){c.value=cat;toggleHOBAmcFields();}}
+  if(isRmc&&cat==='AMC'){
+    if(amcS) document.getElementById('hob_amcStart').value=amcS.slice(0,7);
+    if(amcE) document.getElementById('hob_amcEnd').value=amcE.slice(0,7);
+    calcHOBAmcSlice();
+  }
+}
+function prefillWOBRmcFields(isRmc,cat,amcS,amcE){
+  const cb=document.getElementById('wob_isRmcOpex');if(!cb)return;
+  cb.checked=!!isRmc;toggleWOBRmcFields();
+  if(isRmc&&cat){const c=document.getElementById('wob_rmcCategory');if(c){c.value=cat;toggleWOBAmcFields();}}
+  if(isRmc&&cat==='AMC'){
+    if(amcS) document.getElementById('wob_amcStart').value=amcS.slice(0,7);
+    if(amcE) document.getElementById('wob_amcEnd').value=amcE.slice(0,7);
+    calcWOBAmcSlice();
   }
 }
 
