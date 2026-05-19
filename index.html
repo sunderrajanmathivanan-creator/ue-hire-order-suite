@@ -15209,6 +15209,15 @@ async function loadStockBalance() {
   if(error){toast('Stock error: '+error.message,'error');return;}
   puState.stockBalance=data||[];
   renderStockBalance();
+  // Attach click delegation once (guard with flag)
+  const tbody = document.getElementById('stock_body');
+  if(tbody && !tbody._grnLinkBound){
+    tbody._grnLinkBound = true;
+    tbody.addEventListener('click', e=>{
+      const span = e.target.closest('.mat-grn-link');
+      if(span) showMaterialGRNHistory(span.dataset.mat);
+    });
+  }
 }
 
 function renderStockBalance() {
@@ -15224,7 +15233,7 @@ function renderStockBalance() {
     const balColor = bal <= 0 ? 'var(--danger)' : bal < 10 ? 'var(--warn)' : 'var(--accent)';
     const resColor = reserved > 0 ? '#d97706' : 'var(--muted)';
     return `<tr style="${isLow?'background:#fef2f2;':''}">
-      <td>${esc(s.material_name)}</td>
+      <td><span class="mat-grn-link" data-mat="${esc(s.material_name)}" style="cursor:pointer;color:var(--accent-2);">${esc(s.material_name)}</span></td>
       <td><span class="muted">—</span></td>
       <td>${esc(s.uom||'')}</td>
       <td class="num">${fmtINR(s.total_received_qty||0)}</td>
@@ -15240,6 +15249,98 @@ function renderStockBalance() {
   document.getElementById('stock_lowCount').textContent=lowCount;
 }
 
+// ============================================================
+// MATERIAL GRN HISTORY POP-UP
+// ============================================================
+async function showMaterialGRNHistory(materialName) {
+  openModal(`<h3>&#128230; GRN History &mdash; ${esc(materialName)}</h3>
+    <p style="color:var(--muted);font-size:12px;margin-bottom:12px;">Loading entries&hellip;</p>`);
+
+  // Step 1: exact case-insensitive match (catches casing differences in migrated data)
+  const {data:exactItems, error:iErr} = await sb
+    .from('pu_grn_items')
+    .select('grn_number, this_grn_qty, unit_rate, base_amount, uom, material_name')
+    .ilike('material_name', materialName.trim())
+    .order('grn_number', {ascending: false});
+
+  if(iErr){ openModal(`<h3>GRN History &mdash; ${esc(materialName)}</h3><p style="color:var(--danger);">Error: ${iErr.message}</p>`); return; }
+
+  let finalItems = exactItems || [];
+
+  // Step 2: if still empty, try contains search (catches minor spelling variants in migrated data)
+  if(finalItems.length === 0){
+    const {data:fuzzy} = await sb
+      .from('pu_grn_items')
+      .select('grn_number, this_grn_qty, unit_rate, base_amount, uom, material_name')
+      .ilike('material_name', '%' + materialName.trim().replace(/%/g,'') + '%')
+      .order('grn_number', {ascending: false});
+    finalItems = fuzzy || [];
+  }
+
+  if(finalItems.length === 0){
+    openModal(`<h3>&#128230; GRN History &mdash; ${esc(materialName)}</h3>
+      <p style="color:var(--muted);margin-top:8px;">No GRN line-item entries found for this material.</p>
+      <p style="color:var(--muted);font-size:12px;margin-top:6px;">This may indicate migrated GRNs where item-level data was not recorded at line level in <code>pu_grn_items</code>.</p>
+      <div class="actions-row" style="margin-top:16px;"><button class="btn btn-ghost" onclick="closeModal()">Close</button></div>`);
+    return;
+  }
+
+  // Fetch GRN headers for date, po_number, vendor
+  const grnNums = [...new Set(finalItems.map(i => i.grn_number))];
+  const {data:headers} = await sb
+    .from('pu_grn')
+    .select('grn_number, grn_date, po_number, vendor_name, is_cash_purchase, cash_purchase_ref')
+    .in('grn_number', grnNums);
+
+  const hdrMap = {};
+  (headers||[]).forEach(h=>{ hdrMap[h.grn_number]=h; });
+
+  const uom = (finalItems.find(i=>i.uom)||{}).uom || '';
+  const totalQty = finalItems.reduce((s,r)=>s+num(r.this_grn_qty),0);
+  const totalVal = finalItems.reduce((s,r)=>s+num(r.base_amount),0);
+  const avgRate  = totalQty>0 ? totalVal/totalQty : 0;
+
+  const rows = finalItems.map(it=>{
+    const h = hdrMap[it.grn_number]||{};
+    const poRef = h.is_cash_purchase
+      ? `<span style="font-size:11px;background:#ad6800;color:#fff;padding:1px 6px;border-radius:3px;">CASH</span>`
+      : `<span class="mono" style="font-size:12px;">${esc(h.po_number||'&mdash;')}</span>`;
+    // Warn icon if name matched via fuzzy (casing/spacing difference from migrated data)
+    const nameDiffers = it.material_name && it.material_name.trim().toLowerCase() !== materialName.trim().toLowerCase();
+    const warnBadge = nameDiffers
+      ? ` <span title="Migrated name differs: ${esc(it.material_name)}" style="font-size:10px;color:var(--warn);cursor:help;">&#9888;</span>` : '';
+    return `<tr>
+      <td><span class="mono" style="cursor:pointer;color:var(--accent-2);font-size:12px;" onclick="closeModal();setTimeout(()=>viewGRN('${esc(it.grn_number)}'),100)">${esc(it.grn_number)}</span>${warnBadge}</td>
+      <td>${fmtDate(h.grn_date||'')}</td>
+      <td>${poRef}</td>
+      <td style="max-width:140px;font-size:12px;color:var(--muted);">${esc(h.vendor_name||'&mdash;')}</td>
+      <td class="num">${fmtINR(it.this_grn_qty)} ${esc(uom)}</td>
+      <td class="num">${fmtINRSym(it.unit_rate||0)}</td>
+      <td class="num" style="font-weight:600;">${fmtINRSym(it.base_amount||0)}</td>
+    </tr>`;
+  }).join('');
+
+  openModal(`
+    <h3 style="margin-bottom:4px;">&#128230; GRN History &mdash; ${esc(materialName)}</h3>
+    <p style="color:var(--muted);font-size:12px;margin-bottom:14px;">${finalItems.length} entr${finalItems.length===1?'y':'ies'} &nbsp;&middot;&nbsp; Total received: <strong>${fmtINR(totalQty)} ${esc(uom)}</strong> &nbsp;&middot;&nbsp; Avg rate: <strong>${fmtINRSym(avgRate)}</strong> &nbsp;&middot;&nbsp; Total value: <strong>${fmtINRSym(totalVal)}</strong></p>
+    <div class="table-wrap">
+      <table>
+        <thead><tr>
+          <th>GRN No.</th><th>Date</th><th>PO / Ref</th><th>Vendor</th>
+          <th class="num">Qty Recd</th><th class="num">Rate</th><th class="num">Amount</th>
+        </tr></thead>
+        <tbody>${rows}</tbody>
+        <tfoot><tr style="background:#e6f4f1;font-weight:700;">
+          <td colspan="4" style="text-align:right;padding:7px 8px;font-size:12px;">TOTAL</td>
+          <td class="num">${fmtINR(totalQty)} ${esc(uom)}</td>
+          <td class="num">${fmtINRSym(avgRate)}<span style="font-size:10px;color:var(--muted);font-weight:400;"> avg</span></td>
+          <td class="num">${fmtINRSym(totalVal)}</td>
+        </tr></tfoot>
+      </table>
+    </div>
+    <div class="actions-row" style="margin-top:14px;"><button class="btn btn-ghost" onclick="closeModal()">Close</button></div>
+  `);
+}
 // ============================================================
 // SEQUENCE HELPERS
 // ============================================================
