@@ -1948,6 +1948,7 @@ input[type="number"] {
     <div class="sub-tab" data-mastertab="activities" onclick="switchMasterTab('activities')">Activity Master</div>
     <div class="sub-tab" data-mastertab="materials" onclick="switchMasterTab('materials')">Material Master</div>
     <div class="sub-tab" data-mastertab="contractors" onclick="switchMasterTab('contractors')">Contractor Master</div>
+    <div class="sub-tab" data-mastertab="wbslocation" onclick="switchMasterTab('wbslocation')">WBS &amp; Location</div>
   </div>
 
   <!-- VENDORS -->
@@ -2080,6 +2081,41 @@ input[type="number"] {
       </div>
     </div>
   </div>
+
+
+  <!-- WBS & LOCATION MASTER -->
+  <div id="master-wbslocation" class="hidden">
+    <div class="sub-tabs" style="margin-bottom:20px;">
+      <div class="sub-tab active" data-wlsub="wbs"      onclick="switchWLSub('wbs')">WBS Structure</div>
+      <div class="sub-tab"        data-wlsub="location" onclick="switchWLSub('location')">Location Structure</div>
+    </div>
+
+    <!-- ═══ WBS TREE ═══ -->
+    <div id="wl-wbs">
+      <div class="card">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+          <h3 style="margin:0;border:none;padding:0;">WBS Structure</h3>
+          <button class="btn btn-primary btn-sm" onclick="wbsAddProject()">+ Add Project</button>
+        </div>
+        <div id="wbs_tree_wrap">
+          <div class="center muted" style="padding:24px;">No WBS entries. Add a project to begin.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ LOCATION TREE ═══ -->
+    <div id="wl-location" class="hidden">
+      <div class="card">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+          <h3 style="margin:0;border:none;padding:0;">Location Structure</h3>
+          <button class="btn btn-primary btn-sm" onclick="locAddProject()">+ Add Project</button>
+        </div>
+        <div id="loc_tree_wrap">
+          <div class="center muted" style="padding:24px;">No location entries. Add a project to begin.</div>
+        </div>
+      </div>
+    </div>
+  </div><!-- /master-wbslocation -->
 
   <!-- CONTRACTOR MASTER -->
   <div id="master-contractors" class="hidden">
@@ -5474,7 +5510,7 @@ function switchPayTab(tab) {
 }
 
 function switchMasterTab(tab) {
-  ['vendors','activities','materials','contractors','locations'].forEach(t => {
+  ['vendors','activities','materials','contractors','locations','wbslocation'].forEach(t => {
     const el = document.getElementById('master-' + t);
     if (el) el.classList.toggle('hidden', t !== tab);
     const stab = document.querySelector(`.sub-tab[data-mastertab="${t}"]`);
@@ -5488,6 +5524,7 @@ function switchMasterTab(tab) {
     });
   }
   if (tab === 'contractors') { renderContractorMaster(); }
+  if (tab === 'wbslocation') { Promise.all([apiLoadWBS(), apiLoadLocations()]).then(() => { renderWBSTree(); renderLocTree(); }); }
 }
 
 // ============================================================
@@ -17219,6 +17256,1060 @@ function prefillWOBRmcFields(isRmc,cat,amcS,amcE){
     if(amcE) document.getElementById('wob_amcEnd').value=amcE.slice(0,7);
     calcWOBAmcSlice();
   }
+}
+
+
+// ============================================================
+// WBS & LOCATION — Progressive Tree UI
+// ============================================================
+
+let _wbsData = [];   // flat rows from wbs_master
+let _locData = [];   // flat rows from location_master
+
+// ── Sub-tab switcher ────────────────────────────────────────
+function switchWLSub(sub) {
+  ['wbs','location'].forEach(s => {
+    const el = document.getElementById('wl-' + s);
+    if (el) el.classList.toggle('hidden', s !== sub);
+    const stab = document.querySelector(`.sub-tab[data-wlsub="${s}"]`);
+    if (stab) stab.classList.toggle('active', s === sub);
+  });
+}
+
+// ── Shared helpers ──────────────────────────────────────────
+function _esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+function _treeInlineInput(id, placeholder, onSave, onCancel) {
+  return `<div id="${id}_wrap" style="display:flex;gap:6px;align-items:center;margin-top:6px;">
+    <input id="${id}" placeholder="${_esc(placeholder)}" autocomplete="off"
+      style="padding:6px 10px;border:1px solid var(--accent);border-radius:4px;font-size:12px;width:220px;background:var(--input-bg);color:var(--text);"
+      onkeydown="if(event.key==='Enter'){${onSave}}if(event.key==='Escape'){${onCancel}}">
+    <button class="btn btn-primary btn-sm" onclick="${onSave}">Save</button>
+    <button class="btn btn-ghost btn-sm"   onclick="${onCancel}">Cancel</button>
+  </div>`;
+}
+
+// ── Show / hide inline input inside a node ──────────────────
+function _showInline(containerId, placeholder, onSave, onCancel) {
+  const c = document.getElementById(containerId);
+  if (!c) return;
+  // remove any existing inline inputs in the same container
+  const existing = c.querySelector('.tree-inline-wrap');
+  if (existing) existing.remove();
+  const wrap = document.createElement('div');
+  wrap.className = 'tree-inline-wrap';
+  wrap.style.cssText = 'display:flex;gap:6px;align-items:center;margin-top:6px;flex-wrap:wrap;';
+  wrap.innerHTML = `
+    <input class="tree-inline-input" placeholder="${_esc(placeholder)}" autocomplete="off"
+      style="padding:6px 10px;border:1px solid var(--accent);border-radius:4px;font-size:12px;width:240px;background:var(--input-bg);color:var(--text);"
+      onkeydown="if(event.key==='Enter'){${onSave}(this)}if(event.key==='Escape'){this.closest('.tree-inline-wrap').remove()}">
+    <button class="btn btn-primary btn-sm" onclick="${onSave}(this.previousElementSibling)">Save</button>
+    <button class="btn btn-ghost btn-sm"   onclick="this.closest('.tree-inline-wrap').remove()">✕</button>`;
+  c.appendChild(wrap);
+  wrap.querySelector('input').focus();
+}
+
+// ============================================================
+// WBS API
+// ============================================================
+async function apiLoadWBS() {
+  pbShow('Loading WBS…');
+  try {
+    const { data, error } = await sb.from('wbs_master').select('*').order('wbs_code');
+    if (error) throw error;
+    _wbsData = data || [];
+    return { ok: true };
+  } catch(e) { console.error('apiLoadWBS:', e); return { ok: false }; }
+  finally { pbDone(); }
+}
+
+async function _wbsInsert(project, wbs_group, wbs_sub_group, wbs_activity) {
+  const { data: last } = await sb.from('wbs_master').select('wbs_code').order('wbs_code', { ascending: false }).limit(1);
+  const nextNum = last && last.length ? (parseInt((last[0].wbs_code||'WBS0000').replace('WBS',''))||0) + 1 : 1;
+  const wbs_code = 'WBS' + String(nextNum).padStart(4,'0');
+  const { error } = await sb.from('wbs_master').insert({
+    wbs_code, project, wbs_group, wbs_sub_group, wbs_activity,
+    is_active: true, created_by: state.userId,
+    created_at: new Date().toISOString(), updated_at: new Date().toISOString()
+  });
+  if (error) throw error;
+  return wbs_code;
+}
+
+async function _wbsCheckFK(wbs_code) {
+  const [mis, wob, hob] = await Promise.all([
+    sb.from('mis_lines').select('id', { count:'exact', head:true }).eq('wbs_code', wbs_code),
+    sb.from('wob_lines').select('id', { count:'exact', head:true }).eq('wbs_code', wbs_code),
+    sb.from('hob_lines').select('id', { count:'exact', head:true }).eq('wbs_code', wbs_code),
+  ]);
+  return (mis.count||0) + (wob.count||0) + (hob.count||0);
+}
+
+// ============================================================
+// WBS TREE RENDER
+// ============================================================
+function renderWBSTree() {
+  const wrap = document.getElementById('wbs_tree_wrap');
+  if (!wrap) return;
+  const isAdmin = hasRole('Admin');
+
+  // Group: project → group → subgroup → [activities]
+  const tree = {};
+  _wbsData.forEach(r => {
+    if (!tree[r.project]) tree[r.project] = {};
+    if (!tree[r.project][r.wbs_group]) tree[r.project][r.wbs_group] = {};
+    if (!tree[r.project][r.wbs_group][r.wbs_sub_group]) tree[r.project][r.wbs_group][r.wbs_sub_group] = [];
+    tree[r.project][r.wbs_group][r.wbs_sub_group].push(r);
+  });
+
+  if (!Object.keys(tree).length && !isAdmin) {
+    wrap.innerHTML = '<div class="center muted" style="padding:24px;">No WBS entries.</div>';
+    return;
+  }
+
+  let html = '<div style="font-size:13px;">';
+
+  Object.keys(tree).sort().forEach(proj => {
+    const projId = 'wbsp_' + btoa(proj).replace(/=/g,'');
+    html += `
+    <div class="wbs-node wbs-proj" style="margin-bottom:12px;">
+      <div style="display:flex;align-items:center;gap:8px;padding:8px 10px;background:#dde6f0;border-radius:6px;cursor:pointer;" onclick="wbsToggle('${projId}_children')">
+        <span style="font-size:16px;">▾</span>
+        <span style="font-weight:700;color:#1e3a5f;font-size:14px;">📁 ${_esc(proj)}</span>
+        <span class="badge-count">${_wbsData.filter(r=>r.project===proj).length} activities</span>
+        <span style="flex:1;"></span>
+        ${isAdmin ? `<button class="btn btn-primary btn-sm" onclick="event.stopPropagation();wbsAddGroup('${_esc(proj)}','${projId}')">+ Group</button>
+        <button class="btn btn-danger btn-sm" onclick="event.stopPropagation();wbsDeleteProject('${_esc(proj)}')">🗑</button>` : ''}
+      </div>
+      <div id="${projId}_children" style="margin-left:24px;margin-top:4px;">
+        <div id="${projId}_inline"></div>`;
+
+    Object.keys(tree[proj]).sort().forEach(grp => {
+      const grpId = 'wbsg_' + btoa(proj+'|'+grp).replace(/=/g,'').replace(/\+/g,'').replace(/\//g,'');
+      html += `
+        <div class="wbs-node wbs-grp" style="margin-bottom:8px;margin-top:6px;">
+          <div style="display:flex;align-items:center;gap:8px;padding:6px 10px;background:#eef1f6;border-left:3px solid var(--accent);border-radius:4px;cursor:pointer;" onclick="wbsToggle('${grpId}_children')">
+            <span style="font-size:13px;">▾</span>
+            <span style="font-weight:600;color:var(--accent);">📂 ${_esc(grp)}</span>
+            <span style="flex:1;"></span>
+            ${isAdmin ? `<button class="btn btn-primary btn-sm" onclick="event.stopPropagation();wbsAddSubGroup('${_esc(proj)}','${_esc(grp)}','${grpId}')">+ Sub-Group</button>
+            <button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();wbsRenameNode('group','${_esc(proj)}','${_esc(grp)}','')">✏</button>
+            <button class="btn btn-danger btn-sm" onclick="event.stopPropagation();wbsDeleteGroup('${_esc(proj)}','${_esc(grp)}')">🗑</button>` : ''}
+          </div>
+          <div id="${grpId}_children" style="margin-left:22px;margin-top:4px;">
+            <div id="${grpId}_inline"></div>`;
+
+      Object.keys(tree[proj][grp]).sort().forEach(sub => {
+        const subId = 'wbss_' + btoa(proj+'|'+grp+'|'+sub).replace(/=/g,'').replace(/\+/g,'').replace(/\//g,'');
+        html += `
+            <div class="wbs-node wbs-sub" style="margin-bottom:6px;margin-top:4px;">
+              <div style="display:flex;align-items:center;gap:8px;padding:5px 10px;background:#f8fafc;border-left:3px solid var(--accent-2);border-radius:4px;cursor:pointer;" onclick="wbsToggle('${subId}_children')">
+                <span style="font-size:12px;">▾</span>
+                <span style="font-weight:600;color:var(--accent-2);">📋 ${_esc(sub)}</span>
+                <span style="flex:1;"></span>
+                ${isAdmin ? `<button class="btn btn-primary btn-sm" onclick="event.stopPropagation();wbsAddActivity('${_esc(proj)}','${_esc(grp)}','${_esc(sub)}','${subId}')">+ Activity</button>
+                <button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();wbsRenameNode('subgroup','${_esc(proj)}','${_esc(grp)}','${_esc(sub)}')">✏</button>
+                <button class="btn btn-danger btn-sm" onclick="event.stopPropagation();wbsDeleteSubGroup('${_esc(proj)}','${_esc(grp)}','${_esc(sub)}')">🗑</button>` : ''}
+              </div>
+              <div id="${subId}_children" style="margin-left:20px;margin-top:4px;">
+                <div id="${subId}_inline"></div>`;
+
+        tree[proj][grp][sub].forEach(row => {
+          html += `
+                <div style="display:flex;align-items:center;gap:8px;padding:4px 10px;border-bottom:1px solid #f1f5f9;" id="wbsact_${_esc(row.wbs_code)}">
+                  <span style="font-family:monospace;font-size:11px;font-weight:700;color:var(--accent);min-width:64px;">${_esc(row.wbs_code)}</span>
+                  <span id="wbsact_label_${_esc(row.wbs_code)}">${_esc(row.wbs_activity)}</span>
+                  <span style="flex:1;"></span>
+                  ${isAdmin ? `<button class="btn btn-ghost btn-sm" onclick="wbsEditActivity('${_esc(row.wbs_code)}')">✏</button>
+                  <button class="btn btn-danger btn-sm" onclick="wbsDeleteActivity('${_esc(row.wbs_code)}')">🗑</button>` : ''}
+                </div>`;
+        });
+
+        html += `</div></div>`; // close subId_children + wbs-sub
+      });
+
+      html += `</div></div>`; // close grpId_children + wbs-grp
+    });
+
+    html += `</div></div>`; // close projId_children + wbs-proj
+  });
+
+  html += '</div>';
+  wrap.innerHTML = html;
+}
+
+// ── WBS collapse toggle ─────────────────────────────────────
+function wbsToggle(id) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  const hidden = el.style.display === 'none';
+  el.style.display = hidden ? '' : 'none';
+  // flip chevron
+  const parent = el.previousElementSibling;
+  if (parent) {
+    const chev = parent.querySelector('span:first-child');
+    if (chev) chev.textContent = hidden ? '▾' : '▸';
+  }
+}
+
+// ── WBS Add nodes ───────────────────────────────────────────
+function wbsAddProject() {
+  if (!hasRole('Admin')) { toast('Admin only','error'); return; }
+  // Show inline input at top of tree
+  const wrap = document.getElementById('wbs_tree_wrap');
+  let existingTop = document.getElementById('wbs_newproj_wrap');
+  if (existingTop) { existingTop.querySelector('input').focus(); return; }
+  const div = document.createElement('div');
+  div.id = 'wbs_newproj_wrap';
+  div.style.cssText = 'display:flex;gap:6px;align-items:center;margin-bottom:12px;flex-wrap:wrap;';
+  div.innerHTML = `
+    <span style="font-weight:600;color:#1e3a5f;">New Project:</span>
+    <input id="wbs_newproj_input" placeholder="e.g. Poetry of Earth" autocomplete="off"
+      style="padding:6px 10px;border:1px solid var(--accent);border-radius:4px;font-size:12px;width:240px;background:var(--input-bg);color:var(--text);"
+      onkeydown="if(event.key==='Enter')wbsSaveNewProject();if(event.key==='Escape')document.getElementById('wbs_newproj_wrap').remove()">
+    <button class="btn btn-primary btn-sm" onclick="wbsSaveNewProject()">Save</button>
+    <button class="btn btn-ghost btn-sm"   onclick="document.getElementById('wbs_newproj_wrap').remove()">✕</button>`;
+  wrap.insertBefore(div, wrap.firstChild);
+  div.querySelector('input').focus();
+}
+
+async function wbsSaveNewProject() {
+  const inp = document.getElementById('wbs_newproj_input');
+  const val = (inp?.value||'').trim();
+  if (!val) { toast('Enter a project name','error'); return; }
+  // Project is just a label — no DB insert needed at project level.
+  // We confirm the project exists by checking _wbsData; it materialises when a group is added.
+  // Store as pending project in memory for the tree to show it:
+  if (!_wbsPendingProjects) _wbsPendingProjects = [];
+  if (!_wbsData.find(r=>r.project===val) && !_wbsPendingProjects.includes(val)) {
+    _wbsPendingProjects.push(val);
+  }
+  document.getElementById('wbs_newproj_wrap')?.remove();
+  renderWBSTreeWithPending();
+}
+
+// Render tree including pending (empty) projects
+let _wbsPendingProjects = [];
+function renderWBSTreeWithPending() {
+  // Temporarily inject dummy rows for pending projects so they appear in tree
+  const saved = _wbsData;
+  _wbsPendingProjects.forEach(p => {
+    if (!_wbsData.find(r=>r.project===p)) {
+      _wbsData = [..._wbsData, { project:p, wbs_group:'__pending__', wbs_sub_group:'__pending__', wbs_activity:'__pending__', wbs_code:'__pending__' }];
+    }
+  });
+  renderWBSTree();
+  _wbsData = saved;
+}
+
+function wbsAddGroup(proj, projId) {
+  const inlineId = projId + '_inline';
+  const c = document.getElementById(inlineId);
+  if (!c) return;
+  // remove existing
+  const ex = c.querySelector('.tree-inline-wrap'); if (ex) ex.remove();
+  const wrap = document.createElement('div');
+  wrap.className = 'tree-inline-wrap';
+  wrap.style.cssText = 'display:flex;gap:6px;align-items:center;margin:6px 0;flex-wrap:wrap;';
+  wrap.innerHTML = `
+    <span style="font-size:12px;color:var(--muted);">New Group:</span>
+    <input class="tree-inline-input" placeholder="e.g. Core &amp; Shell" autocomplete="off"
+      style="padding:6px 10px;border:1px solid var(--accent);border-radius:4px;font-size:12px;width:240px;background:var(--input-bg);color:var(--text);"
+      onkeydown="if(event.key==='Enter')wbsSaveGroup(this,'${_esc(proj)}');if(event.key==='Escape')this.closest('.tree-inline-wrap').remove()">
+    <button class="btn btn-primary btn-sm" onclick="wbsSaveGroup(this.previousElementSibling,'${_esc(proj)}')">Save</button>
+    <button class="btn btn-ghost btn-sm"   onclick="this.closest('.tree-inline-wrap').remove()">✕</button>`;
+  c.appendChild(wrap);
+  wrap.querySelector('input').focus();
+}
+
+async function wbsSaveGroup(inp, proj) {
+  const val = (inp?.value||'').trim();
+  if (!val) { toast('Enter a group name','error'); return; }
+  if (_wbsData.find(r => r.project===proj && r.wbs_group===val)) {
+    toast('Group already exists','error'); return;
+  }
+  // Group has no DB row yet — it materialises when a sub-group is added.
+  // Add to pending structure:
+  if (!window._wbsPendingGroups) window._wbsPendingGroups = {};
+  if (!window._wbsPendingGroups[proj]) window._wbsPendingGroups[proj] = [];
+  if (!window._wbsPendingGroups[proj].includes(val)) window._wbsPendingGroups[proj].push(val);
+  // Remove from pending projects (it now has a group)
+  _wbsPendingProjects = (_wbsPendingProjects||[]).filter(p=>p!==proj);
+  inp.closest('.tree-inline-wrap')?.remove();
+  renderWBSTreeFull();
+}
+
+function wbsAddSubGroup(proj, grp, grpId) {
+  const inlineId = grpId + '_inline';
+  const c = document.getElementById(inlineId);
+  if (!c) return;
+  const ex = c.querySelector('.tree-inline-wrap'); if (ex) ex.remove();
+  const wrap = document.createElement('div');
+  wrap.className = 'tree-inline-wrap';
+  wrap.style.cssText = 'display:flex;gap:6px;align-items:center;margin:6px 0;flex-wrap:wrap;';
+  wrap.innerHTML = `
+    <span style="font-size:12px;color:var(--muted);">New Sub-Group:</span>
+    <input class="tree-inline-input" placeholder="e.g. RCC Construction" autocomplete="off"
+      style="padding:6px 10px;border:1px solid var(--accent);border-radius:4px;font-size:12px;width:240px;background:var(--input-bg);color:var(--text);"
+      onkeydown="if(event.key==='Enter')wbsSaveSubGroup(this,'${_esc(proj)}','${_esc(grp)}');if(event.key==='Escape')this.closest('.tree-inline-wrap').remove()">
+    <button class="btn btn-primary btn-sm" onclick="wbsSaveSubGroup(this.previousElementSibling,'${_esc(proj)}','${_esc(grp)}')">Save</button>
+    <button class="btn btn-ghost btn-sm"   onclick="this.closest('.tree-inline-wrap').remove()">✕</button>`;
+  c.appendChild(wrap);
+  wrap.querySelector('input').focus();
+}
+
+async function wbsSaveSubGroup(inp, proj, grp) {
+  const val = (inp?.value||'').trim();
+  if (!val) { toast('Enter a sub-group name','error'); return; }
+  if (_wbsData.find(r => r.project===proj && r.wbs_group===grp && r.wbs_sub_group===val)) {
+    toast('Sub-group already exists','error'); return;
+  }
+  if (!window._wbsPendingSubGroups) window._wbsPendingSubGroups = {};
+  const key = proj+'||'+grp;
+  if (!window._wbsPendingSubGroups[key]) window._wbsPendingSubGroups[key] = [];
+  if (!window._wbsPendingSubGroups[key].includes(val)) window._wbsPendingSubGroups[key].push(val);
+  // Remove from pending groups
+  if (window._wbsPendingGroups?.[proj]) {
+    window._wbsPendingGroups[proj] = window._wbsPendingGroups[proj].filter(g=>g!==grp);
+  }
+  inp.closest('.tree-inline-wrap')?.remove();
+  renderWBSTreeFull();
+}
+
+function wbsAddActivity(proj, grp, sub, subId) {
+  const inlineId = subId + '_inline';
+  const c = document.getElementById(inlineId);
+  if (!c) return;
+  const ex = c.querySelector('.tree-inline-wrap'); if (ex) ex.remove();
+  const wrap = document.createElement('div');
+  wrap.className = 'tree-inline-wrap';
+  wrap.style.cssText = 'display:flex;gap:6px;align-items:center;margin:6px 0;flex-wrap:wrap;';
+  wrap.innerHTML = `
+    <span style="font-size:12px;color:var(--muted);">New Activity:</span>
+    <input class="tree-inline-input" placeholder="e.g. Reinforcement Work" autocomplete="off"
+      style="padding:6px 10px;border:1px solid var(--accent);border-radius:4px;font-size:12px;width:280px;background:var(--input-bg);color:var(--text);"
+      onkeydown="if(event.key==='Enter')wbsSaveActivity(this,'${_esc(proj)}','${_esc(grp)}','${_esc(sub)}');if(event.key==='Escape')this.closest('.tree-inline-wrap').remove()">
+    <button class="btn btn-primary btn-sm" onclick="wbsSaveActivity(this.previousElementSibling,'${_esc(proj)}','${_esc(grp)}','${_esc(sub)}')">Save</button>
+    <button class="btn btn-ghost btn-sm"   onclick="this.closest('.tree-inline-wrap').remove()">✕</button>`;
+  c.appendChild(wrap);
+  wrap.querySelector('input').focus();
+}
+
+async function wbsSaveActivity(inp, proj, grp, sub) {
+  const val = (inp?.value||'').trim();
+  if (!val) { toast('Enter an activity name','error'); return; }
+  const dup = _wbsData.find(r => r.project===proj && r.wbs_group===grp && r.wbs_sub_group===sub && r.wbs_activity.toLowerCase()===val.toLowerCase());
+  if (dup) { toast('Activity already exists in this sub-group','error'); return; }
+  pbShow('Saving…');
+  try {
+    const { data: last } = await sb.from('wbs_master').select('wbs_code').order('wbs_code',{ascending:false}).limit(1);
+    const nextNum = last?.length ? (parseInt((last[0].wbs_code||'WBS0000').replace('WBS',''))||0)+1 : 1;
+    const wbs_code = 'WBS'+String(nextNum).padStart(4,'0');
+    const { error } = await sb.from('wbs_master').insert({
+      wbs_code, project:proj, wbs_group:grp, wbs_sub_group:sub, wbs_activity:val,
+      is_active:true, created_by:state.userId,
+      created_at:new Date().toISOString(), updated_at:new Date().toISOString()
+    });
+    if (error) throw error;
+    toast(`Saved — ${wbs_code}`,'success');
+    inp.closest('.tree-inline-wrap')?.remove();
+    // Remove pending subgroup if any
+    const key = proj+'||'+grp;
+    if (window._wbsPendingSubGroups?.[key]) {
+      window._wbsPendingSubGroups[key] = window._wbsPendingSubGroups[key].filter(s=>s!==sub);
+    }
+    await apiLoadWBS();
+    renderWBSTreeFull();
+  } catch(e) { toast('Error: '+e.message,'error'); }
+  finally { pbDone(); }
+}
+
+// ── WBS Edit activity inline ────────────────────────────────
+function wbsEditActivity(code) {
+  const row = _wbsData.find(r=>r.wbs_code===code);
+  if (!row) return;
+  const labelEl = document.getElementById('wbsact_label_'+code);
+  if (!labelEl) return;
+  const oldVal = row.wbs_activity;
+  labelEl.innerHTML = `<input id="wbsedit_${code}" value="${_esc(oldVal)}" autocomplete="off"
+    style="padding:4px 8px;border:1px solid var(--accent);border-radius:3px;font-size:12px;width:240px;"
+    onkeydown="if(event.key==='Enter')wbsSaveEditActivity('${code}');if(event.key==='Escape')renderWBSTreeFull()">
+    <button class="btn btn-primary btn-sm" style="margin-left:4px;" onclick="wbsSaveEditActivity('${code}')">Save</button>
+    <button class="btn btn-ghost btn-sm" onclick="renderWBSTreeFull()">✕</button>`;
+  document.getElementById('wbsedit_'+code)?.focus();
+}
+
+async function wbsSaveEditActivity(code) {
+  const inp = document.getElementById('wbsedit_'+code);
+  const val = (inp?.value||'').trim();
+  if (!val) { toast('Activity name required','error'); return; }
+  pbShow('Saving…');
+  try {
+    const { error } = await sb.from('wbs_master').update({
+      wbs_activity:val, updated_at:new Date().toISOString(), updated_by:state.userId
+    }).eq('wbs_code',code);
+    if (error) throw error;
+    toast('Updated','success');
+    await apiLoadWBS(); renderWBSTreeFull();
+  } catch(e) { toast('Error: '+e.message,'error'); }
+  finally { pbDone(); }
+}
+
+// ── WBS Delete ──────────────────────────────────────────────
+async function wbsDeleteActivity(code) {
+  if (!hasRole('Admin')) { toast('Admin only','error'); return; }
+  pbShow('Checking…');
+  try {
+    const [mis,wob,hob] = await Promise.all([
+      sb.from('mis_lines').select('id',{count:'exact',head:true}).eq('wbs_code',code),
+      sb.from('wob_lines').select('id',{count:'exact',head:true}).eq('wbs_code',code),
+      sb.from('hob_lines').select('id',{count:'exact',head:true}).eq('wbs_code',code),
+    ]);
+    const refs=(mis.count||0)+(wob.count||0)+(hob.count||0);
+    if (refs>0){toast(`Cannot delete — used in ${refs} transaction(s)`,'error');return;}
+    if (!confirm(`Delete ${code}? This cannot be undone.`)) return;
+    const {error}=await sb.from('wbs_master').delete().eq('wbs_code',code);
+    if (error) throw error;
+    toast('Deleted','success');
+    await apiLoadWBS(); renderWBSTreeFull();
+  } catch(e){toast('Error: '+e.message,'error');}
+  finally{pbDone();}
+}
+
+async function wbsDeleteGroup(proj, grp) {
+  if (!hasRole('Admin')){toast('Admin only','error');return;}
+  const codes = _wbsData.filter(r=>r.project===proj&&r.wbs_group===grp).map(r=>r.wbs_code);
+  if (!codes.length){
+    // Only in pending — remove
+    if(window._wbsPendingGroups?.[proj]) window._wbsPendingGroups[proj]=window._wbsPendingGroups[proj].filter(g=>g!==grp);
+    renderWBSTreeFull(); return;
+  }
+  if (!confirm(`Delete entire group "${grp}" and all its activities (${codes.length})? Cannot be undone.`)) return;
+  pbShow('Checking FK…');
+  try {
+    let totalRefs=0;
+    for (const c of codes) {
+      const [mis,wob,hob]=await Promise.all([
+        sb.from('mis_lines').select('id',{count:'exact',head:true}).eq('wbs_code',c),
+        sb.from('wob_lines').select('id',{count:'exact',head:true}).eq('wbs_code',c),
+        sb.from('hob_lines').select('id',{count:'exact',head:true}).eq('wbs_code',c),
+      ]);
+      totalRefs+=(mis.count||0)+(wob.count||0)+(hob.count||0);
+    }
+    if(totalRefs>0){toast(`Cannot delete — ${totalRefs} transaction reference(s) exist`,'error');return;}
+    const {error}=await sb.from('wbs_master').delete().eq('project',proj).eq('wbs_group',grp);
+    if(error) throw error;
+    toast('Group deleted','success');
+    await apiLoadWBS(); renderWBSTreeFull();
+  } catch(e){toast('Error: '+e.message,'error');}
+  finally{pbDone();}
+}
+
+async function wbsDeleteSubGroup(proj,grp,sub) {
+  if (!hasRole('Admin')){toast('Admin only','error');return;}
+  const codes=_wbsData.filter(r=>r.project===proj&&r.wbs_group===grp&&r.wbs_sub_group===sub).map(r=>r.wbs_code);
+  if (!codes.length){
+    const key=proj+'||'+grp;
+    if(window._wbsPendingSubGroups?.[key]) window._wbsPendingSubGroups[key]=window._wbsPendingSubGroups[key].filter(s=>s!==sub);
+    renderWBSTreeFull(); return;
+  }
+  if (!confirm(`Delete sub-group "${sub}" and all activities (${codes.length})? Cannot be undone.`)) return;
+  pbShow('Checking FK…');
+  try {
+    let totalRefs=0;
+    for(const c of codes){
+      const [mis,wob,hob]=await Promise.all([
+        sb.from('mis_lines').select('id',{count:'exact',head:true}).eq('wbs_code',c),
+        sb.from('wob_lines').select('id',{count:'exact',head:true}).eq('wbs_code',c),
+        sb.from('hob_lines').select('id',{count:'exact',head:true}).eq('wbs_code',c),
+      ]);
+      totalRefs+=(mis.count||0)+(wob.count||0)+(hob.count||0);
+    }
+    if(totalRefs>0){toast(`Cannot delete — ${totalRefs} transaction reference(s) exist`,'error');return;}
+    const {error}=await sb.from('wbs_master').delete().eq('project',proj).eq('wbs_group',grp).eq('wbs_sub_group',sub);
+    if(error) throw error;
+    toast('Sub-group deleted','success');
+    await apiLoadWBS(); renderWBSTreeFull();
+  } catch(e){toast('Error: '+e.message,'error');}
+  finally{pbDone();}
+}
+
+async function wbsDeleteProject(proj) {
+  if (!hasRole('Admin')){toast('Admin only','error');return;}
+  const codes=_wbsData.filter(r=>r.project===proj).map(r=>r.wbs_code);
+  if (!codes.length){
+    _wbsPendingProjects=(_wbsPendingProjects||[]).filter(p=>p!==proj);
+    renderWBSTreeFull(); return;
+  }
+  if(!confirm(`Delete entire project "${proj}" (${codes.length} activities)? Cannot be undone.`)) return;
+  pbShow('Checking FK…');
+  try {
+    let totalRefs=0;
+    for(const c of codes){
+      const [mis,wob,hob]=await Promise.all([
+        sb.from('mis_lines').select('id',{count:'exact',head:true}).eq('wbs_code',c),
+        sb.from('wob_lines').select('id',{count:'exact',head:true}).eq('wbs_code',c),
+        sb.from('hob_lines').select('id',{count:'exact',head:true}).eq('wbs_code',c),
+      ]);
+      totalRefs+=(mis.count||0)+(wob.count||0)+(hob.count||0);
+    }
+    if(totalRefs>0){toast(`Cannot delete — ${totalRefs} transaction reference(s) exist`,'error');return;}
+    const {error}=await sb.from('wbs_master').delete().eq('project',proj);
+    if(error) throw error;
+    toast('Project deleted','success');
+    await apiLoadWBS(); renderWBSTreeFull();
+  } catch(e){toast('Error: '+e.message,'error');}
+  finally{pbDone();}
+}
+
+// ── WBS rename ──────────────────────────────────────────────
+async function wbsRenameNode(type, proj, grp, sub) {
+  const current = type==='group' ? grp : sub;
+  const label   = type==='group' ? 'Group' : 'Sub-Group';
+  const newName = prompt(`Rename ${label} "${current}" to:`, current);
+  if (!newName || newName.trim()===current) return;
+  const val = newName.trim();
+  pbShow('Renaming…');
+  try {
+    let q = sb.from('wbs_master').update({ [type==='group'?'wbs_group':'wbs_sub_group']:val, updated_at:new Date().toISOString() });
+    q = q.eq('project',proj).eq('wbs_group',grp);
+    if (type==='subgroup') q = q.eq('wbs_sub_group',sub);
+    const {error}=await q;
+    if(error) throw error;
+    toast('Renamed','success');
+    await apiLoadWBS(); renderWBSTreeFull();
+  } catch(e){toast('Error: '+e.message,'error');}
+  finally{pbDone();}
+}
+
+// ── Master render including pending nodes ───────────────────
+function renderWBSTreeFull() {
+  // Build augmented data with pending nodes
+  const augmented = [..._wbsData];
+
+  // Pending projects
+  (_wbsPendingProjects||[]).forEach(p => {
+    if (!augmented.find(r=>r.project===p))
+      augmented.push({project:p,wbs_group:'__pending__',wbs_sub_group:'__pending__',wbs_activity:'__pending__',wbs_code:'__pending__'});
+  });
+  // Pending groups
+  Object.entries(window._wbsPendingGroups||{}).forEach(([proj,grps])=>{
+    grps.forEach(g=>{
+      if(!augmented.find(r=>r.project===proj&&r.wbs_group===g))
+        augmented.push({project:proj,wbs_group:g,wbs_sub_group:'__pending__',wbs_activity:'__pending__',wbs_code:'__pending__'});
+    });
+  });
+  // Pending subgroups
+  Object.entries(window._wbsPendingSubGroups||{}).forEach(([key,subs])=>{
+    const [proj,grp]=key.split('||');
+    subs.forEach(s=>{
+      if(!augmented.find(r=>r.project===proj&&r.wbs_group===grp&&r.wbs_sub_group===s))
+        augmented.push({project:proj,wbs_group:grp,wbs_sub_group:s,wbs_activity:'__pending__',wbs_code:'__pending__'});
+    });
+  });
+
+  // Render using augmented data temporarily
+  const saved=_wbsData; _wbsData=augmented;
+  renderWBSTree();
+  _wbsData=saved;
+}
+
+// ============================================================
+// LOCATION API
+// ============================================================
+async function apiLoadLocations() {
+  pbShow('Loading locations…');
+  try {
+    const {data,error}=await sb.from('location_master').select('*').order('location_code');
+    if(error) throw error;
+    _locData=data||[];
+    return {ok:true};
+  } catch(e){console.error('apiLoadLocations:',e);return{ok:false};}
+  finally{pbDone();}
+}
+
+// ============================================================
+// LOCATION TREE RENDER
+// ============================================================
+function renderLocTree() {
+  const wrap=document.getElementById('loc_tree_wrap');
+  if(!wrap) return;
+  const isAdmin=hasRole('Admin');
+
+  // Group: project → block → {type → floor → [units]} or {shafts:[]}
+  const tree={};
+  _locData.forEach(r=>{
+    if(!tree[r.project]) tree[r.project]={};
+    if(!tree[r.project][r.block]) tree[r.project][r.block]={floors:{},shafts:[]};
+    if(r.location_type==='shaft'){
+      tree[r.project][r.block].shafts.push(r);
+    } else {
+      const f=r.floor||'Unknown';
+      if(!tree[r.project][r.block].floors[f]) tree[r.project][r.block].floors[f]=[];
+      tree[r.project][r.block].floors[f].push(r);
+    }
+  });
+
+  // Add pending structure
+  (_locPendingProjects||[]).forEach(p=>{ if(!tree[p]) tree[p]={}; });
+  Object.entries(window._locPendingBlocks||{}).forEach(([proj,blks])=>{
+    if(!tree[proj]) tree[proj]={};
+    blks.forEach(b=>{ if(!tree[proj][b]) tree[proj][b]={floors:{},shafts:[]}; });
+  });
+  Object.entries(window._locPendingFloors||{}).forEach(([key,floors])=>{
+    const [proj,blk]=key.split('||');
+    if(!tree[proj]?.[blk]) return;
+    floors.forEach(f=>{ if(!tree[proj][blk].floors[f]) tree[proj][blk].floors[f]=[]; });
+  });
+
+  if(!Object.keys(tree).length){
+    wrap.innerHTML='<div class="center muted" style="padding:24px;">No location entries. Add a project to begin.</div>';
+    return;
+  }
+
+  let html='<div style="font-size:13px;">';
+
+  Object.keys(tree).sort().forEach(proj=>{
+    const projId='locp_'+btoa(proj).replace(/[=+/]/g,'');
+    const totalLocs=_locData.filter(r=>r.project===proj).length;
+    html+=`
+    <div style="margin-bottom:12px;">
+      <div style="display:flex;align-items:center;gap:8px;padding:8px 10px;background:#dde6f0;border-radius:6px;cursor:pointer;" onclick="wbsToggle('${projId}_ch')">
+        <span style="font-size:16px;">▾</span>
+        <span style="font-weight:700;color:#1e3a5f;font-size:14px;">📁 ${_esc(proj)}</span>
+        <span class="badge-count">${totalLocs} locations</span>
+        <span style="flex:1;"></span>
+        ${isAdmin?`<button class="btn btn-primary btn-sm" onclick="event.stopPropagation();locAddBlock('${_esc(proj)}','${projId}')">+ Block</button>
+        <button class="btn btn-danger btn-sm" onclick="event.stopPropagation();locDeleteProject('${_esc(proj)}')">🗑</button>`:''}
+      </div>
+      <div id="${projId}_ch" style="margin-left:24px;margin-top:4px;">
+        <div id="${projId}_inline"></div>`;
+
+    Object.keys(tree[proj]).sort().forEach(blk=>{
+      const blkId='locb_'+btoa(proj+'|'+blk).replace(/[=+/]/g,'');
+      const blkData=tree[proj][blk];
+      const floorCount=Object.keys(blkData.floors).length;
+      const shaftCount=blkData.shafts.length;
+      html+=`
+        <div style="margin-bottom:8px;margin-top:6px;">
+          <div style="display:flex;align-items:center;gap:8px;padding:6px 10px;background:#eef1f6;border-left:3px solid var(--accent);border-radius:4px;cursor:pointer;" onclick="wbsToggle('${blkId}_ch')">
+            <span style="font-size:13px;">▾</span>
+            <span style="font-weight:600;color:var(--accent);">🏗 ${_esc(blk)}</span>
+            <span class="badge-count">${floorCount} floor(s) · ${shaftCount} shaft(s)</span>
+            <span style="flex:1;"></span>
+            ${isAdmin?`<button class="btn btn-primary btn-sm" onclick="event.stopPropagation();locAddFloor('${_esc(proj)}','${_esc(blk)}','${blkId}')">+ Floor</button>
+            <button class="btn btn-secondary btn-sm" onclick="event.stopPropagation();locAddShaft('${_esc(proj)}','${_esc(blk)}','${blkId}')">+ Shaft</button>
+            <button class="btn btn-danger btn-sm" onclick="event.stopPropagation();locDeleteBlock('${_esc(proj)}','${_esc(blk)}')">🗑</button>`:''}
+          </div>
+          <div id="${blkId}_ch" style="margin-left:22px;margin-top:4px;">
+            <div id="${blkId}_inline"></div>`;
+
+      // Floors
+      Object.keys(blkData.floors).sort().forEach(floor=>{
+        const flrId='locf_'+btoa(proj+'|'+blk+'|'+floor).replace(/[=+/]/g,'');
+        const units=blkData.floors[floor];
+        html+=`
+            <div style="margin-bottom:6px;margin-top:4px;">
+              <div style="display:flex;align-items:center;gap:8px;padding:5px 10px;background:#f8fafc;border-left:3px solid var(--accent-2);border-radius:4px;cursor:pointer;" onclick="wbsToggle('${flrId}_ch')">
+                <span style="font-size:12px;">▾</span>
+                <span style="font-weight:600;color:var(--accent-2);">🏢 Floor: ${_esc(floor)}</span>
+                <span class="badge-count">${units.length} unit(s)</span>
+                <span style="flex:1;"></span>
+                ${isAdmin?`<button class="btn btn-primary btn-sm" onclick="event.stopPropagation();locAddUnit('${_esc(proj)}','${_esc(blk)}','${_esc(floor)}','${flrId}')">+ Unit</button>
+                <button class="btn btn-danger btn-sm" onclick="event.stopPropagation();locDeleteFloor('${_esc(proj)}','${_esc(blk)}','${_esc(floor)}')">🗑</button>`:''}
+              </div>
+              <div id="${flrId}_ch" style="margin-left:20px;margin-top:2px;">
+                <div id="${flrId}_inline"></div>`;
+
+        units.forEach(u=>{
+          html+=`
+                <div style="display:flex;align-items:center;gap:8px;padding:4px 10px;border-bottom:1px solid #f1f5f9;" id="locunit_${u.id}">
+                  <span style="font-family:monospace;font-size:11px;font-weight:700;color:var(--accent-2);min-width:64px;">${_esc(u.location_code)}</span>
+                  <span id="locunit_label_${u.id}">🚪 ${_esc(u.unit)}</span>
+                  <span style="flex:1;"></span>
+                  ${isAdmin?`<button class="btn btn-ghost btn-sm" onclick="locEditUnit('${u.id}')">✏</button>
+                  <button class="btn btn-danger btn-sm" onclick="locDeleteUnit('${u.id}')">🗑</button>`:''}
+                </div>`;
+        });
+
+        html+=`</div></div>`; // close flrId_ch + floor div
+      });
+
+      // Shafts
+      if(blkData.shafts.length || isAdmin){
+        if(blkData.shafts.length){
+          html+=`
+            <div style="margin-top:4px;">
+              <div style="padding:5px 10px;background:#fef9ec;border-left:3px solid var(--warn);border-radius:4px;font-weight:600;color:var(--warn);font-size:12px;">⚡ Shafts</div>
+              <div style="margin-left:20px;">`;
+          blkData.shafts.forEach(s=>{
+            html+=`
+                <div style="display:flex;align-items:center;gap:8px;padding:4px 10px;border-bottom:1px solid #f1f5f9;" id="locshaft_${s.id}">
+                  <span style="font-family:monospace;font-size:11px;font-weight:700;color:var(--warn);min-width:64px;">${_esc(s.location_code)}</span>
+                  <span id="locshaft_label_${s.id}">⚡ ${_esc(s.shaft_name)}</span>
+                  <span style="flex:1;"></span>
+                  ${isAdmin?`<button class="btn btn-ghost btn-sm" onclick="locEditShaft('${s.id}')">✏</button>
+                  <button class="btn btn-danger btn-sm" onclick="locDeleteUnit('${s.id}')">🗑</button>`:''}
+                </div>`;
+          });
+          html+=`</div></div>`;
+        }
+      }
+
+      html+=`</div></div>`; // close blkId_ch + block div
+    });
+
+    html+=`</div></div>`; // close projId_ch + proj div
+  });
+
+  html+='</div>';
+  wrap.innerHTML=html;
+}
+
+// ── Location pending state ──────────────────────────────────
+let _locPendingProjects=[];
+
+// ── Location Add Project ────────────────────────────────────
+function locAddProject() {
+  if(!hasRole('Admin')){toast('Admin only','error');return;}
+  const wrap=document.getElementById('loc_tree_wrap');
+  if(document.getElementById('loc_newproj_wrap')){document.getElementById('loc_newproj_input').focus();return;}
+  const div=document.createElement('div');
+  div.id='loc_newproj_wrap';
+  div.style.cssText='display:flex;gap:6px;align-items:center;margin-bottom:12px;flex-wrap:wrap;';
+  div.innerHTML=`
+    <span style="font-weight:600;color:#1e3a5f;">New Project:</span>
+    <input id="loc_newproj_input" placeholder="e.g. Poetry of Earth" autocomplete="off"
+      style="padding:6px 10px;border:1px solid var(--accent);border-radius:4px;font-size:12px;width:240px;background:var(--input-bg);color:var(--text);"
+      onkeydown="if(event.key==='Enter')locSaveNewProject();if(event.key==='Escape')document.getElementById('loc_newproj_wrap').remove()">
+    <button class="btn btn-primary btn-sm" onclick="locSaveNewProject()">Save</button>
+    <button class="btn btn-ghost btn-sm"   onclick="document.getElementById('loc_newproj_wrap').remove()">✕</button>`;
+  wrap.insertBefore(div,wrap.firstChild);
+  div.querySelector('input').focus();
+}
+
+function locSaveNewProject() {
+  const inp=document.getElementById('loc_newproj_input');
+  const val=(inp?.value||'').trim();
+  if(!val){toast('Enter a project name','error');return;}
+  if(!_locPendingProjects.includes(val)&&!_locData.find(r=>r.project===val))
+    _locPendingProjects.push(val);
+  document.getElementById('loc_newproj_wrap')?.remove();
+  renderLocTree();
+}
+
+// ── Location Add Block ──────────────────────────────────────
+function locAddBlock(proj,projId) {
+  const c=document.getElementById(projId+'_inline');
+  if(!c) return;
+  const ex=c.querySelector('.tree-inline-wrap');if(ex)ex.remove();
+  const wrap=document.createElement('div');
+  wrap.className='tree-inline-wrap';
+  wrap.style.cssText='display:flex;gap:6px;align-items:center;margin:6px 0;flex-wrap:wrap;';
+  wrap.innerHTML=`
+    <span style="font-size:12px;color:var(--muted);">New Block:</span>
+    <input class="tree-inline-input" placeholder="e.g. Tower-A" autocomplete="off"
+      style="padding:6px 10px;border:1px solid var(--accent);border-radius:4px;font-size:12px;width:220px;background:var(--input-bg);color:var(--text);"
+      onkeydown="if(event.key==='Enter')locSaveBlock(this,'${_esc(proj)}');if(event.key==='Escape')this.closest('.tree-inline-wrap').remove()">
+    <button class="btn btn-primary btn-sm" onclick="locSaveBlock(this.previousElementSibling,'${_esc(proj)}')">Save</button>
+    <button class="btn btn-ghost btn-sm"   onclick="this.closest('.tree-inline-wrap').remove()">✕</button>`;
+  c.appendChild(wrap);
+  wrap.querySelector('input').focus();
+}
+
+function locSaveBlock(inp,proj) {
+  const val=(inp?.value||'').trim();
+  if(!val){toast('Enter block name','error');return;}
+  if(_locData.find(r=>r.project===proj&&r.block===val)||(window._locPendingBlocks?.[proj]||[]).includes(val)){
+    toast('Block already exists','error');return;
+  }
+  if(!window._locPendingBlocks) window._locPendingBlocks={};
+  if(!window._locPendingBlocks[proj]) window._locPendingBlocks[proj]=[];
+  window._locPendingBlocks[proj].push(val);
+  _locPendingProjects=_locPendingProjects.filter(p=>p!==proj);
+  inp.closest('.tree-inline-wrap')?.remove();
+  renderLocTree();
+}
+
+// ── Location Add Floor ──────────────────────────────────────
+function locAddFloor(proj,blk,blkId) {
+  const c=document.getElementById(blkId+'_inline');
+  if(!c) return;
+  const ex=c.querySelector('.tree-inline-wrap');if(ex)ex.remove();
+  const wrap=document.createElement('div');
+  wrap.className='tree-inline-wrap';
+  wrap.style.cssText='display:flex;gap:6px;align-items:center;margin:6px 0;flex-wrap:wrap;';
+  wrap.innerHTML=`
+    <span style="font-size:12px;color:var(--muted);">New Floor:</span>
+    <input class="tree-inline-input" placeholder="e.g. G, 1, 2…27" autocomplete="off"
+      style="padding:6px 10px;border:1px solid var(--accent);border-radius:4px;font-size:12px;width:180px;background:var(--input-bg);color:var(--text);"
+      onkeydown="if(event.key==='Enter')locSaveFloor(this,'${_esc(proj)}','${_esc(blk)}');if(event.key==='Escape')this.closest('.tree-inline-wrap').remove()">
+    <button class="btn btn-primary btn-sm" onclick="locSaveFloor(this.previousElementSibling,'${_esc(proj)}','${_esc(blk)}')">Save</button>
+    <button class="btn btn-ghost btn-sm"   onclick="this.closest('.tree-inline-wrap').remove()">✕</button>`;
+  c.appendChild(wrap);
+  wrap.querySelector('input').focus();
+}
+
+function locSaveFloor(inp,proj,blk) {
+  const val=(inp?.value||'').trim();
+  if(!val){toast('Enter floor name','error');return;}
+  const existing=_locData.find(r=>r.project===proj&&r.block===blk&&r.location_type==='floor_unit'&&r.floor===val);
+  const key=proj+'||'+blk;
+  if(existing||(window._locPendingFloors?.[key]||[]).includes(val)){
+    toast('Floor already exists in this block','error');return;
+  }
+  if(!window._locPendingFloors) window._locPendingFloors={};
+  if(!window._locPendingFloors[key]) window._locPendingFloors[key]=[];
+  window._locPendingFloors[key].push(val);
+  // remove from pending blocks
+  if(window._locPendingBlocks?.[proj]) window._locPendingBlocks[proj]=window._locPendingBlocks[proj].filter(b=>b!==blk);
+  inp.closest('.tree-inline-wrap')?.remove();
+  renderLocTree();
+}
+
+// ── Location Add Unit ───────────────────────────────────────
+function locAddUnit(proj,blk,floor,flrId) {
+  const c=document.getElementById(flrId+'_inline');
+  if(!c) return;
+  const ex=c.querySelector('.tree-inline-wrap');if(ex)ex.remove();
+  const wrap=document.createElement('div');
+  wrap.className='tree-inline-wrap';
+  wrap.style.cssText='display:flex;gap:6px;align-items:center;margin:6px 0;flex-wrap:wrap;';
+  wrap.innerHTML=`
+    <span style="font-size:12px;color:var(--muted);">New Unit:</span>
+    <input class="tree-inline-input" placeholder="e.g. A101" autocomplete="off"
+      style="padding:6px 10px;border:1px solid var(--accent);border-radius:4px;font-size:12px;width:180px;background:var(--input-bg);color:var(--text);"
+      onkeydown="if(event.key==='Enter')locSaveUnit(this,'${_esc(proj)}','${_esc(blk)}','${_esc(floor)}');if(event.key==='Escape')this.closest('.tree-inline-wrap').remove()">
+    <button class="btn btn-primary btn-sm" onclick="locSaveUnit(this.previousElementSibling,'${_esc(proj)}','${_esc(blk)}','${_esc(floor)}')">Save</button>
+    <button class="btn btn-ghost btn-sm"   onclick="this.closest('.tree-inline-wrap').remove()">✕</button>`;
+  c.appendChild(wrap);
+  wrap.querySelector('input').focus();
+}
+
+async function locSaveUnit(inp,proj,blk,floor) {
+  const val=(inp?.value||'').trim();
+  if(!val){toast('Enter unit name','error');return;}
+  if(_locData.find(r=>r.project===proj&&r.block===blk&&r.floor===floor&&r.unit===val)){
+    toast('Unit already exists on this floor','error');return;
+  }
+  pbShow('Saving…');
+  try {
+    const {data:last}=await sb.from('location_master').select('location_code').order('location_code',{ascending:false}).limit(1);
+    const nextNum=last?.length?(parseInt((last[0].location_code||'LOC0000').replace('LOC',''))||0)+1:1;
+    const location_code='LOC'+String(nextNum).padStart(4,'0');
+    const {error}=await sb.from('location_master').insert({
+      location_code, project:proj, block:blk, location_type:'floor_unit',
+      floor, unit:val, shaft_name:null,
+      is_active:true, created_by:state.userId,
+      created_at:new Date().toISOString(), updated_at:new Date().toISOString()
+    });
+    if(error) throw error;
+    toast(`Saved — ${location_code}`,'success');
+    // clear pending floor
+    const key=proj+'||'+blk;
+    if(window._locPendingFloors?.[key]) window._locPendingFloors[key]=window._locPendingFloors[key].filter(f=>f!==floor);
+    inp.closest('.tree-inline-wrap')?.remove();
+    await apiLoadLocations(); renderLocTree();
+  } catch(e){toast('Error: '+e.message,'error');}
+  finally{pbDone();}
+}
+
+// ── Location Add Shaft ──────────────────────────────────────
+function locAddShaft(proj,blk,blkId) {
+  const c=document.getElementById(blkId+'_inline');
+  if(!c) return;
+  const ex=c.querySelector('.tree-inline-wrap');if(ex)ex.remove();
+  const wrap=document.createElement('div');
+  wrap.className='tree-inline-wrap';
+  wrap.style.cssText='display:flex;gap:6px;align-items:center;margin:6px 0;flex-wrap:wrap;';
+  wrap.innerHTML=`
+    <span style="font-size:12px;color:var(--warn);font-weight:600;">⚡ New Shaft:</span>
+    <input class="tree-inline-input" placeholder="e.g. Lift Shaft, Staircase" autocomplete="off"
+      style="padding:6px 10px;border:1px solid var(--warn);border-radius:4px;font-size:12px;width:220px;background:var(--input-bg);color:var(--text);"
+      onkeydown="if(event.key==='Enter')locSaveShaft(this,'${_esc(proj)}','${_esc(blk)}');if(event.key==='Escape')this.closest('.tree-inline-wrap').remove()">
+    <button class="btn btn-warn btn-sm" onclick="locSaveShaft(this.previousElementSibling,'${_esc(proj)}','${_esc(blk)}')">Save</button>
+    <button class="btn btn-ghost btn-sm" onclick="this.closest('.tree-inline-wrap').remove()">✕</button>`;
+  c.appendChild(wrap);
+  wrap.querySelector('input').focus();
+}
+
+async function locSaveShaft(inp,proj,blk) {
+  const val=(inp?.value||'').trim();
+  if(!val){toast('Enter shaft name','error');return;}
+  if(_locData.find(r=>r.project===proj&&r.block===blk&&r.location_type==='shaft'&&r.shaft_name?.toLowerCase()===val.toLowerCase())){
+    toast('Shaft already exists in this block','error');return;
+  }
+  pbShow('Saving…');
+  try {
+    const {data:last}=await sb.from('location_master').select('location_code').order('location_code',{ascending:false}).limit(1);
+    const nextNum=last?.length?(parseInt((last[0].location_code||'LOC0000').replace('LOC',''))||0)+1:1;
+    const location_code='LOC'+String(nextNum).padStart(4,'0');
+    const {error}=await sb.from('location_master').insert({
+      location_code, project:proj, block:blk, location_type:'shaft',
+      floor:null, unit:null, shaft_name:val,
+      is_active:true, created_by:state.userId,
+      created_at:new Date().toISOString(), updated_at:new Date().toISOString()
+    });
+    if(error) throw error;
+    toast(`Saved — ${location_code}`,'success');
+    if(window._locPendingBlocks?.[proj]) window._locPendingBlocks[proj]=window._locPendingBlocks[proj].filter(b=>b!==blk);
+    inp.closest('.tree-inline-wrap')?.remove();
+    await apiLoadLocations(); renderLocTree();
+  } catch(e){toast('Error: '+e.message,'error');}
+  finally{pbDone();}
+}
+
+// ── Location Edit ───────────────────────────────────────────
+function locEditUnit(id) {
+  const row=_locData.find(r=>r.id===id);
+  if(!row) return;
+  const labelEl=document.getElementById('locunit_label_'+id);
+  if(!labelEl) return;
+  const oldVal=row.unit;
+  labelEl.innerHTML=`🚪 <input id="locedit_${id}" value="${_esc(oldVal)}" autocomplete="off"
+    style="padding:4px 8px;border:1px solid var(--accent);border-radius:3px;font-size:12px;width:160px;"
+    onkeydown="if(event.key==='Enter')locSaveEditUnit('${id}');if(event.key==='Escape')renderLocTree()">
+    <button class="btn btn-primary btn-sm" style="margin-left:4px;" onclick="locSaveEditUnit('${id}')">Save</button>
+    <button class="btn btn-ghost btn-sm" onclick="renderLocTree()">✕</button>`;
+  document.getElementById('locedit_'+id)?.focus();
+}
+
+async function locSaveEditUnit(id) {
+  const inp=document.getElementById('locedit_'+id);
+  const val=(inp?.value||'').trim();
+  if(!val){toast('Unit name required','error');return;}
+  pbShow('Saving…');
+  try {
+    const {error}=await sb.from('location_master').update({unit:val,updated_at:new Date().toISOString(),updated_by:state.userId}).eq('id',id);
+    if(error) throw error;
+    toast('Updated','success');
+    await apiLoadLocations(); renderLocTree();
+  } catch(e){toast('Error: '+e.message,'error');}
+  finally{pbDone();}
+}
+
+function locEditShaft(id) {
+  const row=_locData.find(r=>r.id===id);
+  if(!row) return;
+  const labelEl=document.getElementById('locshaft_label_'+id);
+  if(!labelEl) return;
+  labelEl.innerHTML=`⚡ <input id="locedit_${id}" value="${_esc(row.shaft_name)}" autocomplete="off"
+    style="padding:4px 8px;border:1px solid var(--warn);border-radius:3px;font-size:12px;width:180px;"
+    onkeydown="if(event.key==='Enter')locSaveEditShaft('${id}');if(event.key==='Escape')renderLocTree()">
+    <button class="btn btn-warn btn-sm" style="margin-left:4px;" onclick="locSaveEditShaft('${id}')">Save</button>
+    <button class="btn btn-ghost btn-sm" onclick="renderLocTree()">✕</button>`;
+  document.getElementById('locedit_'+id)?.focus();
+}
+
+async function locSaveEditShaft(id) {
+  const inp=document.getElementById('locedit_'+id);
+  const val=(inp?.value||'').trim();
+  if(!val){toast('Shaft name required','error');return;}
+  pbShow('Saving…');
+  try {
+    const {error}=await sb.from('location_master').update({shaft_name:val,updated_at:new Date().toISOString(),updated_by:state.userId}).eq('id',id);
+    if(error) throw error;
+    toast('Updated','success');
+    await apiLoadLocations(); renderLocTree();
+  } catch(e){toast('Error: '+e.message,'error');}
+  finally{pbDone();}
+}
+
+// ── Location Delete ─────────────────────────────────────────
+async function _locFKCheck(id) {
+  const row=_locData.find(r=>r.id===id);
+  if(!row) return 0;
+  const code=row.location_code;
+  const [mis,wob,hob]=await Promise.all([
+    sb.from('mis_lines').select('id',{count:'exact',head:true}).eq('location_code',code),
+    sb.from('wob_lines').select('id',{count:'exact',head:true}).eq('location_code',code),
+    sb.from('hob_lines').select('id',{count:'exact',head:true}).eq('location_code',code),
+  ]);
+  return (mis.count||0)+(wob.count||0)+(hob.count||0);
+}
+
+async function locDeleteUnit(id) {
+  if(!hasRole('Admin')){toast('Admin only','error');return;}
+  const row=_locData.find(r=>r.id===id);
+  if(!row) return;
+  pbShow('Checking…');
+  try {
+    const refs=await _locFKCheck(id);
+    if(refs>0){toast(`Cannot delete — used in ${refs} transaction(s)`,'error');return;}
+    if(!confirm(`Delete ${row.location_code}? Cannot be undone.`)) return;
+    const {error}=await sb.from('location_master').delete().eq('id',id);
+    if(error) throw error;
+    toast('Deleted','success');
+    await apiLoadLocations(); renderLocTree();
+  } catch(e){toast('Error: '+e.message,'error');}
+  finally{pbDone();}
+}
+
+async function locDeleteFloor(proj,blk,floor) {
+  if(!hasRole('Admin')){toast('Admin only','error');return;}
+  const rows=_locData.filter(r=>r.project===proj&&r.block===blk&&r.floor===floor);
+  if(!rows.length){
+    const key=proj+'||'+blk;
+    if(window._locPendingFloors?.[key]) window._locPendingFloors[key]=window._locPendingFloors[key].filter(f=>f!==floor);
+    renderLocTree(); return;
+  }
+  if(!confirm(`Delete floor "${floor}" and all ${rows.length} unit(s)? Cannot be undone.`)) return;
+  pbShow('Checking FK…');
+  try {
+    for(const r of rows){
+      const refs=await _locFKCheck(r.id);
+      if(refs>0){toast(`Cannot delete — ${r.location_code} used in transactions`,'error');return;}
+    }
+    const {error}=await sb.from('location_master').delete().eq('project',proj).eq('block',blk).eq('floor',floor);
+    if(error) throw error;
+    toast('Floor deleted','success');
+    await apiLoadLocations(); renderLocTree();
+  } catch(e){toast('Error: '+e.message,'error');}
+  finally{pbDone();}
+}
+
+async function locDeleteBlock(proj,blk) {
+  if(!hasRole('Admin')){toast('Admin only','error');return;}
+  const rows=_locData.filter(r=>r.project===proj&&r.block===blk);
+  if(!rows.length){
+    if(window._locPendingBlocks?.[proj]) window._locPendingBlocks[proj]=window._locPendingBlocks[proj].filter(b=>b!==blk);
+    renderLocTree(); return;
+  }
+  if(!confirm(`Delete block "${blk}" and all ${rows.length} location(s)? Cannot be undone.`)) return;
+  pbShow('Checking FK…');
+  try {
+    for(const r of rows){
+      const refs=await _locFKCheck(r.id);
+      if(refs>0){toast(`Cannot delete — ${r.location_code} used in transactions`,'error');return;}
+    }
+    const {error}=await sb.from('location_master').delete().eq('project',proj).eq('block',blk);
+    if(error) throw error;
+    toast('Block deleted','success');
+    await apiLoadLocations(); renderLocTree();
+  } catch(e){toast('Error: '+e.message,'error');}
+  finally{pbDone();}
+}
+
+async function locDeleteProject(proj) {
+  if(!hasRole('Admin')){toast('Admin only','error');return;}
+  const rows=_locData.filter(r=>r.project===proj);
+  if(!rows.length){
+    _locPendingProjects=_locPendingProjects.filter(p=>p!==proj);
+    renderLocTree(); return;
+  }
+  if(!confirm(`Delete project "${proj}" and all ${rows.length} location(s)? Cannot be undone.`)) return;
+  pbShow('Checking FK…');
+  try {
+    for(const r of rows){
+      const refs=await _locFKCheck(r.id);
+      if(refs>0){toast(`Cannot delete — ${r.location_code} used in transactions`,'error');return;}
+    }
+    const {error}=await sb.from('location_master').delete().eq('project',proj);
+    if(error) throw error;
+    toast('Project deleted','success');
+    await apiLoadLocations(); renderLocTree();
+  } catch(e){toast('Error: '+e.message,'error');}
+  finally{pbDone();}
 }
 
 </script>
