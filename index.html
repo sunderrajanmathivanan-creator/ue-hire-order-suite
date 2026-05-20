@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Penguin-Procurement Suite v40 — Urban Excellence LLP · Poetry of Earth</title>
+<title>Penguin-Procurement Suite v42 — Urban Excellence LLP · Poetry of Earth</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
 /* ============================================================
@@ -837,8 +837,7 @@ input[type="number"] {
           <th style="width:85px;" class="num">Cumulative</th>
           <th style="width:90px;" class="num">Unit Rate</th>
           <th style="width:100px;" class="num">Cert. Value</th>
-          <th style="width:160px;">WBS Sub Activity</th>
-          <th style="width:200px;">WBS Element</th>
+
         </tr></thead>
         <tbody id="hocItemsBody"></tbody>
         <tfoot>
@@ -944,17 +943,16 @@ input[type="number"] {
 
     <!-- Billing items (carried from certification) -->
     <h3 style="margin-top:18px;">Bill Items (from Certification)</h3>
-    <p style="color:var(--muted);font-size:12px;margin-bottom:8px;">WBS Sub Activity is mandatory for each line item.</p>
+
     <div class="table-wrap">
       <table>
         <thead><tr>
           <th>#</th><th>Description</th><th>UOM</th>
           <th class="num">Qty</th><th class="num">Rate</th><th class="num">Amount</th>
-          <th style="min-width:200px;">WBS Sub Activity <span style="color:var(--danger);">*</span></th>
         </tr></thead>
         <tbody id="hob_itemsBody"></tbody>
         <tfoot><tr><td colspan="5" class="num"><strong>Gross Amount</strong></td>
-          <td class="num mono"><strong id="hob_grossAmt">0.00</strong></td><td></td></tr></tfoot>
+          <td class="num mono"><strong id="hob_grossAmt">0.00</strong></td></tr></tfoot>
       </table>
     </div>
 
@@ -1282,8 +1280,7 @@ input[type="number"] {
           <th style="width:90px;" class="num" id="woc_thisPeriodHeader">This Period</th>
           <th style="width:80px;" class="num" id="woc_cumulativeHeader">Cumulative</th>
           <th style="width:90px;" class="num">Unit Rate</th><th style="width:100px;" class="num">Cert. Value</th>
-          <th style="width:160px;">WBS Sub Activity</th>
-          <th style="width:200px;">WBS Element</th>
+
         </tr></thead>
         <tbody id="wocItemsBody"></tbody>
         <tfoot><tr><td colspan="8" class="num"><strong>Gross Value Certified</strong></td>
@@ -1358,17 +1355,16 @@ input[type="number"] {
     </div>
 
     <h3 style="margin-top:18px;">Bill Items (from Certification)</h3>
-    <p style="color:var(--muted);font-size:12px;margin-bottom:8px;">WBS Sub Activity is mandatory for each line item.</p>
+
     <div class="table-wrap">
       <table>
         <thead><tr>
           <th>#</th><th>Description</th><th>UOM</th>
           <th class="num">Qty / %</th><th class="num">Rate</th><th class="num">Amount</th>
-          <th style="min-width:200px;">WBS Sub Activity <span style="color:var(--danger);">*</span></th>
         </tr></thead>
         <tbody id="wob_itemsBody"></tbody>
         <tfoot><tr><td colspan="5" class="num"><strong>Gross Amount</strong></td>
-          <td class="num mono"><strong id="wob_grossAmt">0.00</strong></td><td></td></tr></tfoot>
+          <td class="num mono"><strong id="wob_grossAmt">0.00</strong></td></tr></tfoot>
       </table>
     </div>
 
@@ -1950,7 +1946,6 @@ input[type="number"] {
   <div class="sub-tabs">
     <div class="sub-tab active" data-mastertab="vendors" onclick="switchMasterTab('vendors')">Vendors</div>
     <div class="sub-tab" data-mastertab="activities" onclick="switchMasterTab('activities')">Activity Master</div>
-    <div class="sub-tab" data-mastertab="wbs" onclick="switchMasterTab('wbs')">WBS Master</div>
     <div class="sub-tab" data-mastertab="materials" onclick="switchMasterTab('materials')">Material Master</div>
     <div class="sub-tab" data-mastertab="contractors" onclick="switchMasterTab('contractors')">Contractor Master</div>
   </div>
@@ -2023,240 +2018,6 @@ input[type="number"] {
   </div>
 
   <!-- BOQ ITEMS -->
-  <!-- WBS MASTER -->
-  <div id="master-wbs" class="hidden">
-    <!-- WBS sub-sub-tabs -->
-    <div class="sub-tabs" style="margin-bottom:14px;">
-      <div class="sub-tab active" data-wbstab="acts"   onclick="switchWBSTab('acts')">Activity Hierarchy</div>
-      <div class="sub-tab"        data-wbstab="lvls"   onclick="switchWBSTab('lvls')">Levels</div>
-      <div class="sub-tab"        data-wbstab="blocks" onclick="switchWBSTab('blocks')">Blocks</div>
-      <div class="sub-tab"        data-wbstab="locq"   onclick="switchWBSTab('locq')">Location Types &amp; Instances</div>
-      <div class="sub-tab"        data-wbstab="gen"    onclick="switchWBSTab('gen')">Generate WBS Elements</div>
-      <div class="sub-tab"        data-wbstab="elems"  onclick="switchWBSTab('elems')">WBS Elements</div>
-    </div>
-
-    <!-- ============== TAB 1: ACTIVITY HIERARCHY ============== -->
-    <div id="wbs-tab-acts">
-      <div class="card">
-        <h3>Add Sub-Activity</h3>
-        <div class="grid-3" style="gap:12px;">
-          <div class="field">
-            <label class="req">WBS Group</label>
-            <input id="wam_group" placeholder="e.g. Core and Shell Construction" list="wam_group_list" autocomplete="off">
-            <datalist id="wam_group_list"></datalist>
-          </div>
-          <div class="field">
-            <label class="req">WBS Activity</label>
-            <input id="wam_activity" placeholder="e.g. RCC" list="wam_activity_list" autocomplete="off">
-            <datalist id="wam_activity_list"></datalist>
-          </div>
-          <div class="field">
-            <label class="req">WBS Sub Activity</label>
-            <input id="wam_sub_activity" placeholder="e.g. Concrete Pour">
-          </div>
-        </div>
-        <div class="field" style="margin-top:12px;">
-          <label>Granularity (where this sub-activity is tracked — pick one or more)</label>
-          <div id="wam_granularity_chips" class="chip-multi"
-               style="min-height:48px;border:1px solid var(--border);border-radius:4px;padding:6px;display:flex;flex-wrap:wrap;gap:6px;background:var(--input-bg);"></div>
-          <div class="muted" style="font-size:11px;margin-top:4px;">
-            E.g. "Concrete Pour" → Pour. "Internal Plumbing" → Apartment + Plumbing Shaft. Leave empty = generator will offer all types.
-          </div>
-        </div>
-        <div class="actions-row" style="margin-top:12px;">
-          <button class="btn btn-primary" onclick="saveWBSActivity()">+ Add Sub-Activity</button>
-          <button class="btn btn-ghost" onclick="clearWBSActivityForm()">Clear</button>
-        </div>
-      </div>
-      <div class="card">
-        <h3>Sub-Activities</h3>
-        <div style="display:flex;gap:10px;margin-bottom:10px;flex-wrap:wrap;">
-          <input id="wam_search" placeholder="Search…" autocomplete="off" oninput="renderWBSActivities()"
-            style="padding:7px;background:var(--input-bg);color:var(--text);border:1px solid var(--border);border-radius:4px;width:260px;">
-          <select id="wam_filter_group" onchange="renderWBSActivities()"
-            style="padding:7px;background:var(--input-bg);color:var(--text);border:1px solid var(--border);border-radius:4px;">
-            <option value="">All Groups</option>
-          </select>
-        </div>
-        <div id="wam_tree_wrap"></div>
-      </div>
-    </div>
-
-    <!-- ============== TAB 2: LEVELS ============== -->
-    <div id="wbs-tab-lvls" class="hidden">
-      <div class="card">
-        <h3>Add Level</h3>
-        <div class="grid-4" style="gap:12px;">
-          <div class="field">
-            <label class="req">Level Code</label>
-            <input id="wlm_code" placeholder="e.g. 1F, B2, GF, PODIUM">
-          </div>
-          <div class="field">
-            <label class="req">Level Name</label>
-            <input id="wlm_name" placeholder="e.g. 1st Floor, Basement 2">
-          </div>
-          <div class="field">
-            <label class="req">Order (sort key)</label>
-            <input id="wlm_order" type="number" placeholder="-2, -1, 0, 1, 2..." step="1">
-          </div>
-          <div class="field">
-            <label>Kind</label>
-            <select id="wlm_kind">
-              <option value="floor">Floor</option>
-              <option value="basement">Basement</option>
-              <option value="special">Special (Podium/Terrace/Refuge)</option>
-            </select>
-          </div>
-        </div>
-        <div class="actions-row" style="margin-top:12px;">
-          <button class="btn btn-primary" onclick="saveWBSLevel()">+ Add Level</button>
-          <button class="btn btn-ghost"   onclick="bulkAddFloors()">Bulk Add Floors (1F–N)</button>
-          <button class="btn btn-ghost"   onclick="clearWBSLevelForm()">Clear</button>
-        </div>
-      </div>
-      <div class="card">
-        <h3>Levels</h3>
-        <div class="table-wrap">
-          <table><thead><tr>
-            <th>Code</th><th>Name</th><th>Order</th><th>Kind</th><th style="width:160px;">Actions</th>
-          </tr></thead>
-          <tbody id="wlm_list"><tr><td colspan="5" class="center muted">No levels yet.</td></tr></tbody>
-          </table>
-        </div>
-      </div>
-    </div>
-
-    <!-- ============== TAB 3: BLOCKS ============== -->
-    <div id="wbs-tab-blocks" class="hidden">
-      <div class="card">
-        <h3>Add Block</h3>
-        <div class="grid-2" style="gap:12px;align-items:end;">
-          <div class="field">
-            <label class="req">Block Name</label>
-            <input id="wbm_name" placeholder="e.g. Block-A, Tower-1, Temp. Works">
-          </div>
-          <div class="actions-row">
-            <button class="btn btn-primary" onclick="saveWBSBlock()">+ Add Block</button>
-            <button class="btn btn-ghost"   onclick="document.getElementById('wbm_name').value=''">Clear</button>
-          </div>
-        </div>
-      </div>
-      <div class="card">
-        <h3>Blocks</h3>
-        <div class="table-wrap">
-          <table><thead><tr>
-            <th>Block Name</th><th>WBS Elements</th><th style="width:160px;">Actions</th>
-          </tr></thead>
-          <tbody id="wbm_list"><tr><td colspan="3" class="center muted">No blocks yet.</td></tr></tbody>
-          </table>
-        </div>
-      </div>
-    </div>
-
-    <!-- ============== TAB 4: LOCATION TYPES & INSTANCES (Questionnaire) ============== -->
-    <div id="wbs-tab-locq" class="hidden">
-      <div class="card">
-        <h3>Location Types &amp; Instances</h3>
-        <div class="muted" style="font-size:12px;margin-bottom:14px;">
-          Tell the system what's inside each block. Enter counts, then name each instance. Saved instances apply to all blocks.
-        </div>
-        <div id="locq_container"></div>
-        <div class="actions-row" style="margin-top:18px;border-top:1px solid var(--border);padding-top:14px;">
-          <button class="btn btn-primary" onclick="saveLocationQuestionnaire()">💾 Save All</button>
-          <button class="btn btn-ghost"   onclick="addCustomLocationRow()">+ Add Custom Location Type</button>
-          <button class="btn btn-ghost"   onclick="renderLocationQuestionnaire()">↻ Reset to Defaults</button>
-        </div>
-      </div>
-    </div>
-
-    <!-- ============== TAB 5: GENERATE WBS ELEMENTS ============== -->
-    <div id="wbs-tab-gen" class="hidden">
-      <div class="card">
-        <h3>Generate WBS Elements</h3>
-        <div class="field">
-          <label class="req">Sub-Activities (multi-select)</label>
-          <input id="gen_subact_search" placeholder="Type to filter sub-activities…" autocomplete="off"
-                 oninput="renderGenSubActPicker()"
-                 style="width:100%;padding:7px;background:var(--input-bg);color:var(--text);border:1px solid var(--border);border-radius:4px;margin-bottom:8px;">
-          <div id="gen_subact_picker"
-               style="max-height:260px;overflow:auto;border:1px solid var(--border);border-radius:4px;padding:8px;background:var(--input-bg);"></div>
-          <div id="gen_subact_info" class="muted" style="font-size:11px;margin-top:6px;"></div>
-        </div>
-
-        <div class="grid-2" style="gap:14px;margin-top:14px;">
-          <div class="field">
-            <label class="req">Blocks (multi-select)</label>
-            <div id="gen_blocks_chips" class="chip-multi"
-                 style="min-height:60px;border:1px solid var(--border);border-radius:4px;padding:6px;display:flex;flex-wrap:wrap;gap:6px;background:var(--input-bg);"></div>
-            <div style="margin-top:6px;display:flex;gap:6px;">
-              <button class="btn btn-ghost btn-sm" onclick="genSelectAllBlocks(true)">Select All</button>
-              <button class="btn btn-ghost btn-sm" onclick="genSelectAllBlocks(false)">Clear</button>
-            </div>
-          </div>
-          <div class="field" id="gen_levels_wrap">
-            <label>Levels (multi-select)</label>
-            <div id="gen_levels_chips" class="chip-multi"
-                 style="min-height:60px;border:1px solid var(--border);border-radius:4px;padding:6px;display:flex;flex-wrap:wrap;gap:6px;background:var(--input-bg);"></div>
-            <div style="margin-top:6px;display:flex;gap:6px;flex-wrap:wrap;">
-              <button class="btn btn-ghost btn-sm" onclick="genSelectAllLevels(true)">Select All</button>
-              <button class="btn btn-ghost btn-sm" onclick="genSelectAllLevels(false)">Clear</button>
-              <button class="btn btn-ghost btn-sm" onclick="genSelectLevelKind('floor')">All Floors</button>
-              <button class="btn btn-ghost btn-sm" onclick="genSelectLevelKind('basement')">All Basements</button>
-            </div>
-          </div>
-        </div>
-
-        <div id="gen_instance_panels" style="margin-top:14px;"></div>
-
-        <div class="card" style="margin-top:14px;background:var(--input-bg);">
-          <h3 style="margin:0 0 10px 0;">Preview</h3>
-          <div id="gen_preview_summary" style="font-size:13px;margin-bottom:8px;">Pick a sub-activity to start.</div>
-          <div id="gen_preview_list" style="font-family:monospace;font-size:11px;max-height:240px;overflow:auto;background:var(--bg);border:1px solid var(--border);padding:8px;border-radius:4px;"></div>
-        </div>
-
-        <div class="actions-row" style="margin-top:14px;">
-          <button class="btn btn-primary" onclick="generateWBSElements()">⚡ Generate WBS Elements</button>
-        </div>
-      </div>
-    </div>
-
-    <!-- ============== TAB 6: WBS ELEMENTS LIST (read-only) ============== -->
-    <div id="wbs-tab-elems" class="hidden">
-      <div class="card">
-        <h3>WBS Elements</h3>
-        <div style="display:flex;gap:10px;margin-bottom:12px;flex-wrap:wrap;align-items:center;">
-          <input id="wbs_search" placeholder="Search WBS…" autocomplete="off"
-            style="padding:7px;background:var(--input-bg);color:var(--text);border:1px solid var(--border);border-radius:4px;width:260px;"
-            oninput="renderWBSMaster()">
-          <select id="wbs_filter_block" onchange="renderWBSMaster()"
-            style="padding:7px;background:var(--input-bg);color:var(--text);border:1px solid var(--border);border-radius:4px;">
-            <option value="">All Blocks</option>
-          </select>
-          <select id="wbs_filter_group" onchange="renderWBSMaster()"
-            style="padding:7px;background:var(--input-bg);color:var(--text);border:1px solid var(--border);border-radius:4px;">
-            <option value="">All Groups</option>
-          </select>
-          <div class="muted" style="align-self:center;font-size:11px;" id="wbs_count_label"></div>
-          <!-- Multi-select bulk delete — Admin only, hidden until a checkbox is ticked -->
-          <button id="wbs_bulk_delete_btn" class="btn btn-danger btn-sm"
-            style="display:none;margin-left:auto;"
-            onclick="bulkDeleteWBSSelected()">
-            🗑 Delete Selected (<span id="wbs_sel_count">0</span>)
-          </button>
-        </div>
-        <div class="table-wrap">
-          <table><thead><tr>
-            <th style="padding:8px 12px;">WBS Hierarchy &nbsp;<span class="muted" style="font-weight:normal;font-size:11px;">(click ▶ to expand)</span></th>
-          </tr></thead>
-          <tbody id="wbs_list"><tr><td class="center muted">No WBS elements yet. Use the Generate tab.</td></tr></tbody>
-          </table>
-        </div>
-      </div>
-    </div>
-  </div>
-
-
-  <!-- MATERIAL MASTER -->
   <div id="master-materials" class="hidden">
 
     <!-- ── Manage Categories card (Admin only) ── -->
@@ -2463,7 +2224,7 @@ input[type="number"] {
         <h3 style="font-size:13px;margin-bottom:8px;color:var(--text);">Material Items Required</h3>
         <div class="table-wrap">
           <table>
-            <thead><tr><th>#</th><th>Material</th><th>UOM</th><th class="num">Qty Required</th><th>Specification</th><th>WBS Sub Activity</th><th>Remarks</th><th></th></tr></thead>
+            <thead><tr><th>#</th><th>Material</th><th>UOM</th><th class="num">Qty Required</th><th>Specification</th><th>Remarks</th><th></th></tr></thead>
             <tbody id="mirItemsBody"></tbody>
           </table>
         </div>
@@ -2918,7 +2679,7 @@ input[type="number"] {
               <thead><tr>
                 <th>#</th><th>GRN</th><th>Material</th><th>UOM</th>
                 <th class="num">Qty</th><th class="num">Rate</th><th class="num">Base Amt</th>
-                <th>WBS Sub Activity <span style="color:var(--danger);">*</span></th>
+  
               </tr></thead>
               <tbody id="pob_itemsBody"></tbody>
             </table>
@@ -3037,7 +2798,7 @@ input[type="number"] {
               <thead><tr>
                 <th>#</th><th>GRN</th><th>Material</th><th>UOM</th>
                 <th class="num">Qty</th><th class="num">Rate (editable)</th><th class="num">Base Amt</th>
-                <th>WBS Sub Activity <span style="color:var(--danger);">*</span></th>
+  
               </tr></thead>
               <tbody id="cpob_itemsBody"></tbody>
             </table>
@@ -3162,7 +2923,6 @@ input[type="number"] {
             <thead><tr>
               <th>#</th><th>Material</th><th>UOM</th>
               <th class="num">Stock Available</th><th class="num">Qty to Issue</th>
-              <th>WBS Element <span style="color:var(--danger);">*</span></th>
               <th class="num">Latest Rate</th><th class="num">Amount</th><th></th>
             </tr></thead>
             <tbody id="misItemsBody"></tbody>
@@ -3184,7 +2944,7 @@ input[type="number"] {
         <table>
           <thead><tr>
             <th>MIS Number</th><th>Date</th><th>Issued To</th>
-            <th>Issued By</th><th>WBS Element</th><th class="num">Total Value</th>
+            <th>Issued By</th><th class="num">Total Value</th>
             <th>Status</th><th>Actions</th>
           </tr></thead>
           <tbody id="mis_listBody"><tr><td colspan="8" class="center muted">Loading…</td></tr></tbody>
@@ -3688,13 +3448,7 @@ const ROLE_PERMS = {
 var puState = {
   materials: [],
   matCategories: [],   // rows from pu_material_categories
-  wbsList: [],   // full WBS master list (generated rows in wbs_master table)
-  // ---- WBS redesign state ----
-  wbsActivities: [],    // wbs_activity_master rows
-  wbsLevels:     [],    // wbs_level_master rows
-  wbsBlocks:     [],    // wbs_block_master rows
-  wbsLocTypes:   [],    // wbs_location_type_master rows
-  wbsLocInstances: [],  // wbs_location_instance_master rows
+
   // generator selection state
   genSel: { subActId:null, blocks:new Set(), levels:new Set(), instances:new Set() },
   // ----
@@ -3767,9 +3521,6 @@ function mapHOCItem(r) {
     'Prev Cumulative Qty': r.prev_cumulative_qty, 'This Period Qty': r.this_period_qty,
     'Cumulative Qty': r.cumulative_qty, 'Unit Rate': r.unit_rate,
     'Cert Value': r.cert_value, 'S.No': r.sno,
-    'WBS Sub Activity': r.wbs_sub_activity||null,
-    'WBS Element': r.wbs_element||null,
-    'WBS Code': r.wbs_code||null,
   };
 }
 function mapHOB(r) {
@@ -4238,7 +3989,6 @@ async function apiSaveHOC(data) {
       hoc_number: data.hocNumber, sno: it.sno, description: it.description, uom: it.uom||null,
       ho_qty: it.hoQty, prev_cumulative_qty: it.prevCumulativeQty, this_period_qty: it.thisPeriodQty,
       cumulative_qty: it.cumulativeQty, unit_rate: it.unitRate, cert_value: it.certValue,
-      wbs_sub_activity: it.wbs_sub_activity||null, wbs_element: it.wbs_element||null, wbs_code: it.wbs_code||null
     }));
     if (items.length) {
       const { error: cite } = await sb.from('ho_certification_items').insert(items);
@@ -4357,7 +4107,6 @@ async function apiSaveHOB(data) {
       await sb.from('ho_bill_items').insert(data.items.map(it => ({
         bill_number: data.billNumber, sno: it.sno, description: it.description,
         uom: it.uom||null, this_period_qty: it.thisPeriodQty, unit_rate: it.unitRate, amount: it.amount,
-        wbs_sub_activity: it.wbs_sub_activity||null, wbs_code: it.wbs_code||null
       })));
     }
     if ((data.extraLines||[]).length) {
@@ -5009,8 +4758,7 @@ async function apiSaveWOC(data) {
         this_period_qty: it.thisPeriodQty||0, cumulative_qty: it.cumulativeQty||0,
         prev_cumulative_pct: it.prevCumulativePct||0, this_period_pct: it.thisPeriodPct||0,
         cumulative_pct: it.cumulativePct||0, unit_rate: it.unitRate, cert_value: it.certValue,
-        wbs_sub_activity: it.wbs_sub_activity||null, wbs_element: it.wbs_element||null, wbs_code: it.wbs_code||null
-      })));
+        })));
     }
     _cacheBust('wocList','unbilledWOCs','woList');
     return { ok: true, wocNumber: data.wocNumber };
@@ -5080,7 +4828,7 @@ async function apiGetWOBDetails(billNumber) {
   if (h.error) return { ok: false, error: h.error.message };
   const mapItem = r => ({ 'Description': r.description, 'UOM': r.uom,
     'This Period Qty': r.this_period_qty, 'Unit Rate': r.unit_rate, 'Amount': r.amount,
-    'WBS Sub Activity': r.wbs_sub_activity, 'WBS Code': r.wbs_code, 'S.No': r.sno });
+    'S.No': r.sno });
   const mapExtra = r => ({ 'Description': r.description, 'Type': r.line_type, 'Timing': r.timing, 'Amount': r.amount, 'S.No': r.sno });
   return { ok: true, header: mapWOB(h.data), items: (items.data||[]).map(mapItem), extraLines: (extra.data||[]).map(mapExtra) };
 }
@@ -5125,8 +4873,7 @@ async function apiSaveWOB(data) {
       await sb.from('wo_bill_items').insert(data.items.map(it => ({
         bill_number: data.billNumber, sno: it.sno, description: it.description,
         uom: it.uom||null, this_period_qty: it.thisPeriodQty, unit_rate: it.unitRate,
-        amount: it.amount, wbs_sub_activity: it.wbs_sub_activity||null,
-        wbs_code: it.wbs_code||null
+        amount: it.amount
       })));
     }
     if ((data.extraLines||[]).length) {
@@ -5667,7 +5414,8 @@ document.querySelectorAll('.tabs .tab').forEach(t => {
     // Reset HO and WO sub-tabs to Orders on every main tab switch
     // so cert/billing tabs never bleed through
     _resetSubTabs();
-    if (tab === 'ho')       { switchHOTab('orders'); }
+    if (tab === 'dashboard') { loadDashboard(); }
+    else if (tab === 'ho')       { switchHOTab('orders'); }
     else if (tab === 'wo')  { switchWOTab('orders'); }
     else if (tab === 'payments') initPaymentsModule();
     else if (tab === 'masters')  { apiLoadMasters().then(renderAllMasters); }
@@ -5694,7 +5442,7 @@ function switchHOTab(tab) {
     if (stab) stab.classList.toggle('active', t === tab);
   });
   if (tab === 'orders')  loadHOList();
-  if (tab === 'cert')    { loadHOCList(); if (!(puState.wbsList||[]).length) loadWBSMaster(); }
+  if (tab === 'cert')    { loadHOCList(); }
   if (tab === 'billing') loadHOBList();
 }
 
@@ -5706,7 +5454,7 @@ function switchWOTab(tab) {
     if (stab) stab.classList.toggle('active', t === tab);
   });
   if (tab === 'orders')  loadWOList();
-  if (tab === 'cert')    { loadWOCList(); if (!(puState.wbsList||[]).length) loadWBSMaster(); }
+  if (tab === 'cert')    { loadWOCList(); }
   if (tab === 'billing') loadWOBList();
 }
 
@@ -5726,13 +5474,12 @@ function switchPayTab(tab) {
 }
 
 function switchMasterTab(tab) {
-  ['vendors','activities','wbs','materials','contractors','locations'].forEach(t => {
+  ['vendors','activities','materials','contractors','locations'].forEach(t => {
     const el = document.getElementById('master-' + t);
     if (el) el.classList.toggle('hidden', t !== tab);
     const stab = document.querySelector(`.sub-tab[data-mastertab="${t}"]`);
     if (stab) stab.classList.toggle('active', t === tab);
   });
-  if (tab === 'wbs') { loadWBSAll(); }
   if (tab === 'materials') {
     Promise.all([apiLoadMatCategories(), apiLoadMaterials()]).then(() => {
       populateMatCategoryDropdowns();
@@ -5771,7 +5518,6 @@ async function initApp() {
       apiLoadMatCategories().catch(e => console.error('MatCategories:', e)),
       loadHOList().catch(e      => console.error('HOList:', e)),
       loadWOList().catch(e      => console.error('WOList:', e)),
-      loadWBSMaster().catch(e   => console.error('WBSMaster:', e)),
     ]);
     renderAllMasters();
     populateMatCategoryDropdowns();
@@ -5954,7 +5700,7 @@ async function editMaster(type, code) {
   if (!item) { toast('Item not found','error'); return; }
 
   // Switch to the right sub-tab
-  switchMasterTab(type === 'vendor' ? 'vendors' : type === 'activity' ? 'activities' : 'wbs');
+  switchMasterTab(type === 'vendor' ? 'vendors' : 'activities');
 
   if (type === 'vendor') {
     document.getElementById('mv_name').value    = item['Vendor Name']||'';
@@ -7019,10 +6765,7 @@ function getHOCFormData() {
     const prevQ  = num(tr.querySelector('.hoc_thisQty').dataset.prevqty);
     const thisQ  = num(tr.querySelector('.hoc_thisQty').value);
     const rate   = num(tr.querySelector('.hoc_thisQty').dataset.rate);
-    const wbsSub = tr.querySelector('.hoc_wbs_sub')?.value?.trim()||null;
-    const wbsEl  = tr.querySelector('.hoc_wbs_el')?.value?.trim()||null;
-    const wbsCode= tr.querySelector('[id$="_code"][id*="WBSEl"]')?.value?.trim()||null;
-    items.push({ sno: i+1, description: desc, uom, hoQty, prevCumulativeQty: prevQ, thisPeriodQty: thisQ, cumulativeQty: prevQ + thisQ, unitRate: rate, certValue: thisQ * rate, wbs_sub_activity: wbsSub, wbs_element: wbsEl, wbs_code: wbsCode });
+    items.push({ sno: i+1, description: desc, uom, hoQty, prevCumulativeQty: prevQ, thisPeriodQty: thisQ, cumulativeQty: prevQ + thisQ, unitRate: rate, certValue: thisQ * rate });
   });
   const gross = items.reduce((s,x) => s + x.certValue, 0);
   return {
@@ -7118,22 +6861,6 @@ async function reviseHOC(hocNum) {
       <td class="num mono">${fmtINR(it['Unit Rate'])}</td>
       <td class="num mono hoc_certVal">${fmtINR(preQty * num(it['Unit Rate']))}</td>
       <td><div style="position:relative;">
-        <input class="hoc_wbs_sub" placeholder="WBS Sub Activity…" autocomplete="off"
-          value="${esc(it['WBS Sub Activity']||it.wbs_sub_activity||'')}"
-          style="width:100%;font-size:11px;"
-          oninput="wbsTypeahead(this.id,this.id+'_res',this.id+'_code','sub_activity')"
-          id="hocWBSSub_${i}">
-        <div class="typeahead-results" id="hocWBSSub_${i}_res" style="min-width:280px;position:absolute;top:100%;left:0;z-index:9999;box-shadow:0 4px 16px rgba(0,0,0,.15);"></div>
-        <input type="hidden" id="hocWBSSub_${i}_code">
-      </div></td>
-      <td><div style="position:relative;">
-        <input class="hoc_wbs_el" placeholder="WBS Element…" autocomplete="off"
-          value="${esc(it['WBS Element']||it.wbs_element||'')}"
-          style="width:100%;font-size:11px;"
-          oninput="wbsTypeahead(this.id,this.id+'_res',this.id+'_code','element')"
-          id="hocWBSEl_${i}">
-        <div class="typeahead-results" id="hocWBSEl_${i}_res" style="min-width:320px;position:absolute;top:100%;left:0;z-index:9999;box-shadow:0 4px 16px rgba(0,0,0,.15);"></div>
-        <input type="hidden" id="hocWBSEl_${i}_code">
       </div></td>
     </tr>`;
   }).join('');
@@ -7301,26 +7028,15 @@ async function onHOBHOCChange() {
   const hoRes = await apiGetHODetails(hoNum);
   if (hoRes.ok) document.getElementById('hob_gstPct').value = hoRes.header['GST %'] || 18;
 
-  if (!(puState.wbsList||[]).length) await loadWBSMaster();
-
   let gross = 0;
   document.getElementById('hob_itemsBody').innerHTML = items.map((it, i) => {
     const amt = num(it['This Period Qty']) * num(it['Unit Rate']);
     gross += amt;
-    const wbsSub = it['WBS Sub Activity']||it.wbs_sub_activity||'';
-    const wbsCode = it['WBS Code']||it.wbs_code||'';
     return `<tr>
       <td class="center">${i+1}</td><td>${esc(it['Description'])}</td><td class="center">${esc(it['UOM'])}</td>
       <td class="num mono">${fmtINR(it['This Period Qty'])}</td>
       <td class="num mono">${fmtINR(it['Unit Rate'])}</td>
       <td class="num mono">${fmtINR(amt)}</td>
-      <td><div style="position:relative;">
-        <input class="hob_wbsSub" id="hobWBS_${i}" placeholder="Type WBS…" autocomplete="off" style="width:100%;font-size:12px;"
-          value="${esc(wbsSub)}"
-          oninput="wbsTypeahead('hobWBS_${i}','hobWBSRes_${i}','hobWBSCode_${i}','sub_activity')">
-        <div class="typeahead-results" id="hobWBSRes_${i}" style="min-width:320px;position:absolute;top:100%;left:0;z-index:9999;box-shadow:0 4px 16px rgba(0,0,0,.15);"></div>
-        <input type="hidden" id="hobWBSCode_${i}" value="${esc(wbsCode)}">
-      </div></td>
     </tr>`;
   }).join('');
   document.getElementById('hob_grossAmt').textContent = fmtINR(gross);
@@ -7413,11 +7129,7 @@ function getHOBFormData() {
   const vendor = optText[2] || '';
 
   const items = [];
-  let missingWBS = false;
   document.querySelectorAll('#hob_itemsBody tr').forEach((tr,i) => {
-    const wbsInp = tr.querySelector('.hob_wbsSub');
-    const wbsCodeInp = tr.querySelector('[id^="hobWBSCode_"]');
-    if (wbsInp && !wbsInp.value?.trim()) missingWBS = true;
     items.push({
       sno: i+1,
       description: tr.cells[1].textContent.trim(),
@@ -7425,8 +7137,6 @@ function getHOBFormData() {
       thisPeriodQty: num(tr.cells[3].textContent),
       unitRate:    num(tr.cells[4].textContent),
       amount:      num(tr.cells[5].textContent),
-      wbs_sub_activity: wbsInp?.value?.trim()||null,
-      wbs_code:         wbsCodeInp?.value?.trim()||null
     });
   });
 
@@ -7474,7 +7184,7 @@ function getHOBFormData() {
     netPayable: net, status: 'Pending Approval',
     preparedBy: state.userName,
     remarks:    document.getElementById('hob_remarks').value,
-    items, extraLines, missingWBS,
+    items, extraLines,
     isRmcOpex:       document.getElementById('hob_isRmcOpex')?.checked||false,
     rmcOpexCategory: document.getElementById('hob_rmcCategory')?.value||null,
     amcStartMonth:   (document.getElementById('hob_isRmcOpex')?.checked&&document.getElementById('hob_rmcCategory')?.value==='AMC'&&document.getElementById('hob_amcStart')?.value)
@@ -7490,7 +7200,7 @@ async function saveHOB_direct() {
   if (!data.billDate)   { toast('Bill date required','error'); return; }
   if (!data.vendorInvDate) { toast('Vendor Invoice Date is mandatory','error'); return; }
   if (!data.items.length) { toast('No items loaded — select a certification first','error'); return; }
-  if (data.missingWBS) { toast('WBS Sub Activity is mandatory for all line items','error'); return; }
+
   if (data.netPayable <= 0) { toast('Net Payable is zero or negative. Reduce deductions before saving.','error'); return; }
 
   const isRevision = document.getElementById('hobForm').dataset.revising;
@@ -8170,22 +7880,6 @@ async function onWOCWOChange() {
       <td class="num mono">${fmtINR(it['Unit Rate'])}</td>
       <td class="num mono woc_certVal">0.00</td>
       <td><div style="position:relative;">
-        <input class="woc_wbs_sub" placeholder="WBS Sub Activity…" autocomplete="off"
-          value="${esc(it['WBS Sub Activity']||it.wbs_sub_activity||'')}"
-          style="width:100%;font-size:11px;"
-          id="wocWBSSub_${i}"
-          oninput="wbsTypeahead('wocWBSSub_${i}','wocWBSSub_${i}_res','wocWBSSub_${i}_code','sub_activity')">
-        <div class="typeahead-results" id="wocWBSSub_${i}_res" style="min-width:280px;position:absolute;top:100%;left:0;z-index:9999;box-shadow:0 4px 16px rgba(0,0,0,.15);"></div>
-        <input type="hidden" id="wocWBSSub_${i}_code">
-      </div></td>
-      <td><div style="position:relative;">
-        <input class="woc_wbs_el" placeholder="WBS Element…" autocomplete="off"
-          value="${esc(it['WBS Element']||it.wbs_element||'')}"
-          style="width:100%;font-size:11px;"
-          id="wocWBSEl_${i}"
-          oninput="wbsTypeahead('wocWBSEl_${i}','wocWBSEl_${i}_res','wocWBSEl_${i}_code','element')">
-        <div class="typeahead-results" id="wocWBSEl_${i}_res" style="min-width:320px;position:absolute;top:100%;left:0;z-index:9999;box-shadow:0 4px 16px rgba(0,0,0,.15);"></div>
-        <input type="hidden" id="wocWBSEl_${i}_code">
       </div></td>
     </tr>`;
   }).join('');
@@ -8240,16 +7934,12 @@ async function saveWOC_direct() {
     const rate   = num(inp?.dataset.rate);
     const hoQty  = num(inp?.dataset.hoqty);
     const certVal= isPct ? (hoQty*rate*thisVal/100) : thisVal*rate;
-    const wWbsSub  = tr.querySelector('.woc_wbs_sub')?.value?.trim()||null;
-    const wWbsEl   = tr.querySelector('.woc_wbs_el')?.value?.trim()||null;
-    const wWbsCode = tr.querySelector('[id$="_code"][id*="WBSEl"]')?.value?.trim()||null;
     items.push({
       sno:i+1, description:tr.cells[1].textContent.trim(), uom:tr.cells[2].textContent.trim(),
       woQty:hoQty, prevCumulativeQty:isPct?0:prev, thisPeriodQty:isPct?0:thisVal,
       cumulativeQty:isPct?0:(prev+thisVal), prevCumulativePct:isPct?prev:0,
       thisPeriodPct:isPct?thisVal:0, cumulativePct:isPct?(prev+thisVal):0,
       unitRate:rate, certValue:certVal,
-      wbs_sub_activity:wWbsSub, wbs_element:wWbsEl, wbs_code:wWbsCode
     });
   });
   if (!hasQty) { toast('Enter quantity or % for at least one item','error'); return; }
@@ -8448,27 +8138,19 @@ async function onWOBWOCChange() {
     document.getElementById('wob_mobAdvRecovery').value = mobAdvOS > 0 ? mobAdvOS.toFixed(2) : '0';
   }
 
-  if (!(puState.wbsList||[]).length) await loadWBSMaster();
-
   let gross = 0;
   const retentionPct = num(document.getElementById('wob_retentionPct').value)||5;
   document.getElementById('wob_itemsBody').innerHTML = items.map((it,i) => {
     const amt = num(it['Cert Value']);
     gross += amt;
     const thisPeriodLabel = it['This Period Pct']>0 ? it['This Period Pct'].toFixed(2)+'%' : fmtINR(it['This Period Qty']);
-    const wbsSub = it['WBS Sub Activity']||it.wbs_sub_activity||'';
-    const wbsCode = it['WBS Code']||it.wbs_code||'';
+
     return `<tr>
       <td class="center">${i+1}</td><td>${esc(it['Description'])}</td><td class="center">${esc(it['UOM'])}</td>
       <td class="num mono">${thisPeriodLabel}</td>
       <td class="num mono">${fmtINR(it['Unit Rate'])}</td>
       <td class="num mono">${fmtINR(amt)}</td>
       <td><div style="position:relative;">
-        <input class="wob_wbsSub" id="wobWBS_${i}" placeholder="Type WBS…" autocomplete="off" style="width:100%;font-size:12px;"
-          value="${esc(wbsSub)}"
-          oninput="wbsTypeahead('wobWBS_${i}','wobWBSRes_${i}','wobWBSCode_${i}','sub_activity')">
-        <div class="typeahead-results" id="wobWBSRes_${i}" style="min-width:320px;position:absolute;top:100%;left:0;z-index:9999;box-shadow:0 4px 16px rgba(0,0,0,.15);"></div>
-        <input type="hidden" id="wobWBSCode_${i}" value="${esc(wbsCode)}">
       </div></td>
     </tr>`;
   }).join('');
@@ -8534,22 +8216,15 @@ async function saveWOB_direct() {
   if (!document.getElementById('wob_date').value) { toast('Bill date required','error'); return; }
   if (!document.getElementById('wob_vendorInvDate').value) { toast('Vendor Invoice Date is mandatory','error'); return; }
 
-  // Validate all items have WBS Sub Activity
   const items = [];
-  let missingWBS = false;
   document.querySelectorAll('#wob_itemsBody tr').forEach((tr,i) => {
-    const wbsInp = tr.querySelector('.wob_wbsSub');
-    const wbsCodeInp = tr.querySelector('[id^="wobWBSCode_"]');
-    if (!wbsInp?.value?.trim()) { missingWBS = true; return; }
     items.push({
       sno:i+1, description:tr.cells[1].textContent.trim(), uom:tr.cells[2].textContent.trim(),
       thisPeriodQty:num(tr.cells[3].textContent)||0, unitRate:num(tr.cells[4].textContent),
       amount:num(tr.cells[5].textContent),
-      wbs_sub_activity:wbsInp.value.trim(),
-      wbs_code:wbsCodeInp?.value?.trim()||null
     });
   });
-  if (missingWBS) { toast('WBS Sub Activity is mandatory for all line items','error'); return; }
+
 
   const extraLines=[];
   document.querySelectorAll('#wob_extraBody tr').forEach((tr,i)=>{
@@ -8659,25 +8334,15 @@ async function reviseWOB(billNum) {
   sel.value = h['WOC Number'];
 
   // Load WOC items directly without triggering onWOBWOCChange (items already known)
-  if (!(puState.wbsList||[]).length) await loadWBSMaster();
   let gross = 0;
   document.getElementById('wob_itemsBody').innerHTML = items.map((it,i) => {
     const amt = num(it['This Period Qty']) * num(it['Unit Rate']);
     gross += amt;
-    const wbsSub  = it['WBS Sub Activity']||'';
-    const wbsCode = it['WBS Code']||'';
     return `<tr>
       <td class="center">${i+1}</td><td>${esc(it['Description'])}</td><td class="center">${esc(it['UOM'])}</td>
       <td class="num mono">${fmtINR(it['This Period Qty'])}</td>
       <td class="num mono">${fmtINR(it['Unit Rate'])}</td>
       <td class="num mono">${fmtINR(amt)}</td>
-      <td><div style="position:relative;">
-        <input class="wob_wbsSub" id="wobWBS_${i}" placeholder="Type WBS…" autocomplete="off" style="width:100%;font-size:12px;"
-          value="${esc(wbsSub)}"
-          oninput="wbsTypeahead('wobWBS_${i}','wobWBSRes_${i}','wobWBSCode_${i}','sub_activity')">
-        <div class="typeahead-results" id="wobWBSRes_${i}" style="min-width:320px;position:absolute;top:100%;left:0;z-index:9999;box-shadow:0 4px 16px rgba(0,0,0,.15);"></div>
-        <input type="hidden" id="wobWBSCode_${i}" value="${esc(wbsCode)}">
-      </div></td>
     </tr>`;
   }).join('');
   document.getElementById('wob_grossAmt').textContent = fmtINR(gross);
@@ -9653,7 +9318,6 @@ function renderPrintWOB(d) {
     <td class="r">${fmtINR(it['This Period Qty'])}</td>
     <td class="r">₹\u202f${fmtINR(it['Unit Rate'])}</td>
     <td class="r">₹\u202f${fmtINR(it['Amount'])}</td>
-    <td style="font-size:10pt;">${esc(it['WBS Sub Activity']||it.wbs_sub_activity||'—')}</td>
   </tr>`).join('');
   return `<div class="pd-so-top">
     <div class="pd-co-block"><div class="pd-co-name">Urban Excellence LLP</div>
@@ -9667,7 +9331,6 @@ function renderPrintWOB(d) {
   <table class="pd-items"><thead><tr>
     <th class="c">#</th><th class="desc">Description</th><th class="c">UOM</th>
     <th class="r">Qty/%</th><th class="r">Rate</th><th class="r">Amount</th>
-    <th>WBS Sub Activity</th>
   </tr></thead><tbody>${itemsHTML}</tbody></table>
   ${extras.length?`<table class="pd-items" style="margin-top:8px;"><thead><tr><th>Additional/Deduction</th><th>Type</th><th>Timing</th><th class="r">Amount</th></tr></thead>
   <tbody>${extras.map(e=>`<tr><td>${esc(e['Description']||'')}</td><td>${esc(e['Type'])}</td><td>${esc(e['Timing'])}</td><td class="r">${e['Type']==='Addition'?'+':'-'}₹\u202f${fmtINR(e['Amount'])}</td></tr>`).join('')}</tbody></table>`:''}
@@ -10048,12 +9711,12 @@ function switchPUTab(tab) {
     const stab = document.querySelector(`.sub-tab[data-putab="${t}"]`);
     if (stab) stab.classList.toggle('active', t === tab);
   });
-  if (tab === 'mir')   { loadMIRList(); if (!(puState.wbsList||[]).length) loadWBSMaster(); }
+  if (tab === 'mir')   { loadMIRList(); }
   if (tab === 'rfq')   { loadRFQList(); loadQCList(); }
   if (tab === 'po')    loadPOList();
   if (tab === 'grn')   loadGRNList();
   if (tab === 'pob')   loadPOBList();
-  if (tab === 'mis')   { loadMISList(); if (!(puState.wbsList||[]).length) loadWBSMaster(); }
+  if (tab === 'mis')   { loadMISList(); }
   if (tab === 'stock') loadStockBalance();
 }
 
@@ -10947,10 +10610,6 @@ function addMIRItem() {
     <td><input type="number" class="num" id="mirQty_${i}" style="width:90px;" step="0.001" placeholder="0"></td>
     <td><input id="mirSpec_${i}" style="width:160px;" placeholder="Grade / spec"></td>
     <td><div style="position:relative;width:160px;">
-      <input id="mirWBS_${i}" placeholder="Type WBS…" autocomplete="off" style="width:100%;"
-        oninput="wbsTypeahead('mirWBS_${i}','mirWBSRes_${i}','mirWBSCode_${i}','sub_activity')">
-      <div class="typeahead-results" id="mirWBSRes_${i}" style="min-width:300px;position:absolute;top:100%;left:0;z-index:9999;box-shadow:0 4px 16px rgba(0,0,0,.15);"></div>
-      <input type="hidden" id="mirWBSCode_${i}">
     </div></td>
     <td><input id="mirRmk_${i}" style="width:120px;" placeholder="Remarks"></td>
     <td><button class="btn btn-ghost btn-sm" onclick="document.getElementById('mirItem_${i}').remove()">✕</button></td>`;
@@ -10963,8 +10622,6 @@ async function saveMIR() {
   const items = [];
   document.querySelectorAll('#mirItemsBody tr').forEach((tr,i) => {
     const mat = tr.querySelector('.pu_material')?.value?.trim();
-    const wbsSubAct = tr.querySelector('[id^="mirWBS_"]')?.value?.trim()||null;
-    const wbsCode   = tr.querySelector('[id^="mirWBSCode_"]')?.value?.trim()||null;
     const qty = parseFloat(tr.querySelector('input[type="number"]')?.value)||0;
     if (mat && qty > 0) items.push({
       sno: items.length+1, material_name: mat,
@@ -10990,8 +10647,7 @@ async function saveMIR() {
     if (error) throw new Error(error.message);
     await sb.from('pu_mir_items').insert(items.map((it,idx)=>({
       ...it, mir_number: mirNumber, item_status: 'Pending', rfq_number: null, po_number: null,
-      wbs_sub_activity: document.querySelectorAll('[id^="mirWBS_"]')[idx]?.value?.trim()||null,
-      wbs_code: document.querySelectorAll('[id^="mirWBSCode_"]')[idx]?.value?.trim()||null,
+
     })));
     flashSuccess('MIR ' + mirNumber + ' submitted for PM approval');
     closeMIRForm(); loadMIRList();
@@ -14184,7 +13840,6 @@ async function onPOBGRNSelect() {
   document.getElementById('pob_selectedGRNs').textContent=_pobSelectedGRNs.length?_pobSelectedGRNs.join(', '):'None';
   if(!_pobSelectedGRNs.length){document.getElementById('pob_billDetails').style.display='none';return;}
   document.getElementById('pob_billDetails').style.display='';
-  if (!(puState.wbsList||[]).length) loadWBSMaster();
   const {data:grnItems}=await sb.from('pu_grn_items').select('*').in('grn_number',_pobSelectedGRNs).order('grn_number,sno');
   _pobLineItems=grnItems||[];
   let grossAmt=0;
@@ -14197,10 +13852,6 @@ async function onPOBGRNSelect() {
       <td class="num">${fmtINR(it.unit_rate)}</td>
       <td class="num">${fmtINR(it.base_amount)}</td>
       <td><div style="position:relative;width:200px;">
-        <input class="pob_wbsSub" id="pobWBS_${i}" placeholder="Type WBS…" autocomplete="off" style="width:100%;"
-          oninput="wbsTypeahead('pobWBS_${i}','pobWBSRes_${i}','pobWBSCode_${i}','sub_activity')">
-        <div class="typeahead-results" id="pobWBSRes_${i}" style="min-width:320px;position:absolute;top:100%;left:0;z-index:9999;box-shadow:0 4px 16px rgba(0,0,0,.15);"></div>
-        <input type="hidden" id="pobWBSCode_${i}">
       </div></td>
     </tr>`;
   }).join('')||'<tr><td colspan="8" class="center muted">No items</td></tr>';
@@ -14281,8 +13932,6 @@ async function savePOB() {
   if(!invNo){toast('Vendor Invoice No. required','error');return;}
   if(!invDate){toast('Invoice Date required','error');return;}
   if(!_pobSelectedGRNs.length){toast('Select at least one GRN','error');return;}
-  const wbsSubs=document.querySelectorAll('.pob_wbsSub');
-  for(let el of wbsSubs){if(!el.value?.trim()){toast('WBS Sub Activity required for all bill line items','error');el.focus();return;}}
   const f=document.getElementById('pobForm');
   const gross=parseFloat(f.dataset.gross||0);
   const invoice=parseFloat(f.dataset.invoice||0);
@@ -14312,14 +13961,10 @@ async function savePOB() {
       status:'Pending Approval',
     });
     if(error) throw new Error(error.message);
-    const wbsSubArr=[...wbsSubs];
-    const wbsCodeArr=[...document.querySelectorAll('[id^="pobWBSCode_"]')];
     await sb.from('pu_po_bill_items').insert(_pobLineItems.map((it,i)=>({
       bill_number:billNumber,sno:i+1,grn_number:it.grn_number,
       material_name:it.material_name,uom:it.uom,qty:it.this_grn_qty,
       unit_rate:it.unit_rate,base_amount:it.base_amount,
-      wbs_sub_activity:wbsSubArr[i]?.value?.trim()||null,
-      wbs_code:wbsCodeArr[i]?.value?.trim()||null
     })));
     const extraLines=[];
     document.querySelectorAll('#pob_extraBody tr').forEach((tr,i)=>{
@@ -14481,7 +14126,6 @@ async function onCashPobGRNSelect() {
   document.getElementById('cpob_selectedGRNs').textContent = _cpobSelectedGRNs.length ? _cpobSelectedGRNs.join(', ') : 'None';
   if (!_cpobSelectedGRNs.length) { document.getElementById('cpob_billDetails').style.display = 'none'; return; }
   document.getElementById('cpob_billDetails').style.display = '';
-  if (!(puState.wbsList||[]).length) loadWBSMaster();
   const { data: grnItems } = await sb.from('pu_grn_items').select('*')
     .in('grn_number', _cpobSelectedGRNs).order('grn_number').order('sno');
   _cpobLineItems = grnItems || [];
@@ -14496,10 +14140,6 @@ async function onCashPobGRNSelect() {
       <td class="num"><input type="number" id="cpobRate_${i}" class="num" step="0.01" value="${num(it.unit_rate).toFixed(2)}" style="width:110px;text-align:right;" oninput="cpobRecalcLine(${i})"></td>
       <td class="num" id="cpobAmt_${i}">${fmtINR(it.base_amount)}</td>
       <td class="typeahead" style="position:relative;width:200px;">
-        <input class="cpob_wbsSub" id="cpobWBS_${i}" placeholder="Type WBS…" autocomplete="off" style="width:100%;"
-          oninput="wbsTypeahead('cpobWBS_${i}','cpobWBSRes_${i}','cpobWBSCode_${i}','sub_activity')">
-        <div class="typeahead-results" id="cpobWBSRes_${i}" style="min-width:320px;"></div>
-        <input type="hidden" id="cpobWBSCode_${i}">
       </td>
     </tr>`;
   }).join('') || '<tr><td colspan="8" class="center muted">No items</td></tr>';
@@ -14612,11 +14252,6 @@ async function saveCashPOB() {
   if (!invNo)  { toast('Vendor Invoice No. required','error'); return; }
   if (!invDate){ toast('Invoice Date required','error'); return; }
   if (!_cpobSelectedGRNs.length) { toast('Select at least one cash GRN','error'); return; }
-  // WBS sub-activity required on every line (decision #5)
-  const wbsInputs = document.querySelectorAll('.cpob_wbsSub');
-  for (const el of wbsInputs) {
-    if (!el.value?.trim()) { toast('WBS Sub Activity required for all bill line items','error'); el.focus(); return; }
-  }
   // Validate rates
   for (let i = 0; i < _cpobLineItems.length; i++) {
     const r = num(document.getElementById('cpobRate_'+i)?.value);
@@ -14664,15 +14299,10 @@ async function saveCashPOB() {
     });
     if (error) throw new Error(error.message);
 
-    // Insert bill items with editable rate & base_amount, WBS coded
-    const wbsArr     = [...document.querySelectorAll('.cpob_wbsSub')];
-    const wbsCodeArr = [...document.querySelectorAll('[id^="cpobWBSCode_"]')];
     await sb.from('pu_po_bill_items').insert(_cpobLineItems.map((it, i) => ({
       bill_number: billNumber, sno: i+1, grn_number: it.grn_number,
       material_name: it.material_name, uom: it.uom, qty: it.this_grn_qty,
       unit_rate: it.unit_rate, base_amount: it.base_amount,
-      wbs_sub_activity: wbsArr[i]?.value?.trim() || null,
-      wbs_code: wbsCodeArr[i]?.value?.trim() || null,
     })));
 
     // Extra lines
@@ -14786,11 +14416,6 @@ function renderMISList() {
       ? ' <span style="font-size:10px;background:#ad6800;color:#fff;padding:1px 6px;border-radius:3px;font-weight:600;vertical-align:middle;" title="Contains material with cash-purchase history">DIRECT</span>'
       : '';
     const stCls=m.status==='Approved'?'approved':m.status==='Rejected'?'rejected':'pending-approval';
-    // Distinct WBS elements across all items — compact display
-    const wbsVals = [...new Set(its.map(it=>it.wbs_element).filter(Boolean))];
-    const wbsDisplay = wbsVals.length
-      ? `<span style="font-size:11px;">${esc(wbsVals.join(', '))}</span>`
-      : '<span style="color:#94a3b8;font-size:11px;font-style:italic;">—</span>';
     // View button only — Approve/Reject moved into the popup
     const acts=`<button class="btn btn-ghost btn-sm" onclick="viewMIS('${esc(m.mis_number)}')">View</button>`;
     const rmcBadge = (m.issued_to||'').toLowerCase().includes('rmc plant')
@@ -14799,7 +14424,6 @@ function renderMISList() {
       <td class="mono">${esc(m.mis_number)}${cashBadge}${rmcBadge}</td><td>${fmtDate(m.issue_date)}</td>
       <td>${esc(m.issued_to)}</td>
       <td>${esc(m.issued_by||'—')}</td>
-      <td>${wbsDisplay}</td>
       <td class="num">${fmtINR(totalVal)}</td>
       <td><span class="status ${stCls}">${m.status||'Pending Approval'}</span></td>
       <td>${acts}</td></tr>`;
@@ -14881,10 +14505,6 @@ async function addMISItem() {
     <td class="num" id="misBalance_${i}" style="font-weight:600;color:var(--accent);">—</td>
     <td><input type="number" id="misQty_${i}" class="num" style="width:90px;" step="0.001" oninput="recalcMISRow(${i})"></td>
     <td style="min-width:160px;"><div style="position:relative;">
-      <input id="misWBS_${i}" placeholder="WBS Element…" autocomplete="off" style="width:100%;font-size:11px;"
-        oninput="wbsTypeahead('misWBS_${i}','misWBSRes_${i}','misWBSCode_${i}','element')">
-      <div class="typeahead-results" id="misWBSRes_${i}" style="min-width:320px;position:absolute;top:100%;left:0;z-index:9999;box-shadow:0 4px 16px rgba(0,0,0,.15);"></div>
-      <input type="hidden" id="misWBSCode_${i}">
     </div></td>
     <td class="num" id="misRate_${i}">—</td>
     <td class="num" id="misAmt_${i}">—</td>
@@ -14964,7 +14584,7 @@ function selectMISMaterial(i, name, uom, balance, rate) {
   }
   document.getElementById('misRate_'+i).textContent = fmtINR(parseFloat(rate||0));
 
-  // Inject ✕ clear button next to input (same pattern as WBS/contractor fields)
+  // Inject ✕ clear button next to input (same pattern as contractor fields)
   const btnId = 'misMat_'+i+'_clrBtn';
   if (inp && !document.getElementById(btnId)) {
     const btn = document.createElement('button');
@@ -15031,9 +14651,8 @@ async function saveMIS() {
   const locSel=document.getElementById('mis_location');
   const locOpt=locSel?.options[locSel.selectedIndex];
   const items=[];
-  const wbsEls = [...document.querySelectorAll('[id^="misWBS_"]')];
   const trsAll = [...document.querySelectorAll('#misItemsBody tr')];
-  // Validate every populated line: material must be selected from master + WBS mandatory
+  // Validate every populated line: material must be selected from master
   for (let i=0; i<trsAll.length; i++) {
     const tr = trsAll[i];
     const matInp = tr.querySelector('.pu_material');
@@ -15045,12 +14664,6 @@ async function saveMIS() {
       if (!matInp.readOnly) {
         toast('Material must be selected from the master — type and choose from dropdown','error');
         matInp.focus();
-        return;
-      }
-      const wbsVal = wbsEls[i]?.value?.trim();
-      if (!wbsVal) {
-        toast('WBS Element required for all material lines','error');
-        wbsEls[i]?.focus();
         return;
       }
     }
@@ -15118,13 +14731,8 @@ async function saveMIS() {
       status:'Pending Approval',
     });
     if(error) throw new Error(error.message);
-    // Attach WBS from form to each item
-    const misWBSEls   = [...document.querySelectorAll('[id^="misWBS_"]')];
-    const misWBSCodes = [...document.querySelectorAll('[id^="misWBSCode_"]')];
     await sb.from('pu_mis_items').insert(items.map((it,idx2)=>({
       ...it, mis_number:misNumber,
-      wbs_element: misWBSEls[idx2]?.value?.trim()||null,
-      wbs_code:    misWBSCodes[idx2]?.value?.trim()||null,
       is_cash_purchase: cashMatSet.has(it.material_name),
     })));
     flashSuccess('MIS '+misNumber+' saved — pending Site Manager approval');
@@ -15136,13 +14744,7 @@ async function saveMIS() {
 async function confirmApproveMIS(misNum) {
   if (!hasPerm('canApproveMIS')) { toast('Only Site Manager can approve MIS','error'); return; }
 
-  // ── 1. Validate WBS from the already-fetched items (no DOM reading) ─────────
   const misItems = window._misApprovalItems || [];
-  const missingLine = misItems.find(it => !it.wbs_element);
-  if (missingLine) {
-    toast(`Line ${missingLine.sno} (${missingLine.material_name}) has no WBS Element — the Store Executive must assign WBS before approval.`,'error',6000);
-    return;
-  }
 
   closeModal();
   pbShow('Approving MIS…');
@@ -15167,8 +14769,6 @@ async function confirmApproveMIS(misNum) {
 
 async function viewMIS(misNum) {
   pbShow('Loading…');
-  // Ensure WBS master is loaded for the typeahead
-  if (!(puState.wbsList||[]).length) await loadWBSMaster();
   const [{data:h},{data:items}]=await Promise.all([
     sb.from('pu_mis').select('*').eq('mis_number',misNum).single(),
     sb.from('pu_mis_items').select('*').eq('mis_number',misNum).order('sno'),
@@ -15195,17 +14795,12 @@ async function viewMIS(misNum) {
        </div>`
     : '';
 
-  // Item rows — WBS always read-only, shown for all users
+  // Item rows
   const itemRows = (items||[]).map((it,idx) => {
-    const wbsMissing = canApprove && !it.wbs_element;
-    const wbsCell = `<td style="font-size:11px;${wbsMissing?'background:#fef2f2;color:#991b1b;font-weight:600;':''}">${
-      it.wbs_element ? esc(it.wbs_element) : '<span style="color:#dc2626;font-style:italic;">Missing</span>'
-    }</td>`;
     return `<tr>
       <td>${it.sno}</td>
       <td>${esc(it.material_name)}${lineBadge(it)}</td>
       <td>${esc(it.uom)}</td>
-      ${wbsCell}
       <td class="num">${fmtINR(it.stock_before)}</td>
       <td class="num">${fmtINR(it.qty_issued)}</td>
       <td class="num">${fmtINR(it.unit_rate)}</td>
@@ -15213,25 +14808,12 @@ async function viewMIS(misNum) {
     </tr>`;
   }).join('');
 
-  // WBS warning for approver — if any item is missing WBS, block approval
-  const missingWBS = canApprove && (items||[]).some(it => !it.wbs_element);
-  const wbsNotice = canApprove
-    ? missingWBS
-      ? `<div style="background:#fef2f2;border:1px solid #fca5a5;border-radius:4px;padding:6px 10px;margin-bottom:8px;font-size:12px;">
-          <span style="font-weight:700;color:#991b1b;">⚠ Cannot Approve:</span>
-          <span style="color:#7f1d1d;margin-left:6px;">One or more line items are missing a WBS Element. The Store Executive must assign WBS before this MIS can be approved.</span>
-         </div>`
-      : `<div style="background:#f0fdf4;border:1px solid #86efac;border-radius:4px;padding:6px 10px;margin-bottom:8px;font-size:12px;color:#166534;">
-          ✓ All line items have WBS Elements assigned — ready to approve.
-         </div>`
-    : '';
 
   // Action buttons
   let actionBtns = '';
   if (canApprove) {
     actionBtns = `
       <button class="btn btn-primary"
-        ${missingWBS?'disabled style="opacity:.5;cursor:not-allowed;" title="Assign WBS to all items before approving"':''}
         onclick="confirmApproveMIS('${esc(misNum)}')">✓ Approve</button>
       <button class="btn btn-danger" onclick="closeModal();rejectDoc('MIS','${esc(misNum)}')">✕ Reject</button>`;
   }
@@ -15239,7 +14821,7 @@ async function viewMIS(misNum) {
 
   // Store loaded items for confirmApproveMIS — avoids re-fetch and unsafe inline JSON
   window._misApprovalItems = (items||[]).map(it=>({
-    id: it.id, sno: it.sno, material_name: it.material_name, wbs_element: it.wbs_element||null
+    id: it.id, sno: it.sno, material_name: it.material_name
   }));
 
   openModal(`
@@ -15255,19 +14837,17 @@ async function viewMIS(misNum) {
       ${h?.remarks?`<div style="grid-column:span 2;"><label class="muted" style="font-size:11px;">REMARKS</label><div style="font-size:12px;">${esc(h.remarks)}</div></div>`:''}
     </div>
     ${rejBanner}
-    ${wbsNotice}
     <div class="table-wrap">
       <table>
         <thead><tr>
           <th>#</th><th>Material</th><th>UOM</th>
-          <th>WBS Element ${canApprove?'<span style="color:var(--danger);">*</span>':''}</th>
           <th class="num">Stock Before</th><th class="num">Qty Issued</th>
           <th class="num">Rate</th><th class="num">Amount</th>
         </tr></thead>
         <tbody>
           ${itemRows}
           <tr style="background:#e6f4f1;font-weight:700;">
-            <td colspan="7" style="text-align:right;padding:6px 8px;">Total</td>
+            <td colspan="6" style="text-align:right;padding:6px 8px;">Total</td>
             <td class="num">${fmtINRSym(total)}</td>
           </tr>
         </tbody>
@@ -16356,2117 +15936,7 @@ async function printQCPopup(qcNum) {
 }
 
 // ============================================================
-// WBS MASTER
 // ============================================================
-async function loadWBSMaster() {
-  // Paginate to bypass Supabase's default 1000-row limit.
-  // Pull in 1000-row chunks until we have everything.
-  const PAGE = 1000;
-  let from = 0;
-  const all = [];
-  while (true) {
-    const { data, error } = await sb.from('wbs_master')
-      .select('*').eq('is_active', true)
-      .order('block').order('wbs_group').order('wbs_activity')
-      .order('wbs_sub_activity').order('wbs_location')
-      .range(from, from + PAGE - 1);
-    if (error) {
-      console.error('loadWBSMaster error:', error);
-      toast('WBS load error: '+error.message,'error');
-      break;
-    }
-    if (!data || !data.length) break;
-    all.push(...data);
-    if (data.length < PAGE) break; // last page
-    from += PAGE;
-    if (from > 100000) break; // safety cap — shouldn't ever happen
-  }
-  puState.wbsList = all;
-  renderWBSMaster();
-  refreshWBSDataLists();
-  refreshWBSFilterDropdowns();
-}
-
-function buildWBSElement(block, group, activity, subActivity, location) {
-  // Format: SubActivity/Location/Activity/Group/Block
-  const parts = [subActivity, location, activity, group, block].filter(Boolean);
-  return parts.join('/');
-}
-
-function refreshWBSDataLists(selBlock='', selGroup='', selActivity='', selSubAct='') {
-  const data = puState.wbsList || [];
-  function unique(arr) { return [...new Set(arr.filter(Boolean))].sort(); }
-
-  // Block list — always all blocks
-  const blocks = unique(data.map(w => w.block));
-  const blkDl  = document.getElementById('wbs_block_list');
-  if (blkDl) blkDl.innerHTML = blocks.map(b=>`<option value="${esc(b)}">`).join('');
-
-  // Group list — filtered by block if selected
-  const groups = unique(data.filter(w => !selBlock || w.block===selBlock).map(w=>w.wbs_group));
-  const grpDl  = document.getElementById('wbs_group_list');
-  if (grpDl) grpDl.innerHTML = groups.map(g=>`<option value="${esc(g)}">`).join('');
-
-  // Activity list — filtered by block+group
-  const acts = unique(data.filter(w =>
-    (!selBlock  || w.block===selBlock) &&
-    (!selGroup  || w.wbs_group===selGroup)
-  ).map(w=>w.wbs_activity));
-  const actDl = document.getElementById('wbs_activity_list');
-  if (actDl) actDl.innerHTML = acts.map(a=>`<option value="${esc(a)}">`).join('');
-
-  // Sub Activity — filtered by block+group+activity
-  const subs = unique(data.filter(w =>
-    (!selBlock    || w.block===selBlock) &&
-    (!selGroup    || w.wbs_group===selGroup) &&
-    (!selActivity || w.wbs_activity===selActivity)
-  ).map(w=>w.wbs_sub_activity).filter(Boolean));
-  const subDl = document.getElementById('wbs_sub_activity_list');
-  if (subDl) subDl.innerHTML = subs.map(s=>`<option value="${esc(s)}">`).join('');
-
-  // Location — filtered by block+group+activity+subActivity
-  const locs = unique(data.filter(w =>
-    (!selBlock    || w.block===selBlock) &&
-    (!selGroup    || w.wbs_group===selGroup) &&
-    (!selActivity || w.wbs_activity===selActivity) &&
-    (!selSubAct   || w.wbs_sub_activity===selSubAct)
-  ).map(w=>w.wbs_location).filter(Boolean));
-  const locDl = document.getElementById('wbs_location_list');
-  if (locDl) locDl.innerHTML = locs.map(l=>`<option value="${esc(l)}">`).join('');
-}
-
-function refreshWBSFilterDropdowns() {
-  const data = puState.wbsList||[];
-  const blocks = [...new Set(data.map(w=>w.block).filter(Boolean))].sort();
-  const groups = [...new Set(data.map(w=>w.wbs_group).filter(Boolean))].sort();
-  const bSel   = document.getElementById('wbs_filter_block');
-  const gSel   = document.getElementById('wbs_filter_group');
-  if (bSel) {
-    const cur = bSel.value;
-    bSel.innerHTML = '<option value="">All Blocks</option>'+blocks.map(b=>`<option value="${esc(b)}" ${b===cur?'selected':''}>${esc(b)}</option>`).join('');
-  }
-  if (gSel) {
-    const cur = gSel.value;
-    gSel.innerHTML = '<option value="">All Groups</option>'+groups.map(g=>`<option value="${esc(g)}" ${g===cur?'selected':''}>${esc(g)}</option>`).join('');
-  }
-}
-
-// Build a fast lookup of instance_label → type_code from the instance master.
-// Used by _classifyWBSLocation to group leaves by Location Type.
-function _buildInstanceLabelLookup() {
-  const lookup = [];
-  (puState.wbsLocInstances||[]).forEach(i => {
-    if (!i.instance_label) return;
-    lookup.push({ label: i.instance_label, type_code: i.type_code });
-  });
-  // Sort by label length descending so longer labels (e.g. "Pour-1") match before shorter ones ("1")
-  lookup.sort((a,b) => b.label.length - a.label.length);
-  return lookup;
-}
-
-// Given a wbs_location string, find which Location Type's instance it contains.
-// Returns type_code or null if no match (rows in "Other / Unmatched").
-function _classifyWBSLocation(loc, lookup) {
-  if (!loc) return null;
-  // Most labels are unique enough that whole-word containment works.
-  // Compare with normalized whitespace.
-  for (const { label, type_code } of lookup) {
-    // Match as a substring delimited by start/end or non-alphanumeric on either side
-    // (so "01" doesn't match "001"). Build a regex once per call would be slow; use indexOf with boundary check.
-    let i = loc.indexOf(label);
-    while (i !== -1) {
-      const before = i === 0 ? '' : loc[i-1];
-      const after  = i + label.length === loc.length ? '' : loc[i + label.length];
-      const boundaryBefore = !before || /[^A-Za-z0-9]/.test(before);
-      const boundaryAfter  = !after  || /[^A-Za-z0-9]/.test(after);
-      if (boundaryBefore && boundaryAfter) return type_code;
-      i = loc.indexOf(label, i + 1);
-    }
-  }
-  return null;
-}
-
-// ─── Grouped accordion: Block › Group › Activity › Sub-Activity › leaf rows ───
-function renderWBSMaster() {
-  const q        = (document.getElementById('wbs_search')?.value||'').toLowerCase();
-  const fBlock   = document.getElementById('wbs_filter_block')?.value||'';
-  const fGroup   = document.getElementById('wbs_filter_group')?.value||'';
-  const isAdmin  = hasRole('Admin');
-  let rows       = puState.wbsList||[];
-  if (fBlock) rows = rows.filter(w => w.block===fBlock);
-  if (fGroup) rows = rows.filter(w => w.wbs_group===fGroup);
-  const searching = !!q;
-  if (q) {
-    const tokens = _fuzzyTokens(q);
-    rows = rows.filter(w => {
-      const hay = ((w.wbs_element||'')+'|'+(w.wbs_activity||'')+'|'+(w.wbs_sub_activity||'')+'|'+(w.block||'')+'|'+(w.wbs_location||'')+'|'+(w.wbs_group||'')).toLowerCase();
-      return _fuzzyMatch(hay, tokens);
-    });
-  }
-  // Count
-  const totalCount = (puState.wbsList||[]).length;
-  const filteredCount = rows.length;
-  const lbl = document.getElementById('wbs_count_label');
-  if (lbl) {
-    lbl.textContent = (q || fBlock || fGroup)
-      ? `${filteredCount.toLocaleString()} of ${totalCount.toLocaleString()} elements`
-      : `${totalCount.toLocaleString()} elements`;
-  }
-  const tbody = document.getElementById('wbs_list');
-  if (!tbody) return;
-
-  if (!rows.length) {
-    tbody.innerHTML = '<tr><td class="center muted">No WBS elements found.</td></tr>';
-    return;
-  }
-
-  // Build hierarchy: block → group → activity → subAct → [rows]
-  const tree = {};
-  rows.forEach(w => {
-    const blk = w.block || '—';
-    const grp = w.wbs_group || '—';
-    const act = w.wbs_activity || '—';
-    const sub = w.wbs_sub_activity || '—';
-    tree[blk]                       = tree[blk]                       || {};
-    tree[blk][grp]                  = tree[blk][grp]                  || {};
-    tree[blk][grp][act]             = tree[blk][grp][act]             || {};
-    tree[blk][grp][act][sub]        = tree[blk][grp][act][sub]        || [];
-    tree[blk][grp][act][sub].push(w);
-  });
-
-  // Cache the instance-label lookup once for this render pass (used in level 5)
-  const _instLabelLookupCache = _buildInstanceLabelLookup();
-
-  // Performance guard: count nested rows
-  const branchCountText = (n) => `<span style="display:inline-block;background:var(--input-bg);border:1px solid var(--border);border-radius:10px;padding:1px 7px;margin-left:6px;font-size:10px;color:var(--muted);">${n.toLocaleString()}</span>`;
-
-  const adminBtns = (level, path, count) => {
-    if (!isAdmin) return '';
-    const safePath = esc(JSON.stringify(path)).replace(/"/g,'&quot;');
-    return `
-      <span style="display:inline-flex;gap:4px;margin-left:8px;">
-        <button class="btn btn-ghost btn-sm" style="padding:2px 7px;font-size:10px;"
-                title="Generate more WBS under this branch"
-                onclick="event.stopPropagation();event.preventDefault();wbsBranchAdd('${level}', ${safePath})">+ Add</button>
-        <button class="btn btn-danger btn-sm" style="padding:2px 7px;font-size:10px;"
-                title="Delete all ${count} WBS elements under this branch"
-                onclick="event.stopPropagation();event.preventDefault();wbsBranchDelete('${level}', ${safePath}, ${count})">Delete branch</button>
-      </span>`;
-  };
-
-  // Auto-open if searching/filtering
-  const openAttr = searching || fBlock || fGroup ? 'open' : '';
-
-  // Build HTML — nested <details> for native collapsibles
-  const blockNames = Object.keys(tree).sort();
-  const html = blockNames.map(blk => {
-    const groups = tree[blk];
-    const blkCount = Object.values(groups).reduce((sum,g)=>sum + Object.values(g).reduce((s,a)=>s + Object.values(a).reduce((ss,r)=>ss+r.length,0),0),0);
-    const groupNames = Object.keys(groups).sort();
-    return `
-    <details ${openAttr} class="wbs-acc lvl-block" style="margin-bottom:6px;border:1px solid var(--border);border-radius:5px;background:var(--bg);">
-      <summary style="cursor:pointer;padding:10px 12px;font-weight:700;font-size:13px;color:var(--primary);display:flex;align-items:center;justify-content:space-between;">
-        <span>📦 ${esc(blk)} ${branchCountText(blkCount)}</span>
-        ${adminBtns('block', {block:blk}, blkCount)}
-      </summary>
-      <div style="padding:6px 10px 10px 22px;">
-        ${groupNames.map(grp => {
-          const acts = groups[grp];
-          const grpCount = Object.values(acts).reduce((sum,a)=>sum + Object.values(a).reduce((s,r)=>s+r.length,0),0);
-          const actNames = Object.keys(acts).sort();
-          return `
-          <details ${openAttr} class="wbs-acc lvl-group" style="margin-bottom:4px;border:1px solid var(--border);border-radius:4px;background:var(--input-bg);">
-            <summary style="cursor:pointer;padding:7px 10px;font-weight:600;font-size:12px;display:flex;align-items:center;justify-content:space-between;">
-              <span>📁 ${esc(grp)} ${branchCountText(grpCount)}</span>
-              ${adminBtns('group', {block:blk, group:grp}, grpCount)}
-            </summary>
-            <div style="padding:4px 8px 8px 18px;">
-              ${actNames.map(act => {
-                const subs = acts[act];
-                const actCount = Object.values(subs).reduce((sum,r)=>sum+r.length,0);
-                const subNames = Object.keys(subs).sort();
-                return `
-                <details ${openAttr} class="wbs-acc lvl-activity" style="margin-bottom:3px;border:1px solid var(--border);border-radius:4px;background:var(--bg);">
-                  <summary style="cursor:pointer;padding:6px 10px;font-size:12px;font-weight:500;display:flex;align-items:center;justify-content:space-between;">
-                    <span>🔧 ${esc(act)} ${branchCountText(actCount)}</span>
-                    ${adminBtns('activity', {block:blk, group:grp, activity:act}, actCount)}
-                  </summary>
-                  <div style="padding:4px 6px 6px 14px;">
-                    ${subNames.map(sub => {
-                      const leaves = subs[sub];
-
-                      // Group leaves by Location Type using instance master.
-                      const instLookup = _instLabelLookupCache;
-                      const byType = {};
-                      leaves.forEach(w => {
-                        const tc = _classifyWBSLocation(w.wbs_location||'', instLookup) || '__OTHER__';
-                        (byType[tc] = byType[tc] || []).push(w);
-                      });
-                      const typeKeys = Object.keys(byType);
-                      const onlyOneType = typeKeys.length === 1;
-                      const typeNameFor = (tc) => {
-                        if (tc === '__OTHER__') return 'Other / Unmatched';
-                        return (puState.wbsLocTypes||[]).find(t => t.type_code === tc)?.type_name || tc;
-                      };
-                      // Order types by display_order from master, "Other" last
-                      typeKeys.sort((a,b) => {
-                        if (a === '__OTHER__') return 1;
-                        if (b === '__OTHER__') return -1;
-                        const ta = (puState.wbsLocTypes||[]).find(t => t.type_code === a);
-                        const tb = (puState.wbsLocTypes||[]).find(t => t.type_code === b);
-                        return (ta?.display_order ?? 999) - (tb?.display_order ?? 999);
-                      });
-
-                      // Leaf table HTML factory
-                      const leafTableHTML = (rows) => `
-                        <table style="width:100%;font-size:11px;">
-                          <thead><tr style="background:var(--bg);">
-                            ${isAdmin?'<th style="width:28px;padding:4px 8px;text-align:center;"><input type="checkbox" title="Select all in this group" onclick="wbsToggleGroupCheckboxes(this)"></th>':''}
-                            <th style="text-align:left;padding:4px 8px;">Code</th>
-                            <th style="text-align:left;padding:4px 8px;">Location</th>
-                            <th style="text-align:left;padding:4px 8px;">WBS Element</th>
-                            ${isAdmin?'<th style="width:140px;"></th>':''}
-                          </tr></thead>
-                          <tbody>
-                            ${rows.map(w=>`
-                              <tr>
-                                ${isAdmin?`<td style="padding:3px 8px;text-align:center;">
-                                  <input type="checkbox" class="wbs-sel-cb" data-code="${esc(w.wbs_code)}" onchange="wbsUpdateBulkBtn()">
-                                </td>`:''}
-                                <td class="mono" style="padding:3px 8px;font-size:10px;">${esc(w.wbs_code||'—')}</td>
-                                <td style="padding:3px 8px;">${esc(w.wbs_location||'—')}</td>
-                                <td style="padding:3px 8px;font-size:10px;color:var(--muted);max-width:300px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"
-                                    title="${esc(w.wbs_element||'')}">${esc(w.wbs_element||'—')}</td>
-                                ${isAdmin?`<td style="padding:3px 8px;">
-                                  <button class="btn btn-ghost btn-sm" style="padding:2px 7px;font-size:10px;" onclick="editWBS('${esc(w.wbs_code)}')">Edit</button>
-                                  <button class="btn btn-danger btn-sm" style="padding:2px 7px;font-size:10px;" onclick="deleteWBS('${esc(w.wbs_code)}','${esc((w.wbs_element||w.wbs_activity||'').replace(/'/g,"\\'"))}')">Delete</button>
-                                </td>`:''}
-                              </tr>
-                            `).join('')}
-                          </tbody>
-                        </table>`;
-
-                      return `
-                      <details ${openAttr || (leaves.length<=20?'open':'')} class="wbs-acc lvl-sub" style="margin-bottom:2px;border:1px solid var(--border);border-radius:4px;background:var(--input-bg);">
-                        <summary style="cursor:pointer;padding:5px 9px;font-size:11.5px;display:flex;align-items:center;justify-content:space-between;">
-                          <span>📋 ${esc(sub)} ${branchCountText(leaves.length)}</span>
-                          ${adminBtns('subact', {block:blk, group:grp, activity:act, subAct:sub}, leaves.length)}
-                        </summary>
-                        <div style="padding:4px 6px;">
-                          ${typeKeys.map(tc => {
-                            const typeRows = byType[tc];
-                            const typeName = typeNameFor(tc);
-                            const typeIcon = tc === '__OTHER__' ? '⚠️' : '🏷️';
-                            // Auto-expand if it's the only type under this sub-activity, OR open globally on search
-                            const typeOpen = openAttr || onlyOneType || typeRows.length <= 20;
-                            return `
-                            <details ${typeOpen?'open':''} class="wbs-acc lvl-instype" style="margin-bottom:2px;border:1px solid var(--border);border-radius:4px;background:var(--bg);">
-                              <summary style="cursor:pointer;padding:4px 9px;font-size:11px;display:flex;align-items:center;justify-content:space-between;">
-                                <span>${typeIcon} ${esc(typeName)} ${branchCountText(typeRows.length)}</span>
-                                ${adminBtns('instype', {block:blk, group:grp, activity:act, subAct:sub, typeCode:tc}, typeRows.length)}
-                              </summary>
-                              <div style="padding:4px 6px;">
-                                ${leafTableHTML(typeRows)}
-                              </div>
-                            </details>`;
-                          }).join('')}
-                        </div>
-                      </details>`;
-                    }).join('')}
-                  </div>
-                </details>`;
-              }).join('')}
-            </div>
-          </details>`;
-        }).join('')}
-      </div>
-    </details>`;
-  }).join('');
-
-  // Inject into the wbs_list tbody as a single row containing the whole tree
-  tbody.innerHTML = `<tr><td style="padding:8px;background:transparent;">${html}</td></tr>`;
-}
-
-// ─── Branch actions ──────────────────────────────────────────────
-function wbsBranchAdd(level, pathStr) {
-  // pathStr arrives as a JS object via the safePath escaping; ensure it's an object
-  const path = typeof pathStr === 'string' ? JSON.parse(pathStr) : pathStr;
-  if (!hasRole('Admin')) { toast('Only Admin can add WBS elements','error'); return; }
-
-  // Switch to Generate tab
-  switchWBSTab('gen');
-  // Wait one tick for refreshGenerator to bootstrap, then pre-select
-  setTimeout(() => {
-    puState._genSelectedSubActIds = new Set();
-    let matched = 0;
-    (puState.wbsActivities||[]).forEach(a => {
-      let ok = true;
-      if (path.group    && a.wbs_group        !== path.group)    ok = false;
-      if (path.activity && a.wbs_activity     !== path.activity) ok = false;
-      if (path.subAct   && a.wbs_sub_activity !== path.subAct)   ok = false;
-      if (ok) { puState._genSelectedSubActIds.add(a.id); matched++; }
-    });
-    // Pre-select the block too if specified
-    if (path.block) {
-      const bWrap = document.getElementById('gen_blocks_chips');
-      if (bWrap) {
-        bWrap.querySelectorAll('.chip').forEach(c => {
-          if (c.dataset.val === path.block) {
-            const sel = new Set(JSON.parse(bWrap.dataset.selected||'[]'));
-            if (!sel.has(path.block)) toggleGenChip(c, 'gen_blocks_chips');
-          }
-        });
-      }
-    }
-    renderGenSubActPicker();
-    refreshGenInstancePanelsForSelection();
-
-    // If invoked from instance-type level, pre-select that type's instances
-    let instMsg = '';
-    if (path.typeCode && path.typeCode !== '__OTHER__') {
-      // refreshGenInstancePanelsForSelection() just rendered the panels; pre-tick chips
-      setTimeout(() => {
-        const panel = document.getElementById(`gen_inst_${path.typeCode}`);
-        if (panel) {
-          panel.querySelectorAll('.chip').forEach(c => {
-            const sel = new Set(JSON.parse(panel.dataset.selected||'[]'));
-            if (!sel.has(c.dataset.val)) toggleGenChip(c, `gen_inst_${path.typeCode}`);
-          });
-          const typeName = (puState.wbsLocTypes||[]).find(t=>t.type_code===path.typeCode)?.type_name || path.typeCode;
-          toast(`Pre-selected ${matched} sub-activit${matched===1?'y':'ies'} and ${typeName} instances — pick levels and generate`, 'info');
-        }
-      }, 50);
-      return; // toast handled above
-    }
-
-    updateGenPreview();
-    toast(`Pre-selected ${matched} sub-activit${matched===1?'y':'ies'} — pick blocks/levels/instances and generate`, 'info');
-  }, 100);
-}
-
-async function wbsBranchDelete(level, pathStr, count) {
-  const path = typeof pathStr === 'string' ? JSON.parse(pathStr) : pathStr;
-  if (!hasRole('Admin')) { toast('Only Admin can delete','error'); return; }
-  if (!count) { toast('Nothing to delete','info'); return; }
-
-  // Find matching rows. For typeCode, we also classify each row's location.
-  const lookup = path.typeCode ? _buildInstanceLabelLookup() : null;
-  const matches = (puState.wbsList||[]).filter(w => {
-    if (path.block    && w.block            !== path.block)    return false;
-    if (path.group    && w.wbs_group        !== path.group)    return false;
-    if (path.activity && w.wbs_activity     !== path.activity) return false;
-    if (path.subAct   && w.wbs_sub_activity !== path.subAct)   return false;
-    if (path.typeCode) {
-      const tc = _classifyWBSLocation(w.wbs_location||'', lookup);
-      if (path.typeCode === '__OTHER__') {
-        if (tc !== null) return false;
-      } else {
-        if (tc !== path.typeCode) return false;
-      }
-    }
-    return true;
-  });
-  if (!matches.length) { toast('No matching WBS rows found','info'); return; }
-
-  const sampleCodes = matches.slice(0,5).map(w => w.wbs_code).join(', ');
-  const pathDesc = ['block','group','activity','subAct']
-    .map(k => path[k]).filter(Boolean).join(' › ') +
-    (path.typeCode ? ` › ${path.typeCode === '__OTHER__' ? 'Other/Unmatched' : ((puState.wbsLocTypes||[]).find(t=>t.type_code===path.typeCode)?.type_name || path.typeCode)}` : '');
-
-  openModal(`
-    <h3>Delete WBS Branch</h3>
-    <div style="margin:12px 0;font-size:13px;">
-      Delete <strong>${matches.length}</strong> WBS element(s) under:<br>
-      <code style="background:var(--input-bg);padding:3px 7px;border-radius:3px;display:inline-block;margin:4px 0;">${esc(pathDesc)}</code><br>
-      <span style="color:var(--danger);font-size:12px;">This cannot be undone.</span><br>
-      <span class="muted" style="font-size:11px;">Sample codes: ${esc(sampleCodes)}${matches.length>5?', …':''}</span>
-    </div>
-    <div class="actions-row">
-      <button class="btn btn-danger" onclick="confirmWBSBranchDelete('${esc(JSON.stringify(matches.map(m=>m.wbs_code))).replace(/"/g,'&quot;')}')">Yes, Delete ${matches.length}</button>
-      <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
-    </div>`);
-}
-
-async function confirmWBSBranchDelete(codesStr) {
-  const codes = JSON.parse(codesStr);
-  closeModal();
-  pbShow(`Deleting ${codes.length} WBS elements…`);
-  try {
-    // Delete in chunks (Supabase has request payload limits)
-    const chunk = 200;
-    for (let i=0; i<codes.length; i+=chunk) {
-      const slice = codes.slice(i, i+chunk);
-      const { error } = await sb.from('wbs_master').delete().in('wbs_code', slice);
-      if (error) throw new Error(error.message);
-    }
-    flashSuccess(`Deleted ${codes.length} WBS element(s)`);
-    await loadWBSMaster();
-    renderWBSMaster();
-  } catch(e) { toast('Delete error: '+e.message,'error'); }
-  finally { pbDone(); }
-}
-
-
-async function editWBS(code) {
-  if (!hasRole('Admin')) {
-    toast('Only Admin can edit WBS','error'); return;
-  }
-  const w = (puState.wbsList||[]).find(x=>x.wbs_code===code);
-  if (!w) { toast('WBS not found','error'); return; }
-  openModal(`
-    <h3 style="margin-bottom:12px;">Edit WBS — ${esc(code)}</h3>
-    <div class="grid-2" style="gap:12px;">
-      <div class="field"><label class="req">Block</label>
-        <input id="ew_block" value="${esc(w.block||'')}"></div>
-      <div class="field"><label class="req">WBS Group</label>
-        <input id="ew_group" value="${esc(w.wbs_group||'')}"></div>
-      <div class="field"><label class="req">WBS Activity</label>
-        <input id="ew_activity" value="${esc(w.wbs_activity||'')}"></div>
-      <div class="field"><label>WBS Sub Activity</label>
-        <input id="ew_sub_activity" value="${esc(w.wbs_sub_activity||'')}"></div>
-      <div class="field"><label>WBS Location</label>
-        <input id="ew_location" value="${esc(w.wbs_location||'')}"></div>
-    </div>
-    <div class="actions-row">
-      <button class="btn btn-primary" onclick="confirmEditWBS('${esc(code)}')">Save Changes</button>
-      <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
-    </div>
-  `);
-}
-
-async function confirmEditWBS(code) {
-  const block    = document.getElementById('ew_block')?.value?.trim();
-  const group    = document.getElementById('ew_group')?.value?.trim();
-  const activity = document.getElementById('ew_activity')?.value?.trim();
-  const subAct   = document.getElementById('ew_sub_activity')?.value?.trim()||null;
-  const location = document.getElementById('ew_location')?.value?.trim()||null;
-  if (!block||!group||!activity) { toast('Block, Group and Activity are required','error'); return; }
-  const element  = buildWBSElement(block, group, activity, subAct, location);
-  pbShow('Saving…');
-  const {error}  = await sb.from('wbs_master').update({
-    block, wbs_group:group, wbs_activity:activity,
-    wbs_sub_activity:subAct, wbs_location:location, wbs_element:element
-  }).eq('wbs_code',code);
-  pbDone();
-  if(error){ toast('Error: '+error.message,'error'); return; }
-  closeModal();
-  flashSuccess('WBS '+code+' updated');
-  await loadWBSMaster();
-}
-
-// ── WBS MULTI-SELECT HELPERS ──────────────────────────────────────────────────
-
-// Update the "Delete Selected (N)" button visibility and count
-function wbsUpdateBulkBtn() {
-  const cbs  = document.querySelectorAll('.wbs-sel-cb:checked');
-  const btn  = document.getElementById('wbs_bulk_delete_btn');
-  const lbl  = document.getElementById('wbs_sel_count');
-  if (!btn) return;
-  if (lbl) lbl.textContent = cbs.length;
-  btn.style.display = (hasRole('Admin') && cbs.length > 0) ? '' : 'none';
-}
-
-// "Select all in this group" header checkbox toggles all siblings in same tbody
-function wbsToggleGroupCheckboxes(headerCb) {
-  const tbody = headerCb.closest('table')?.querySelector('tbody');
-  if (!tbody) return;
-  tbody.querySelectorAll('.wbs-sel-cb').forEach(cb => { cb.checked = headerCb.checked; });
-  wbsUpdateBulkBtn();
-}
-
-// Bulk delete all currently checked WBS elements
-async function bulkDeleteWBSSelected() {
-  if (!hasRole('Admin')) { toast('Only Admin can delete WBS elements','error'); return; }
-  const cbs   = [...document.querySelectorAll('.wbs-sel-cb:checked')];
-  const codes = cbs.map(cb => cb.dataset.code).filter(Boolean);
-  if (!codes.length) { toast('No elements selected','error'); return; }
-  // Stash codes on window so the confirm button can access them without
-  // embedding a JSON array inside an HTML attribute (which breaks on double-quotes).
-  window._pendingBulkWBSCodes = codes;
-  openModal(`
-    <h3>Delete ${codes.length} WBS Element${codes.length>1?'s':''}</h3>
-    <div style="margin:16px 0;font-size:14px;">
-      You are about to permanently delete <strong>${codes.length}</strong> WBS element${codes.length>1?'s':''}.<br>
-      <span style="color:var(--danger);font-size:12px;">Existing transactions tagged to these WBS codes will not be affected.</span><br>
-      <span class="muted" style="font-size:11px;">Sample: ${codes.slice(0,5).join(', ')}${codes.length>5?', …':''}</span>
-    </div>
-    <div class="actions-row">
-      <button class="btn btn-danger" onclick="confirmBulkDeleteWBS()">Yes, Delete ${codes.length}</button>
-      <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
-    </div>
-  `);
-}
-
-async function confirmBulkDeleteWBS() {
-  const codes = window._pendingBulkWBSCodes || [];
-  if (!codes.length) { toast('No codes to delete','error'); return; }
-  window._pendingBulkWBSCodes = [];
-  closeModal();
-  pbShow('Deleting '+codes.length+' WBS elements…');
-  try {
-    const chunk = 200;
-    for (let i = 0; i < codes.length; i += chunk) {
-      const slice = codes.slice(i, i + chunk);
-      const { error } = await sb.from('wbs_master').delete().in('wbs_code', slice);
-      if (error) throw new Error(error.message);
-    }
-    flashSuccess('Deleted '+codes.length+' WBS element(s)');
-    await loadWBSMaster();
-    renderWBSMaster();
-    const btn = document.getElementById('wbs_bulk_delete_btn');
-    if (btn) btn.style.display = 'none';
-  } catch(e) { toast('Delete error: '+e.message,'error'); }
-  finally { pbDone(); }
-}
-
-async function deleteWBS(code, label) {
-  openModal(`
-    <h3>Delete WBS Element</h3>
-    <div style="margin:16px 0;font-size:14px;">
-      Delete <strong>${esc(code)}</strong>: ${esc(label)}?<br>
-      <span style="color:var(--danger);font-size:12px;">Existing transactions tagged to this WBS will not be affected.</span>
-    </div>
-    <div class="actions-row">
-      <button class="btn btn-danger" onclick="confirmDeleteWBS('${esc(code)}')">Yes, Delete</button>
-      <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
-    </div>
-  `);
-}
-
-async function confirmDeleteWBS(code) {
-  closeModal();
-  pbShow('Deleting…');
-  const {error} = await sb.from('wbs_master').update({is_active:false}).eq('wbs_code',code);
-  pbDone();
-  if(error){ toast('Error: '+error.message,'error'); return; }
-  flashSuccess('WBS '+code+' deleted');
-  puState.wbsList = (puState.wbsList||[]).filter(w=>w.wbs_code!==code);
-  renderWBSMaster();
-  refreshWBSFilterDropdowns();
-}
-
-// Generic WBS typeahead for use in MIR, MIS, HOC, WOC forms
-function wbsTypeahead(inputId, resultsId, codeId, level='element') {
-  const q = (document.getElementById(inputId)?.value||'').toLowerCase();
-  const res = document.getElementById(resultsId);
-  const inp = document.getElementById(inputId);
-  if (!res) return;
-  if (!q) { res.classList.remove('show'); res.style.display='none'; return; }
-  const data = puState.wbsList||[];
-  const CAP = 20;
-  const tokens = q ? _fuzzyTokens(q) : [];
-  let matches = [];
-  let totalCount = 0;
-  if (level==='sub_activity') {
-    const seen = new Set();
-    const all = data.filter(w=>{
-      const val = (w.wbs_sub_activity||'').toLowerCase();
-      if (!val) return false;
-      if (seen.has(val)) return false;
-      if (q && !_fuzzyMatch(val, tokens)) return false;
-      seen.add(val); return true;
-    });
-    totalCount = all.length;
-    matches = all.slice(0, CAP);
-  } else {
-    const all = data.filter(w => {
-      if (!q) return true;
-      const hay = ((w.wbs_element||'')+'|'+(w.wbs_activity||'')+'|'+(w.wbs_sub_activity||'')+'|'+(w.block||'')+'|'+(w.wbs_location||'')+'|'+(w.wbs_group||'')).toLowerCase();
-      return _fuzzyMatch(hay, tokens);
-    });
-    totalCount = all.length;
-    matches = all.slice(0, CAP);
-  }
-  if (!matches.length) { res.classList.remove('show'); res.style.display='none'; return; }
-  const hint = totalCount > CAP
-    ? `<div class="typeahead-item" style="background:var(--input-bg);font-size:11px;cursor:default;" onmousedown="event.preventDefault();event.stopPropagation()">
-         <span class="muted">Showing ${matches.length} of ${totalCount} ${q?'matches — type more to narrow down':'options — type to filter'}</span>
-       </div>` : '';
-  res.innerHTML = hint + matches.map(w=>{
-    const display = level==='sub_activity' ? (w.wbs_sub_activity||'—') : (w.wbs_element||'—');
-    const code    = level==='sub_activity' ? (w.wbs_sub_activity||'') : w.wbs_code;
-    return `<div class="typeahead-item"
-      onmousedown="event.preventDefault();selectWBS('${inputId}','${resultsId}','${codeId}','${esc(display).replace(/'/g,"\'")}','${esc(code).replace(/'/g,"\'")}')">
-      <strong>${esc(display)}</strong>
-      ${level!=='sub_activity'?`<div class="muted" style="font-size:10px;">${esc(w.block||'')} · ${esc(w.wbs_group||'')} · ${esc(w.wbs_activity||'')}</div>`:''}
-    </div>`;
-  }).join('');
-
-  // Use shared anchor helper — body-portals + positions flush below input
-  _anchorDropdown(inp, res);
-}
-
-function selectWBS(inputId, resultsId, codeId, display, code) {
-  const inp = document.getElementById(inputId);
-  if (inp) { inp.value = display; inp.readOnly = true; }
-  const cEl = document.getElementById(codeId);
-  if (cEl) cEl.value = code;
-  const res = document.getElementById(resultsId);
-  if (res) res.classList.remove('show');
-  // Inject a clear (✕) button right next to the input, unless already present.
-  // Using a sibling button keeps markup-agnostic across all call sites.
-  if (inp && !document.getElementById(inputId + '_clrBtn')) {
-    const btn = document.createElement('button');
-    btn.type = 'button';
-    btn.id   = inputId + '_clrBtn';
-    btn.textContent = '✕';
-    btn.title = 'Clear';
-    btn.setAttribute('aria-label','Clear WBS selection');
-    btn.style.cssText = 'margin-left:4px;padding:2px 7px;border:1px solid #cbd5e1;background:#f8fafc;color:#64748b;border-radius:3px;cursor:pointer;font-size:11px;line-height:1;vertical-align:middle;';
-    btn.onmouseenter = () => { btn.style.background='#fee2e2'; btn.style.color='#dc2626'; btn.style.borderColor='#fca5a5'; };
-    btn.onmouseleave = () => { btn.style.background='#f8fafc'; btn.style.color='#64748b'; btn.style.borderColor='#cbd5e1'; };
-    btn.onclick = (ev) => { ev.preventDefault(); ev.stopPropagation(); clearWBSField(inputId, codeId, resultsId); };
-    // Insert after input
-    if (inp.parentNode) {
-      inp.parentNode.insertBefore(btn, inp.nextSibling);
-    }
-  }
-}
-
-function clearWBSField(inputId, codeId, resultsId) {
-  const inp = document.getElementById(inputId);
-  if (inp) { inp.value=''; inp.readOnly=false; inp.focus(); }
-  const cEl = document.getElementById(codeId);
-  if (cEl) cEl.value='';
-  const res = document.getElementById(resultsId);
-  if (res) res.classList.remove('show');
-  // Remove the clear button if we previously injected one
-  const btn = document.getElementById(inputId + '_clrBtn');
-  if (btn && btn.parentNode) btn.parentNode.removeChild(btn);
-}
-
-
-// ====================================================================
-// WBS REDESIGN MODULE v16 (field-engineer-friendly)
-//   Tabs: Activity Hierarchy / Levels / Blocks / Location Q&A / Generate / Elements
-//   - Multi-granularity per sub-activity (text[] in DB)
-//   - Explicit Block master
-//   - Questionnaire-driven Location Types & Instances
-//   - Generator offers instance panels for EVERY granularity type of the sub-act
-// ====================================================================
-
-const WBS_ADMIN_ROLES = ['Admin'];
-const wbsIsAdmin = () => hasRole('Admin');
-
-// Default questionnaire structure: which types to show, in what order, with defaults
-const LOCQ_DEFAULTS = [
-  { type_code:'APT',        type_name:'Apartments',          scope:'per_floor', label_format:'{level}-{instance}', count_label:'How many apartments per floor?',          default_count:4, default_labels:['001','002','003','004'], placeholder:'001' },
-  { type_code:'POUR',       type_name:'Pours',               scope:'per_floor', label_format:'{level}-{instance}', count_label:'How many pours per floor?',               default_count:2, default_labels:['Pour-1','Pour-2'],         placeholder:'Pour-1' },
-  { type_code:'STAIR',      type_name:'Staircases',          scope:'per_floor', label_format:'{level}-{instance}', count_label:'How many staircases per floor?',          default_count:2, default_labels:['Stair-1','Stair-2'],       placeholder:'Stair-1' },
-  { type_code:'ELEV',       type_name:'Elevators',           scope:'vertical',  label_format:'{instance}',         count_label:'How many elevators per block?',           default_count:3, default_labels:['Elevator-1','Elevator-2','Service Elevator'], placeholder:'Elevator-1' },
-  { type_code:'SHAFT_PLB',  type_name:'Plumbing Shafts',     scope:'vertical',  label_format:'{instance}',         count_label:'How many plumbing shafts per block?',     default_count:2, default_labels:['Plumbing Shaft-1','Plumbing Shaft-2'], placeholder:'Plumbing Shaft-1' },
-  { type_code:'SHAFT_ELE',  type_name:'Electrical Shafts',   scope:'vertical',  label_format:'{instance}',         count_label:'How many electrical shafts per block?',   default_count:2, default_labels:['Electrical Shaft-1','Electrical Shaft-2'], placeholder:'Electrical Shaft-1' },
-  { type_code:'SHAFT_COM',  type_name:'Communication Shafts',scope:'vertical',  label_format:'{instance}',         count_label:'How many communication shafts per block?',default_count:1, default_labels:['Communication Shaft-1'],  placeholder:'Communication Shaft-1' },
-  { type_code:'SHAFT_FIRE', type_name:'Fire Shafts',         scope:'vertical',  label_format:'{instance}',         count_label:'How many fire shafts per block?',         default_count:1, default_labels:['Fire Shaft-1'],            placeholder:'Fire Shaft-1' },
-  { type_code:'OTS',        type_name:'Open-to-Sky Areas',   scope:'vertical',  label_format:'{instance}',         count_label:'How many OTS areas per block?',           default_count:2, default_labels:['OTS-North','OTS-South'],  placeholder:'OTS-North' },
-  { type_code:'EXT',        type_name:'External Faces',      scope:'vertical',  label_format:'{instance}',         count_label:'How many external faces per block?',      default_count:4, default_labels:['Face-North','Face-South','Face-East','Face-West'], placeholder:'Face-North' },
-];
-
-// --- Sub-tab switching ---------------------------------------------------
-function switchWBSTab(tab) {
-  // Role gate: only Admin sees the 5 creation sub-tabs.
-  // Everyone else (Planning/QS, Procurement, Site Engineer, etc.) sees only WBS Elements.
-  const isWBSAdmin = hasRole('Admin');
-  const adminOnly = ['acts','lvls','blocks','locq','gen'];
-  adminOnly.forEach(t => {
-    const stab = document.querySelector(`.sub-tab[data-wbstab="${t}"]`);
-    if (stab) stab.style.display = isWBSAdmin ? '' : 'none';
-  });
-  // Force non-Admin requests to land on 'elems'
-  if (!isWBSAdmin) tab = 'elems';
-
-  ['acts','lvls','blocks','locq','gen','elems'].forEach(t => {
-    const el = document.getElementById('wbs-tab-' + t);
-    if (el) el.classList.toggle('hidden', t !== tab);
-    const stab = document.querySelector(`.sub-tab[data-wbstab="${t}"]`);
-    if (stab) stab.classList.toggle('active', t === tab);
-  });
-  if (tab === 'acts')   renderWBSActivities();
-  if (tab === 'lvls')   renderWBSLevels();
-  if (tab === 'blocks') renderWBSBlocks();
-  if (tab === 'locq')   renderLocationQuestionnaire();
-  if (tab === 'gen')    refreshGenerator();
-  if (tab === 'elems')  renderWBSMaster();
-}
-
-// --- Master loader (called when WBS tab opens) ---------------------------
-async function loadWBSAll() {
-  pbShow('Loading WBS…');
-  try {
-    const [acts, lvls, blocks, types, insts] = await Promise.all([
-      sb.from('wbs_activity_master').select('*').eq('is_active',true)
-        .order('wbs_group').order('wbs_activity').order('wbs_sub_activity'),
-      sb.from('wbs_level_master').select('*').eq('is_active',true).order('level_order'),
-      sb.from('wbs_block_master').select('*').eq('is_active',true).order('display_order').order('block_name'),
-      sb.from('wbs_location_type_master').select('*').eq('is_active',true).order('display_order').order('type_code'),
-      sb.from('wbs_location_instance_master').select('*').eq('is_active',true).order('type_code').order('display_order').order('instance_label'),
-    ]);
-    puState.wbsActivities    = acts.data    || [];
-    puState.wbsLevels        = lvls.data    || [];
-    puState.wbsBlocks        = blocks.data  || [];
-    puState.wbsLocTypes      = types.data   || [];
-    puState.wbsLocInstances  = insts.data   || [];
-  } catch(e) { toast('WBS masters load error: '+e.message,'error'); }
-  finally { pbDone(); }
-  await loadWBSMaster();
-  renderWBSActivities();
-  renderWBSLevels();
-  renderWBSBlocks();
-  refreshActivityGranularityChips();
-  refreshActivityGroupDatalists();
-
-  // Role-aware default sub-tab: Admin opens to Activity Hierarchy,
-  // everyone else lands on WBS Elements (the only one they'll see anyway).
-  const defaultTab = hasRole('Admin') ? 'acts' : 'elems';
-  switchWBSTab(defaultTab);
-}
-
-// =====================================================================
-// TAB 1 — ACTIVITY HIERARCHY (multi-granularity chips)
-// =====================================================================
-function refreshActivityGranularityChips() {
-  const wrap = document.getElementById('wam_granularity_chips'); if (!wrap) return;
-  wrap.dataset.selected = JSON.stringify([]);
-  wrap.innerHTML = (puState.wbsLocTypes||[]).map(t =>
-    `<span class="chip" data-val="${esc(t.type_code)}" onclick="toggleGranularityChip(this)"
-       style="cursor:pointer;padding:5px 10px;border:1px solid var(--border);border-radius:14px;font-size:11px;background:var(--bg);user-select:none;">
-       ${esc(t.type_name)}
-     </span>`
-  ).join('') || '<span class="muted" style="font-size:11px;">No location types yet. Create them in the Location Types &amp; Instances tab first.</span>';
-}
-
-function toggleGranularityChip(el) {
-  const wrap = document.getElementById('wam_granularity_chips');
-  const sel = JSON.parse(wrap.dataset.selected||'[]');
-  const v = el.dataset.val;
-  const ix = sel.indexOf(v);
-  if (ix>=0) { sel.splice(ix,1); el.style.background='var(--bg)'; el.style.color=''; }
-  else       { sel.push(v);      el.style.background='var(--primary)'; el.style.color='#fff'; }
-  wrap.dataset.selected = JSON.stringify(sel);
-}
-
-function setGranularityChips(codes) {
-  const wrap = document.getElementById('wam_granularity_chips'); if (!wrap) return;
-  wrap.dataset.selected = JSON.stringify(codes||[]);
-  wrap.querySelectorAll('.chip').forEach(c => {
-    const isOn = (codes||[]).includes(c.dataset.val);
-    c.style.background = isOn ? 'var(--primary)' : 'var(--bg)';
-    c.style.color      = isOn ? '#fff' : '';
-  });
-}
-
-function refreshActivityGroupDatalists() {
-  const acts = puState.wbsActivities||[];
-  const groups = [...new Set(acts.map(a=>a.wbs_group).filter(Boolean))].sort();
-  const activities = [...new Set(acts.map(a=>a.wbs_activity).filter(Boolean))].sort();
-  const gDl = document.getElementById('wam_group_list');
-  const aDl = document.getElementById('wam_activity_list');
-  if (gDl) gDl.innerHTML = groups.map(g=>`<option value="${esc(g)}">`).join('');
-  if (aDl) aDl.innerHTML = activities.map(a=>`<option value="${esc(a)}">`).join('');
-  const f = document.getElementById('wam_filter_group');
-  if (f) {
-    const cur = f.value;
-    f.innerHTML = '<option value="">All Groups</option>' +
-      groups.map(g=>`<option value="${esc(g)}" ${g===cur?'selected':''}>${esc(g)}</option>`).join('');
-  }
-}
-
-function renderWBSActivities() {
-  const wrap = document.getElementById('wam_tree_wrap'); if (!wrap) return;
-  const q    = (document.getElementById('wam_search')?.value||'').toLowerCase();
-  const fG   = document.getElementById('wam_filter_group')?.value||'';
-  const admin = wbsIsAdmin();
-  const typeName = (code) => (puState.wbsLocTypes||[]).find(t=>t.type_code===code)?.type_name || code;
-
-  let rows = puState.wbsActivities||[];
-  if (fG) rows = rows.filter(r => r.wbs_group===fG);
-  if (q)  rows = rows.filter(r =>
-    (r.wbs_group||'').toLowerCase().includes(q) ||
-    (r.wbs_activity||'').toLowerCase().includes(q) ||
-    (r.wbs_sub_activity||'').toLowerCase().includes(q)
-  );
-
-  if (!rows.length) {
-    wrap.innerHTML = '<div class="muted" style="padding:16px;font-size:13px;">No sub-activities found.</div>';
-    return;
-  }
-
-  // Build 2-level tree: Group -> Activity -> [sub-activity rows]
-  const tree = {};
-  rows.forEach(r => {
-    const grp = r.wbs_group    || '\u2014';
-    const act = r.wbs_activity || '\u2014';
-    tree[grp]      = tree[grp]      || {};
-    tree[grp][act] = tree[grp][act] || [];
-    tree[grp][act].push(r);
-  });
-
-  const searching = !!(q || fG);
-  const openAttr  = searching ? 'open' : '';
-
-  const branchCount = (n) =>
-    `<span style="display:inline-block;background:var(--input-bg);border:1px solid var(--border);` +
-    `border-radius:10px;padding:1px 7px;margin-left:6px;font-size:10px;color:var(--muted);">${n}</span>`;
-
-  const groupNames = Object.keys(tree).sort();
-  const html = groupNames.map(grp => {
-    const acts = tree[grp];
-    const grpTotal = Object.values(acts).reduce((s,a) => s + a.length, 0);
-    const grpIds   = rows.filter(r => r.wbs_group===grp).map(r => r.id);
-    const actNames = Object.keys(acts).sort();
-
-    const actHtml = actNames.map(act => {
-      const leaves = acts[act];
-      const actIds = leaves.map(r => r.id);
-
-      const leafRows = leaves.map(r => {
-        const gCodes = Array.isArray(r.granularity_type_code) ? r.granularity_type_code : [];
-        const gPills = gCodes.length
-          ? gCodes.map(c =>
-              `<span style="display:inline-block;background:var(--input-bg);border:1px solid var(--border);` +
-              `border-radius:10px;padding:1px 8px;margin:1px;font-size:10px;">${esc(typeName(c))}</span>`
-            ).join('')
-          : '<span class="muted" style="font-size:11px;">\u2014</span>';
-        return `<tr>
-          <td style="padding:5px 10px;font-weight:600;font-size:12px;">${esc(r.wbs_sub_activity||'\u2014')}</td>
-          <td style="padding:5px 10px;">${gPills}</td>
-          ${admin ? `<td style="padding:5px 10px;white-space:nowrap;">
-            <button class="btn btn-ghost btn-sm" onclick="editWBSActivity('${esc(r.id)}')">Edit</button>
-            <button class="btn btn-danger btn-sm" onclick="deleteWBSActivity('${esc(r.id)}')">Delete</button>
-          </td>` : ''}
-        </tr>`;
-      }).join('');
-
-      const actBranchBtn = admin
-        ? `<button class="btn btn-danger btn-sm" style="padding:2px 7px;font-size:10px;margin-left:6px;"
-             onclick="event.stopPropagation();wamBranchDelete(window._wamIds['act_${grp}_${act}'],${leaves.length},'${esc(act)}')"
-             title="Delete all ${leaves.length} sub-activities in this activity">Delete branch</button>`
-        : '';
-
-      return `
-      <details ${openAttr} class="wbs-acc" style="margin-bottom:3px;border:1px solid var(--border);border-radius:4px;background:var(--bg);">
-        <summary style="cursor:pointer;padding:6px 10px;font-size:12px;font-weight:500;display:flex;align-items:center;justify-content:space-between;">
-          <span>&#128295; ${esc(act)} ${branchCount(leaves.length)}</span>
-          <span>${actBranchBtn}</span>
-        </summary>
-        <div style="padding:4px 8px 8px 14px;">
-          <table style="width:100%;font-size:12px;">
-            <thead><tr style="background:var(--bg);">
-              <th style="text-align:left;padding:4px 8px;">Sub-Activity</th>
-              <th style="text-align:left;padding:4px 8px;">Granularity</th>
-              ${admin ? '<th style="width:160px;"></th>' : ''}
-            </tr></thead>
-            <tbody>${leafRows}</tbody>
-          </table>
-        </div>
-      </details>`;
-    }).join('');
-
-    const grpBranchBtn = admin
-      ? `<button class="btn btn-danger btn-sm" style="padding:2px 7px;font-size:10px;margin-left:6px;"
-           onclick="event.stopPropagation();wamBranchDelete(window._wamIds['grp_${grp}'],${grpTotal},'${esc(grp)}')"
-           title="Delete all ${grpTotal} sub-activities in this group">Delete branch</button>`
-      : '';
-
-    return `
-    <details ${openAttr} class="wbs-acc" style="margin-bottom:6px;border:1px solid var(--border);border-radius:5px;background:var(--bg);">
-      <summary style="cursor:pointer;padding:10px 12px;font-weight:700;font-size:13px;display:flex;align-items:center;justify-content:space-between;">
-        <span>&#128193; ${esc(grp)} ${branchCount(grpTotal)}</span>
-        <span>${grpBranchBtn}</span>
-      </summary>
-      <div style="padding:6px 10px 10px 22px;">${actHtml}</div>
-    </details>`;
-  }).join('');
-
-  // Store branch ID arrays on window so branch-delete buttons can access them
-  // without embedding arrays in HTML onclick attributes (double-quote breakage).
-  window._wamIds = window._wamIds || {};
-  groupNames.forEach(grp => {
-    const grpIds = rows.filter(r => r.wbs_group===grp).map(r => r.id);
-    window._wamIds['grp_'+grp] = grpIds;
-    Object.keys(tree[grp]).forEach(act => {
-      window._wamIds['act_'+grp+'_'+act] = tree[grp][act].map(r => r.id);
-    });
-  });
-
-  wrap.innerHTML = html;
-}
-
-// Branch delete for sub-activities
-function wamBranchDelete(ids, count, label) {
-  if (!ids || !ids.length) { toast('No items to delete','error'); return; }
-  window._pendingWamBranchIds = ids;
-  openModal(
-    `<h3>Delete Branch: ${esc(label)}</h3>
-    <div style="margin:16px 0;font-size:14px;">
-      Delete <strong>${count}</strong> sub-activit${count===1?'y':'ies'} in this branch?<br>
-      <span style="color:var(--danger);font-size:12px;">This cannot be undone.</span>
-    </div>
-    <div class="actions-row">
-      <button class="btn btn-danger" onclick="confirmWamBranchDelete()">Yes, Delete ${count}</button>
-      <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
-    </div>`
-  );
-}
-
-async function confirmWamBranchDelete() {
-  const ids = window._pendingWamBranchIds || [];
-  if (!ids.length) return;
-  window._pendingWamBranchIds = [];
-  closeModal();
-  pbShow('Deleting ' + ids.length + ' sub-activit' + (ids.length===1?'y':'ies') + '\u2026');
-  try {
-    for (const id of ids) {
-      const { error } = await sb.from('wbs_activity_master').update({is_active:false}).eq('id', id);
-      if (error) throw new Error(error.message);
-    }
-    flashSuccess('Deleted ' + ids.length + ' sub-activit' + (ids.length===1?'y':'ies'));
-    await loadWBSAll();
-  } catch(e) { toast('Error: ' + e.message, 'error'); }
-  finally { pbDone(); }
-}
-
-async function saveWBSActivity() {
-  if (!wbsIsAdmin()) { toast('Only Admin','error'); return; }
-  const group = document.getElementById('wam_group')?.value?.trim();
-  const act   = document.getElementById('wam_activity')?.value?.trim();
-  const sub   = document.getElementById('wam_sub_activity')?.value?.trim();
-  const gWrap = document.getElementById('wam_granularity_chips');
-  const grans = JSON.parse(gWrap?.dataset.selected||'[]');
-  if (!group || !act || !sub) { toast('Group, Activity, Sub-Activity required','error'); return; }
-  const dup = (puState.wbsActivities||[]).find(r =>
-    r.wbs_group===group && r.wbs_activity===act && r.wbs_sub_activity===sub);
-  if (dup) { toast('Already exists','error'); return; }
-  pbShow('Saving…');
-  try {
-    const { error } = await sb.from('wbs_activity_master').insert({
-      wbs_group:group, wbs_activity:act, wbs_sub_activity:sub,
-      granularity_type_code: grans.length ? grans : null
-    });
-    if (error) throw new Error(error.message);
-    flashSuccess('Sub-activity added');
-    clearWBSActivityForm();
-    await loadWBSAll();
-  } catch(e){ toast('Error: '+e.message,'error'); }
-  finally{ pbDone(); }
-}
-
-function clearWBSActivityForm() {
-  ['wam_group','wam_activity','wam_sub_activity'].forEach(id=>{
-    const e=document.getElementById(id); if(e) e.value='';
-  });
-  setGranularityChips([]);
-}
-
-async function editWBSActivity(id) {
-  if (!wbsIsAdmin()) { toast('Only Admin','error'); return; }
-  const r = (puState.wbsActivities||[]).find(x=>x.id===id);
-  if (!r) return;
-  const curGrans = Array.isArray(r.granularity_type_code) ? r.granularity_type_code : [];
-  const typeChips = (puState.wbsLocTypes||[]).map(t => {
-    const on = curGrans.includes(t.type_code);
-    return `<span class="chip" data-val="${esc(t.type_code)}" onclick="toggleEditGranularityChip(this)"
-       style="cursor:pointer;padding:4px 9px;border:1px solid var(--border);border-radius:14px;font-size:11px;background:${on?'var(--primary)':'var(--bg)'};color:${on?'#fff':''};user-select:none;">
-       ${esc(t.type_name)}
-     </span>`;
-  }).join('');
-  openModal(`
-    <h3 style="margin-bottom:12px;">Edit Sub-Activity</h3>
-    <div class="grid-2" style="gap:12px;">
-      <div class="field"><label class="req">Group</label><input id="ewa_group" value="${esc(r.wbs_group||'')}"></div>
-      <div class="field"><label class="req">Activity</label><input id="ewa_activity" value="${esc(r.wbs_activity||'')}"></div>
-      <div class="field" style="grid-column:span 2;"><label class="req">Sub-Activity</label><input id="ewa_sub" value="${esc(r.wbs_sub_activity||'')}"></div>
-    </div>
-    <div class="field" style="margin-top:10px;">
-      <label>Granularity (multi-select)</label>
-      <div id="ewa_gran_chips" data-selected='${esc(JSON.stringify(curGrans))}'
-           style="min-height:42px;border:1px solid var(--border);border-radius:4px;padding:6px;display:flex;flex-wrap:wrap;gap:6px;background:var(--input-bg);">
-        ${typeChips}
-      </div>
-    </div>
-    <div class="muted" style="font-size:11px;margin-top:8px;">
-      Renaming Group/Activity/Sub-Activity cascades to all matching rows in wbs_master.
-    </div>
-    <div class="actions-row" style="margin-top:12px;">
-      <button class="btn btn-primary" onclick="confirmEditWBSActivity('${esc(id)}')">Save</button>
-      <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
-    </div>`);
-}
-
-function toggleEditGranularityChip(el) {
-  const wrap = document.getElementById('ewa_gran_chips');
-  const sel = JSON.parse(wrap.dataset.selected||'[]');
-  const v = el.dataset.val;
-  const ix = sel.indexOf(v);
-  if (ix>=0) { sel.splice(ix,1); el.style.background='var(--bg)'; el.style.color=''; }
-  else       { sel.push(v);      el.style.background='var(--primary)'; el.style.color='#fff'; }
-  wrap.dataset.selected = JSON.stringify(sel);
-}
-
-async function confirmEditWBSActivity(id) {
-  const r = (puState.wbsActivities||[]).find(x=>x.id===id);
-  if (!r) return;
-  const oldG = r.wbs_group, oldA = r.wbs_activity, oldS = r.wbs_sub_activity;
-  const newG = document.getElementById('ewa_group')?.value?.trim();
-  const newA = document.getElementById('ewa_activity')?.value?.trim();
-  const newS = document.getElementById('ewa_sub')?.value?.trim();
-  const grans = JSON.parse(document.getElementById('ewa_gran_chips')?.dataset.selected||'[]');
-  if (!newG || !newA || !newS) { toast('All fields required','error'); return; }
-  pbShow('Saving…');
-  try {
-    const { error } = await sb.from('wbs_activity_master').update({
-      wbs_group:newG, wbs_activity:newA, wbs_sub_activity:newS,
-      granularity_type_code: grans.length ? grans : null
-    }).eq('id', id);
-    if (error) throw new Error(error.message);
-    if (newG!==oldG || newA!==oldA || newS!==oldS) {
-      const { error: rpcErr } = await sb.rpc('wbs_cascade_activity_rename', {
-        p_old_group: oldG, p_old_activity: oldA, p_old_subact: oldS,
-        p_new_group: newG, p_new_activity: newA, p_new_subact: newS
-      });
-      if (rpcErr) toast('Activity updated, but cascade-rename failed: '+rpcErr.message,'error');
-    }
-    closeModal();
-    flashSuccess('Sub-activity updated');
-    await loadWBSAll();
-  } catch(e){ toast('Error: '+e.message,'error'); }
-  finally{ pbDone(); }
-}
-
-async function deleteWBSActivity(id) {
-  if (!wbsIsAdmin()) { toast('Only Admin','error'); return; }
-  const r = (puState.wbsActivities||[]).find(x=>x.id===id);
-  if (!r) return;
-  openModal(`
-    <h3>Delete Sub-Activity</h3>
-    <div style="margin:14px 0;font-size:13px;">
-      Delete <strong>${esc(r.wbs_sub_activity)}</strong> from <em>${esc(r.wbs_activity)}</em>?<br>
-      <span style="color:var(--danger);font-size:12px;">Existing WBS elements in wbs_master are NOT affected.</span>
-    </div>
-    <div class="actions-row">
-      <button class="btn btn-danger" onclick="confirmDeleteWBSActivity('${esc(id)}')">Yes, Delete</button>
-      <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
-    </div>`);
-}
-
-async function confirmDeleteWBSActivity(id) {
-  closeModal(); pbShow('Deleting…');
-  try {
-    const { error } = await sb.from('wbs_activity_master').update({is_active:false}).eq('id',id);
-    if (error) throw new Error(error.message);
-    flashSuccess('Deleted');
-    await loadWBSAll();
-  } catch(e){ toast('Error: '+e.message,'error'); }
-  finally{ pbDone(); }
-}
-
-// =====================================================================
-// TAB 2 — LEVELS (unchanged from v15)
-// =====================================================================
-function renderWBSLevels() {
-  const tbody = document.getElementById('wlm_list'); if (!tbody) return;
-  const rows = puState.wbsLevels||[];
-  if (!rows.length) { tbody.innerHTML='<tr><td colspan="5" class="center muted">No levels yet.</td></tr>'; return; }
-  const admin = wbsIsAdmin();
-  tbody.innerHTML = rows.map(r=>`
-    <tr>
-      <td><strong>${esc(r.level_code)}</strong></td>
-      <td>${esc(r.level_name)}</td>
-      <td class="num">${r.level_order}</td>
-      <td><span class="mono" style="font-size:11px;">${esc(r.level_kind)}</span></td>
-      <td>${admin?`
-        <button class="btn btn-ghost btn-sm" onclick="editWBSLevel('${esc(r.id)}')">Edit</button>
-        <button class="btn btn-danger btn-sm" onclick="deleteWBSLevel('${esc(r.id)}')">Delete</button>`:''}
-      </td>
-    </tr>`).join('');
-}
-
-async function saveWBSLevel() {
-  if (!wbsIsAdmin()) { toast('Only Admin','error'); return; }
-  const code  = document.getElementById('wlm_code')?.value?.trim();
-  const name  = document.getElementById('wlm_name')?.value?.trim();
-  const order = parseInt(document.getElementById('wlm_order')?.value);
-  const kind  = document.getElementById('wlm_kind')?.value||'floor';
-  if (!code || !name || isNaN(order)) { toast('Code, Name, Order required','error'); return; }
-  pbShow('Saving…');
-  try {
-    const { error } = await sb.from('wbs_level_master').insert({
-      level_code:code, level_name:name, level_order:order, level_kind:kind
-    });
-    if (error) throw new Error(error.message);
-    flashSuccess('Level added');
-    clearWBSLevelForm();
-    await loadWBSAll();
-  } catch(e){ toast('Error: '+e.message,'error'); }
-  finally{ pbDone(); }
-}
-
-function clearWBSLevelForm() {
-  ['wlm_code','wlm_name','wlm_order'].forEach(id=>{const e=document.getElementById(id); if(e) e.value='';});
-}
-
-async function bulkAddFloors() {
-  if (!wbsIsAdmin()) { toast('Only Admin','error'); return; }
-  openModal(`
-    <h3>Bulk Add Floors</h3>
-    <div class="grid-2" style="gap:12px;margin-top:10px;">
-      <div class="field"><label>Start floor #</label><input id="bf_start" type="number" value="1"></div>
-      <div class="field"><label>End floor #</label><input id="bf_end" type="number" value="25"></div>
-      <div class="field"><label>Code template</label><input id="bf_codetpl" value="{n}F"></div>
-      <div class="field"><label>Name template</label><input id="bf_nametpl" value="{n} Floor"></div>
-    </div>
-    <div class="muted" style="font-size:11px;margin-top:6px;">
-      Use {n} = floor number, {ord} = 1st/2nd/3rd…
-    </div>
-    <div class="actions-row" style="margin-top:12px;">
-      <button class="btn btn-primary" onclick="confirmBulkAddFloors()">Add</button>
-      <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
-    </div>`);
-}
-
-function ordinal(n){const s=["th","st","nd","rd"],v=n%100;return n+(s[(v-20)%10]||s[v]||s[0]);}
-
-async function confirmBulkAddFloors() {
-  const start    = parseInt(document.getElementById('bf_start')?.value);
-  const end      = parseInt(document.getElementById('bf_end')?.value);
-  const codeTpl  = document.getElementById('bf_codetpl')?.value||'{n}F';
-  const nameTpl  = document.getElementById('bf_nametpl')?.value||'{n} Floor';
-  if (isNaN(start)||isNaN(end)||end<start) { toast('Invalid range','error'); return; }
-  closeModal(); pbShow('Adding floors…');
-  try {
-    const rows = [];
-    for (let n=start; n<=end; n++) {
-      const code = codeTpl.replaceAll('{n}',n).replaceAll('{ord}',ordinal(n));
-      const name = nameTpl.replaceAll('{n}',n).replaceAll('{ord}',ordinal(n));
-      rows.push({ level_code:code, level_name:name, level_order:n, level_kind:'floor' });
-    }
-    // Insert one-by-one to bypass partial-index quirks
-    let added = 0;
-    for (const row of rows) {
-      const { error } = await sb.from('wbs_level_master').insert(row);
-      if (!error) added++;
-    }
-    flashSuccess(`Added ${added} of ${rows.length} floors (skipped existing)`);
-    await loadWBSAll();
-  } catch(e){ toast('Error: '+e.message,'error'); }
-  finally{ pbDone(); }
-}
-
-async function editWBSLevel(id) {
-  if (!wbsIsAdmin()) return;
-  const r = (puState.wbsLevels||[]).find(x=>x.id===id); if (!r) return;
-  openModal(`
-    <h3>Edit Level</h3>
-    <div class="grid-2" style="gap:12px;">
-      <div class="field"><label class="req">Code</label><input id="el_code" value="${esc(r.level_code)}"></div>
-      <div class="field"><label class="req">Name</label><input id="el_name" value="${esc(r.level_name)}"></div>
-      <div class="field"><label class="req">Order</label><input id="el_order" type="number" value="${r.level_order}"></div>
-      <div class="field"><label>Kind</label>
-        <select id="el_kind">
-          <option value="floor"    ${r.level_kind==='floor'?'selected':''}>Floor</option>
-          <option value="basement" ${r.level_kind==='basement'?'selected':''}>Basement</option>
-          <option value="special"  ${r.level_kind==='special'?'selected':''}>Special</option>
-        </select></div>
-    </div>
-    <div class="actions-row" style="margin-top:12px;">
-      <button class="btn btn-primary" onclick="confirmEditWBSLevel('${esc(id)}')">Save</button>
-      <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
-    </div>`);
-}
-
-async function confirmEditWBSLevel(id) {
-  const code  = document.getElementById('el_code')?.value?.trim();
-  const name  = document.getElementById('el_name')?.value?.trim();
-  const order = parseInt(document.getElementById('el_order')?.value);
-  const kind  = document.getElementById('el_kind')?.value||'floor';
-  pbShow('Saving…');
-  try {
-    const { error } = await sb.from('wbs_level_master')
-      .update({level_code:code, level_name:name, level_order:order, level_kind:kind}).eq('id',id);
-    if (error) throw new Error(error.message);
-    closeModal(); flashSuccess('Level updated'); await loadWBSAll();
-  } catch(e){ toast('Error: '+e.message,'error'); }
-  finally{ pbDone(); }
-}
-
-async function deleteWBSLevel(id) {
-  if (!wbsIsAdmin()) return;
-  openModal(`<h3>Delete Level?</h3>
-    <div style="margin:14px 0;">Soft-delete. Won't affect existing wbs_master rows.</div>
-    <div class="actions-row">
-      <button class="btn btn-danger" onclick="confirmDeleteWBSLevel('${esc(id)}')">Yes</button>
-      <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
-    </div>`);
-}
-async function confirmDeleteWBSLevel(id) {
-  closeModal(); pbShow('Deleting…');
-  try {
-    const { error } = await sb.from('wbs_level_master').update({is_active:false}).eq('id',id);
-    if (error) throw new Error(error.message);
-    flashSuccess('Deleted'); await loadWBSAll();
-  } catch(e){ toast('Error: '+e.message,'error'); }
-  finally{ pbDone(); }
-}
-
-// =====================================================================
-// TAB 3 — BLOCKS
-// =====================================================================
-function renderWBSBlocks() {
-  const tbody = document.getElementById('wbm_list'); if (!tbody) return;
-  const rows = puState.wbsBlocks||[];
-  if (!rows.length) { tbody.innerHTML='<tr><td colspan="3" class="center muted">No blocks yet.</td></tr>'; return; }
-  const admin = wbsIsAdmin();
-  // count wbs_master usage per block
-  const counts = {};
-  (puState.wbsList||[]).forEach(w => { if (w.block) counts[w.block] = (counts[w.block]||0)+1; });
-  tbody.innerHTML = rows.map(r=>`
-    <tr>
-      <td><strong>${esc(r.block_name)}</strong></td>
-      <td class="num">${counts[r.block_name]||0}</td>
-      <td>${admin?`
-        <button class="btn btn-ghost btn-sm" onclick="editWBSBlock('${esc(r.id)}')">Rename</button>
-        <button class="btn btn-danger btn-sm" onclick="deleteWBSBlock('${esc(r.id)}')">Delete</button>`:''}
-      </td>
-    </tr>`).join('');
-}
-
-async function saveWBSBlock() {
-  if (!wbsIsAdmin()) { toast('Only Admin','error'); return; }
-  const name = document.getElementById('wbm_name')?.value?.trim();
-  if (!name) { toast('Block name required','error'); return; }
-  pbShow('Saving…');
-  try {
-    const { error } = await sb.from('wbs_block_master').insert({ block_name:name });
-    if (error) throw new Error(error.message);
-    flashSuccess('Block added');
-    document.getElementById('wbm_name').value='';
-    await loadWBSAll();
-  } catch(e){ toast('Error: '+e.message,'error'); }
-  finally{ pbDone(); }
-}
-
-async function editWBSBlock(id) {
-  if (!wbsIsAdmin()) return;
-  const r = (puState.wbsBlocks||[]).find(x=>x.id===id); if (!r) return;
-  openModal(`
-    <h3>Rename Block</h3>
-    <div class="field" style="margin:14px 0;">
-      <label class="req">Block Name</label>
-      <input id="eb_name" value="${esc(r.block_name)}">
-    </div>
-    <div class="muted" style="font-size:11px;">Renaming cascades to all wbs_master rows with this block name.</div>
-    <div class="actions-row" style="margin-top:12px;">
-      <button class="btn btn-primary" onclick="confirmEditWBSBlock('${esc(id)}','${esc(r.block_name)}')">Save</button>
-      <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
-    </div>`);
-}
-async function confirmEditWBSBlock(id, oldName) {
-  const newName = document.getElementById('eb_name')?.value?.trim();
-  if (!newName) { toast('Name required','error'); return; }
-  pbShow('Saving…');
-  try {
-    const { error } = await sb.from('wbs_block_master').update({block_name:newName}).eq('id',id);
-    if (error) throw new Error(error.message);
-    if (newName !== oldName) {
-      // cascade to wbs_master
-      const { data: affected } = await sb.from('wbs_master').select('wbs_code').eq('block', oldName);
-      for (const row of (affected||[])) {
-        await sb.from('wbs_master').update({ block: newName }).eq('wbs_code', row.wbs_code);
-      }
-      // rebuild wbs_element strings — pull, mutate, push
-      const { data: toUpd } = await sb.from('wbs_master').select('*').eq('block', newName);
-      for (const w of (toUpd||[])) {
-        const el = buildWBSElement(w.block, w.wbs_group, w.wbs_activity, w.wbs_sub_activity, w.wbs_location);
-        await sb.from('wbs_master').update({ wbs_element: el }).eq('wbs_code', w.wbs_code);
-      }
-    }
-    closeModal(); flashSuccess('Block updated'); await loadWBSAll();
-  } catch(e){ toast('Error: '+e.message,'error'); }
-  finally{ pbDone(); }
-}
-
-async function deleteWBSBlock(id) {
-  if (!wbsIsAdmin()) return;
-  const r = (puState.wbsBlocks||[]).find(x=>x.id===id); if (!r) return;
-  const inUse = (puState.wbsList||[]).filter(w => w.block === r.block_name).length;
-  if (inUse > 0) {
-    openModal(`<h3>Cannot Delete Block</h3>
-      <div style="margin:14px 0;">
-        <strong>${esc(r.block_name)}</strong> is used by <strong>${inUse}</strong> WBS element(s).
-        Remove or reassign those first.
-      </div>
-      <div class="actions-row"><button class="btn btn-ghost" onclick="closeModal()">OK</button></div>`);
-    return;
-  }
-  openModal(`<h3>Delete Block?</h3>
-    <div style="margin:14px 0;">Delete <strong>${esc(r.block_name)}</strong>?</div>
-    <div class="actions-row">
-      <button class="btn btn-danger" onclick="confirmDeleteWBSBlock('${esc(id)}')">Yes</button>
-      <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
-    </div>`);
-}
-async function confirmDeleteWBSBlock(id) {
-  closeModal(); pbShow('Deleting…');
-  try {
-    const { error } = await sb.from('wbs_block_master').update({is_active:false}).eq('id',id);
-    if (error) throw new Error(error.message);
-    flashSuccess('Deleted'); await loadWBSAll();
-  } catch(e){ toast('Error: '+e.message,'error'); }
-  finally{ pbDone(); }
-}
-
-// =====================================================================
-// TAB 4 — LOCATION TYPES & INSTANCES (Questionnaire)
-// =====================================================================
-function renderLocationQuestionnaire() {
-  const c = document.getElementById('locq_container'); if (!c) return;
-
-  // Build merged view: defaults + any custom types not in defaults
-  const existingTypes = puState.wbsLocTypes || [];
-  const existingInsts = puState.wbsLocInstances || [];
-
-  const defaultCodes = new Set(LOCQ_DEFAULTS.map(d => d.type_code));
-  const customTypes  = existingTypes.filter(t => !defaultCodes.has(t.type_code));
-
-  // For each default, find existing type/instances OR fall back to defaults
-  const rows = LOCQ_DEFAULTS.map(def => {
-    const t = existingTypes.find(x => x.type_code === def.type_code);
-    const insts = existingInsts.filter(i => i.type_code === def.type_code).map(i => i.instance_label);
-    const labels = insts.length ? insts : def.default_labels.slice();
-    return { ...def, exists: !!t, count: labels.length, labels };
-  });
-  // append custom-types (user-added beyond defaults)
-  customTypes.forEach(t => {
-    const insts = existingInsts.filter(i => i.type_code === t.type_code).map(i => i.instance_label);
-    rows.push({
-      type_code: t.type_code, type_name: t.type_name, scope: t.instance_scope, label_format: t.label_format,
-      count_label: `How many "${t.type_name}" per ${t.instance_scope==='vertical'?'block':'floor'}?`,
-      default_count: insts.length || 1, default_labels: insts, placeholder: t.type_name,
-      exists: true, count: insts.length, labels: insts, isCustom: true
-    });
-  });
-
-  c.innerHTML = rows.map((r,ix) => locqRowHTML(r, ix)).join('');
-}
-
-function locqRowHTML(r, ix) {
-  const scopeLabel = r.scope==='vertical' ? 'per block' : 'per floor';
-  return `
-    <div class="locq-row" data-ix="${ix}" data-typecode="${esc(r.type_code)}" data-scope="${esc(r.scope)}" data-format="${esc(r.label_format)}" data-typename="${esc(r.type_name)}" data-custom="${r.isCustom?'1':'0'}"
-         style="padding:14px;border:1px solid var(--border);border-radius:6px;margin-bottom:12px;background:var(--input-bg);">
-      <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;">
-        <div>
-          <div style="font-weight:600;font-size:13px;">${esc(r.type_name)} <span class="muted" style="font-weight:normal;font-size:11px;">(${esc(scopeLabel)}, code: ${esc(r.type_code)})</span></div>
-          <div class="muted" style="font-size:11px;margin-top:2px;">${esc(r.count_label)}</div>
-        </div>
-        <div style="display:flex;align-items:center;gap:8px;">
-          <input type="number" class="locq-count" min="0" max="50" value="${r.count}"
-                 oninput="onLocqCountChange(${ix})"
-                 style="width:70px;padding:5px;background:var(--bg);border:1px solid var(--border);border-radius:4px;color:var(--text);text-align:center;font-weight:600;">
-          ${r.isCustom ? `<button class="btn btn-danger btn-sm" onclick="removeCustomLocqRow(${ix})">Remove</button>` : ''}
-        </div>
-      </div>
-      <div class="locq-labels" style="margin-top:10px;display:flex;flex-wrap:wrap;gap:8px;">
-        ${r.labels.map((lbl,i) => locqLabelInputHTML(ix, i, lbl, r.placeholder)).join('')}
-      </div>
-      <div class="locq-preview muted" style="font-size:11px;margin-top:8px;font-family:monospace;"></div>
-    </div>`;
-}
-
-function locqLabelInputHTML(rowIx, labelIx, value, placeholder) {
-  return `<div style="display:flex;flex-direction:column;">
-    <label class="muted" style="font-size:10px;margin-bottom:2px;">#${labelIx+1}</label>
-    <input class="locq-label" data-li="${labelIx}" value="${esc(value)}" placeholder="${esc(placeholder)}"
-           oninput="updateLocqPreview(${rowIx})"
-           style="width:120px;padding:5px;background:var(--bg);border:1px solid var(--border);border-radius:4px;color:var(--text);font-size:12px;">
-  </div>`;
-}
-
-function onLocqCountChange(rowIx) {
-  const rowEl = document.querySelector(`.locq-row[data-ix="${rowIx}"]`); if (!rowEl) return;
-  const newCount = Math.max(0, Math.min(50, parseInt(rowEl.querySelector('.locq-count').value)||0));
-  const labelsWrap = rowEl.querySelector('.locq-labels');
-  const placeholder = (LOCQ_DEFAULTS.find(d => d.type_code === rowEl.dataset.typecode) || {}).placeholder || rowEl.dataset.typename;
-  const def = LOCQ_DEFAULTS.find(d => d.type_code === rowEl.dataset.typecode);
-
-  // Capture existing values
-  const existing = [...labelsWrap.querySelectorAll('.locq-label')].map(i => i.value);
-
-  // Build new labels list of size newCount
-  const newLabels = [];
-  for (let i = 0; i < newCount; i++) {
-    if (existing[i] !== undefined) newLabels.push(existing[i]);
-    else if (def && def.default_labels[i]) newLabels.push(def.default_labels[i]);
-    else newLabels.push(`${rowEl.dataset.typename}-${i+1}`);
-  }
-  labelsWrap.innerHTML = newLabels.map((v,i) => locqLabelInputHTML(rowIx, i, v, placeholder)).join('');
-  updateLocqPreview(rowIx);
-}
-
-function updateLocqPreview(rowIx) {
-  const rowEl = document.querySelector(`.locq-row[data-ix="${rowIx}"]`); if (!rowEl) return;
-  const labels = [...rowEl.querySelectorAll('.locq-label')].map(i => i.value.trim()).filter(Boolean);
-  const fmt    = rowEl.dataset.format;
-  const scope  = rowEl.dataset.scope;
-  const sampleLevel = (puState.wbsLevels||[]).find(l => l.level_kind==='floor')?.level_code || '5F';
-  const preview = labels.slice(0,4).map(lbl => {
-    if (scope === 'vertical') return fmt.replaceAll('{instance}', lbl);
-    return fmt.replaceAll('{level}', sampleLevel).replaceAll('{instance}', lbl);
-  });
-  const p = rowEl.querySelector('.locq-preview');
-  if (p) p.textContent = preview.length ? 'Preview: ' + preview.join('   ') + (labels.length>4?'   …':'') : '';
-}
-
-function removeCustomLocqRow(rowIx) {
-  const rowEl = document.querySelector(`.locq-row[data-ix="${rowIx}"]`); if (!rowEl) return;
-  if (rowEl.dataset.custom !== '1') return;
-  // mark for removal so save() knows to soft-delete the type
-  rowEl.dataset.remove = '1';
-  rowEl.style.display = 'none';
-}
-
-function addCustomLocationRow() {
-  const c = document.getElementById('locq_container'); if (!c) return;
-  openModal(`
-    <h3>Add Custom Location Type</h3>
-    <div class="grid-2" style="gap:12px;margin-top:10px;">
-      <div class="field"><label class="req">Type Name</label><input id="ncl_name" placeholder="e.g. Refuge Area, Helipad"></div>
-      <div class="field"><label class="req">Code</label><input id="ncl_code" placeholder="e.g. REFUGE" style="text-transform:uppercase;"></div>
-      <div class="field"><label>Scope</label>
-        <select id="ncl_scope">
-          <option value="per_floor">Per Floor (one per floor)</option>
-          <option value="vertical">Vertical (one per block, across floors)</option>
-        </select></div>
-      <div class="field"><label>Count</label><input id="ncl_count" type="number" value="1" min="0" max="50"></div>
-    </div>
-    <div class="actions-row" style="margin-top:12px;">
-      <button class="btn btn-primary" onclick="confirmAddCustomLocq()">Add</button>
-      <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
-    </div>`);
-}
-
-function confirmAddCustomLocq() {
-  const name  = document.getElementById('ncl_name')?.value?.trim();
-  const code  = (document.getElementById('ncl_code')?.value||'').trim().toUpperCase();
-  const scope = document.getElementById('ncl_scope')?.value||'per_floor';
-  const count = parseInt(document.getElementById('ncl_count')?.value)||1;
-  if (!name || !code) { toast('Name and Code required','error'); return; }
-  // append a custom row to the questionnaire (not yet saved)
-  const c = document.getElementById('locq_container');
-  const ix = c.querySelectorAll('.locq-row').length;
-  const fmt = scope==='vertical' ? '{instance}' : '{level}-{instance}';
-  const labels = [];
-  for (let i=0;i<count;i++) labels.push(`${name}-${i+1}`);
-  const r = {
-    type_code:code, type_name:name, scope, label_format:fmt,
-    count_label:`How many "${name}" per ${scope==='vertical'?'block':'floor'}?`,
-    default_count:count, default_labels:labels, placeholder:name,
-    exists:false, count, labels, isCustom:true
-  };
-  c.insertAdjacentHTML('beforeend', locqRowHTML(r, ix));
-  closeModal();
-  updateLocqPreview(ix);
-}
-
-async function saveLocationQuestionnaire() {
-  if (!wbsIsAdmin()) { toast('Only Admin','error'); return; }
-  const rows = [...document.querySelectorAll('.locq-row')];
-
-  // Build desired state: for each type, the new set of instance labels
-  const desired = rows.map(r => {
-    const labels = [...r.querySelectorAll('.locq-label')].map(i => i.value.trim()).filter(Boolean);
-    return {
-      type_code: r.dataset.typecode,
-      type_name: r.dataset.typename,
-      scope: r.dataset.scope,
-      label_format: r.dataset.format,
-      labels,
-      remove: r.dataset.remove === '1',
-    };
-  });
-
-  // 1. SAFETY CHECK: refuse if any reduction orphans existing wbs_master rows
-  //    Match wbs_location by EXACT format reconstruction, not substring.
-  const conflicts = [];
-  const levelCodes = (puState.wbsLevels||[]).map(l => l.level_code);
-
-  for (const d of desired) {
-    if (d.remove) continue;
-    const oldLabels = (puState.wbsLocInstances||[])
-      .filter(i => i.type_code === d.type_code).map(i => i.instance_label);
-    const removed = oldLabels.filter(l => !d.labels.includes(l));
-    if (!removed.length) continue;
-
-    // Build the exact set of location strings each removed instance could have produced
-    const fmt = d.label_format || '{level}-{instance}';
-    const orphanLocations = new Set();
-    removed.forEach(lbl => {
-      if (d.scope === 'vertical') {
-        orphanLocations.add(fmt.replaceAll('{instance}', lbl));
-      } else {
-        // per_floor — multiplied by every known level
-        levelCodes.forEach(lvl => {
-          orphanLocations.add(fmt.replaceAll('{level}', lvl).replaceAll('{instance}', lbl));
-        });
-        // also the rare "instance only, no level" case
-        orphanLocations.add(lbl);
-      }
-    });
-
-    const usedRows = (puState.wbsList||[]).filter(w => {
-      if (!w.wbs_location) return false;
-      return orphanLocations.has(w.wbs_location);
-    });
-
-    if (usedRows.length) {
-      conflicts.push({ type: d.type_name, removed, count: usedRows.length,
-        sampleCodes: usedRows.slice(0,5).map(w=>w.wbs_code) });
-    }
-  }
-  if (conflicts.length) {
-    const msg = conflicts.map(c =>
-      `<div style="margin-bottom:8px;"><strong>${esc(c.type)}</strong>: removing [${c.removed.map(esc).join(', ')}] would orphan <strong>${c.count}</strong> WBS element(s)<br>
-       <span class="muted" style="font-size:11px;">e.g. ${c.sampleCodes.map(esc).join(', ')}${c.count>5?', …':''}</span></div>`
-    ).join('');
-    openModal(`<h3>Cannot Save — Conflicts</h3>
-      <div style="margin:14px 0;font-size:13px;">${msg}</div>
-      <div class="muted" style="font-size:11px;">Either keep those instances, or delete the affected WBS elements first.</div>
-      <div class="actions-row"><button class="btn btn-ghost" onclick="closeModal()">OK</button></div>`);
-    return;
-  }
-
-  // 2. Persist: upsert types, replace instances (soft-delete removed + insert new)
-  pbShow('Saving location masters…');
-  try {
-    // 2a. Types — upsert
-    for (const d of desired) {
-      const existing = (puState.wbsLocTypes||[]).find(t => t.type_code === d.type_code);
-      if (d.remove) {
-        if (existing) {
-          await sb.from('wbs_location_type_master').update({is_active:false}).eq('id', existing.id);
-          // also soft-delete its instances
-          await sb.from('wbs_location_instance_master').update({is_active:false}).eq('type_code', d.type_code);
-        }
-        continue;
-      }
-      if (!existing) {
-        const { error } = await sb.from('wbs_location_type_master').insert({
-          type_code: d.type_code, type_name: d.type_name, instance_scope: d.scope, label_format: d.label_format
-        });
-        if (error) throw new Error(`Type ${d.type_code}: ${error.message}`);
-      } else {
-        await sb.from('wbs_location_type_master').update({
-          type_name: d.type_name, instance_scope: d.scope, label_format: d.label_format, is_active: true
-        }).eq('id', existing.id);
-      }
-    }
-
-    // 2b. Instances — soft-delete removed, insert new
-    for (const d of desired) {
-      if (d.remove) continue;
-      const oldInsts = (puState.wbsLocInstances||[]).filter(i => i.type_code === d.type_code);
-      const oldLabels = oldInsts.map(i => i.instance_label);
-      const toRemove  = oldInsts.filter(i => !d.labels.includes(i.instance_label));
-      const toAdd     = d.labels.filter(l => !oldLabels.includes(l));
-      for (const ri of toRemove) {
-        await sb.from('wbs_location_instance_master').update({is_active:false}).eq('id', ri.id);
-      }
-      for (const lbl of toAdd) {
-        const { error } = await sb.from('wbs_location_instance_master').insert({
-          type_code: d.type_code, instance_label: lbl
-        });
-        if (error) throw new Error(`Instance ${lbl}: ${error.message}`);
-      }
-    }
-    flashSuccess('Location types & instances saved');
-    await loadWBSAll();
-    switchWBSTab('locq'); // re-render
-  } catch(e) { toast('Save error: '+e.message,'error'); }
-  finally { pbDone(); }
-}
-
-// =====================================================================
-// TAB 5 — GENERATOR (multi-granularity)
-// =====================================================================
-function refreshGenerator() {
-  // Selection state for sub-activities (set of sub-activity IDs)
-  puState._genSelectedSubActIds = new Set();
-
-  renderGenSubActPicker();
-
-  // Blocks chips — from wbs_block_master
-  const bWrap = document.getElementById('gen_blocks_chips');
-  if (bWrap) {
-    const blocks = (puState.wbsBlocks||[]).map(b => b.block_name);
-    bWrap.dataset.selected = JSON.stringify([]);
-    bWrap.innerHTML = blocks.length ? blocks.map(b => renderGenChip(b, 'gen_blocks_chips')).join('')
-      : '<span class="muted" style="font-size:12px;">No blocks yet. Add some in the Blocks tab.</span>';
-  }
-  // Levels chips
-  const lWrap = document.getElementById('gen_levels_chips');
-  if (lWrap) {
-    lWrap.dataset.selected = JSON.stringify([]);
-    const lvls = puState.wbsLevels||[];
-    lWrap.innerHTML = lvls.length ? lvls.map(l => renderGenChip(l.level_code, 'gen_levels_chips')).join('')
-      : '<span class="muted" style="font-size:12px;">No levels defined.</span>';
-  }
-  document.getElementById('gen_instance_panels').innerHTML = '';
-  document.getElementById('gen_preview_summary').textContent = 'Pick one or more sub-activities to start.';
-  document.getElementById('gen_preview_list').innerHTML = '';
-}
-
-// ---------- Sub-activity picker (multi-select, grouped by Group › Activity) ----------
-function renderGenSubActPicker() {
-  const c = document.getElementById('gen_subact_picker'); if (!c) return;
-  const q = (document.getElementById('gen_subact_search')?.value||'').trim().toLowerCase();
-  const tokens = q ? _fuzzyTokens(q) : null;
-  const selectedIds = puState._genSelectedSubActIds || new Set();
-
-  // Build hierarchy: Group → Activity → [sub-activities]
-  const hierarchy = {};
-  (puState.wbsActivities||[]).forEach(a => {
-    const hay = ((a.wbs_group||'')+'|'+(a.wbs_activity||'')+'|'+(a.wbs_sub_activity||'')).toLowerCase();
-    if (tokens && !_fuzzyMatch(hay, tokens)) return;
-    const g = a.wbs_group || '—';
-    const act = a.wbs_activity || '—';
-    hierarchy[g]               = hierarchy[g]               || {};
-    hierarchy[g][act]          = hierarchy[g][act]          || [];
-    hierarchy[g][act].push(a);
-  });
-
-  const groupKeys = Object.keys(hierarchy).sort();
-  if (!groupKeys.length) {
-    c.innerHTML = '<span class="muted" style="font-size:12px;">No sub-activities match.</span>';
-    document.getElementById('gen_subact_info').innerHTML = '';
-    return;
-  }
-
-  c.innerHTML = groupKeys.map(g => {
-    const acts = hierarchy[g];
-    // Group-level select-all helper: collect all sub-act IDs under this group
-    const groupSubIds = Object.values(acts).flat().map(a=>a.id);
-    const allGroupSelected = groupSubIds.every(id => selectedIds.has(id));
-    return `
-    <details ${tokens ? 'open' : ''} style="margin-bottom:8px;border:1px solid var(--border);border-radius:4px;background:var(--bg);">
-      <summary style="cursor:pointer;padding:7px 10px;font-weight:600;font-size:12px;display:flex;justify-content:space-between;align-items:center;gap:8px;">
-        <span>${esc(g)} <span class="muted" style="font-weight:normal;font-size:10px;">(${groupSubIds.length})</span></span>
-        <span style="display:flex;gap:4px;">
-          <button class="btn btn-ghost btn-sm" style="padding:2px 6px;font-size:10px;"
-                  onclick="event.stopPropagation();event.preventDefault();genSelectGroup('${esc(g).replace(/'/g,"\\'")}', ${allGroupSelected?'false':'true'})">
-            ${allGroupSelected ? 'Clear group' : 'Select all in group'}
-          </button>
-        </span>
-      </summary>
-      <div style="padding:6px 10px 10px 10px;">
-        ${Object.keys(acts).sort().map(act => {
-          const subs = acts[act];
-          const actSubIds = subs.map(a=>a.id);
-          const allActSelected = actSubIds.every(id => selectedIds.has(id));
-          return `
-          <div style="margin-top:6px;">
-            <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:4px;">
-              <span style="font-size:11px;color:var(--muted);">${esc(act)} <span class="muted" style="font-size:10px;">(${actSubIds.length})</span></span>
-              <button class="btn btn-ghost btn-sm" style="padding:2px 6px;font-size:10px;"
-                      onclick="genSelectActivity('${esc(g).replace(/'/g,"\\'")}', '${esc(act).replace(/'/g,"\\'")}', ${allActSelected?'false':'true'})">
-                ${allActSelected ? 'Clear activity' : 'Select activity'}
-              </button>
-            </div>
-            <div style="display:flex;flex-wrap:wrap;gap:4px;">
-              ${subs.map(a => {
-                const on = selectedIds.has(a.id);
-                const grans = Array.isArray(a.granularity_type_code) ? a.granularity_type_code : [];
-                const tip = grans.length ? ` [${grans.join(', ')}]` : '';
-                return `<span class="chip" data-said="${esc(a.id)}" onclick="genToggleSubAct('${esc(a.id)}')"
-                  style="cursor:pointer;padding:4px 9px;border:1px solid var(--border);border-radius:14px;font-size:11px;user-select:none;
-                         background:${on?'var(--primary)':'var(--bg)'};color:${on?'#fff':'inherit'};">
-                  ${esc(a.wbs_sub_activity)}<span style="opacity:.7;font-size:10px;">${esc(tip)}</span>
-                </span>`;
-              }).join('')}
-            </div>
-          </div>`;
-        }).join('')}
-      </div>
-    </details>`;
-  }).join('');
-
-  updateGenSubActInfo();
-}
-
-function updateGenSubActInfo() {
-  const info = document.getElementById('gen_subact_info'); if (!info) return;
-  const selectedIds = puState._genSelectedSubActIds || new Set();
-  if (!selectedIds.size) { info.innerHTML = ''; return; }
-  // Aggregate granularity across selected
-  const granSet = new Set();
-  (puState.wbsActivities||[]).forEach(a => {
-    if (!selectedIds.has(a.id)) return;
-    (a.granularity_type_code||[]).forEach(c => granSet.add(c));
-  });
-  const granNames = [...granSet].map(c => (puState.wbsLocTypes||[]).find(t=>t.type_code===c)?.type_name || c);
-  info.innerHTML = `Selected: <strong>${selectedIds.size}</strong> sub-activit${selectedIds.size===1?'y':'ies'}` +
-    (granNames.length ? ` · Tracks at: <strong>${granNames.map(esc).join(' + ')}</strong>` :
-      ' · <span style="color:var(--warning,#d97706);">no granularity on any selected — generator will offer all types</span>');
-}
-
-function genToggleSubAct(id) {
-  const s = puState._genSelectedSubActIds = puState._genSelectedSubActIds || new Set();
-  if (s.has(id)) s.delete(id); else s.add(id);
-  // Toggle just this chip's appearance
-  document.querySelectorAll(`.chip[data-said="${id}"]`).forEach(el => {
-    const on = s.has(id);
-    el.style.background = on ? 'var(--primary)' : 'var(--bg)';
-    el.style.color = on ? '#fff' : 'inherit';
-  });
-  updateGenSubActInfo();
-  refreshGenInstancePanelsForSelection();
-  updateGenPreview();
-}
-
-function genSelectGroup(group, on) {
-  const s = puState._genSelectedSubActIds = puState._genSelectedSubActIds || new Set();
-  (puState.wbsActivities||[]).forEach(a => {
-    if (a.wbs_group === group) { if (on) s.add(a.id); else s.delete(a.id); }
-  });
-  renderGenSubActPicker();
-  refreshGenInstancePanelsForSelection();
-  updateGenPreview();
-}
-
-function genSelectActivity(group, activity, on) {
-  const s = puState._genSelectedSubActIds = puState._genSelectedSubActIds || new Set();
-  (puState.wbsActivities||[]).forEach(a => {
-    if (a.wbs_group === group && a.wbs_activity === activity) {
-      if (on) s.add(a.id); else s.delete(a.id);
-    }
-  });
-  renderGenSubActPicker();
-  refreshGenInstancePanelsForSelection();
-  updateGenPreview();
-}
-
-// Show instance panels for the UNION of granularity types across all selected sub-activities.
-function refreshGenInstancePanelsForSelection() {
-  const selectedIds = puState._genSelectedSubActIds || new Set();
-  if (!selectedIds.size) { document.getElementById('gen_instance_panels').innerHTML = ''; return; }
-  const granSet = new Set();
-  let anySubActHasNoGran = false;
-  (puState.wbsActivities||[]).forEach(a => {
-    if (!selectedIds.has(a.id)) return;
-    const g = a.granularity_type_code;
-    if (!Array.isArray(g) || !g.length) { anySubActHasNoGran = true; return; }
-    g.forEach(c => granSet.add(c));
-  });
-  // If any selected sub-act has no granularity, offer ALL types (fallback behaviour)
-  const granCodes = anySubActHasNoGran && !granSet.size
-    ? (puState.wbsLocTypes||[]).map(t=>t.type_code)
-    : [...granSet];
-  renderGenInstancePanels(granCodes);
-}
-
-function renderGenChip(val, wrapId) {
-  return `<span class="chip" data-val="${esc(val)}" onclick="toggleGenChip(this,'${wrapId}')"
-    style="cursor:pointer;padding:5px 10px;border:1px solid var(--border);border-radius:14px;font-size:11px;background:var(--bg);user-select:none;">
-    ${esc(val)}
-  </span>`;
-}
-
-function getChipSet(wrapId) {
-  const w = document.getElementById(wrapId);
-  if (!w) return new Set();
-  return new Set(JSON.parse(w.dataset.selected||'[]'));
-}
-function setChipSet(wrapId, codes) {
-  const w = document.getElementById(wrapId); if (!w) return;
-  w.dataset.selected = JSON.stringify([...codes]);
-  w.querySelectorAll('.chip').forEach(c => {
-    const on = codes.has(c.dataset.val);
-    c.style.background = on ? 'var(--primary)' : 'var(--bg)';
-    c.style.color = on ? '#fff' : '';
-  });
-}
-
-function toggleGenChip(el, wrapId) {
-  const wrap = document.getElementById(wrapId);
-  const sel = new Set(JSON.parse(wrap.dataset.selected||'[]'));
-  const v = el.dataset.val;
-  if (sel.has(v)) { sel.delete(v); el.style.background='var(--bg)'; el.style.color=''; }
-  else            { sel.add(v);    el.style.background='var(--primary)'; el.style.color='#fff'; }
-  wrap.dataset.selected = JSON.stringify([...sel]);
-  updateGenPreview();
-}
-
-function onGenSubActChange() {
-  // Legacy single-select handler — no longer used; selection is via chip picker.
-  refreshGenInstancePanelsForSelection();
-  updateGenPreview();
-}
-
-function renderGenInstancePanels(granCodes) {
-  const c = document.getElementById('gen_instance_panels'); if (!c) return;
-  if (!granCodes.length) { c.innerHTML=''; return; }
-  // Preserve any previously-selected instances when re-rendering
-  const prevSel = {};
-  c.querySelectorAll('[id^="gen_inst_"]').forEach(d => {
-    try { prevSel[d.dataset.typecode] = JSON.parse(d.dataset.selected||'[]'); } catch(e){}
-  });
-  c.innerHTML = '<label style="font-weight:600;font-size:12px;display:block;margin-bottom:8px;">Instances (multi-select per type)</label>' +
-    granCodes.map(code => {
-      const t = (puState.wbsLocTypes||[]).find(x=>x.type_code===code);
-      if (!t) return '';
-      const insts = (puState.wbsLocInstances||[]).filter(i => i.type_code === code);
-      const prev = new Set(prevSel[code] || []);
-      const chipsHTML = insts.length ? insts.map(i => {
-        const tip = i.level_restriction?.length ? ` (only: ${i.level_restriction.join(',')})` : '';
-        const val = i.instance_label + tip;
-        const on = prev.has(val);
-        return `<span class="chip" data-val="${esc(val)}" onclick="toggleGenChip(this,'gen_inst_${esc(code)}')"
-          style="cursor:pointer;padding:5px 10px;border:1px solid var(--border);border-radius:14px;font-size:11px;
-                 background:${on?'var(--primary)':'var(--bg)'};color:${on?'#fff':'inherit'};">${esc(i.instance_label)}${esc(tip)}</span>`;
-      }).join('') : '<span class="muted" style="font-size:11px;">No instances of this type defined.</span>';
-      return `<div style="margin-bottom:10px;padding:10px;border:1px solid var(--border);border-radius:6px;background:var(--input-bg);">
-        <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:6px;">
-          <div style="font-weight:600;font-size:12px;">${esc(t.type_name)} <span class="muted" style="font-weight:normal;font-size:10px;">(${esc(t.instance_scope)})</span></div>
-          <div style="display:flex;gap:6px;">
-            <button class="btn btn-ghost btn-sm" onclick="genSelectAllChipsIn('gen_inst_${esc(code)}',true)">All</button>
-            <button class="btn btn-ghost btn-sm" onclick="genSelectAllChipsIn('gen_inst_${esc(code)}',false)">Clear</button>
-          </div>
-        </div>
-        <div id="gen_inst_${esc(code)}" class="chip-multi" data-selected='${esc(JSON.stringify([...prev]))}' data-typecode="${esc(code)}"
-             style="display:flex;flex-wrap:wrap;gap:6px;background:var(--bg);padding:6px;border-radius:4px;border:1px solid var(--border);">
-          ${chipsHTML}
-        </div>
-      </div>`;
-    }).join('');
-}
-
-function genSelectAllChipsIn(wrapId, on) {
-  const w = document.getElementById(wrapId); if (!w) return;
-  w.querySelectorAll('.chip').forEach(c => {
-    const cur = new Set(JSON.parse(w.dataset.selected||'[]'));
-    const v = c.dataset.val;
-    const has = cur.has(v);
-    if (on && !has) toggleGenChip(c, wrapId);
-    if (!on && has) toggleGenChip(c, wrapId);
-  });
-}
-
-function genSelectAllBlocks(on) { genSelectAllChipsIn('gen_blocks_chips', on); }
-function genSelectAllLevels(on) { genSelectAllChipsIn('gen_levels_chips', on); }
-function genSelectLevelKind(kind) {
-  const codes = new Set((puState.wbsLevels||[]).filter(l=>l.level_kind===kind).map(l=>l.level_code));
-  const wrap = document.getElementById('gen_levels_chips'); if (!wrap) return;
-  wrap.querySelectorAll('.chip').forEach(c => {
-    const v = c.dataset.val;
-    const cur = new Set(JSON.parse(wrap.dataset.selected||'[]'));
-    if (codes.has(v) && !cur.has(v)) toggleGenChip(c,'gen_levels_chips');
-  });
-}
-
-function genComputeCombinations() {
-  const selectedIds = puState._genSelectedSubActIds || new Set();
-  if (!selectedIds.size) return { combos:[], breakdown:{}, selectedSubActs:[] };
-
-  const blocks = [...getChipSet('gen_blocks_chips')];
-  if (!blocks.length) return { combos:[], breakdown:{}, selectedSubActs:[] };
-
-  const selLevels = [...getChipSet('gen_levels_chips')];
-
-  // Read selected instances per type from rendered panels
-  const panelDivs = [...document.querySelectorAll('#gen_instance_panels [id^="gen_inst_"]')];
-  const stripHint = s => s.replace(/\s*\(only:[^)]*\)\s*$/, '');
-  const instByType = {};
-  panelDivs.forEach(d => {
-    const code = d.dataset.typecode;
-    const sel = JSON.parse(d.dataset.selected||'[]').map(stripHint);
-    if (sel.length) instByType[code] = sel;
-  });
-
-  // Pre-build instance lookup for restriction enforcement
-  const lookupByTypeLabel = {}; // typeCode -> { label -> instObj }
-  (puState.wbsLocInstances||[]).forEach(i => {
-    lookupByTypeLabel[i.type_code] = lookupByTypeLabel[i.type_code] || {};
-    lookupByTypeLabel[i.type_code][i.instance_label] = i;
-  });
-
-  const combos = [];
-  const breakdown = {};
-  const selectedSubActs = (puState.wbsActivities||[]).filter(a => selectedIds.has(a.id));
-
-  selectedSubActs.forEach(a => {
-    const subActKey = `${a.wbs_group} › ${a.wbs_activity} › ${a.wbs_sub_activity}`;
-    breakdown[subActKey] = 0;
-    let granCodes = Array.isArray(a.granularity_type_code) ? a.granularity_type_code : [];
-    if (!granCodes.length) granCodes = (puState.wbsLocTypes||[]).map(t=>t.type_code); // fallback
-
-    // Filter to types the user actually has instances selected for
-    const usableTypes = granCodes.filter(c => instByType[c] && instByType[c].length);
-
-    if (!usableTypes.length) {
-      // No instance picks intersect this sub-activity's granularity.
-      // Emit block × level rows only (or just block rows if no levels picked).
-      if (!selLevels.length) {
-        blocks.forEach(blk => {
-          const combo = buildCombo(blk, a, '', '', '{level}');
-          combos.push(combo); breakdown[subActKey]++;
-        });
-      } else {
-        blocks.forEach(blk => selLevels.forEach(lvl => {
-          const combo = buildCombo(blk, a, lvl, '', '{level}');
-          combos.push(combo); breakdown[subActKey]++;
-        }));
-      }
-      return;
-    }
-
-    usableTypes.forEach(code => {
-      const t = (puState.wbsLocTypes||[]).find(x=>x.type_code===code);
-      if (!t) return;
-      const fmt = t.label_format || '{level}-{instance}';
-      const instances = instByType[code];
-      const lookup = lookupByTypeLabel[code] || {};
-
-      if (t.instance_scope === 'vertical') {
-        blocks.forEach(blk => {
-          instances.forEach(lbl => {
-            const inst = lookup[lbl]; if (!inst) return;
-            if (inst.block_restriction?.length && !inst.block_restriction.includes(blk)) return;
-            combos.push(buildCombo(blk, a, '', lbl, fmt));
-            breakdown[subActKey]++;
-          });
-        });
-      } else {
-        if (!selLevels.length) return;
-        blocks.forEach(blk => {
-          selLevels.forEach(lvl => {
-            instances.forEach(lbl => {
-              const inst = lookup[lbl]; if (!inst) return;
-              if (inst.level_restriction?.length && !inst.level_restriction.includes(lvl)) return;
-              if (inst.block_restriction?.length && !inst.block_restriction.includes(blk)) return;
-              combos.push(buildCombo(blk, a, lvl, lbl, fmt));
-              breakdown[subActKey]++;
-            });
-          });
-        });
-      }
-    });
-  });
-
-  return { combos, breakdown, selectedSubActs };
-}
-
-function buildCombo(block, a, level, instance, fmt) {
-  fmt = fmt || '{level}-{instance}';
-  let loc = '';
-  if (level && instance) loc = fmt.replaceAll('{level}', level).replaceAll('{instance}', instance);
-  else if (level)        loc = level;
-  else if (instance)     loc = instance;
-  return {
-    block,
-    wbs_group:        a.wbs_group,
-    wbs_activity:     a.wbs_activity,
-    wbs_sub_activity: a.wbs_sub_activity,
-    wbs_location:     loc || null
-  };
-}
-
-function updateGenPreview() {
-  const { combos, breakdown, selectedSubActs } = genComputeCombinations();
-  const sum  = document.getElementById('gen_preview_summary');
-  const list = document.getElementById('gen_preview_list');
-  if (!sum || !list) return;
-
-  if (!selectedSubActs.length) {
-    sum.innerHTML = 'Pick one or more sub-activities to start.';
-    list.innerHTML='';
-    return;
-  }
-  if (!combos.length) {
-    sum.innerHTML = '<span style="color:var(--danger);">No combinations yet — pick blocks, levels, and instances.</span>';
-    list.innerHTML=''; return;
-  }
-  const existKeys = new Set((puState.wbsList||[]).map(w => keyOf(w)));
-  const dupCount  = combos.filter(c => existKeys.has(keyOf(c))).length;
-  const newCount  = combos.length - dupCount;
-
-  // Build per-sub-activity new/dup breakdown
-  const subActStats = {};
-  Object.keys(breakdown).forEach(k => subActStats[k] = { total: breakdown[k], dup: 0, fresh: 0 });
-  combos.forEach(c => {
-    const k = `${c.wbs_group} › ${c.wbs_activity} › ${c.wbs_sub_activity}`;
-    if (!subActStats[k]) subActStats[k] = { total: 0, dup: 0, fresh: 0 };
-    if (existKeys.has(keyOf(c))) subActStats[k].dup++; else subActStats[k].fresh++;
-  });
-
-  const breakdownHTML = Object.entries(subActStats).map(([k,s]) =>
-    `<div style="font-size:11px;padding:2px 0;">• <strong>${esc(k)}</strong> — ${s.total} total, <span style="color:var(--success);">${s.fresh} new</span>${s.dup?`, <span class="muted">${s.dup} skipped</span>`:''}</div>`
-  ).join('');
-
-  sum.innerHTML = `Will generate <strong>${combos.length}</strong> WBS element(s) across <strong>${selectedSubActs.length}</strong> sub-activit${selectedSubActs.length===1?'y':'ies'} — `+
-    `<span style="color:var(--success);">${newCount} new</span>, `+
-    `<span style="color:var(--muted);">${dupCount} already exist (skipped)</span>.` +
-    `<div style="margin-top:8px;padding-top:8px;border-top:1px dashed var(--border);">${breakdownHTML}</div>`;
-
-  const limit = 200;
-  const shown = combos.slice(0, limit);
-  list.innerHTML = shown.map(c => {
-    const dup = existKeys.has(keyOf(c));
-    const el = buildWBSElement(c.block, c.wbs_group, c.wbs_activity, c.wbs_sub_activity, c.wbs_location);
-    return `<div style="padding:2px 0;${dup?'opacity:.5;text-decoration:line-through;':''}">${esc(el)}</div>`;
-  }).join('') + (combos.length>limit ? `<div class="muted" style="margin-top:6px;">…and ${combos.length-limit} more</div>` : '');
-}
-
-function keyOf(c) {
-  return [c.block, c.wbs_group, c.wbs_activity, c.wbs_sub_activity, c.wbs_location||''].join('|');
-}
-
-async function generateWBSElements() {
-  if (!wbsIsAdmin()) { toast('Only Admin','error'); return; }
-  const { combos } = genComputeCombinations();
-  if (!combos.length) { toast('No combinations to create','error'); return; }
-  const existKeys = new Set((puState.wbsList||[]).map(w => keyOf(w)));
-  const fresh = combos.filter(c => !existKeys.has(keyOf(c)));
-  if (!fresh.length) { toast('All these elements already exist','info'); return; }
-
-  pbShow(`Generating ${fresh.length} elements…`);
-  try {
-    const { data: last } = await sb.from('wbs_master')
-      .select('wbs_code').order('wbs_code',{ascending:false}).limit(1);
-    let nextNum = last?.length ? parseInt((last[0].wbs_code||'WBS0000').replace('WBS',''))||0 : 0;
-
-    const rows = fresh.map(c => {
-      nextNum += 1;
-      const code = 'WBS' + String(nextNum).padStart(4,'0');
-      const el   = buildWBSElement(c.block, c.wbs_group, c.wbs_activity, c.wbs_sub_activity, c.wbs_location);
-      return {
-        wbs_code: code,
-        block: c.block,
-        wbs_group: c.wbs_group,
-        wbs_activity: c.wbs_activity,
-        wbs_sub_activity: c.wbs_sub_activity,
-        wbs_location: c.wbs_location,
-        wbs_element: el,
-        is_active: true
-      };
-    });
-    const chunkSize = 500;
-    for (let i=0; i<rows.length; i+=chunkSize) {
-      const slice = rows.slice(i, i+chunkSize);
-      const { error } = await sb.from('wbs_master').insert(slice);
-      if (error) throw new Error(error.message);
-    }
-    flashSuccess(`Generated ${rows.length} WBS elements (${combos.length-fresh.length} skipped as duplicates)`);
-    await loadWBSAll();
-    updateGenPreview();
-  } catch(e) {
-    toast('Generation error: '+e.message,'error');
-  } finally { pbDone(); }
-}
-// ====================================================================
-// END WBS REDESIGN MODULE
-// ====================================================================
-
-
-
 // ============================================================
 // DASHBOARD MODULE
 // ============================================================
@@ -19676,6 +17146,8 @@ function tcInitEmpty(editorId) {
   }
 }
 
+
+// ============================================================
 
 // ============================================================
 // RMC OPEX TOGGLE — HOB + WOB
