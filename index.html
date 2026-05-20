@@ -3527,12 +3527,11 @@ async function _printOrderDoc(docType, docNumber, h, items, vmOverride) {
 <meta charset="UTF-8">
 <title>${docTitle} — ${esc(docNumber)}</title>
 <style>
-@page { size:A4 portrait; margin:0mm; }
-@page :first { margin:0mm; }
+@page { size:A4 portrait; margin:30mm 15mm 30mm 15mm; }
 * { box-sizing:border-box; margin:0; padding:0; }
 body { font-family:Arial,Helvetica,sans-serif; font-size:9pt; color:#111;
   -webkit-print-color-adjust:exact; print-color-adjust:exact;
-  padding:25mm 15mm 20mm 15mm; }
+  padding:0; }
 .page-margin-top { display:block; height:30mm; }
 .title-row { display:flex; justify-content:flex-end; align-items:flex-start; margin-bottom:10pt; }
 .doc-title { font-size:20pt; font-weight:700; color:#1e3a5f; letter-spacing:1pt; }
@@ -3567,9 +3566,7 @@ tr { page-break-inside:avoid; }
 .footer-table { page-break-inside:avoid; }
 .sign-wrap { page-break-inside:avoid; }
 @media print {
-  @page { margin:30mm 15mm 50mm 15mm; }
-  @page :first { margin:0mm 0mm 0mm 0mm; }
-  body { padding:25mm 15mm 50mm 15mm; }
+  body { padding:0; }
 }
 </style></head><body>
 
