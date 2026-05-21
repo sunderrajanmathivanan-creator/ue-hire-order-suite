@@ -12884,7 +12884,7 @@ async function viewQC(qcNum) {
     sb.from('pu_quote_comparison').select('*').eq('qc_number',qcNum).single(),
     sb.from('pu_quotes').select('*').eq('qc_number',qcNum).order('sno'),
     sb.from('pu_quote_items').select('*').eq('qc_number',qcNum),
-    sb.from('pu_qc_negotiations').select('*').eq('qc_number',qcNum).order('round,vendor_name'),
+    sb.from('pu_qc_negotiations').select('*').eq('qc_number',qcNum).order('round').order('vendor_name'),
   ]);
   pbDone();
   if(!h){toast('QC not found','error');return;}
@@ -14967,7 +14967,7 @@ async function onPOBGRNSelect() {
   document.getElementById('pob_selectedGRNs').textContent=_pobSelectedGRNs.length?_pobSelectedGRNs.join(', '):'None';
   if(!_pobSelectedGRNs.length){document.getElementById('pob_billDetails').style.display='none';return;}
   document.getElementById('pob_billDetails').style.display='';
-  const {data:grnItems}=await sb.from('pu_grn_items').select('*').in('grn_number',_pobSelectedGRNs).order('grn_number,sno');
+  const {data:grnItems}=await sb.from('pu_grn_items').select('*').in('grn_number',_pobSelectedGRNs).order('grn_number').order('sno');
   _pobLineItems=grnItems||[];
   let grossAmt=0;
   document.getElementById('pob_itemsBody').innerHTML=_pobLineItems.map((it,i)=>{
@@ -15522,7 +15522,7 @@ let _misItemC=0;
 async function loadMISList() {
   const [{data:mis},{data:items}]=await Promise.all([
     sb.from('pu_mis').select('*').order('created_at',{ascending:false}),
-    sb.from('pu_mis_items').select('*').order('mis_number,sno'),
+    sb.from('pu_mis_items').select('*').order('mis_number').order('sno'),
   ]);
   puState.misList=mis||[];
   puState.misLedger=items||[];
