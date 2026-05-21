@@ -2730,10 +2730,10 @@ input[type="number"] {
           <h3 style="font-size:13px;">Bill Computation</h3>
           <table style="max-width:420px;margin-left:auto;">
             <tr><td style="padding:4px 8px;color:var(--muted);">Gross Amount</td><td class="num" style="padding:4px 8px;" id="pob_s_gross">0.00</td></tr>
-            <tr><td style="padding:4px 8px;color:var(--muted);" id="pob_s_extraBeforeLabel">Add: Before-GST</td><td class="num" style="padding:4px 8px;" id="pob_s_extraBefore">0.00</td></tr>
+            <tbody id="pob_s_dynamic"></tbody>
             <tr><td style="padding:4px 8px;color:var(--muted);">Taxable Value</td><td class="num" style="padding:4px 8px;font-weight:600;" id="pob_s_taxable">0.00</td></tr>
-            <tr><td style="padding:4px 8px;color:var(--muted);" id="pob_s_gstLabel">GST</td><td class="num" style="padding:4px 8px;" id="pob_s_gst">0.00</td></tr>
-            <tr><td style="padding:4px 8px;color:var(--muted);" id="pob_s_extraAfterLabel">Add: After-GST</td><td class="num" style="padding:4px 8px;" id="pob_s_extraAfter">0.00</td></tr>
+            <tbody id="pob_s_gst_rows"></tbody>
+            <tbody id="pob_s_after_rows"></tbody>
             <tr style="border-top:1px solid var(--border);"><td style="padding:6px 8px;font-weight:600;">Invoice Value</td><td class="num" style="padding:6px 8px;font-weight:600;" id="pob_s_invoice">0.00</td></tr>
             <tr><td style="padding:4px 8px;color:var(--muted);">Less: Hold Amount</td>
               <td class="num" style="padding:4px 8px;"><input type="number" id="pob_holdAmt" value="0" step="0.01" style="width:100px;text-align:right;" oninput="recalcPOBTotals()"></td></tr>
@@ -2851,10 +2851,10 @@ input[type="number"] {
           <h3 style="font-size:13px;">Bill Computation</h3>
           <table style="max-width:420px;margin-left:auto;">
             <tr><td style="padding:4px 8px;color:var(--muted);">Gross Amount</td><td class="num" style="padding:4px 8px;" id="cpob_s_gross">0.00</td></tr>
-            <tr><td style="padding:4px 8px;color:var(--muted);">Add: Before-GST</td><td class="num" style="padding:4px 8px;" id="cpob_s_extraBefore">0.00</td></tr>
+            <tbody id="cpob_s_dynamic"></tbody>
             <tr><td style="padding:4px 8px;color:var(--muted);">Taxable Value</td><td class="num" style="padding:4px 8px;font-weight:600;" id="cpob_s_taxable">0.00</td></tr>
-            <tr><td style="padding:4px 8px;color:var(--muted);" id="cpob_s_gstLabel">GST</td><td class="num" style="padding:4px 8px;" id="cpob_s_gst">0.00</td></tr>
-            <tr><td style="padding:4px 8px;color:var(--muted);">Add: After-GST</td><td class="num" style="padding:4px 8px;" id="cpob_s_extraAfter">0.00</td></tr>
+            <tbody id="cpob_s_gst_rows"></tbody>
+            <tbody id="cpob_s_after_rows"></tbody>
             <tr style="border-top:1px solid var(--border);"><td style="padding:6px 8px;font-weight:600;">Invoice Value</td><td class="num" style="padding:6px 8px;font-weight:600;" id="cpob_s_invoice">0.00</td></tr>
             <tr><td style="padding:4px 8px;color:var(--muted);">Less: Hold Amount</td>
               <td class="num" style="padding:4px 8px;"><input type="number" id="cpob_holdAmt" value="0" step="0.01" style="width:100px;text-align:right;" oninput="recalcCashPobTotals()"></td></tr>
@@ -14811,6 +14811,11 @@ async function viewGRN(grnNum) {
   const createPOBBtn = canCreatePOBFromGRN
     ? `<button class="btn btn-primary" onclick="closeModal();newPOBFromGRN('${esc(grnNum)}','${esc(h?.po_number||'')}')">📄 Create POB</button>`
     : '';
+  // Show "Create Direct Bill" for Verified cash GRNs
+  const canCreateCashBillFromGRN = hasPerm('canCreatePOB') && h?.status === 'Verified' && isCash;
+  const createCashBillBtn = canCreateCashBillFromGRN
+    ? `<button class="btn btn-warning" style="background:#ad6800;color:#fff;border-color:#ad6800;" onclick="closeModal();newCashPOBFromGRN('${esc(grnNum)}','${esc(h?.vendor_name||'')}')">💵 Create Direct Bill</button>`
+    : '';
 
   openModal(`<h3>GRN — ${esc(grnNum)}${cashBadge}</h3>
     <div class="grid-3" style="margin-bottom:10px;">
@@ -14824,6 +14829,7 @@ async function viewGRN(grnNum) {
     ${itemTable}
     <div class="actions-row">
       ${createPOBBtn}
+      ${createCashBillBtn}
       <button class="btn btn-ghost" onclick="closeModal()">Close</button>
     </div>`);
 }
@@ -14863,6 +14869,30 @@ async function newPOBFromGRN(grnNum, poNum) {
   const banner = document.getElementById('grn_toBillBanner');
   if (banner) banner.style.display = 'none';
   puState._grnToBillMode = false;
+  window.scrollTo(0, 0);
+}
+
+async function newCashPOBFromGRN(grnNum, vendorName) {
+  if (!hasPerm('canCreatePOB')) { toast('Only Planning/QS can create bills','error'); return; }
+  // Switch to POB tab
+  switchPUTab('pob');
+  await loadPOBList();
+  // Open the Direct Purchase Bill form
+  await newCashPOB();
+  // Pre-fill vendor and load their cash GRNs
+  if (vendorName) {
+    await cpobPickVendor(vendorName);
+    // Wait for GRN checkboxes to render then tick this GRN
+    await new Promise(r => setTimeout(r, 400));
+    const chk = [...document.querySelectorAll('.cpob_grnChk')].find(c => c.value === grnNum);
+    if (chk) {
+      chk.checked = true;
+      await onCashPobGRNSelect();
+      toast(`GRN ${grnNum} pre-selected — fill invoice details and submit`, 'info', 4000);
+    } else {
+      toast(`Vendor selected — please tick GRN ${grnNum} from the list`, 'info', 4000);
+    }
+  }
   window.scrollTo(0, 0);
 }
 
@@ -14983,8 +15013,6 @@ async function onPOBGRNSelect() {
     </tr>`;
   }).join('')||'<tr><td colspan="8" class="center muted">No items</td></tr>';
   document.getElementById('pob_s_gross').textContent=fmtINR(grossAmt);
-  const gstPct=_pobGSTInfo.cgst+_pobGSTInfo.sgst+_pobGSTInfo.igst;
-  document.getElementById('pob_s_gstLabel').textContent='GST ('+gstPct+'%)';
   recalcPOBTotals();
 }
 
@@ -15013,26 +15041,63 @@ function addPOBExtraLine() {
 
 function recalcPOBTotals() {
   const gross=num(document.getElementById('pob_s_gross')?.textContent);
-  let extraBefore=0, extraAfter=0;
+
+  // ── Collect extra lines ──────────────────────────────────────────────────
+  const beforeLines=[], afterLines=[];
   document.querySelectorAll('#pob_extraBody tr').forEach(tr=>{
     const cells=tr.cells;
+    const desc=(cells[0]?.querySelector('input')?.value||'').trim()||'—';
     const amt=num(cells[3]?.querySelector('input')?.value||0);
     const type=cells[1]?.querySelector('select')?.value;
     const timing=cells[2]?.querySelector('select')?.value;
     const signed=type==='Addition'?amt:-amt;
-    if(timing==='Before GST') extraBefore+=signed; else extraAfter+=signed;
+    if(timing==='Before GST') beforeLines.push({desc,signed});
+    else afterLines.push({desc,signed});
   });
+  const extraBefore=beforeLines.reduce((a,l)=>a+l.signed,0);
+  const extraAfter=afterLines.reduce((a,l)=>a+l.signed,0);
+
   const taxable=gross+extraBefore;
   const gstPct=(_pobGSTInfo.cgst||0)+(_pobGSTInfo.sgst||0)+(_pobGSTInfo.igst||0);
   const gst=taxable*gstPct/100;
+  const cgstAmt=taxable*(_pobGSTInfo.cgst||0)/100;
+  const sgstAmt=taxable*(_pobGSTInfo.sgst||0)/100;
+  const igstAmt=taxable*(_pobGSTInfo.igst||0)/100;
   const invoice=taxable+gst+extraAfter;
   const hold=num(document.getElementById('pob_holdAmt')?.value);
   const net=invoice-hold;
-  document.getElementById('pob_s_extraBefore').textContent=(extraBefore>=0?'+':'')+fmtINR(extraBefore);
+
+  // ── Render: Before-GST lines individually ───────────────────────────────
+  const dynEl=document.getElementById('pob_s_dynamic');
+  if(dynEl) dynEl.innerHTML=beforeLines.map(l=>
+    `<tr><td style="padding:4px 8px;color:var(--muted);">${l.signed>=0?'Add':'Less'}: ${l.desc}</td>`+
+    `<td class="num" style="padding:4px 8px;">${(l.signed>=0?'+':'')+fmtINR(l.signed)}</td></tr>`
+  ).join('');
+
   document.getElementById('pob_s_taxable').textContent=fmtINR(taxable);
-  document.getElementById('pob_s_gstLabel').textContent='GST ('+gstPct+'%)';
-  document.getElementById('pob_s_gst').textContent=fmtINR(gst);
-  document.getElementById('pob_s_extraAfter').textContent=(extraAfter>=0?'+':'')+fmtINR(extraAfter);
+
+  // ── Render: CGST / SGST / IGST split ────────────────────────────────────
+  const gstEl=document.getElementById('pob_s_gst_rows');
+  if(gstEl){
+    let html='';
+    if(cgstAmt>0) html+=`<tr><td style="padding:4px 8px;color:var(--muted);">Total CGST</td>`+
+      `<td class="num" style="padding:4px 8px;">${fmtINR(cgstAmt)}</td></tr>`;
+    if(sgstAmt>0) html+=`<tr><td style="padding:4px 8px;color:var(--muted);">Total SGST</td>`+
+      `<td class="num" style="padding:4px 8px;">${fmtINR(sgstAmt)}</td></tr>`;
+    if(igstAmt>0) html+=`<tr><td style="padding:4px 8px;color:var(--muted);">Total IGST</td>`+
+      `<td class="num" style="padding:4px 8px;">${fmtINR(igstAmt)}</td></tr>`;
+    if(!html) html=`<tr><td style="padding:4px 8px;color:var(--muted);">GST</td>`+
+      `<td class="num" style="padding:4px 8px;">0.00</td></tr>`;
+    gstEl.innerHTML=html;
+  }
+
+  // ── Render: After-GST lines individually ────────────────────────────────
+  const afterEl=document.getElementById('pob_s_after_rows');
+  if(afterEl) afterEl.innerHTML=afterLines.map(l=>
+    `<tr><td style="padding:4px 8px;color:var(--muted);">${l.signed>=0?'Add':'Less'}: ${l.desc}</td>`+
+    `<td class="num" style="padding:4px 8px;">${(l.signed>=0?'+':'')+fmtINR(l.signed)}</td></tr>`
+  ).join('');
+
   document.getElementById('pob_s_invoice').textContent=fmtINR(invoice);
   document.getElementById('pob_s_net').textContent=fmtINR(net);
   const f=document.getElementById('pobForm');
@@ -15328,27 +15393,65 @@ function recalcCashPobTotals() {
   // Sum gross from current line items (uses live mutated rates)
   let gross = 0;
   _cpobLineItems.forEach(it => { gross += num(it.base_amount); });
-  let extraBefore = 0, extraAfter = 0;
+
+  // ── Collect extra lines ──────────────────────────────────────────────────
+  const beforeLines = [], afterLines = [];
   document.querySelectorAll('#cpob_extraBody tr').forEach(tr => {
     const cells = tr.cells;
+    const desc  = (cells[0]?.querySelector('input')?.value || '').trim() || '—';
     const amt    = num(cells[3]?.querySelector('input')?.value || 0);
     const type   = cells[1]?.querySelector('select')?.value;
     const timing = cells[2]?.querySelector('select')?.value;
     const signed = type === 'Addition' ? amt : -amt;
-    if (timing === 'Before GST') extraBefore += signed; else extraAfter += signed;
+    if (timing === 'Before GST') beforeLines.push({desc, signed});
+    else afterLines.push({desc, signed});
   });
-  const taxable = gross + extraBefore;
-  const gstInfo = _cashPobGSTPct();
-  const gst = taxable * gstInfo.total / 100;
-  const invoice = taxable + gst + extraAfter;
-  const hold = num(document.getElementById('cpob_holdAmt')?.value);
-  const net = invoice - hold;
+  const extraBefore = beforeLines.reduce((a,l) => a+l.signed, 0);
+  const extraAfter  = afterLines.reduce((a,l) => a+l.signed, 0);
+
+  const taxable  = gross + extraBefore;
+  const gstInfo  = _cashPobGSTPct();
+  const gst      = taxable * gstInfo.total / 100;
+  const cgstAmt  = taxable * gstInfo.cgst / 100;
+  const sgstAmt  = taxable * gstInfo.sgst / 100;
+  const igstAmt  = taxable * gstInfo.igst / 100;
+  const invoice  = taxable + gst + extraAfter;
+  const hold     = num(document.getElementById('cpob_holdAmt')?.value);
+  const net      = invoice - hold;
+
   document.getElementById('cpob_s_gross').textContent = fmtINR(gross);
-  document.getElementById('cpob_s_extraBefore').textContent = (extraBefore >= 0 ? '+' : '') + fmtINR(extraBefore);
+
+  // ── Render: Before-GST lines individually (no GST sub-row) ──────────────
+  const dynEl = document.getElementById('cpob_s_dynamic');
+  if (dynEl) dynEl.innerHTML = beforeLines.map(l =>
+    `<tr><td style="padding:4px 8px;color:var(--muted);">${l.signed>=0?'Add':'Less'}: ${l.desc}</td>`+
+    `<td class="num" style="padding:4px 8px;">${(l.signed>=0?'+':'')+fmtINR(l.signed)}</td></tr>`
+  ).join('');
+
   document.getElementById('cpob_s_taxable').textContent = fmtINR(taxable);
-  document.getElementById('cpob_s_gstLabel').textContent = 'GST (' + gstInfo.total + '%)';
-  document.getElementById('cpob_s_gst').textContent = fmtINR(gst);
-  document.getElementById('cpob_s_extraAfter').textContent = (extraAfter >= 0 ? '+' : '') + fmtINR(extraAfter);
+
+  // ── Render: CGST / SGST / IGST split ────────────────────────────────────
+  const gstEl = document.getElementById('cpob_s_gst_rows');
+  if (gstEl) {
+    let html = '';
+    if (cgstAmt > 0) html += `<tr><td style="padding:4px 8px;color:var(--muted);">Total CGST</td>`+
+      `<td class="num" style="padding:4px 8px;">${fmtINR(cgstAmt)}</td></tr>`;
+    if (sgstAmt > 0) html += `<tr><td style="padding:4px 8px;color:var(--muted);">Total SGST</td>`+
+      `<td class="num" style="padding:4px 8px;">${fmtINR(sgstAmt)}</td></tr>`;
+    if (igstAmt > 0) html += `<tr><td style="padding:4px 8px;color:var(--muted);">Total IGST</td>`+
+      `<td class="num" style="padding:4px 8px;">${fmtINR(igstAmt)}</td></tr>`;
+    if (!html) html = `<tr><td style="padding:4px 8px;color:var(--muted);">GST</td>`+
+      `<td class="num" style="padding:4px 8px;">0.00</td></tr>`;
+    gstEl.innerHTML = html;
+  }
+
+  // ── Render: After-GST lines individually ────────────────────────────────
+  const afterEl = document.getElementById('cpob_s_after_rows');
+  if (afterEl) afterEl.innerHTML = afterLines.map(l =>
+    `<tr><td style="padding:4px 8px;color:var(--muted);">${l.signed>=0?'Add':'Less'}: ${l.desc}</td>`+
+    `<td class="num" style="padding:4px 8px;">${(l.signed>=0?'+':'')+fmtINR(l.signed)}</td></tr>`
+  ).join('');
+
   document.getElementById('cpob_s_invoice').textContent = fmtINR(invoice);
   document.getElementById('cpob_s_net').textContent = fmtINR(net);
   const f = document.getElementById('cashPobForm');
