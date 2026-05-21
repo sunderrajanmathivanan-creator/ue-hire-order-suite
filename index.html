@@ -1949,6 +1949,7 @@ input[type="number"] {
     <div class="sub-tab" data-mastertab="materials" onclick="switchMasterTab('materials')">Material Master</div>
     <div class="sub-tab" data-mastertab="contractors" onclick="switchMasterTab('contractors')">Contractor Master</div>
     <div class="sub-tab" data-mastertab="wbslocation" onclick="switchMasterTab('wbslocation')">WBS &amp; Location</div>
+    <div class="sub-tab" data-mastertab="costheads" onclick="switchMasterTab('costheads')">Cost Head</div>
   </div>
 
   <!-- VENDORS -->
@@ -2001,7 +2002,16 @@ input[type="number"] {
       <div id="ma_dup" style="display:none;margin-top:10px;padding:8px 10px;border-radius:4px;font-size:12px;color:var(--text);"></div>
       <div class="grid-3" style="margin-top:12px;">
         <div class="field"><label>Default Rate (₹)</label><input type="number" id="ma_rate" step="0.01" placeholder="0.00"></div>
-        <div class="field"><label>Category</label><input id="ma_category" placeholder="e.g. Crane, RMC, Labour"></div>
+        <div class="field" style="position:relative;">
+          <label>Cost Head</label>
+          <input id="ma_costhead" placeholder="Type to search…" autocomplete="off" oninput="chFuzzy('ma_costhead','ma_costhead_list','ma_costsubhead','ma_costsubhead_list')" onfocus="chFuzzy('ma_costhead','ma_costhead_list','ma_costsubhead','ma_costsubhead_list')" onblur="setTimeout(()=>chHide('ma_costhead_list'),200)">
+          <div id="ma_costhead_list" class="ch-dropdown" style="display:none;"></div>
+        </div>
+        <div class="field" style="position:relative;">
+          <label>Cost Subhead</label>
+          <input id="ma_costsubhead" placeholder="Select Cost Head first…" autocomplete="off" oninput="chFuzzySub('ma_costsubhead','ma_costsubhead_list','ma_costhead')" onfocus="chFuzzySub('ma_costsubhead','ma_costsubhead_list','ma_costhead')" onblur="setTimeout(()=>chHide('ma_costsubhead_list'),200)">
+          <div id="ma_costsubhead_list" class="ch-dropdown" style="display:none;"></div>
+        </div>
       </div>
       <div class="actions-row"><button class="btn btn-primary" onclick="saveMaster('activity')">+ Add Activity</button></div>
     </div>
@@ -2012,7 +2022,7 @@ input[type="number"] {
           style="padding:7px 10px;background:var(--input-bg);color:var(--text);border:1px solid var(--border);border-radius:4px;width:260px;">
       </div>
       <div class="table-wrap">
-        <table><thead><tr><th>Code</th><th>Description</th><th>UOM</th><th>Category</th><th class="num">Default Rate</th></tr></thead>
+        <table><thead><tr><th>Code</th><th>Description</th><th>UOM</th><th>Cost Head</th><th>Cost Subhead</th><th class="num">Default Rate</th></tr></thead>
         <tbody id="ma_list"><tr><td colspan="5" class="center muted">No activities.</td></tr></tbody></table>
       </div>
     </div>
@@ -2020,26 +2030,6 @@ input[type="number"] {
 
   <!-- BOQ ITEMS -->
   <div id="master-materials" class="hidden">
-
-    <!-- ── Manage Categories card (Admin only) ── -->
-    <div class="card" id="masterMatCatCard" style="display:none;">
-      <h3>Manage Material Categories</h3>
-      <div class="row" style="gap:10px;align-items:flex-end;flex-wrap:wrap;">
-        <div class="field" style="flex:1;min-width:220px;margin:0;">
-          <label class="req">Category Name</label>
-          <input id="mc_catName" placeholder="e.g. Structural, Landscaping, Safety" autocomplete="off" style="width:100%;">
-        </div>
-        <div class="field" style="flex:1;min-width:220px;margin:0;">
-          <label>Description <span style="color:var(--muted);font-weight:400;">(optional)</span></label>
-          <input id="mc_catDesc" placeholder="Brief description of this category" style="width:100%;">
-        </div>
-        <button class="btn btn-primary" onclick="saveMatCategory()" style="align-self:flex-end;white-space:nowrap;">+ Add Category</button>
-      </div>
-      <div class="table-wrap" style="margin-top:16px;">
-        <table><thead><tr><th>Category</th><th>Description</th><th>Materials</th><th style="width:80px;"></th></tr></thead>
-        <tbody id="mc_catList"><tr><td colspan="4" class="center muted">Loading…</td></tr></tbody></table>
-      </div>
-    </div>
 
     <!-- ── Add Material card ── -->
     <div class="card" id="masterAddMaterialCard">
@@ -2053,13 +2043,16 @@ input[type="number"] {
         <div class="field"><label class="req">UOM</label><input id="mm_uom" placeholder="e.g. Bags, MT, Nos, RMT" oninput="mmNameDupCheck()"></div>
       </div>
       <div class="grid-4" style="margin-top:12px;">
-        <div class="field">
-          <label class="req">Category</label>
-          <select id="mm_category">
-            <option value="">— Select —</option>
-          </select>
+        <div class="field" style="position:relative;">
+          <label class="req">Cost Head</label>
+          <input id="mm_costhead" placeholder="Type to search…" autocomplete="off" oninput="chFuzzy('mm_costhead','mm_costhead_list','mm_costsubhead','mm_costsubhead_list')" onfocus="chFuzzy('mm_costhead','mm_costhead_list','mm_costsubhead','mm_costsubhead_list')" onblur="setTimeout(()=>chHide('mm_costhead_list'),200)">
+          <div id="mm_costhead_list" class="ch-dropdown" style="display:none;"></div>
         </div>
-        <div class="field"><label>Sub Category</label><input id="mm_subcat" placeholder="e.g. Structural Steel, Plumbing"></div>
+        <div class="field" style="position:relative;">
+          <label>Cost Subhead</label>
+          <input id="mm_costsubhead" placeholder="Select Cost Head first…" autocomplete="off" oninput="chFuzzySub('mm_costsubhead','mm_costsubhead_list','mm_costhead')" onfocus="chFuzzySub('mm_costsubhead','mm_costsubhead_list','mm_costhead')" onblur="setTimeout(()=>chHide('mm_costsubhead_list'),200)">
+          <div id="mm_costsubhead_list" class="ch-dropdown" style="display:none;"></div>
+        </div>
         <div class="field"><label>HSN Code</label><input id="mm_hsn" placeholder="e.g. 2523"></div>
         <div class="field"><label>Specification</label><input id="mm_spec" placeholder="Grade / Brand / Standard"></div>
       </div>
@@ -2070,18 +2063,29 @@ input[type="number"] {
     <div class="card">
       <h3>Material List</h3>
       <div class="row" style="margin-bottom:10px;">
-        <select id="mm_catFilter" style="padding:7px;background:var(--input-bg);color:var(--text);border:1px solid var(--border);border-radius:4px;" onchange="renderMaterialMaster()">
-          <option value="">All Categories</option>
-        </select>
+        <input id="mm_chFilter" placeholder="Filter by Cost Head…" autocomplete="off"
+          style="padding:7px;background:var(--input-bg);color:var(--text);border:1px solid var(--border);border-radius:4px;width:200px;"
+          oninput="renderMaterialMaster()">
         <input id="mm_search" placeholder="Search materials…" style="padding:7px;background:var(--input-bg);color:var(--text);border:1px solid var(--border);border-radius:4px;width:220px;" oninput="renderMaterialMaster()">
       </div>
       <div class="table-wrap">
-        <table><thead><tr id="mm_thead"><th style="cursor:pointer;user-select:none;" onclick="_mmSortBy('material_code')">Code ⇅</th><th style="cursor:pointer;user-select:none;" onclick="_mmSortBy('material_name')">Name ⇅</th><th style="cursor:pointer;user-select:none;" onclick="_mmSortBy('category')">Category ⇅</th><th style="cursor:pointer;user-select:none;" onclick="_mmSortBy('sub_category')">Sub Category ⇅</th><th style="cursor:pointer;user-select:none;" onclick="_mmSortBy('uom')">UOM ⇅</th><th style="cursor:pointer;user-select:none;" onclick="_mmSortBy('hsn_code')">HSN ⇅</th><th style="cursor:pointer;user-select:none;" onclick="_mmSortBy('specification')">Specification ⇅</th><th style="width:70px;"></th></tr></thead>
+        <table><thead><tr id="mm_thead"><th style="cursor:pointer;user-select:none;" onclick="_mmSortBy('material_code')">Code ⇅</th><th style="cursor:pointer;user-select:none;" onclick="_mmSortBy('material_name')">Name ⇅</th><th style="cursor:pointer;user-select:none;" onclick="_mmSortBy('costhead')">Cost Head ⇅</th><th style="cursor:pointer;user-select:none;" onclick="_mmSortBy('cost_subhead')">Cost Subhead ⇅</th><th style="cursor:pointer;user-select:none;" onclick="_mmSortBy('uom')">UOM ⇅</th><th style="cursor:pointer;user-select:none;" onclick="_mmSortBy('hsn_code')">HSN ⇅</th><th style="cursor:pointer;user-select:none;" onclick="_mmSortBy('specification')">Specification ⇅</th><th style="width:70px;"></th></tr></thead>
         <tbody id="mm_list"><tr><td colspan="7" class="center muted">No materials.</td></tr></tbody></table>
       </div>
     </div>
   </div>
 
+
+  <!-- COST HEAD MASTER -->
+  <div id="master-costheads" class="hidden">
+    <div class="card" id="masterCostHeadCard">
+      <h3>Cost Head Master</h3>
+      <p style="color:var(--muted);font-size:12px;margin-bottom:16px;">Two-level hierarchy: <strong>Cost Head</strong> &rarr; <strong>Cost Subhead</strong>. Admin only for add/edit/delete. Click &ldquo;+ Cost Subhead&rdquo; on any head to add entries.</p>
+      <div id="ch_tree_wrap">
+        <div class="center muted" style="padding:24px;">Loading&hellip;</div>
+      </div>
+    </div>
+  </div>
 
   <!-- WBS & LOCATION MASTER -->
   <div id="master-wbslocation" class="hidden">
@@ -2726,7 +2730,7 @@ input[type="number"] {
           <h3 style="font-size:13px;margin-bottom:8px;color:var(--text);">Additional / Deduction Lines</h3>
           <div class="table-wrap">
             <table>
-              <thead><tr><th>Description</th><th>Type</th><th>Timing</th><th class="num">Amount (₹)</th><th></th></tr></thead>
+              <thead><tr><th>Description</th><th>Type</th><th>Timing</th><th class="num">GST %</th><th class="num">Amount (₹)</th><th></th></tr></thead>
               <tbody id="pob_extraBody"></tbody>
             </table>
           </div>
@@ -2737,10 +2741,10 @@ input[type="number"] {
           <h3 style="font-size:13px;">Bill Computation</h3>
           <table style="max-width:420px;margin-left:auto;">
             <tr><td style="padding:4px 8px;color:var(--muted);">Gross Amount</td><td class="num" style="padding:4px 8px;" id="pob_s_gross">0.00</td></tr>
-            <tr><td style="padding:4px 8px;color:var(--muted);" id="pob_s_extraBeforeLabel">Add: Before-GST</td><td class="num" style="padding:4px 8px;" id="pob_s_extraBefore">0.00</td></tr>
+            <tbody id="pob_s_dynamic"></tbody>
             <tr><td style="padding:4px 8px;color:var(--muted);">Taxable Value</td><td class="num" style="padding:4px 8px;font-weight:600;" id="pob_s_taxable">0.00</td></tr>
-            <tr><td style="padding:4px 8px;color:var(--muted);" id="pob_s_gstLabel">GST</td><td class="num" style="padding:4px 8px;" id="pob_s_gst">0.00</td></tr>
-            <tr><td style="padding:4px 8px;color:var(--muted);" id="pob_s_extraAfterLabel">Add: After-GST</td><td class="num" style="padding:4px 8px;" id="pob_s_extraAfter">0.00</td></tr>
+            <tbody id="pob_s_gst_rows"></tbody>
+            <tbody id="pob_s_after_rows"></tbody>
             <tr style="border-top:1px solid var(--border);"><td style="padding:6px 8px;font-weight:600;">Invoice Value</td><td class="num" style="padding:6px 8px;font-weight:600;" id="pob_s_invoice">0.00</td></tr>
             <tr><td style="padding:4px 8px;color:var(--muted);">Less: Hold Amount</td>
               <td class="num" style="padding:4px 8px;"><input type="number" id="pob_holdAmt" value="0" step="0.01" style="width:100px;text-align:right;" oninput="recalcPOBTotals()"></td></tr>
@@ -3483,7 +3487,7 @@ const ROLE_PERMS = {
 // ── Purchase module state (defined early so initApp can call apiLoadMaterials) ──
 var puState = {
   materials: [],
-  matCategories: [],   // rows from pu_material_categories
+  costHeads: [],   // rows from pu_cost_heads
 
   // generator selection state
   genSel: { subActId:null, blocks:new Set(), levels:new Set(), instances:new Set() },
@@ -3586,7 +3590,7 @@ function mapVendor(r) {
 function mapActivity(r) {
   return {
     'Activity Code': r.activity_code, 'Activity Description': r.activity_description,
-    'UOM': r.uom, 'Default Rate': r.default_rate, 'Category': r.category
+    'UOM': r.uom, 'Default Rate': r.default_rate, 'Cost Head': r.costhead, 'Cost Subhead': r.cost_subhead
   };
 }
 function mapBOQ(r) {
@@ -3887,8 +3891,8 @@ async function apiSaveHO(data) {
     if (he) return { ok: false, error: he.message };
 
     const items = (data.items||[]).map(it => ({
-      ho_number: hoNumber, sno: it.sno, description: it.description,
-      uom: it.uom||null, qty: it.qty, unit_rate: it.rate, amount: it.amount
+      ho_number: hoNumber, sno: it.sno, activity_code: it.activity_code||null,
+      description: it.description, uom: it.uom||null, qty: it.qty, unit_rate: it.rate, amount: it.amount
     }));
     if (items.length) {
       const { error: ie } = await sb.from('ho_order_items').insert(items);
@@ -3927,8 +3931,8 @@ async function apiReviseHO(hoNumber, data) {
     if (he) return { ok: false, error: he.message };
     await sb.from('ho_order_items').delete().eq('ho_number', hoNumber);
     const items = (data.items||[]).map(it => ({
-      ho_number: hoNumber, sno: it.sno, description: it.description,
-      uom: it.uom||null, qty: it.qty, unit_rate: it.rate, amount: it.amount
+      ho_number: hoNumber, sno: it.sno, activity_code: it.activity_code||null,
+      description: it.description, uom: it.uom||null, qty: it.qty, unit_rate: it.rate, amount: it.amount
     }));
     if (items.length) {
       const { error: ie } = await sb.from('ho_order_items').insert(items);
@@ -4645,8 +4649,8 @@ async function apiSaveWO(data) {
     });
     if (we) return { ok: false, error: we.message };
     const items = (data.items||[]).map(it => ({
-      wo_number: woNumber, sno: it.sno, description: it.description,
-      uom: it.uom||null, qty: it.qty, unit_rate: it.rate, amount: it.amount
+      wo_number: woNumber, sno: it.sno, activity_code: it.activity_code||null,
+      description: it.description, uom: it.uom||null, qty: it.qty, unit_rate: it.rate, amount: it.amount
     }));
     if (items.length) {
       const { error: ie } = await sb.from('wo_order_items').insert(items);
@@ -4677,8 +4681,8 @@ async function apiReviseWO(woNumber, data) {
     if (he) return { ok: false, error: he.message };
     await sb.from('wo_order_items').delete().eq('wo_number', woNumber);
     const items = (data.items||[]).map(it => ({
-      wo_number: woNumber, sno: it.sno, description: it.description,
-      uom: it.uom||null, qty: it.qty, unit_rate: it.rate, amount: it.amount
+      wo_number: woNumber, sno: it.sno, activity_code: it.activity_code||null,
+      description: it.description, uom: it.uom||null, qty: it.qty, unit_rate: it.rate, amount: it.amount
     }));
     if (items.length) {
       const { error: ie } = await sb.from('wo_order_items').insert(items);
@@ -5060,7 +5064,7 @@ async function apiSaveMaster(type, row) {
     const { data: last } = await sb.from('ho_activities').select('activity_code').order('activity_code', { ascending: false }).limit(1);
     const nextNum = last && last.length ? (parseInt(last[0].activity_code.replace('ACT',''))||0) + 1 : 1;
     const code = 'ACT' + String(nextNum).padStart(3,'0');
-    return dbInsert('ho_activities', { activity_code: code, activity_description: row.desc, uom: row.uom, default_rate: row.rate||0, category: row.category||null, created_by: state.userId }, ['masters']);
+    return dbInsert('ho_activities', { activity_code: code, activity_description: row.desc, uom: row.uom, default_rate: row.rate||0, costhead: row.costhead||null, cost_subhead: row.cost_subhead||null, created_by: state.userId }, ['masters']);
   }
   if (type === 'boq') {
     const { data: last } = await sb.from('ho_boq_items').select('boq_code').order('boq_code', { ascending: false }).limit(1);
@@ -5510,20 +5514,18 @@ function switchPayTab(tab) {
 }
 
 function switchMasterTab(tab) {
-  ['vendors','activities','materials','contractors','locations','wbslocation'].forEach(t => {
+  ['vendors','activities','materials','contractors','locations','wbslocation','costheads'].forEach(t => {
     const el = document.getElementById('master-' + t);
     if (el) el.classList.toggle('hidden', t !== tab);
     const stab = document.querySelector(`.sub-tab[data-mastertab="${t}"]`);
     if (stab) stab.classList.toggle('active', t === tab);
   });
   if (tab === 'materials') {
-    Promise.all([apiLoadMatCategories(), apiLoadMaterials()]).then(() => {
-      populateMatCategoryDropdowns();
-      renderMatCategories();
-      renderMaterialMaster();
-    });
+    Promise.all([apiLoadCostHeads(), apiLoadMaterials()]).then(() => { renderMaterialMaster(); });
   }
+  if (tab === 'activities') { apiLoadCostHeads(); }
   if (tab === 'contractors') { renderContractorMaster(); }
+  if (tab === 'costheads') { apiLoadCostHeads().then(() => renderCostHeadTree()); }
   if (tab === 'wbslocation') { Promise.all([apiLoadWBS(), apiLoadLocations()]).then(() => { renderWBSTree(); renderLocTree(); }); }
 }
 
@@ -5552,13 +5554,11 @@ async function initApp() {
     await Promise.all([
       apiLoadMasters().catch(e  => console.error('Masters:', e)),
       apiLoadMaterials().catch(e => console.error('Materials:', e)),
-      apiLoadMatCategories().catch(e => console.error('MatCategories:', e)),
+      apiLoadCostHeads().catch(e => console.error('CostHeads:', e)),
       loadHOList().catch(e      => console.error('HOList:', e)),
       loadWOList().catch(e      => console.error('WOList:', e)),
     ]);
     renderAllMasters();
-    populateMatCategoryDropdowns();
-    renderMatCategories();
     // Ensure only HO Orders sub-tab visible on initial load
     _resetSubTabs();
     // Dashboard activated by onSignedIn override — no default sub-tab switch here
@@ -5605,8 +5605,8 @@ function renderAllMasters() {
       <td>${esc(v['Vendor Name'])}</td><td>${esc(v['Trade']||'')}</td>
       <td>${esc(v['GSTIN']||'')}</td><td>${esc(v['Contact Person']||'')}</td><td>${esc(v['Phone']||'')}</td>
       ${isAdmin ? `<td class="center">
-        <button class="btn btn-ghost btn-sm" onclick="editMaster('vendor','${esc(v['Vendor Code']||'')}')">Edit</button>
-        <button class="btn btn-danger btn-sm" onclick="deleteMaster('vendor','${esc(v['Vendor Code']||'')}','${esc(v['Vendor Name'])}')">Delete</button></td>` : ''}
+        <button class="btn btn-ghost btn-sm" onclick="openVendorEdit('${esc(v['Vendor Code']||'')}')">✏ Edit</button>
+        <button class="btn btn-danger btn-sm" onclick="openVendorDelete('${esc(v['Vendor Code']||'')}','${esc(v['Vendor Name'])}')">🗑 Delete</button></td>` : ''}
     </tr>`).join('') || `<tr><td colspan="${isAdmin?7:6}" class="center muted">No vendors.</td></tr>`);
 
   // Activities
@@ -5614,11 +5614,11 @@ function renderAllMasters() {
     `<tr>
       <td class="mono" style="color:var(--accent);">${esc(a['Activity Code']||'')}</td>
       <td>${esc(a['Activity Description'])}</td><td>${esc(a['UOM'])}</td>
-      <td>${esc(a['Category']||'')}</td><td class="num mono">${fmtINR(a['Default Rate']||0)}</td>
+      <td>${esc(a['Cost Head']||'')}</td><td>${esc(a['Cost Subhead']||'')}</td><td class="num mono">${fmtINR(a['Default Rate']||0)}</td>
       ${isAdmin ? `<td class="center">
-        <button class="btn btn-ghost btn-sm" onclick="editMaster('activity','${esc(a['Activity Code']||'')}')">Edit</button>
-        <button class="btn btn-danger btn-sm" onclick="deleteMaster('activity','${esc(a['Activity Code']||'')}','${esc(a['Activity Description'])}')">Delete</button></td>` : ''}
-    </tr>`).join('') || `<tr><td colspan="${isAdmin?6:5}" class="center muted">No activities.</td></tr>`);
+        <button class="btn btn-ghost btn-sm" onclick="openActivityEdit('${esc(a['Activity Code']||'')}')">✏ Edit</button>
+        <button class="btn btn-danger btn-sm" onclick="openActivityDelete('${esc(a['Activity Code']||'')}','${esc(a['Activity Description'])}')">🗑 Delete</button></td>` : ''}
+    </tr>`).join('') || `<tr><td colspan="${isAdmin?7:6}" class="center muted">No activities.</td></tr>`);
 
   // BOQ — two-level grouped display
   const l1Items = (m.boqItems||[]).filter(b => b['Level'] === 1);
@@ -5755,7 +5755,8 @@ async function editMaster(type, code) {
     document.getElementById('ma_desc').value     = item['Activity Description']||'';
     document.getElementById('ma_uom').value      = item['UOM']||'';
     document.getElementById('ma_rate').value     = item['Default Rate']||'';
-    document.getElementById('ma_category').value = item['Category']||'';
+    document.getElementById('ma_costhead').value = item['Cost Head']||'';
+    document.getElementById('ma_costsubhead').value = item['Cost Subhead']||'';
   } else if (type === 'boq') {
     document.getElementById('mb_name').value   = item['BOQ Name']||'';
     document.getElementById('mb_desc').value   = item['Description']||'';
@@ -5818,7 +5819,7 @@ async function saveMaster(type) {
     const descKey = _normKey(desc);
     const actDup = (state.masters.activities||[]).find(a => _normKey(a['Activity Description']) === descKey && a['Activity Code'] !== isEdit);
     if (actDup) { toast('Activity "' + desc + '" already exists (Code: ' + actDup['Activity Code'] + ')','error'); return; }
-    row = { desc, uom, rate: num(document.getElementById('ma_rate').value), category: document.getElementById('ma_category').value };
+    row = { desc, uom, rate: num(document.getElementById('ma_rate').value), costhead: document.getElementById('ma_costhead').value, cost_subhead: document.getElementById('ma_costsubhead').value };
   } else if (type === 'boq') {
     const name  = document.getElementById('mb_name').value.trim();
     const level = num(document.getElementById('mb_level').value) || 2;
@@ -5850,6 +5851,245 @@ async function saveMaster(type) {
     if (type === 'boq') populateBOQL1Dropdown();
     if (type === 'service') populateServiceParentDropdown();
   } else toast(r.error || 'Save failed','error');
+}
+
+// ============================================================
+// VENDOR EDIT & DELETE (modal-based, matching Material pattern)
+// ============================================================
+function openVendorEdit(code) {
+  if (!hasRole('Admin')) { toast('Only Admin can edit vendors','error'); return; }
+  const v = (state.masters.vendors||[]).find(x => x['Vendor Code'] === code);
+  if (!v) { toast('Vendor not found','error'); return; }
+  const html = `
+    <h3 style="color:var(--accent);margin-bottom:4px;">Edit Vendor — <span class="mono" style="font-size:14px;">${esc(v['Vendor Code'])}</span></h3>
+    <p style="color:var(--muted);font-size:12px;margin-bottom:16px;">Fields marked * are mandatory.</p>
+    <div class="grid-3" style="margin-bottom:12px;">
+      <div class="field" style="grid-column:1/3;"><label class="req">Vendor Name</label><input id="ve_name" value="${esc(v['Vendor Name']||'')}" autocomplete="off" style="width:100%;"></div>
+      <div class="field"><label class="req">Trade / Category</label><input id="ve_trade" value="${esc(v['Trade']||'')}" style="width:100%;"></div>
+    </div>
+    <div class="grid-3" style="margin-bottom:12px;">
+      <div class="field"><label class="req">GSTIN</label><input id="ve_gstin" value="${esc(v['GSTIN']||'')}" style="width:100%;"></div>
+      <div class="field"><label>PAN</label><input id="ve_pan" value="${esc(v['PAN']||'')}" style="width:100%;"></div>
+      <div class="field"><label class="req">Contact Person</label><input id="ve_contact" value="${esc(v['Contact Person']||'')}" style="width:100%;"></div>
+    </div>
+    <div class="grid-3" style="margin-bottom:12px;">
+      <div class="field"><label class="req">Phone</label><input id="ve_phone" value="${esc(v['Phone']||'')}" style="width:100%;"></div>
+      <div class="field" style="grid-column:2/4;"><label class="req">Address</label><input id="ve_address" value="${esc(v['Address']||'')}" style="width:100%;"></div>
+    </div>
+    <div class="grid-4" style="margin-bottom:18px;">
+      <div class="field"><label>Bank Name</label><input id="ve_bankName" value="${esc(v['Bank Name']||'')}" style="width:100%;"></div>
+      <div class="field"><label>Branch</label><input id="ve_branch" value="${esc(v['Branch']||'')}" style="width:100%;"></div>
+      <div class="field"><label>Account No.</label><input id="ve_bank" value="${esc(v['Bank Account']||'')}" style="width:100%;"></div>
+      <div class="field"><label>IFSC</label><input id="ve_ifsc" value="${esc(v['IFSC']||'')}" style="width:100%;"></div>
+    </div>
+    <div style="display:flex;gap:10px;justify-content:flex-end;">
+      <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="updateVendor('${esc(v['Vendor Code'])}')">&#128190; Save Changes</button>
+    </div>`;
+  openModal(html, 'large');
+}
+
+async function updateVendor(code) {
+  if (!hasRole('Admin')) { toast('Admin only','error'); return; }
+  const name    = (document.getElementById('ve_name')?.value||'').trim();
+  const trade   = (document.getElementById('ve_trade')?.value||'').trim();
+  const gstin   = (document.getElementById('ve_gstin')?.value||'').trim();
+  const pan     = (document.getElementById('ve_pan')?.value||'').trim();
+  const contact = (document.getElementById('ve_contact')?.value||'').trim();
+  const phone   = (document.getElementById('ve_phone')?.value||'').trim();
+  const address = (document.getElementById('ve_address')?.value||'').trim();
+  if (!name)    { toast('Vendor Name required','error'); return; }
+  if (!trade)   { toast('Trade required','error'); return; }
+  if (!gstin)   { toast('GSTIN required','error'); return; }
+  if (!contact) { toast('Contact Person required','error'); return; }
+  if (!phone)   { toast('Phone required','error'); return; }
+  if (!address) { toast('Address required','error'); return; }
+  // Dup check excluding self
+  const nameKey  = _normKey(name);
+  const gstinKey = _normGSTIN(gstin);
+  const dupName  = (state.masters.vendors||[]).find(v => _normKey(v['Vendor Name'])===nameKey && v['Vendor Code']!==code);
+  if (dupName) { toast('Vendor "'+name+'" already exists ('+dupName['Vendor Code']+')','error'); return; }
+  const dupGSTIN = (state.masters.vendors||[]).find(v => _normGSTIN(v['GSTIN'])===gstinKey && v['Vendor Code']!==code);
+  if (dupGSTIN) { toast('GSTIN '+gstin+' already registered to "'+dupGSTIN['Vendor Name']+'"','error'); return; }
+  pbShow('Saving...');
+  try {
+    const { error } = await sb.from('ho_vendors').update({
+      vendor_name: name, trade, gstin, pan: pan||null,
+      contact_person: contact, phone, address,
+      bank_name:    document.getElementById('ve_bankName')?.value?.trim()||null,
+      branch:       document.getElementById('ve_branch')?.value?.trim()||null,
+      bank_account: document.getElementById('ve_bank')?.value?.trim()||null,
+      ifsc:         document.getElementById('ve_ifsc')?.value?.trim()||null,
+      updated_at: new Date().toISOString(),
+    }).eq('vendor_code', code);
+    if (error) throw new Error(error.message);
+    closeModal();
+    flashSuccess('Vendor '+code+' updated');
+    _cacheBust('masters'); state.mastersCached = false;
+    await apiLoadMasters(); renderAllMasters();
+  } catch(e) { toast('Error: '+e.message,'error'); }
+  finally { pbDone(); }
+}
+
+async function openVendorDelete(code, name) {
+  if (!hasRole('Admin')) { toast('Admin only','error'); return; }
+  pbShow('Checking downstream usage...');
+  try {
+    const [ho, wo, po] = await Promise.all([
+      sb.from('ho_orders').select('ho_number', { count:'exact', head:true }).eq('vendor_name', name),
+      sb.from('wo_orders').select('wo_number', { count:'exact', head:true }).eq('vendor_name', name),
+      sb.from('pu_po_orders').select('po_number', { count:'exact', head:true }).eq('vendor_name', name),
+    ]);
+    pbDone();
+    const usages = [
+      { label: 'Hire Orders',  count: ho.count||0 },
+      { label: 'Work Orders',  count: wo.count||0 },
+      { label: 'Purchase Orders', count: po.count||0 },
+    ].filter(u => u.count > 0);
+
+    if (usages.length) {
+      const lines = usages.map(u => '<li>'+u.label+': '+u.count+' record'+(u.count>1?'s':'')+'</li>').join('');
+      openModal('<h3 style="color:var(--danger);">Cannot Delete \u2014 Vendor In Use</h3>'+
+        '<p style="font-size:13px;margin-bottom:12px;"><strong>'+esc(name)+'</strong> ('+esc(code)+') is referenced in:</p>'+
+        '<ul style="margin:0 0 16px 18px;font-size:13px;line-height:1.8;">'+lines+'</ul>'+
+        '<p style="font-size:12px;color:var(--muted);">Vendors with transactions cannot be deleted. Contact Admin to deactivate if needed.</p>'+
+        '<div class="actions-row"><button class="btn btn-ghost" onclick="closeModal()">Close</button></div>');
+      return;
+    }
+    // Safe to delete
+    const safeName = name.replace(/'/g, "\\'");
+    openModal('<h3 style="color:var(--danger);">Delete Vendor</h3>'+
+      '<p style="font-size:13px;margin-bottom:16px;"><strong>'+esc(name)+'</strong> ('+esc(code)+') has no transactions.<br>This will permanently remove the vendor.</p>'+
+      '<div class="actions-row">'+
+      '<button class="btn btn-danger" onclick="confirmVendorDelete(\''+esc(code)+'\',\''+safeName+'\')">Confirm Delete</button>'+
+      '<button class="btn btn-ghost" onclick="closeModal()">Cancel</button></div>');
+  } catch(e) { pbDone(); toast('Error: '+e.message,'error'); }
+}
+
+async function confirmVendorDelete(code, name) {
+  pbShow('Deleting...');
+  try {
+    const { error } = await sb.from('ho_vendors').delete().eq('vendor_code', code);
+    if (error) throw new Error(error.message);
+    closeModal();
+    flashSuccess('Vendor '+code+' deleted');
+    _cacheBust('masters'); state.mastersCached = false;
+    await apiLoadMasters(); renderAllMasters();
+  } catch(e) { toast('Error: '+e.message,'error'); }
+  finally { pbDone(); }
+}
+
+// ============================================================
+// ACTIVITY EDIT & DELETE (modal-based, matching Material pattern)
+// ============================================================
+function openActivityEdit(code) {
+  if (!hasRole('Admin')) { toast('Admin only','error'); return; }
+  const a = (state.masters.activities||[]).find(x => x['Activity Code']===code);
+  if (!a) { toast('Activity not found','error'); return; }
+  const html = `
+    <h3 style="color:var(--accent);margin-bottom:4px;">Edit Activity — <span class="mono" style="font-size:14px;">${esc(a['Activity Code'])}</span></h3>
+    <p style="color:var(--muted);font-size:12px;margin-bottom:16px;">All changes take effect immediately in new orders.</p>
+    <div class="grid-3" style="margin-bottom:12px;">
+      <div class="field" style="grid-column:1/3;"><label class="req">Activity Description</label><input id="ae_desc" value="${esc(a['Activity Description']||'')}" autocomplete="off" style="width:100%;"></div>
+      <div class="field"><label class="req">UOM</label><input id="ae_uom" value="${esc(a['UOM']||'')}" style="width:100%;"></div>
+    </div>
+    <div class="grid-3" style="margin-bottom:18px;">
+      <div class="field"><label>Default Rate (&#8377;)</label><input type="number" id="ae_rate" value="${esc(String(a['Default Rate']||0))}" step="0.01" style="width:100%;"></div>
+      <div class="field" style="position:relative;">
+        <label>Cost Head</label>
+        <input id="ae_costhead" value="${esc(a['Cost Head']||'')}" autocomplete="off" style="width:100%;"
+          oninput="chFuzzy('ae_costhead','ae_costhead_list','ae_costsubhead','ae_costsubhead_list')"
+          onfocus="chFuzzy('ae_costhead','ae_costhead_list','ae_costsubhead','ae_costsubhead_list')"
+          onblur="setTimeout(()=>chHide('ae_costhead_list'),200)">
+        <div id="ae_costhead_list" class="ch-dropdown" style="display:none;"></div>
+      </div>
+      <div class="field" style="position:relative;">
+        <label>Cost Subhead</label>
+        <input id="ae_costsubhead" value="${esc(a['Cost Subhead']||'')}" autocomplete="off" style="width:100%;"
+          oninput="chFuzzySub('ae_costsubhead','ae_costsubhead_list','ae_costhead')"
+          onfocus="chFuzzySub('ae_costsubhead','ae_costsubhead_list','ae_costhead')"
+          onblur="setTimeout(()=>chHide('ae_costsubhead_list'),200)">
+        <div id="ae_costsubhead_list" class="ch-dropdown" style="display:none;"></div>
+      </div>
+    </div>
+    <div style="display:flex;gap:10px;justify-content:flex-end;">
+      <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="updateActivity('${esc(a['Activity Code'])}')">&#128190; Save Changes</button>
+    </div>`;
+  openModal(html);
+}
+
+async function updateActivity(code) {
+  if (!hasRole('Admin')) { toast('Admin only','error'); return; }
+  const desc = (document.getElementById('ae_desc')?.value||'').trim();
+  const uom  = (document.getElementById('ae_uom')?.value||'').trim();
+  if (!desc) { toast('Description required','error'); return; }
+  if (!uom)  { toast('UOM required','error'); return; }
+  const descKey = _normKey(desc);
+  const dup = (state.masters.activities||[]).find(a => _normKey(a['Activity Description'])===descKey && a['Activity Code']!==code);
+  if (dup) { toast('Activity "'+desc+'" already exists ('+dup['Activity Code']+')','error'); return; }
+  pbShow('Saving...');
+  try {
+    const { error } = await sb.from('ho_activities').update({
+      activity_description: desc,
+      uom,
+      default_rate: parseFloat(document.getElementById('ae_rate')?.value)||0,
+      costhead:     document.getElementById('ae_costhead')?.value?.trim()||null,
+      cost_subhead: document.getElementById('ae_costsubhead')?.value?.trim()||null,
+      updated_at: new Date().toISOString(),
+    }).eq('activity_code', code);
+    if (error) throw new Error(error.message);
+    closeModal();
+    flashSuccess('Activity '+code+' updated');
+    _cacheBust('masters'); state.mastersCached = false;
+    await apiLoadMasters(); renderAllMasters();
+  } catch(e) { toast('Error: '+e.message,'error'); }
+  finally { pbDone(); }
+}
+
+async function openActivityDelete(code, desc) {
+  if (!hasRole('Admin')) { toast('Admin only','error'); return; }
+  pbShow('Checking downstream usage...');
+  try {
+    const [ho, wo] = await Promise.all([
+      sb.from('ho_order_items').select('id', { count:'exact', head:true }).eq('description', desc),
+      sb.from('wo_order_items').select('id', { count:'exact', head:true }).eq('description', desc),
+    ]);
+    pbDone();
+    const usages = [
+      { label: 'Hire Order lines', count: ho.count||0 },
+      { label: 'Work Order lines', count: wo.count||0 },
+    ].filter(u => u.count > 0);
+
+    if (usages.length) {
+      const lines = usages.map(u => '<li>'+u.label+': '+u.count+' line'+(u.count>1?'s':'')+'</li>').join('');
+      openModal('<h3 style="color:var(--danger);">Cannot Delete \u2014 Activity In Use</h3>'+
+        '<p style="font-size:13px;margin-bottom:12px;"><strong>'+esc(desc)+'</strong> ('+esc(code)+') is used in:</p>'+
+        '<ul style="margin:0 0 16px 18px;font-size:13px;line-height:1.8;">'+lines+'</ul>'+
+        '<p style="font-size:12px;color:var(--muted);">Activities with order lines cannot be deleted.</p>'+
+        '<div class="actions-row"><button class="btn btn-ghost" onclick="closeModal()">Close</button></div>');
+      return;
+    }
+    const safeDesc = desc.replace(/'/g, "\\'");
+    openModal('<h3 style="color:var(--danger);">Delete Activity</h3>'+
+      '<p style="font-size:13px;margin-bottom:16px;"><strong>'+esc(desc)+'</strong> ('+esc(code)+') has no order lines.<br>This will permanently remove it from Activity Master.</p>'+
+      '<div class="actions-row">'+
+      '<button class="btn btn-danger" onclick="confirmActivityDelete(\''+esc(code)+'\',\''+safeDesc+'\')">Confirm Delete</button>'+
+      '<button class="btn btn-ghost" onclick="closeModal()">Cancel</button></div>');
+  } catch(e) { pbDone(); toast('Error: '+e.message,'error'); }
+}
+
+async function confirmActivityDelete(code, desc) {
+  pbShow('Deleting...');
+  try {
+    const { error } = await sb.from('ho_activities').delete().eq('activity_code', code);
+    if (error) throw new Error(error.message);
+    closeModal();
+    flashSuccess('Activity '+code+' deleted');
+    _cacheBust('masters'); state.mastersCached = false;
+    await apiLoadMasters(); renderAllMasters();
+  } catch(e) { toast('Error: '+e.message,'error'); }
+  finally { pbDone(); }
 }
 
 // ============================================================
@@ -6117,26 +6357,24 @@ function activityTypeahead(inputId, resultsId, rateId, uomId, rowIdx, orderType)
   if (!q) { res.classList.remove('show'); res.style.display='none'; return; }
   const tokens = _fuzzyTokens(q);
   const matches = (state.masters.activities||[]).filter(a => {
-    const hay = ((a['Activity Description']||'')+'|'+(a['Category']||'')+'|'+(a['UOM']||'')).toLowerCase();
+    const hay = ((a['Activity Description']||'')+'|'+(a['Cost Head']||'')+'|'+(a['Cost Subhead']||'')+'|'+(a['UOM']||'')).toLowerCase();
     return _fuzzyMatch(hay, tokens);
   }).slice(0,12);
   if (!matches.length) { res.classList.remove('show'); res.style.display='none'; return; }
   const selectFn = orderType === 'WO' ? 'selectWOActivity' : 'selectActivity';
-  res.innerHTML = matches.map(a => `<div class="typeahead-item" onmousedown="event.preventDefault();${selectFn}(${rowIdx},'${esc(a['Activity Description'])}','${esc(a['UOM']||'')}',${num(a['Default Rate']||0)})">
-    <div>${esc(a['Activity Description'])}</div>
-    <div class="muted">${esc(a['UOM']||'')} \u00b7 \u20b9${fmtINR(a['Default Rate']||0)}</div>
-  </div>`).join('');
+  res.innerHTML = matches.map(a => `<div class="typeahead-item" onmousedown="event.preventDefault();${selectFn}(${rowIdx},'${esc(a['Activity Description'])}','${esc(a['UOM']||'')}',${num(a['Default Rate']||0)},'${esc(a['Activity Code']||'')}')">\n    <div>${esc(a['Activity Description'])}</div>\n    <div class="muted">${esc(a['Cost Head']||'')} &middot; ${esc(a['UOM']||'')} &middot; \u20b9${fmtINR(a['Default Rate']||0)}</div>\n  </div>`).join('');
   _anchorDropdown(inp, res);
 }
 
 
-function selectActivity(rowIdx, desc, uom, rate) {
+function selectActivity(rowIdx, desc, uom, rate, actCode) {
   const row = document.getElementById('hoItem_' + rowIdx);
   if (!row) return;
   const descInput = row.querySelector('.ho_desc');
   descInput.value = desc;
   descInput.readOnly = true;
   descInput.style.background = 'var(--input-bg)';
+  if (actCode) row.dataset.actCode = actCode;
   // Show clear button for this activity
   const clearBtn = row.querySelector('.ho_desc_clear');
   if (clearBtn) clearBtn.style.display = '';
@@ -6154,6 +6392,7 @@ function clearActivity(rowIdx) {
   const descInput = row.querySelector('.ho_desc');
   descInput.value = '';
   descInput.readOnly = false;
+  delete row.dataset.actCode;
   row.querySelector('.ho_uom').value = '';
   row.querySelector('.ho_rate').value = '';
   const clearBtn = row.querySelector('.ho_desc_clear');
@@ -6367,7 +6606,8 @@ function getHOFormData() {
     const uom  = tr.querySelector('.ho_uom')?.value?.trim();
     const qty  = num(tr.querySelector('.ho_qty')?.value);
     const rate = num(tr.querySelector('.ho_rate')?.value);
-    if (desc) items.push({ sno: i+1, description: desc, uom, qty, rate, amount: qty * rate });
+    const actCode = tr.dataset.actCode || null;
+    if (desc) items.push({ sno: i+1, activity_code: actCode, description: desc, uom, qty, rate, amount: qty * rate });
   });
   const gross   = items.reduce((s,x) => s + x.amount, 0);
   const gstPct  = num(document.getElementById('ho_gstPct').value);
@@ -7517,10 +7757,11 @@ function recalcWOTotals() {
   document.getElementById('wo_totalAmt').textContent = fmtINR(gross + gst);
 }
 
-function selectWOActivity(rowIdx, desc, uom, rate) {
+function selectWOActivity(rowIdx, desc, uom, rate, actCode) {
   const row = document.getElementById('woItem_' + rowIdx); if (!row) return;
   const descInput = row.querySelector('.wo_desc');
   descInput.value = desc; descInput.readOnly = true;
+  if (actCode) row.dataset.actCode = actCode;
   const clearBtn = row.querySelector('.wo_desc_clear');
   if (clearBtn) clearBtn.style.display = '';
   row.querySelector('.wo_uom').value = uom;
@@ -7534,6 +7775,7 @@ function clearWOActivity(rowIdx) {
   const row = document.getElementById('woItem_' + rowIdx); if (!row) return;
   const descInput = row.querySelector('.wo_desc');
   descInput.value = ''; descInput.readOnly = false;
+  delete row.dataset.actCode;
   row.querySelector('.wo_uom').value = '';
   row.querySelector('.wo_rate').value = '';
   const clearBtn = row.querySelector('.wo_desc_clear');
@@ -7547,7 +7789,8 @@ function getWOFormData() {
     const desc = tr.querySelector('.wo_desc')?.value?.trim();
     const qty  = num(tr.querySelector('.wo_qty')?.value);
     const rate = num(tr.querySelector('.wo_rate')?.value);
-    if (desc) items.push({ sno:i+1, description:desc, uom:tr.querySelector('.wo_uom')?.value?.trim(), qty, rate, amount:qty*rate });
+    const woActCode = tr.dataset.actCode || null;
+    if (desc) items.push({ sno:i+1, activity_code: woActCode, description:desc, uom:tr.querySelector('.wo_uom')?.value?.trim(), qty, rate, amount:qty*rate });
   });
   const gross  = items.reduce((s,x) => s+x.amount, 0);
   const gstPct = num(document.getElementById('wo_gstPct').value);
@@ -9771,108 +10014,328 @@ async function apiLoadMaterials() {
   return { ok: !error };
 }
 
-// ── Material Category functions ────────────────────────────────
-async function apiLoadMatCategories() {
-  const { data, error } = await sb.from('pu_material_categories')
-    .select('*').eq('is_active', true).order('category_name');
-  if (!error) puState.matCategories = data || [];
-  return { ok: !error };
+// ============================================================
+// COST HEAD API & TREE
+// ============================================================
+var _chData = []; // rows from pu_cost_heads
+
+async function apiLoadCostHeads() {
+  try {
+    const { data, error } = await sb.from('pu_cost_heads').select('*').eq('is_active', true).order('costhead').order('cost_subhead');
+    if (error) throw error;
+    _chData = data || [];
+    puState.costHeads = _chData;
+    return { ok: true };
+  } catch(e) { console.error('apiLoadCostHeads:', e); return { ok: false }; }
 }
 
-function populateMatCategoryDropdowns() {
-  const cats = puState.matCategories;
-  // Add form dropdown
-  const addSel = document.getElementById('mm_category');
-  if (addSel) {
-    const cur = addSel.value;
-    addSel.innerHTML = '<option value="">— Select —</option>' +
-      cats.map(c => `<option value="${esc(c.category_name)}">${esc(c.category_name)}</option>`).join('');
-    if (cur) addSel.value = cur;
-  }
-  // Filter dropdown
-  const filtSel = document.getElementById('mm_catFilter');
-  if (filtSel) {
-    const cur2 = filtSel.value;
-    filtSel.innerHTML = '<option value="">All Categories</option>' +
-      cats.map(c => `<option value="${esc(c.category_name)}">${esc(c.category_name)}</option>`).join('');
-    if (cur2) filtSel.value = cur2;
-  }
+// ── Fuzzy-search dropdown helpers (ch-dropdown) ────────────────
+(function() {
+  if (document.getElementById('ch-dropdown-style')) return;
+  const s = document.createElement('style');
+  s.id = 'ch-dropdown-style';
+  s.textContent = '.ch-dropdown{position:absolute;top:100%;left:0;right:0;background:var(--input-bg);border:1px solid var(--accent);border-radius:4px;max-height:200px;overflow-y:auto;z-index:9999;box-shadow:0 4px 12px rgba(0,0,0,0.2);}' +
+    '.ch-dropdown div{padding:7px 12px;cursor:pointer;font-size:13px;color:var(--text);}' +
+    '.ch-dropdown div:hover{background:var(--accent);color:#fff;}';
+  document.head.appendChild(s);
+})();
+
+function chHide(listId) {
+  const el = document.getElementById(listId);
+  if (el) el.style.display = 'none';
 }
 
-function renderMatCategories() {
+function chFuzzy(inputId, listId, subInputId, subListId) {
+  const inp = document.getElementById(inputId);
+  const list = document.getElementById(listId);
+  if (!inp || !list) return;
+  const q = inp.value.trim().toLowerCase();
+  const heads = [...new Set(_chData.map(r => r.costhead))].sort();
+  const filtered = q ? heads.filter(h => h.toLowerCase().includes(q)) : heads;
+  if (!filtered.length) { list.style.display = 'none'; return; }
+  list.innerHTML = filtered.map(h => {
+    const safe = h.replace(/'/g, "\\'");
+    const display = q ? h.replace(new RegExp(q.replace(/[.*+?^${}()|[\]\\]/g,'\\$&'),'gi'), m => '<strong>'+m+'</strong>') : h;
+    return '<div onmousedown="chSelectHead(\''+inputId+'\',\''+listId+'\',\''+subInputId+'\',\''+subListId+'\',\''+safe+'\')">'+display+'</div>';
+  }).join('');
+  list.style.display = '';
+}
+
+function chSelectHead(inputId, listId, subInputId, subListId, val) {
+  const inp = document.getElementById(inputId);
+  if (inp) inp.value = val;
+  chHide(listId);
+  const subInp = document.getElementById(subInputId);
+  if (subInp) { subInp.value = ''; subInp.placeholder = 'Type to search...'; }
+  chHide(subListId);
+}
+
+function chFuzzySub(subInputId, subListId, parentInputId) {
+  const parentInp = document.getElementById(parentInputId);
+  const subInp = document.getElementById(subInputId);
+  const list = document.getElementById(subListId);
+  if (!subInp || !list) return;
+  const parentVal = parentInp?.value?.trim() || '';
+  const q = subInp.value.trim().toLowerCase();
+  const subs = _chData
+    .filter(r => !parentVal || r.costhead === parentVal)
+    .map(r => r.cost_subhead)
+    .filter(Boolean);
+  const unique = [...new Set(subs)].sort();
+  const filtered = q ? unique.filter(s => s.toLowerCase().includes(q)) : unique;
+  if (!filtered.length) { list.style.display = 'none'; return; }
+  list.innerHTML = filtered.map(s => {
+    const safe = s.replace(/'/g, "\\'");
+    const display = q ? s.replace(new RegExp(q.replace(/[.*+?^${}()|[\]\\]/g,'\\$&'),'gi'), m => '<strong>'+m+'</strong>') : s;
+    return '<div onmousedown="chSelectSub(\''+subInputId+'\',\''+subListId+'\',\''+safe+'\')">'+display+'</div>';
+  }).join('');
+  list.style.display = '';
+}
+
+function chSelectSub(subInputId, subListId, val) {
+  const inp = document.getElementById(subInputId);
+  if (inp) inp.value = val;
+  chHide(subListId);
+}
+
+// ── Cost Head Tree ─────────────────────────────────────────────
+function renderCostHeadTree() {
+  const wrap = document.getElementById('ch_tree_wrap');
+  if (!wrap) return;
   const isAdmin = hasRole('Admin');
-  // Show/hide manage card
-  const card = document.getElementById('masterMatCatCard');
-  if (card) card.style.display = isAdmin ? '' : 'none';
-  if (!isAdmin) return;
 
-  const cats = puState.matCategories;
-  const mats = puState.materials;
-  const tbody = document.getElementById('mc_catList');
-  if (!tbody) return;
+  const tree = {};
+  _chData.forEach(r => {
+    if (!tree[r.costhead]) tree[r.costhead] = [];
+    if (r.cost_subhead && !tree[r.costhead].includes(r.cost_subhead))
+      tree[r.costhead].push(r.cost_subhead);
+  });
 
-  if (!cats.length) {
-    tbody.innerHTML = '<tr><td colspan="4" class="center muted">No categories yet. Add one above.</td></tr>';
+  if (!Object.keys(tree).length) {
+    wrap.innerHTML = isAdmin
+      ? '<div class="center muted" style="padding:24px;">No cost heads yet. <button class="btn btn-primary btn-sm" onclick="chAddHead()">+ Add Cost Head</button></div>'
+      : '<div class="center muted" style="padding:24px;">No cost heads defined.</div>';
     return;
   }
-  tbody.innerHTML = cats.map(c => {
-    const count = mats.filter(m => m.category === c.category_name).length;
-    const canDelete = count === 0;
-    return `<tr>
-      <td><strong>${esc(c.category_name)}</strong></td>
-      <td class="muted">${esc(c.description||'—')}</td>
-      <td>${count} material${count !== 1 ? 's' : ''}</td>
-      <td>${canDelete
-        ? `<button class="btn btn-ghost btn-sm" style="color:var(--danger);" onclick="deleteMatCategory(${c.id}, '${esc(c.category_name)}')">Delete</button>`
-        : `<span class="muted" title="Cannot delete — category has materials">In use</span>`
-      }</td>
-    </tr>`;
-  }).join('');
-}
 
-async function saveMatCategory() {
-  if (!hasRole('Admin')) { toast('Only Admin can manage categories','error'); return; }
-  const name = (document.getElementById('mc_catName')?.value || '').trim();
-  const desc = (document.getElementById('mc_catDesc')?.value || '').trim();
-  if (!name) { toast('Category name is required','error'); return; }
-  const dup = puState.matCategories.find(c => c.category_name.toLowerCase() === name.toLowerCase());
-  if (dup) { toast(`Category "${name}" already exists`,'error'); return; }
-  pbShow('Saving category…');
-  try {
-    const { error } = await sb.from('pu_material_categories').insert({
-      category_name: name,
-      description: desc || null,
-      created_by: state.userId,
-      created_by_name: state.userName,
+  let html = '<div style="font-size:13px;">';
+  Object.keys(tree).sort().forEach(head => {
+    const safeHead = head.replace(/'/g, "\\'");
+    const headId = 'chh_' + head.replace(/[^a-z0-9]/gi,'_');
+    const subs = tree[head];
+    const matCount = (puState.materials||[]).filter(m => m.costhead === head).length;
+    const actCount = (state.masters?.activities||[]).filter(a => a['Cost Head'] === head).length;
+    html += '<div style="margin-bottom:12px;">';
+    html += '<div style="display:flex;align-items:center;gap:8px;padding:8px 10px;background:var(--panel-2);border-left:4px solid var(--accent);border-radius:6px;cursor:pointer;" onclick="chToggle(\''+headId+'_children\')">';
+    html += '<span style="font-size:15px;">&#9662;</span>';
+    html += '<span style="font-weight:700;color:var(--accent);font-size:14px;">&#128193; '+esc(head)+'</span>';
+    html += '<span class="badge-count">'+subs.length+' sub-head'+(subs.length!==1?'s':'')+'</span>';
+    html += '<span style="color:var(--muted);font-size:11px;">'+matCount+' material'+(matCount!==1?'s':'')+' &nbsp;|&nbsp; '+actCount+' activit'+(actCount!==1?'ies':'y')+'</span>';
+    html += '<span style="flex:1;"></span>';
+    if (isAdmin) {
+      html += '<button class="btn btn-primary btn-sm" onclick="event.stopPropagation();chAddSub(\''+safeHead+'\',\''+headId+'\')">+ Cost Subhead</button> ';
+      html += '<button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();chRenameHead(\''+safeHead+'\')">&#9999;</button> ';
+      html += '<button class="btn btn-danger btn-sm" onclick="event.stopPropagation();chDeleteHead(\''+safeHead+'\')">&#128465;</button>';
+    }
+    html += '</div>';
+    html += '<div id="'+headId+'_children" style="margin-left:24px;margin-top:4px;">';
+    html += '<div id="'+headId+'_inline"></div>';
+    subs.sort().forEach(sub => {
+      const row = _chData.find(r => r.costhead===head && r.cost_subhead===sub);
+      const subElId = 'chs_'+(row?row.id:'x');
+      const safeSub = sub.replace(/'/g, "\\'");
+      html += '<div style="display:flex;align-items:center;gap:8px;padding:5px 10px;border-bottom:1px solid var(--border);" id="'+subElId+'">';
+      html += '<span style="color:var(--muted);font-size:12px;">&#9492;&#9472;</span>';
+      html += '<span id="'+subElId+'_label">'+esc(sub)+'</span>';
+      html += '<span style="flex:1;"></span>';
+      if (isAdmin && row) {
+        html += '<button class="btn btn-ghost btn-sm" onclick="chEditSub(\''+safeHead+'\',\''+safeSub+'\','+row.id+',\''+subElId+'\')">&#9999;</button> ';
+        html += '<button class="btn btn-danger btn-sm" onclick="chDeleteSub('+row.id+',\''+safeHead+'\',\''+safeSub+'\')">&#128465;</button>';
+      }
+      html += '</div>';
     });
-    if (error) throw new Error(error.message);
-    flashSuccess(`Category "${name}" added`);
-    document.getElementById('mc_catName').value = '';
-    document.getElementById('mc_catDesc').value = '';
-    await apiLoadMatCategories();
-    populateMatCategoryDropdowns();
-    renderMatCategories();
-  } catch(e) { toast('Error: ' + e.message, 'error'); }
+    html += '</div></div>';
+  });
+  html += '</div>';
+  if (isAdmin) html += '<div style="margin-top:16px;"><button class="btn btn-primary" onclick="chAddHead()">+ Add Cost Head</button></div>';
+  wrap.innerHTML = html;
+}
+
+function chToggle(id) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  const hidden = el.style.display === 'none';
+  el.style.display = hidden ? '' : 'none';
+  const parent = el.previousElementSibling;
+  if (parent) {
+    const chev = parent.querySelector('span:first-child');
+    if (chev) chev.innerHTML = hidden ? '&#9662;' : '&#9656;';
+  }
+}
+
+function chAddHead() {
+  if (!hasRole('Admin')) { toast('Admin only','error'); return; }
+  const wrap = document.getElementById('ch_tree_wrap');
+  let existing = document.getElementById('ch_newhead_wrap');
+  if (existing) { existing.querySelector('input').focus(); return; }
+  const div = document.createElement('div');
+  div.id = 'ch_newhead_wrap';
+  div.style.cssText = 'display:flex;gap:6px;align-items:center;margin-bottom:12px;flex-wrap:wrap;';
+  div.innerHTML = '<span style="font-weight:600;color:var(--accent);">New Cost Head:</span>' +
+    '<input id="ch_newhead_input" placeholder="e.g. Civil Works, MEP, Finishes" autocomplete="off"' +
+    ' style="padding:6px 10px;border:1px solid var(--accent);border-radius:4px;font-size:12px;width:260px;background:var(--input-bg);color:var(--text);"' +
+    ' onkeydown="if(event.key===\'Enter\')chSaveNewHead();if(event.key===\'Escape\')document.getElementById(\'ch_newhead_wrap\').remove()">' +
+    '<button class="btn btn-primary btn-sm" onclick="chSaveNewHead()">Save</button>' +
+    '<button class="btn btn-ghost btn-sm" onclick="document.getElementById(\'ch_newhead_wrap\').remove()">&#10005;</button>';
+  wrap.insertBefore(div, wrap.firstChild);
+  div.querySelector('input').focus();
+}
+
+async function chSaveNewHead() {
+  const inp = document.getElementById('ch_newhead_input');
+  const val = (inp?.value||'').trim();
+  if (!val) { toast('Enter a cost head name','error'); return; }
+  if (_chData.find(r => r.costhead.toLowerCase() === val.toLowerCase())) {
+    toast('Cost Head already exists','error'); return;
+  }
+  pbShow('Saving...');
+  try {
+    const { error } = await sb.from('pu_cost_heads').insert({
+      costhead: val, cost_subhead: null, is_active: true,
+      created_by: state.userId, created_at: new Date().toISOString()
+    });
+    if (error) throw error;
+    toast('Cost Head added','success');
+    document.getElementById('ch_newhead_wrap')?.remove();
+    await apiLoadCostHeads(); renderCostHeadTree();
+  } catch(e) { toast('Error: '+e.message,'error'); }
   finally { pbDone(); }
 }
 
-async function deleteMatCategory(id, name) {
-  if (!hasRole('Admin')) { toast('Only Admin can delete categories','error'); return; }
-  const inUse = puState.materials.some(m => m.category === name);
-  if (inUse) { toast(`Cannot delete — "${name}" is used by existing materials`,'error'); return; }
-  if (!confirm(`Delete category "${name}"?`)) return;
-  pbShow('Deleting…');
+function chAddSub(head, headId) {
+  if (!hasRole('Admin')) { toast('Admin only','error'); return; }
+  const inlineId = headId + '_inline';
+  const c = document.getElementById(inlineId);
+  if (!c) return;
+  const ex = c.querySelector('.tree-inline-wrap'); if (ex) ex.remove();
+  const wrap = document.createElement('div');
+  wrap.className = 'tree-inline-wrap';
+  wrap.style.cssText = 'display:flex;gap:6px;align-items:center;margin:6px 0;flex-wrap:wrap;';
+  const safeHead = head.replace(/'/g, "\\'");
+  wrap.innerHTML = '<span style="font-size:12px;color:var(--muted);">New Cost Subhead:</span>' +
+    '<input class="tree-inline-input" placeholder="e.g. RCC Columns, Foundation, Tiling" autocomplete="off"' +
+    ' style="padding:6px 10px;border:1px solid var(--accent);border-radius:4px;font-size:12px;width:260px;background:var(--input-bg);color:var(--text);"' +
+    ' onkeydown="if(event.key===\'Enter\')chSaveSub(this,\''+safeHead+'\');if(event.key===\'Escape\')this.closest(\'.tree-inline-wrap\').remove()">' +
+    '<button class="btn btn-primary btn-sm" onclick="chSaveSub(this.previousElementSibling,\''+safeHead+'\')">Save</button>' +
+    '<button class="btn btn-ghost btn-sm" onclick="this.closest(\'.tree-inline-wrap\').remove()">&#10005;</button>';
+  c.appendChild(wrap);
+  wrap.querySelector('input').focus();
+}
+
+async function chSaveSub(inp, head) {
+  const val = (inp?.value||'').trim();
+  if (!val) { toast('Enter a sub cost head name','error'); return; }
+  if (_chData.find(r => r.costhead===head && (r.cost_subhead||'').toLowerCase()===val.toLowerCase())) {
+    toast('Cost Subhead already exists under this head','error'); return;
+  }
+  pbShow('Saving...');
   try {
-    const { error } = await sb.from('pu_material_categories').update({ is_active: false }).eq('id', id);
-    if (error) throw new Error(error.message);
-    flashSuccess(`Category "${name}" deleted`);
-    await apiLoadMatCategories();
-    populateMatCategoryDropdowns();
-    renderMatCategories();
-  } catch(e) { toast('Error: ' + e.message, 'error'); }
+    const { error } = await sb.from('pu_cost_heads').insert({
+      costhead: head, cost_subhead: val, is_active: true,
+      created_by: state.userId, created_at: new Date().toISOString()
+    });
+    if (error) throw error;
+    toast('Cost Subhead added','success');
+    inp.closest('.tree-inline-wrap')?.remove();
+    await apiLoadCostHeads(); renderCostHeadTree();
+  } catch(e) { toast('Error: '+e.message,'error'); }
   finally { pbDone(); }
 }
-// ──────────────────────────────────────────────────────────────
+
+function chEditSub(head, sub, id, subElId) {
+  if (!hasRole('Admin')) return;
+  const labelEl = document.getElementById(subElId+'_label');
+  if (!labelEl) return;
+  const safeHead = head.replace(/'/g, "\\'");
+  const safeSub = sub.replace(/'/g, "\\'");
+  labelEl.innerHTML = '<input id="chedit_'+id+'" value="'+esc(sub)+'" autocomplete="off"' +
+    ' style="padding:4px 8px;border:1px solid var(--accent);border-radius:3px;font-size:12px;width:220px;"' +
+    ' onkeydown="if(event.key===\'Enter\')chSaveEditSub('+id+',\''+safeHead+'\',\''+safeSub+'\');if(event.key===\'Escape\')renderCostHeadTree()">' +
+    '<button class="btn btn-primary btn-sm" style="margin-left:4px;" onclick="chSaveEditSub('+id+',\''+safeHead+'\',\''+safeSub+'\')">Save</button>' +
+    '<button class="btn btn-ghost btn-sm" onclick="renderCostHeadTree()">&#10005;</button>';
+  document.getElementById('chedit_'+id)?.focus();
+}
+
+async function chSaveEditSub(id, head, oldSub) {
+  const inp = document.getElementById('chedit_'+id);
+  const val = (inp?.value||'').trim();
+  if (!val) { toast('Name required','error'); return; }
+  pbShow('Saving...');
+  try {
+    const { error } = await sb.from('pu_cost_heads').update({
+      cost_subhead: val, updated_at: new Date().toISOString()
+    }).eq('id', id);
+    if (error) throw error;
+    toast('Updated','success');
+    await apiLoadCostHeads(); renderCostHeadTree();
+  } catch(e) { toast('Error: '+e.message,'error'); }
+  finally { pbDone(); }
+}
+
+async function chRenameHead(head) {
+  if (!hasRole('Admin')) return;
+  const newName = prompt('Rename Cost Head "'+head+'" to:', head);
+  if (!newName || newName.trim() === head) return;
+  const val = newName.trim();
+  if (_chData.find(r => r.costhead.toLowerCase() === val.toLowerCase() && r.costhead !== head)) {
+    toast('Name already in use','error'); return;
+  }
+  pbShow('Renaming...');
+  try {
+    const { error } = await sb.from('pu_cost_heads').update({ costhead: val }).eq('costhead', head);
+    if (error) throw error;
+    toast('Cost Head renamed','success');
+    await apiLoadCostHeads(); renderCostHeadTree();
+  } catch(e) { toast('Error: '+e.message,'error'); }
+  finally { pbDone(); }
+}
+
+async function chDeleteHead(head) {
+  if (!hasRole('Admin')) return;
+  const matUsed = (puState.materials||[]).filter(m => m.costhead === head).length;
+  const actUsed = (state.masters?.activities||[]).filter(a => a['Cost Head'] === head).length;
+  if (matUsed + actUsed > 0) {
+    toast('Cannot delete -- "'+head+'" is used by '+matUsed+' material(s) and '+actUsed+' activity/activities','error'); return;
+  }
+  if (!confirm('Delete Cost Head "'+head+'" and all its sub-heads? Cannot be undone.')) return;
+  pbShow('Deleting...');
+  try {
+    const { error } = await sb.from('pu_cost_heads').update({ is_active: false }).eq('costhead', head);
+    if (error) throw error;
+    toast('Deleted','success');
+    await apiLoadCostHeads(); renderCostHeadTree();
+  } catch(e) { toast('Error: '+e.message,'error'); }
+  finally { pbDone(); }
+}
+
+async function chDeleteSub(id, head, sub) {
+  if (!hasRole('Admin')) return;
+  const matUsed = (puState.materials||[]).filter(m => m.costhead === head && m.cost_subhead === sub).length;
+  const actUsed = (state.masters?.activities||[]).filter(a => a['Cost Head'] === head && a['Cost Subhead'] === sub).length;
+  if (matUsed + actUsed > 0) {
+    toast('Cannot delete -- "'+sub+'" is used by '+matUsed+' material(s) and '+actUsed+' activity/activities','error'); return;
+  }
+  if (!confirm('Delete Cost Subhead "'+sub+'"?')) return;
+  pbShow('Deleting...');
+  try {
+    const { error } = await sb.from('pu_cost_heads').update({ is_active: false }).eq('id', id);
+    if (error) throw error;
+    toast('Deleted','success');
+    await apiLoadCostHeads(); renderCostHeadTree();
+  } catch(e) { toast('Error: '+e.message,'error'); }
+  finally { pbDone(); }
+}
+// ─────────────────────────────────────────────────────────────────────────────
 
 // ── Material Master sort state ─────────────────────────────────
 var _mmSort = { col: 'material_name', dir: 1 }; // dir: 1=asc, -1=desc
@@ -9922,16 +10385,17 @@ function _fuzzyScore(target, query) {
 
 function renderMaterialMaster() {
   const q   = (document.getElementById('mm_search')?.value || '').trim();
-  const cat = document.getElementById('mm_catFilter')?.value || '';
+  const chf = (document.getElementById('mm_chFilter')?.value || '').trim().toLowerCase();
   let rows = puState.materials;
-  if (cat) rows = rows.filter(m => m.category === cat);
+  if (chf) rows = rows.filter(m => (m.costhead||'').toLowerCase().includes(chf));
 
-  // Fuzzy search across name, sub_category, material_code, uom
+  // Fuzzy search across name, cost_subhead, material_code, uom
   if (q) {
     rows = rows.map(m => {
       const score = Math.max(
         _fuzzyScore(m.material_name    || '', q),
-        _fuzzyScore(m.sub_category     || '', q) * 0.8,
+        _fuzzyScore(m.cost_subhead     || '', q) * 0.8,
+        _fuzzyScore(m.costhead         || '', q) * 0.8,
         _fuzzyScore(m.material_code    || '', q) * 0.9,
         _fuzzyScore(m.uom              || '', q) * 0.6,
         _fuzzyScore(m.specification    || '', q) * 0.5
@@ -9957,8 +10421,8 @@ function renderMaterialMaster() {
   const cols = [
     { key: 'material_code',  label: 'Code' },
     { key: 'material_name',  label: 'Name' },
-    { key: 'category',       label: 'Category' },
-    { key: 'sub_category',   label: 'Sub Category' },
+    { key: 'costhead',       label: 'Cost Head' },
+    { key: 'cost_subhead',   label: 'Cost Subhead' },
     { key: 'uom',            label: 'UOM' },
     { key: 'hsn_code',       label: 'HSN' },
     { key: 'specification',  label: 'Specification' },
@@ -9975,8 +10439,8 @@ function renderMaterialMaster() {
     <tr>
       <td class="mono">${esc(m.material_code)}</td>
       <td>${esc(m.material_name)}</td>
-      <td>${esc(m.category||'')}</td>
-      <td>${esc(m.sub_category||'')}</td>
+      <td>${esc(m.costhead||'')}</td>
+      <td>${esc(m.cost_subhead||'')}</td>
       <td>${esc(m.uom)}</td>
       <td>${esc(m.hsn_code||'—')}</td>
       <td>${esc(m.specification||'—')}</td>
@@ -10099,10 +10563,10 @@ async function saveMaterialMaster() {
   }
   const name = document.getElementById('mm_name').value.trim();
   const uom  = document.getElementById('mm_uom').value.trim();
-  const cat  = document.getElementById('mm_category').value;
+  const ch   = document.getElementById('mm_costhead').value.trim();
   if (!name) { toast('Material name required','error'); return; }
   if (!uom)  { toast('UOM required','error'); return; }
-  if (!cat)  { toast('Category required','error'); return; }
+  if (!ch)   { toast('Cost Head required','error'); return; }
   // Duplicate check — composite key on (name + UOM), normalised
   const nameKey = _normKey(name);
   const uomKey  = _normKey(uom);
@@ -10117,18 +10581,17 @@ async function saveMaterialMaster() {
     const lastNum = last?.length ? parseInt((last[0].material_code||'MAT000').replace('MAT',''))||0 : 0;
     const code = 'MAT' + String(lastNum + 1).padStart(3, '0');
     const { error } = await sb.from('pu_material_master').insert({
-      material_code: code, material_name: name, uom, category: cat,
-      sub_category: document.getElementById('mm_subcat').value.trim()||null,
+      material_code: code, material_name: name, uom, costhead: ch,
+      cost_subhead: document.getElementById('mm_costsubhead').value.trim()||null,
       hsn_code: document.getElementById('mm_hsn').value.trim()||null,
       specification: document.getElementById('mm_spec').value.trim()||null,
       created_by: state.userId, created_by_name: state.userName,
     });
     if (error) throw new Error(error.message);
     flashSuccess('Material ' + code + ' added');
-    ['mm_name','mm_uom','mm_subcat','mm_hsn','mm_spec'].forEach(id => {
+    ['mm_name','mm_uom','mm_costhead','mm_costsubhead','mm_hsn','mm_spec'].forEach(id => {
       const el = document.getElementById(id); if (el) el.value = '';
     });
-    document.getElementById('mm_category').value = '';
     const dupBox = document.getElementById('mm_name_dup');
     if (dupBox) { dupBox.style.display = 'none'; dupBox.innerHTML = ''; }
     await apiLoadMaterials();
@@ -10142,10 +10605,6 @@ function openMatEdit(code) {
   if (!hasRole('Admin')) { toast('Only Admin can edit materials','error'); return; }
   const m = puState.materials.find(x => x.material_code === code);
   if (!m) { toast('Material not found','error'); return; }
-
-  const catOptions = puState.matCategories.map(c =>
-    `<option value="${esc(c.category_name)}" ${m.category === c.category_name ? 'selected' : ''}>${esc(c.category_name)}</option>`
-  ).join('');
 
   const html = `
     <h3 style="color:var(--accent);margin-bottom:4px;">Edit Material — <span class="mono" style="font-size:14px;">${esc(m.material_code)}</span></h3>
@@ -10161,16 +10620,21 @@ function openMatEdit(code) {
       </div>
     </div>
     <div class="grid-4" style="margin-bottom:18px;">
-      <div class="field">
-        <label class="req">Category</label>
-        <select id="me_category" style="width:100%;">
-          <option value="">— Select —</option>
-          ${catOptions}
-        </select>
+      <div class="field" style="position:relative;">
+        <label class="req">Cost Head</label>
+        <input id="me_costhead" value="${esc(m.costhead||'')}" autocomplete="off" style="width:100%;"
+          oninput="chFuzzy('me_costhead','me_costhead_list','me_costsubhead','me_costsubhead_list')"
+          onfocus="chFuzzy('me_costhead','me_costhead_list','me_costsubhead','me_costsubhead_list')"
+          onblur="setTimeout(()=>chHide('me_costhead_list'),200)">
+        <div id="me_costhead_list" class="ch-dropdown" style="display:none;"></div>
       </div>
-      <div class="field">
-        <label>Sub Category</label>
-        <input id="me_subcat" value="${esc(m.sub_category||'')}" style="width:100%;">
+      <div class="field" style="position:relative;">
+        <label>Cost Subhead</label>
+        <input id="me_costsubhead" value="${esc(m.cost_subhead||'')}" autocomplete="off" style="width:100%;"
+          oninput="chFuzzySub('me_costsubhead','me_costsubhead_list','me_costhead')"
+          onfocus="chFuzzySub('me_costsubhead','me_costsubhead_list','me_costhead')"
+          onblur="setTimeout(()=>chHide('me_costsubhead_list'),200)">
+        <div id="me_costsubhead_list" class="ch-dropdown" style="display:none;"></div>
       </div>
       <div class="field">
         <label>HSN Code</label>
@@ -10198,15 +10662,15 @@ async function updateMaterialMaster(code) {
 
   const name   = (document.getElementById('me_name')?.value   || '').trim();
   const uom    = (document.getElementById('me_uom')?.value    || '').trim();
-  const cat    = (document.getElementById('me_category')?.value || '');
-  const subcat = (document.getElementById('me_subcat')?.value  || '').trim();
+  const cat    = (document.getElementById('me_costhead')?.value || '').trim();
+  const subcat = (document.getElementById('me_costsubhead')?.value  || '').trim();
   const hsn    = (document.getElementById('me_hsn')?.value     || '').trim();
   const spec   = (document.getElementById('me_spec')?.value    || '').trim();
   const reason = (document.getElementById('me_reason')?.value  || '').trim();
 
   if (!name)   { toast('Material name is required','error'); return; }
   if (!uom)    { toast('UOM is required','error'); return; }
-  if (!cat)    { toast('Category is required','error'); return; }
+  if (!cat)    { toast('Cost Head is required','error'); return; }
   if (!reason) { toast('Reason for edit is required','error'); return; }
 
   // Duplicate check — same name+UOM on a different material code
@@ -10231,8 +10695,8 @@ async function updateMaterialMaster(code) {
     const { error: updErr } = await sb.from('pu_material_master').update({
       material_name: name,
       uom,
-      category:      cat,
-      sub_category:  subcat || null,
+      costhead:      cat,
+      cost_subhead:  subcat || null,
       hsn_code:      hsn    || null,
       specification: spec   || null,
       updated_by:      state.userId,
@@ -10245,8 +10709,8 @@ async function updateMaterialMaster(code) {
     const changes = {};
     if (before.material_name !== name)          changes.material_name  = { from: before.material_name,          to: name };
     if (before.uom           !== uom)           changes.uom            = { from: before.uom,                    to: uom };
-    if ((before.category||'') !== cat)          changes.category       = { from: before.category||'',           to: cat };
-    if ((before.sub_category||'') !== subcat)   changes.sub_category   = { from: before.sub_category||'',       to: subcat };
+    if ((before.costhead||'') !== cat)          changes.costhead       = { from: before.costhead||'',           to: cat };
+    if ((before.cost_subhead||'') !== subcat)   changes.cost_subhead   = { from: before.cost_subhead||'',       to: subcat };
     if ((before.hsn_code||'') !== hsn)          changes.hsn_code       = { from: before.hsn_code||'',           to: hsn };
     if ((before.specification||'') !== spec)    changes.specification  = { from: before.specification||'',      to: spec };
 
@@ -10255,10 +10719,10 @@ async function updateMaterialMaster(code) {
       material_name:    name,
       changed_fields:   JSON.stringify(changes),
       before_snapshot:  JSON.stringify({
-        material_name: before.material_name, uom: before.uom, category: before.category,
-        sub_category: before.sub_category, hsn_code: before.hsn_code, specification: before.specification,
+        material_name: before.material_name, uom: before.uom, costhead: before.costhead,
+        cost_subhead: before.cost_subhead, hsn_code: before.hsn_code, specification: before.specification,
       }),
-      after_snapshot:   JSON.stringify({ material_name: name, uom, category: cat, sub_category: subcat, hsn_code: hsn, specification: spec }),
+      after_snapshot:   JSON.stringify({ material_name: name, uom, costhead: cat, cost_subhead: subcat, hsn_code: hsn, specification: spec }),
       edit_reason:      reason,
       edited_by:        state.userId,
       edited_by_name:   state.userName,
@@ -10535,27 +10999,27 @@ function materialTypeahead(inputId, resultsId) {
   if (!q || !res) return;
   const tokens = _fuzzyTokens(q);
   const matches = puState.materials.filter(m => {
-    const hay = ((m.material_name||'')+'|'+(m.category||'')+'|'+(m.sub_category||'')+'|'+(m.uom||'')).toLowerCase();
+    const hay = ((m.material_name||'')+'|'+(m.costhead||'')+'|'+(m.cost_subhead||'')+'|'+(m.uom||'')).toLowerCase();
     return _fuzzyMatch(hay, tokens);
   }).slice(0, 15);
   if (!matches.length) { res.classList.remove('show'); res.style.display='none'; return; }
   res.innerHTML = matches.map(m =>
-    `<div class="typeahead-item" onmousedown="event.preventDefault();selectMaterialItem('${inputId}','${resultsId}','${esc(m.material_name).replace(/'/g,"\\'")}','${esc(m.uom).replace(/'/g,"\\'")}')">
+    `<div class="typeahead-item" onmousedown="event.preventDefault();selectMaterialItem('${inputId}','${resultsId}','${esc(m.material_name).replace(/'/g,"\\'")}','${esc(m.uom).replace(/'/g,"\\'")}','${esc(m.material_code).replace(/'/g,"\\'")}')">
       <strong>${esc(m.material_name)}</strong>
-      <div class="muted">${esc(m.category||'')}${m.sub_category?' · '+esc(m.sub_category):''} · ${esc(m.uom)}</div>
+      <div class="muted">${esc(m.costhead||'')}${m.cost_subhead?' · '+esc(m.cost_subhead):''} · ${esc(m.uom)}</div>
     </div>`
   ).join('');
   _anchorDropdown(inp, res);
 }
 
-function selectMaterialItem(inputId, resultsId, name, uom) {
+function selectMaterialItem(inputId, resultsId, name, uom, matCode) {
   const input = document.getElementById(inputId);
-  if (input) input.value = name;
+  if (input) { input.value = name; input.dataset.matCode = matCode||''; }
   const res = document.getElementById(resultsId);
   if (res) { res.classList.remove('show'); res.style.display='none'; }
   const row = document.getElementById(inputId)?.closest('tr');
   if (row) {
-    const uomEl = row.querySelector('.pu_uom');
+    const uomEl = row.querySelector('.pu_uom') || row.querySelector('.po_uom');
     if (uomEl) uomEl.value = uom;
   }
 }
@@ -10658,10 +11122,12 @@ async function saveMIR() {
   if (!date) { toast('MIR Date required','error'); return; }
   const items = [];
   document.querySelectorAll('#mirItemsBody tr').forEach((tr,i) => {
-    const mat = tr.querySelector('.pu_material')?.value?.trim();
+    const matEl2 = tr.querySelector('.pu_material');
+    const mat = matEl2?.value?.trim();
+    const matCode2 = matEl2?.dataset?.matCode||null;
     const qty = parseFloat(tr.querySelector('input[type="number"]')?.value)||0;
     if (mat && qty > 0) items.push({
-      sno: items.length+1, material_name: mat,
+      sno: items.length+1, material_code: matCode2, material_name: mat,
       uom: tr.querySelector('.pu_uom')?.value?.trim()||'',
       qty_required: qty,
       specification: tr.cells[4]?.querySelector('input')?.value?.trim()||null,
@@ -11641,8 +12107,10 @@ async function saveRFQ() {
   if(!desc){toast('Description required','error');return;}
   const items=[];
   document.querySelectorAll('#rfqItemsBody tr').forEach((tr,i)=>{
-    const mat=tr.querySelector('.pu_material')?.value?.trim();
-    if(mat) items.push({sno:items.length+1,material_name:mat,
+    const rfqMatEl=tr.querySelector('.pu_material');
+    const mat=rfqMatEl?.value?.trim();
+    const rfqMatCode=rfqMatEl?.dataset?.matCode||null;
+    if(mat) items.push({sno:items.length+1,material_code:rfqMatCode,material_name:mat,
       uom:tr.querySelector('.pu_uom')?.value?.trim()||'',
       qty_required:parseFloat(tr.querySelector('input[type="number"]')?.value)||0,
       specification:tr.cells[4]?.querySelector('input')?.value||null});
@@ -12472,7 +12940,9 @@ function getPOItemsData() {
   const items=[];
   document.querySelectorAll('#poItemsBody tr').forEach(tr=>{
     const rn=tr.id?.split('_')[1];
-    const mat=tr.querySelector('.po_material')?.value?.trim();
+    const matEl=tr.querySelector('.po_material');
+    const mat=matEl?.value?.trim();
+    const matCode=matEl?.dataset?.matCode||null;
     const uom=tr.querySelector('.po_uom')?.value?.trim()||'';
     const qty=parseFloat(tr.querySelector('.po_qty')?.value)||0;
     const rate=parseFloat(tr.querySelector('.po_rate')?.value)||0;
@@ -12489,7 +12959,7 @@ function getPOItemsData() {
       igstP=parseFloat(document.getElementById('po_igstPct')?.value)||0;
     }
     cgst=base*cgstP/100; sgst=base*sgstP/100; igst=base*igstP/100;
-    items.push({sno:items.length+1,material_name:mat,uom,qty,unit_rate:rate,base_amount:base,
+    items.push({sno:items.length+1,material_code:matCode,material_name:mat,uom,qty,unit_rate:rate,base_amount:base,
       cgst_pct:cgstP,sgst_pct:sgstP,igst_pct:igstP,
       cgst_amount:cgst,sgst_amount:sgst,igst_amount:igst,
       total_amount:base+cgst+sgst+igst,
@@ -13520,7 +13990,7 @@ function cgrnMatTypeahead(i) {
     list = mats.slice(0, 12);
   } else {
     list = mats.filter(m => {
-      const hay = ((m.material_name||'')+'|'+(m.category||'')+'|'+(m.sub_category||'')+'|'+(m.uom||'')).toLowerCase();
+      const hay = ((m.material_name||'')+'|'+(m.costhead||'')+'|'+(m.cost_subhead||'')+'|'+(m.uom||'')).toLowerCase();
       return _fuzzyMatch(hay, tokens);
     }).slice(0, 15);
   }
@@ -13533,7 +14003,7 @@ function cgrnMatTypeahead(i) {
       const code = esc(m.material_code).replace(/'/g,"\\'");
       return `<div class="typeahead-item" onmousedown="event.preventDefault();cgrnPickMat(${i},'${code}','${name}','${uom}')">
         <strong>${esc(m.material_name)}</strong>
-        <div class="muted">${esc(m.material_code)} · ${esc(m.uom||'—')}${m.category ? ' · ' + esc(m.category) : ''}</div>
+        <div class="muted">${esc(m.material_code)} · ${esc(m.uom||'—')}${m.costhead ? ' · ' + esc(m.costhead) : ''}</div>
       </div>`;
     }).join('');
   }
@@ -13869,7 +14339,29 @@ async function onPOBPOChange() {
     </label>`).join('');
   // Load PO GST info
   const {data:po}=await sb.from('pu_po_orders').select('gst_mode,cgst_pct,sgst_pct,igst_pct').eq('po_number',poNum).single();
-  _pobGSTInfo={mode:po?.gst_mode||'overall',cgst:po?.cgst_pct||0,sgst:po?.sgst_pct||0,igst:po?.igst_pct||0};
+  if((po?.gst_mode||'overall')==='per_line'){
+    // Per-line mode: group items by rate combination into display slabs
+    const {data:poItems}=await sb.from('pu_po_items').select('base_amount,cgst_pct,sgst_pct,igst_pct').eq('po_number',poNum);
+    const slabMap={};
+    let totalBase=0;
+    (poItems||[]).forEach(it=>{
+      const b=num(it.base_amount)||0;
+      const c=num(it.cgst_pct)||0, s=num(it.sgst_pct)||0, g=num(it.igst_pct)||0;
+      const key=c+'|'+s+'|'+g;
+      if(!slabMap[key]) slabMap[key]={cgst:c,sgst:s,igst:g,base:0,gstAmt:0};
+      slabMap[key].base+=b;
+      slabMap[key].gstAmt+=b*(c+s+g)/100;
+      totalBase+=b;
+    });
+    const slabs=Object.values(slabMap);
+    // Blended effective rates stored for savePOB compatibility (cgst_pct/sgst_pct columns)
+    const effCGST=totalBase>0?Math.round((slabs.reduce((a,sl)=>a+sl.base*sl.cgst/100,0)/totalBase)*100*100)/100:0;
+    const effSGST=totalBase>0?Math.round((slabs.reduce((a,sl)=>a+sl.base*sl.sgst/100,0)/totalBase)*100*100)/100:0;
+    const effIGST=totalBase>0?Math.round((slabs.reduce((a,sl)=>a+sl.base*sl.igst/100,0)/totalBase)*100*100)/100:0;
+    _pobGSTInfo={mode:'per_line',cgst:effCGST,sgst:effSGST,igst:effIGST,slabs};
+  } else {
+    _pobGSTInfo={mode:'overall',cgst:po?.cgst_pct||0,sgst:po?.sgst_pct||0,igst:po?.igst_pct||0,slabs:null};
+  }
 }
 
 async function onPOBGRNSelect() {
@@ -13893,8 +14385,6 @@ async function onPOBGRNSelect() {
     </tr>`;
   }).join('')||'<tr><td colspan="8" class="center muted">No items</td></tr>';
   document.getElementById('pob_s_gross').textContent=fmtINR(grossAmt);
-  const gstPct=_pobGSTInfo.cgst+_pobGSTInfo.sgst+_pobGSTInfo.igst;
-  document.getElementById('pob_s_gstLabel').textContent='GST ('+gstPct+'%)';
   recalcPOBTotals();
 }
 
@@ -13915,34 +14405,118 @@ function addPOBExtraLine() {
   tr.innerHTML=`
     <td><input placeholder="Description" style="width:180px;"></td>
     <td><select><option value="Addition">Addition</option><option value="Deduction">Deduction</option></select></td>
-    <td><select><option value="Before GST">Before GST</option><option value="After GST">After GST</option></select></td>
+    <td><select onchange="pobToggleGSTPct(this)" ><option value="Before GST">Before GST</option><option value="After GST">After GST</option></select></td>
+    <td class="pobGstPctCell"><input type="number" step="0.01" value="18" style="width:70px;text-align:right;" oninput="recalcPOBTotals()"></td>
     <td><input type="number" step="0.01" style="width:100px;text-align:right;" oninput="recalcPOBTotals()"></td>
     <td><button class="btn btn-ghost btn-sm" onclick="this.closest('tr').remove();recalcPOBTotals()">✕</button></td>`;
   document.getElementById('pob_extraBody').appendChild(tr);
 }
 
+function pobToggleGSTPct(sel) {
+  const gstCell=sel.closest('tr').querySelector('.pobGstPctCell');
+  if(gstCell) gstCell.style.display=sel.value==='Before GST'?'':'none';
+  recalcPOBTotals();
+}
+
 function recalcPOBTotals() {
   const gross=num(document.getElementById('pob_s_gross')?.textContent);
-  let extraBefore=0, extraAfter=0;
+
+  // ── Collect extra lines ──────────────────────────────────────────────────
+  const beforeLines=[], afterLines=[];
   document.querySelectorAll('#pob_extraBody tr').forEach(tr=>{
     const cells=tr.cells;
-    const amt=num(cells[3]?.querySelector('input')?.value||0);
+    const desc=(cells[0]?.querySelector('input')?.value||'').trim()||'—';
+    const gstPct=num(cells[3]?.querySelector('input')?.value||0);  // GST % cell
+    const amt=num(cells[4]?.querySelector('input')?.value||0);     // Amount cell
     const type=cells[1]?.querySelector('select')?.value;
     const timing=cells[2]?.querySelector('select')?.value;
     const signed=type==='Addition'?amt:-amt;
-    if(timing==='Before GST') extraBefore+=signed; else extraAfter+=signed;
+    if(timing==='Before GST') beforeLines.push({desc,signed,gstPct});
+    else afterLines.push({desc,signed,gstPct:0});
   });
+  const extraBefore=beforeLines.reduce((a,l)=>a+l.signed,0);
+  const extraAfter=afterLines.reduce((a,l)=>a+l.signed,0);
+
+  // ── Render Before-GST rows: description + indented GST line ─────────────
+  const dynEl=document.getElementById('pob_s_dynamic');
+  if(dynEl) dynEl.innerHTML=beforeLines.map(l=>{
+    const gstAmt=l.signed*l.gstPct/100;
+    const gstRow=l.gstPct>0
+      ? `<tr><td style="padding:2px 8px 4px 20px;color:var(--muted);font-size:11.5px;">GST @${l.gstPct}%</td>`+
+        `<td class="num" style="padding:2px 8px 4px 8px;font-size:11.5px;">${fmtINR(gstAmt)}</td></tr>`
+      : '';
+    return `<tr><td style="padding:4px 8px;color:var(--muted);">${l.signed>=0?'Add':'Less'}: ${l.desc}</td>`+
+           `<td class="num" style="padding:4px 8px;">${(l.signed>=0?'+':'')+fmtINR(l.signed)}</td></tr>${gstRow}`;
+  }).join('');
+
+  // ── Taxable Value = Gross + Before-GST extra amounts (ex-tax) ───────────
   const taxable=gross+extraBefore;
-  const gstPct=(_pobGSTInfo.cgst||0)+(_pobGSTInfo.sgst||0)+(_pobGSTInfo.igst||0);
-  const gst=taxable*gstPct/100;
+  document.getElementById('pob_s_taxable').textContent=fmtINR(taxable);
+
+  // ── Material GST: computed on gross only, split by slab ─────────────────
+  let matCGST=0, matSGST=0, matIGST=0;
+  if(_pobGSTInfo.mode==='per_line' && _pobGSTInfo.slabs && _pobGSTInfo.slabs.length){
+    const totalPOBase=_pobGSTInfo.slabs.reduce((a,sl)=>a+sl.base,0);
+    _pobGSTInfo.slabs.forEach(sl=>{
+      const portion=totalPOBase>0?(sl.base/totalPOBase):0;
+      const slabBase=gross*portion;
+      matCGST+=slabBase*sl.cgst/100;
+      matSGST+=slabBase*sl.sgst/100;
+      matIGST+=slabBase*sl.igst/100;
+    });
+  } else {
+    matCGST=gross*(_pobGSTInfo.cgst||0)/100;
+    matSGST=gross*(_pobGSTInfo.sgst||0)/100;
+    matIGST=gross*(_pobGSTInfo.igst||0)/100;
+  }
+
+  // ── Extra-line GST: split assuming same CGST/SGST/IGST ratio as material ─
+  // For Before-GST extra lines, each line carries its own GST %
+  // Split into CGST/SGST/IGST using same ratio as the PO's material rates
+  const matTotalPct=(_pobGSTInfo.cgst||0)+(_pobGSTInfo.sgst||0)+(_pobGSTInfo.igst||0);
+  let extraCGST=0, extraSGST=0, extraIGST=0;
+  beforeLines.forEach(l=>{
+    const lineGST=l.signed*l.gstPct/100;
+    if((_pobGSTInfo.igst||0)>0){
+      // IGST regime
+      extraIGST+=lineGST;
+    } else {
+      // CGST+SGST regime — split equally (half each)
+      extraCGST+=lineGST/2;
+      extraSGST+=lineGST/2;
+    }
+  });
+
+  // ── Combined GST totals ──────────────────────────────────────────────────
+  const totalCGST=matCGST+extraCGST;
+  const totalSGST=matSGST+extraSGST;
+  const totalIGST=matIGST+extraIGST;
+  const gst=totalCGST+totalSGST+totalIGST;
+
+  const gstEl=document.getElementById('pob_s_gst_rows');
+  if(gstEl){
+    let html='';
+    if(totalCGST>0) html+=`<tr><td style="padding:4px 8px;color:var(--muted);">Total CGST</td>`+
+      `<td class="num" style="padding:4px 8px;">${fmtINR(totalCGST)}</td></tr>`;
+    if(totalSGST>0) html+=`<tr><td style="padding:4px 8px;color:var(--muted);">Total SGST</td>`+
+      `<td class="num" style="padding:4px 8px;">${fmtINR(totalSGST)}</td></tr>`;
+    if(totalIGST>0) html+=`<tr><td style="padding:4px 8px;color:var(--muted);">Total IGST</td>`+
+      `<td class="num" style="padding:4px 8px;">${fmtINR(totalIGST)}</td></tr>`;
+    if(!html) html=`<tr><td style="padding:4px 8px;color:var(--muted);">GST</td>`+
+      `<td class="num" style="padding:4px 8px;">0.00</td></tr>`;
+    gstEl.innerHTML=html;
+  }
+
+  // ── After-GST rows ───────────────────────────────────────────────────────
+  const afterEl=document.getElementById('pob_s_after_rows');
+  if(afterEl) afterEl.innerHTML=afterLines.map(l=>
+    `<tr><td style="padding:4px 8px;color:var(--muted);">${l.signed>=0?'Add':'Less'}: ${l.desc}</td>`+
+    `<td class="num" style="padding:4px 8px;">${(l.signed>=0?'+':'')+fmtINR(l.signed)}</td></tr>`
+  ).join('');
+
   const invoice=taxable+gst+extraAfter;
   const hold=num(document.getElementById('pob_holdAmt')?.value);
   const net=invoice-hold;
-  document.getElementById('pob_s_extraBefore').textContent=(extraBefore>=0?'+':'')+fmtINR(extraBefore);
-  document.getElementById('pob_s_taxable').textContent=fmtINR(taxable);
-  document.getElementById('pob_s_gstLabel').textContent='GST ('+gstPct+'%)';
-  document.getElementById('pob_s_gst').textContent=fmtINR(gst);
-  document.getElementById('pob_s_extraAfter').textContent=(extraAfter>=0?'+':'')+fmtINR(extraAfter);
   document.getElementById('pob_s_invoice').textContent=fmtINR(invoice);
   document.getElementById('pob_s_net').textContent=fmtINR(net);
   const f=document.getElementById('pobForm');
@@ -14562,7 +15136,7 @@ function misMaterialTypeahead(i) {
   const CAP = 20;
   const all = data.filter(m => {
     if (!q) return true;
-    const hay = ((m.material_name||'')+'|'+(m.category||'')+'|'+(m.sub_category||'')+'|'+(m.uom||'')+'|'+(m.material_code||'')).toLowerCase();
+    const hay = ((m.material_name||'')+'|'+(m.costhead||'')+'|'+(m.cost_subhead||'')+'|'+(m.uom||'')+'|'+(m.material_code||'')).toLowerCase();
     return _fuzzyMatch(hay, tokens);
   });
   const matches = all.slice(0, CAP);
@@ -14581,7 +15155,7 @@ function misMaterialTypeahead(i) {
     return `<div class="typeahead-item"
       onmousedown="event.preventDefault();selectMISMaterial(${i},'${esc(m.material_name).replace(/'/g,"\\'")}','${esc(m.uom||'').replace(/'/g,"\\'")}',${bal},${rate})">
       <strong>${esc(m.material_name)}</strong>
-      <div class="muted" style="font-size:10px;">${esc(m.category||'')}${m.sub_category?' · '+esc(m.sub_category):''} · ${esc(m.uom||'')} · ${balBadge}</div>
+      <div class="muted" style="font-size:10px;">${esc(m.costhead||'')}${m.cost_subhead?' · '+esc(m.cost_subhead):''} · ${esc(m.uom||'')} · ${balBadge}</div>
     </div>`;
   }).join('');
   _anchorDropdown(inp, res);
@@ -17858,7 +18432,8 @@ function renderLocTree() {
   });
   Object.entries(window._locPendingFloors||{}).forEach(([key,floors])=>{
     const [proj,blk]=key.split('||');
-    if(!tree[proj]?.[blk]) return;
+    if(!tree[proj]) tree[proj]={};
+    if(!tree[proj][blk]) tree[proj][blk]={floors:{},shafts:[]};
     floors.forEach(f=>{ if(!tree[proj][blk].floors[f]) tree[proj][blk].floors[f]=[]; });
   });
 
@@ -17870,7 +18445,7 @@ function renderLocTree() {
   let html='<div style="font-size:13px;">';
 
   Object.keys(tree).sort().forEach(proj=>{
-    const projId='locp_'+btoa(proj).replace(/[=+/]/g,'');
+    const projId='locp_'+btoa(unescape(encodeURIComponent(proj))).replace(/[=+/]/g,'');
     const totalLocs=_locData.filter(r=>r.project===proj).length;
     html+=`
     <div style="margin-bottom:12px;">
@@ -17886,7 +18461,7 @@ function renderLocTree() {
         <div id="${projId}_inline"></div>`;
 
     Object.keys(tree[proj]).sort().forEach(blk=>{
-      const blkId='locb_'+btoa(proj+'|'+blk).replace(/[=+/]/g,'');
+      const blkId='locb_'+btoa(unescape(encodeURIComponent(proj+'|'+blk))).replace(/[=+/]/g,'');
       const blkData=tree[proj][blk];
       const floorCount=Object.keys(blkData.floors).length;
       const shaftCount=blkData.shafts.length;
@@ -17906,7 +18481,7 @@ function renderLocTree() {
 
       // Floors
       Object.keys(blkData.floors).sort().forEach(floor=>{
-        const flrId='locf_'+btoa(proj+'|'+blk+'|'+floor).replace(/[=+/]/g,'');
+        const flrId='locf_'+btoa(unescape(encodeURIComponent(proj+'|'+blk+'|'+floor))).replace(/[=+/]/g,'');
         const units=blkData.floors[floor];
         html+=`
             <div style="margin-bottom:6px;margin-top:4px;">
@@ -18061,8 +18636,7 @@ function locSaveFloor(inp,proj,blk) {
   if(!window._locPendingFloors) window._locPendingFloors={};
   if(!window._locPendingFloors[key]) window._locPendingFloors[key]=[];
   window._locPendingFloors[key].push(val);
-  // remove from pending blocks
-  if(window._locPendingBlocks?.[proj]) window._locPendingBlocks[proj]=window._locPendingBlocks[proj].filter(b=>b!==blk);
+  // keep block in _locPendingBlocks so the tree node stays visible
   inp.closest('.tree-inline-wrap')?.remove();
   renderLocTree();
 }
