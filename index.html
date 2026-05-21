@@ -831,13 +831,14 @@ input[type="number"] {
           <th style="width:28px;">#</th>
           <th>Activity / Description</th>
           <th style="width:55px;">UOM</th>
+          <th>WBS Activity</th>
+          <th>Cost Subhead</th>
           <th style="width:85px;" class="num">HO Qty</th>
           <th style="width:85px;" class="num">Prev Cert.</th>
           <th style="width:90px;" class="num">This Period</th>
           <th style="width:85px;" class="num">Cumulative</th>
           <th style="width:90px;" class="num">Unit Rate</th>
           <th style="width:100px;" class="num">Cert. Value</th>
-
         </tr></thead>
         <tbody id="hocItemsBody"></tbody>
         <tfoot>
@@ -2042,19 +2043,9 @@ input[type="number"] {
         </div>
         <div class="field"><label class="req">UOM</label><input id="mm_uom" placeholder="e.g. Bags, MT, Nos, RMT" oninput="mmNameDupCheck()"></div>
       </div>
-      <div class="grid-4" style="margin-top:12px;">
-        <div class="field" style="position:relative;">
-          <label class="req">Cost Head</label>
-          <input id="mm_costhead" placeholder="Type to search…" autocomplete="off" oninput="chFuzzy('mm_costhead','mm_costhead_list','mm_costsubhead','mm_costsubhead_list')" onfocus="chFuzzy('mm_costhead','mm_costhead_list','mm_costsubhead','mm_costsubhead_list')" onblur="setTimeout(()=>chHide('mm_costhead_list'),200)">
-          <div id="mm_costhead_list" class="ch-dropdown" style="display:none;"></div>
-        </div>
-        <div class="field" style="position:relative;">
-          <label>Cost Subhead</label>
-          <input id="mm_costsubhead" placeholder="Select Cost Head first…" autocomplete="off" oninput="chFuzzySub('mm_costsubhead','mm_costsubhead_list','mm_costhead')" onfocus="chFuzzySub('mm_costsubhead','mm_costsubhead_list','mm_costhead')" onblur="setTimeout(()=>chHide('mm_costsubhead_list'),200)">
-          <div id="mm_costsubhead_list" class="ch-dropdown" style="display:none;"></div>
-        </div>
+      <div class="grid-3" style="margin-top:12px;">
         <div class="field"><label>HSN Code</label><input id="mm_hsn" placeholder="e.g. 2523"></div>
-        <div class="field"><label>Specification</label><input id="mm_spec" placeholder="Grade / Brand / Standard"></div>
+        <div class="field" style="grid-column:2/4;"><label>Specification</label><input id="mm_spec" placeholder="Grade / Brand / Standard"></div>
       </div>
       <div class="actions-row"><button class="btn btn-primary" onclick="saveMaterialMaster()">+ Add Material</button></div>
     </div>
@@ -2063,13 +2054,10 @@ input[type="number"] {
     <div class="card">
       <h3>Material List</h3>
       <div class="row" style="margin-bottom:10px;">
-        <input id="mm_chFilter" placeholder="Filter by Cost Head…" autocomplete="off"
-          style="padding:7px;background:var(--input-bg);color:var(--text);border:1px solid var(--border);border-radius:4px;width:200px;"
-          oninput="renderMaterialMaster()">
         <input id="mm_search" placeholder="Search materials…" style="padding:7px;background:var(--input-bg);color:var(--text);border:1px solid var(--border);border-radius:4px;width:220px;" oninput="renderMaterialMaster()">
       </div>
       <div class="table-wrap">
-        <table><thead><tr id="mm_thead"><th style="cursor:pointer;user-select:none;" onclick="_mmSortBy('material_code')">Code ⇅</th><th style="cursor:pointer;user-select:none;" onclick="_mmSortBy('material_name')">Name ⇅</th><th style="cursor:pointer;user-select:none;" onclick="_mmSortBy('costhead')">Cost Head ⇅</th><th style="cursor:pointer;user-select:none;" onclick="_mmSortBy('cost_subhead')">Cost Subhead ⇅</th><th style="cursor:pointer;user-select:none;" onclick="_mmSortBy('uom')">UOM ⇅</th><th style="cursor:pointer;user-select:none;" onclick="_mmSortBy('hsn_code')">HSN ⇅</th><th style="cursor:pointer;user-select:none;" onclick="_mmSortBy('specification')">Specification ⇅</th><th style="width:70px;"></th></tr></thead>
+        <table><thead><tr id="mm_thead"><th style="cursor:pointer;user-select:none;" onclick="_mmSortBy('material_code')">Code ⇅</th><th style="cursor:pointer;user-select:none;" onclick="_mmSortBy('material_name')">Name ⇅</th><th style="cursor:pointer;user-select:none;" onclick="_mmSortBy('uom')">UOM ⇅</th><th style="cursor:pointer;user-select:none;" onclick="_mmSortBy('hsn_code')">HSN ⇅</th><th style="cursor:pointer;user-select:none;" onclick="_mmSortBy('specification')">Specification ⇅</th><th style="width:70px;"></th></tr></thead>
         <tbody id="mm_list"><tr><td colspan="7" class="center muted">No materials.</td></tr></tbody></table>
       </div>
     </div>
@@ -2231,6 +2219,7 @@ input[type="number"] {
     <div class="sub-tab"        data-putab="pob"    onclick="switchPUTab('pob')">GRN Billing (POB)</div>
     <div class="sub-tab"        data-putab="mis"    onclick="switchPUTab('mis')">Material Issue (MIS)</div>
     <div class="sub-tab"        data-putab="stock"  onclick="switchPUTab('stock')">Stock Balance</div>
+    <div class="sub-tab"        data-putab="openstock" id="tab-openstock" onclick="switchPUTab('openstock')" style="display:none;">Opening Stock</div>
   </div>
 
   <!-- ── MIR ── -->
@@ -2730,7 +2719,7 @@ input[type="number"] {
           <h3 style="font-size:13px;margin-bottom:8px;color:var(--text);">Additional / Deduction Lines</h3>
           <div class="table-wrap">
             <table>
-              <thead><tr><th>Description</th><th>Type</th><th>Timing</th><th class="num">GST %</th><th class="num">Amount (₹)</th><th></th></tr></thead>
+              <thead><tr><th>Description</th><th>Type</th><th>Timing</th><th class="num">Amount (₹)</th><th></th></tr></thead>
               <tbody id="pob_extraBody"></tbody>
             </table>
           </div>
@@ -2741,10 +2730,10 @@ input[type="number"] {
           <h3 style="font-size:13px;">Bill Computation</h3>
           <table style="max-width:420px;margin-left:auto;">
             <tr><td style="padding:4px 8px;color:var(--muted);">Gross Amount</td><td class="num" style="padding:4px 8px;" id="pob_s_gross">0.00</td></tr>
-            <tbody id="pob_s_dynamic"></tbody>
+            <tr><td style="padding:4px 8px;color:var(--muted);" id="pob_s_extraBeforeLabel">Add: Before-GST</td><td class="num" style="padding:4px 8px;" id="pob_s_extraBefore">0.00</td></tr>
             <tr><td style="padding:4px 8px;color:var(--muted);">Taxable Value</td><td class="num" style="padding:4px 8px;font-weight:600;" id="pob_s_taxable">0.00</td></tr>
-            <tbody id="pob_s_gst_rows"></tbody>
-            <tbody id="pob_s_after_rows"></tbody>
+            <tr><td style="padding:4px 8px;color:var(--muted);" id="pob_s_gstLabel">GST</td><td class="num" style="padding:4px 8px;" id="pob_s_gst">0.00</td></tr>
+            <tr><td style="padding:4px 8px;color:var(--muted);" id="pob_s_extraAfterLabel">Add: After-GST</td><td class="num" style="padding:4px 8px;" id="pob_s_extraAfter">0.00</td></tr>
             <tr style="border-top:1px solid var(--border);"><td style="padding:6px 8px;font-weight:600;">Invoice Value</td><td class="num" style="padding:6px 8px;font-weight:600;" id="pob_s_invoice">0.00</td></tr>
             <tr><td style="padding:4px 8px;color:var(--muted);">Less: Hold Amount</td>
               <td class="num" style="padding:4px 8px;"><input type="number" id="pob_holdAmt" value="0" step="0.01" style="width:100px;text-align:right;" oninput="recalcPOBTotals()"></td></tr>
@@ -2961,7 +2950,7 @@ input[type="number"] {
         <div class="table-wrap">
           <table>
             <thead><tr>
-              <th>#</th><th>Material</th><th>UOM</th>
+              <th>#</th><th>Material</th><th>UOM</th><th>WBS Activity</th><th>Cost Subhead</th>
               <th class="num">Stock Available</th><th class="num">Qty to Issue</th>
               <th class="num">Latest Rate</th><th class="num">Amount</th><th></th>
             </tr></thead>
@@ -3047,6 +3036,100 @@ input[type="number"] {
             <th class="num">Stock Value (₹)</th>
           </tr></thead>
           <tbody id="stock_body"><tr><td colspan="8" class="center muted">Loading…</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── OPENING STOCK (Admin only) ── -->
+  <div id="puTab-openstock" style="display:none;">
+    <div class="row" style="justify-content:space-between;margin:16px 0 8px;">
+      <div>
+        <div class="section-title">Opening Stock Upload</div>
+        <div class="section-sub">Bulk upload opening stock as on 1st April. Admin only. Downloads a pre-defined Excel template — fill and upload.</div>
+      </div>
+    </div>
+
+    <!-- Step 1: Download Template -->
+    <div class="card" style="margin-bottom:16px;">
+      <div style="font-weight:600;font-size:13px;margin-bottom:6px;color:var(--accent);">Step 1 — Download Template</div>
+      <p style="font-size:13px;color:var(--muted);margin-bottom:12px;">
+        Download the pre-defined Excel template. Fill in your opening stock data — do not change column headers or sheet name.
+        Rates must be basic rate (excluding GST), per UOM.
+      </p>
+      <div style="background:var(--input-bg);border:1px solid var(--border);border-radius:6px;padding:10px 14px;font-size:12px;margin-bottom:12px;">
+        <strong>Required columns (in order):</strong>&nbsp;
+        <span style="color:var(--accent);">Material Description</span> &nbsp;|&nbsp;
+        <span style="color:var(--accent);">UOM</span> &nbsp;|&nbsp;
+        <span style="color:var(--accent);">Opening Date</span> &nbsp;|&nbsp;
+        <span style="color:var(--accent);">Quantity</span> &nbsp;|&nbsp;
+        <span style="color:var(--accent);">Basic Rate (₹)</span> &nbsp;|&nbsp;
+        <span style="color:var(--accent);">Category</span> &nbsp;|&nbsp;
+        <span style="color:var(--accent);">Remarks</span>
+      </div>
+      <button class="btn btn-primary" onclick="downloadOSTemplate()">⬇ Download Excel Template</button>
+    </div>
+
+    <!-- Step 2: Upload Excel -->
+    <div class="card" style="margin-bottom:16px;">
+      <div style="font-weight:600;font-size:13px;margin-bottom:6px;color:var(--accent);">Step 2 — Upload Filled Template</div>
+      <p style="font-size:13px;color:var(--muted);margin-bottom:12px;">
+        Upload the filled template. The system will validate each row and show a preview before saving.
+        Rows with missing Material Description, UOM, Quantity or Rate will be flagged.
+      </p>
+      <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+        <input type="file" id="osFileInput" accept=".xlsx,.xls" style="display:none;" onchange="onOSFileSelected(this)">
+        <button class="btn btn-primary" onclick="document.getElementById('osFileInput').click()">📂 Choose Excel File</button>
+        <span id="osFileName" style="font-size:13px;color:var(--muted);">No file selected</span>
+      </div>
+    </div>
+
+    <!-- Step 3: Preview & Upload -->
+    <div id="osPreviewCard" class="card" style="display:none;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:8px;">
+        <div style="font-weight:600;font-size:13px;color:var(--accent);">Step 3 — Review &amp; Confirm Upload</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+          <span id="osValidCount" style="font-size:12px;padding:4px 10px;background:#d1fae5;color:#065f46;border-radius:12px;font-weight:600;"></span>
+          <span id="osErrorCount" style="font-size:12px;padding:4px 10px;background:#fee2e2;color:#991b1b;border-radius:12px;font-weight:600;display:none;"></span>
+        </div>
+      </div>
+      <div id="osGRNMeta" style="font-size:12px;color:var(--muted);margin-bottom:10px;"></div>
+      <div class="table-wrap" style="max-height:380px;overflow-y:auto;">
+        <table id="osPreviewTable">
+          <thead><tr>
+            <th>#</th>
+            <th>Material Description</th>
+            <th>UOM</th>
+            <th>Opening Date</th>
+            <th class="num">Qty</th>
+            <th class="num">Basic Rate (₹)</th>
+            <th class="num">Value (₹)</th>
+            <th>Category</th>
+            <th>Remarks</th>
+            <th>Status</th>
+          </tr></thead>
+          <tbody id="osPreviewBody"></tbody>
+        </table>
+      </div>
+      <div style="display:flex;gap:12px;margin-top:16px;flex-wrap:wrap;">
+        <button class="btn btn-primary" id="osUploadBtn" onclick="guardedSave(confirmOSUpload, this)">✅ Confirm &amp; Upload to System</button>
+        <button class="btn btn-ghost" onclick="resetOSUpload()">✖ Cancel</button>
+      </div>
+    </div>
+
+    <!-- Upload History -->
+    <div class="card" style="margin-top:8px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+        <div style="font-weight:600;font-size:13px;">Upload History</div>
+        <button class="btn btn-ghost btn-sm" onclick="loadOSHistory()">↻ Refresh</button>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr>
+            <th>GRN Number</th><th>Opening Date</th><th>Items</th>
+            <th class="num">Total Value (₹)</th><th>Uploaded By</th><th>Status</th>
+          </tr></thead>
+          <tbody id="osHistoryBody"><tr><td colspan="6" class="center muted">Click Refresh to load history</td></tr></tbody>
         </table>
       </div>
     </div>
@@ -3693,6 +3776,303 @@ function _cacheSet(key, data) { _cache[key] = { ts: Date.now(), data }; }
 function _cacheBust(...keys) { keys.forEach(k => { delete _cache[k]; }); }
 
 // ============================================================
+// OPENING STOCK — ADMIN BULK UPLOAD
+// ============================================================
+
+let _osParsedRows = [];   // holds validated rows after file parse
+
+// ── Template Download ──────────────────────────────────────
+function downloadOSTemplate() {
+  if (!hasRole('Admin')) { toast('Admin access only', 'error'); return; }
+
+  // Build CSV template that Excel will open cleanly
+  const headers = ['Material Description','UOM','Opening Date (DD-MM-YYYY)','Quantity','Basic Rate (Rs)','Category','Remarks'];
+  const sampleRows = [
+    ['PPC Cement 50kg','Bags','01-04-2025','55','292.37','Civil','Opening balance as on 1st April 2025'],
+    ['MS Binding Wire 18G','kg','01-04-2025','100','72.00','Civil',''],
+    ['Safety Helmet Yellow','Nos','01-04-2025','23','78.00','Consumable',''],
+  ];
+
+  // Use SheetJS if available, else fallback to CSV blob
+  if (typeof XLSX !== 'undefined') {
+    const wsData = [headers, ...sampleRows];
+    const ws = XLSX.utils.aoa_to_sheet(wsData);
+    // Column widths
+    ws['!cols'] = [40,10,22,10,16,16,40].map(w => ({ wch: w }));
+    // Freeze header row
+    ws['!freeze'] = { xSplit: 0, ySplit: 1 };
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Opening Stock');
+    XLSX.writeFile(wb, 'UE_Opening_Stock_Template.xlsx');
+  } else {
+    // Fallback: load SheetJS on-demand then retry
+    const s = document.createElement('script');
+    s.src = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
+    s.onload = () => downloadOSTemplate();
+    s.onerror = () => {
+      // Last resort — plain CSV
+      const csvRows = [headers, ...sampleRows].map(r => r.map(c => `"${c}"`).join(',')).join('\n');
+      const blob = new Blob([csvRows], { type: 'text/csv' });
+      const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
+      a.download = 'UE_Opening_Stock_Template.csv'; a.click();
+    };
+    document.head.appendChild(s);
+  }
+}
+
+// ── File Selected ──────────────────────────────────────────
+function onOSFileSelected(input) {
+  if (!hasRole('Admin')) { toast('Admin access only', 'error'); return; }
+  const file = input.files[0];
+  if (!file) return;
+  document.getElementById('osFileName').textContent = file.name;
+
+  const loadAndParse = () => {
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      try {
+        const wb = XLSX.read(new Uint8Array(e.target.result), { type: 'array', cellDates: true });
+        const wsName = wb.SheetNames[0];
+        const ws = wb.Sheets[wsName];
+        const raw = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
+        parseOSRows(raw);
+      } catch(err) {
+        toast('Failed to read Excel: ' + err.message, 'error');
+      }
+    };
+    reader.readAsArrayBuffer(file);
+  };
+
+  if (typeof XLSX !== 'undefined') {
+    loadAndParse();
+  } else {
+    const s = document.createElement('script');
+    s.src = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
+    s.onload = loadAndParse;
+    s.onerror = () => toast('Could not load Excel reader library', 'error');
+    document.head.appendChild(s);
+  }
+  // Reset input so same file can be re-selected
+  input.value = '';
+}
+
+// ── Parse & Validate ──────────────────────────────────────
+function parseOSRows(raw) {
+  if (!raw || raw.length < 2) { toast('Template appears empty — check your file', 'error'); return; }
+
+  // Find header row (first row containing "Material Description")
+  let headerIdx = raw.findIndex(r =>
+    r.some(c => String(c).toLowerCase().includes('material description'))
+  );
+  if (headerIdx < 0) headerIdx = 0;   // default to first row
+
+  const dataRows = raw.slice(headerIdx + 1).filter(r => r.some(c => String(c).trim() !== ''));
+
+  const VALID_CATS = ['Civil','MEP','Finishing','Consumable','Equipment','Other'];
+
+  _osParsedRows = dataRows.map((r, i) => {
+    const desc     = String(r[0] || '').trim();
+    const uom      = String(r[1] || '').trim();
+    const rawDate  = r[2];
+    const qty      = parseFloat(String(r[3] || '').replace(/,/g, '')) || 0;
+    const rate     = parseFloat(String(r[4] || '').replace(/,/g, '')) || 0;
+    const category = String(r[5] || '').trim() || 'Civil';
+    const remarks  = String(r[6] || '').trim();
+
+    // Parse date — accept DD-MM-YYYY, YYYY-MM-DD, or JS Date object
+    let openDate = '';
+    if (rawDate instanceof Date) {
+      openDate = rawDate.toISOString().split('T')[0];
+    } else {
+      const ds = String(rawDate || '').trim();
+      if (/^\d{2}-\d{2}-\d{4}$/.test(ds)) {
+        const [d, m, y] = ds.split('-');
+        openDate = `${y}-${m}-${d}`;
+      } else if (/^\d{4}-\d{2}-\d{2}$/.test(ds)) {
+        openDate = ds;
+      } else if (ds === '') {
+        openDate = '2025-04-01';   // default to 1-Apr-25
+      } else {
+        openDate = '';
+      }
+    }
+
+    const errors = [];
+    if (!desc)      errors.push('Missing description');
+    if (!uom)       errors.push('Missing UOM');
+    if (!openDate)  errors.push('Invalid date');
+    if (qty <= 0)   errors.push('Qty must be > 0');
+    if (rate <= 0)  errors.push('Rate must be > 0');
+
+    const catNorm = VALID_CATS.find(c => c.toLowerCase() === category.toLowerCase()) || 'Civil';
+
+    return {
+      sno: i + 1,
+      material_name: desc,
+      uom, open_date: openDate, qty, rate,
+      category: catNorm, remarks,
+      value: qty * rate,
+      errors,
+      valid: errors.length === 0,
+    };
+  });
+
+  renderOSPreview();
+}
+
+// ── Render Preview Table ───────────────────────────────────
+function renderOSPreview() {
+  const valid   = _osParsedRows.filter(r => r.valid);
+  const invalid = _osParsedRows.filter(r => !r.valid);
+
+  document.getElementById('osValidCount').textContent  = `✓ ${valid.length} valid rows`;
+  const errEl = document.getElementById('osErrorCount');
+  if (invalid.length) {
+    errEl.textContent = `⚠ ${invalid.length} rows with errors`;
+    errEl.style.display = '';
+  } else {
+    errEl.style.display = 'none';
+  }
+
+  const totalValue = valid.reduce((s, r) => s + r.value, 0);
+  document.getElementById('osGRNMeta').innerHTML =
+    `Will create <strong>1 GRN</strong> tagged <em>"Opening Stock"</em> with <strong>${valid.length} line items</strong> ` +
+    `| Total Value: <strong>₹${totalValue.toLocaleString('en-IN', {minimumFractionDigits:2, maximumFractionDigits:2})}</strong>` +
+    (invalid.length ? ` | <span style="color:var(--error);">${invalid.length} rows will be skipped</span>` : '');
+
+  const tbody = document.getElementById('osPreviewBody');
+  tbody.innerHTML = _osParsedRows.map(r => `
+    <tr style="${r.valid ? '' : 'background:#fff0f0;'}">
+      <td class="center">${r.sno}</td>
+      <td>${esc(r.material_name) || '<span style="color:var(--error);">—</span>'}</td>
+      <td>${esc(r.uom)}</td>
+      <td>${r.open_date || '<span style="color:var(--error);">Invalid</span>'}</td>
+      <td class="num">${r.qty > 0 ? r.qty : '<span style="color:var(--error);">'+r.qty+'</span>'}</td>
+      <td class="num">${r.rate > 0 ? '₹'+r.rate.toLocaleString('en-IN') : '<span style="color:var(--error);">'+r.rate+'</span>'}</td>
+      <td class="num">${r.valid ? '₹'+r.value.toLocaleString('en-IN',{minimumFractionDigits:2,maximumFractionDigits:2}) : '—'}</td>
+      <td>${esc(r.category)}</td>
+      <td style="font-size:11px;">${esc(r.remarks)}</td>
+      <td>${r.valid
+        ? '<span style="color:#059669;font-weight:600;">✓ OK</span>'
+        : '<span style="color:var(--error);font-size:11px;">'+r.errors.join(', ')+'</span>'}</td>
+    </tr>`).join('');
+
+  document.getElementById('osPreviewCard').style.display = '';
+  document.getElementById('osUploadBtn').disabled = valid.length === 0;
+}
+
+// ── Confirm Upload ─────────────────────────────────────────
+async function confirmOSUpload() {
+  if (!hasRole('Admin')) { toast('Admin access only', 'error'); return; }
+  const validRows = _osParsedRows.filter(r => r.valid);
+  if (!validRows.length) { toast('No valid rows to upload', 'error'); return; }
+
+  pbShow('Generating GRN number…');
+  try {
+    const grnNumber = await nextPUGRNNumber();
+    const openDate  = validRows[0].open_date;   // use date from first valid row
+
+    // Insert GRN header
+    const { error: hErr } = await sb.from('pu_grn').insert({
+      grn_number: grnNumber,
+      grn_date: openDate,
+      po_number: null,
+      is_cash_purchase: true,
+      cash_purchase_ref: 'Opening Stock',
+      vendor_name: 'Opening Stock — 1st April',
+      vehicle_challan: 'Opening Stock',
+      invoice_no: 'Opening Stock',
+      invoice_date: openDate,
+      received_by: state.userName,
+      received_by_id: state.userId,
+      remarks: 'Bulk opening stock upload by Admin',
+      status: 'Verified',   // Opening stock pre-verified — no challan flow needed
+    });
+    if (hErr) throw new Error(hErr.message);
+
+    pbShow(`Uploading ${validRows.length} items…`);
+
+    // Insert GRN items in one batch
+    const items = validRows.map((r, i) => ({
+      grn_number: grnNumber,
+      sno: i + 1,
+      material_name: r.material_name,
+      uom: r.uom,
+      this_grn_qty: r.qty,
+      total_received_qty: r.qty,
+      balance_qty: 0,
+      unit_rate: r.rate,
+      base_amount: r.value,
+      is_cash_purchase: true,
+      remarks: r.remarks || 'Opening Stock',
+    }));
+
+    const { error: iErr } = await sb.from('pu_grn_items').insert(items);
+    if (iErr) throw new Error(iErr.message);
+
+    flashSuccess(`Opening Stock uploaded! GRN ${grnNumber} created with ${validRows.length} items.`);
+    resetOSUpload();
+    loadOSHistory();
+  } catch(e) {
+    toast('Upload failed: ' + e.message, 'error');
+  } finally {
+    pbDone();
+  }
+}
+
+// ── Reset ──────────────────────────────────────────────────
+function resetOSUpload() {
+  _osParsedRows = [];
+  document.getElementById('osPreviewCard').style.display = 'none';
+  document.getElementById('osFileName').textContent = 'No file selected';
+  document.getElementById('osFileInput').value = '';
+}
+
+// ── History ────────────────────────────────────────────────
+async function loadOSHistory() {
+  if (!hasRole('Admin')) return;
+  const tbody = document.getElementById('osHistoryBody');
+  tbody.innerHTML = '<tr><td colspan="6" class="center muted">Loading…</td></tr>';
+  try {
+    const { data: grns, error } = await sb.from('pu_grn')
+      .select('grn_number,grn_date,vendor_name,status,received_by,created_at')
+      .eq('cash_purchase_ref', 'Opening Stock')
+      .order('created_at', { ascending: false });
+    if (error) throw new Error(error.message);
+    if (!grns || !grns.length) {
+      tbody.innerHTML = '<tr><td colspan="6" class="center muted">No opening stock uploads found</td></tr>';
+      return;
+    }
+    // Fetch item counts & totals per GRN
+    const grnNums = grns.map(g => g.grn_number);
+    const { data: items } = await sb.from('pu_grn_items')
+      .select('grn_number,this_grn_qty,base_amount')
+      .in('grn_number', grnNums);
+
+    const itemMap = {};
+    (items || []).forEach(it => {
+      if (!itemMap[it.grn_number]) itemMap[it.grn_number] = { count: 0, total: 0 };
+      itemMap[it.grn_number].count++;
+      itemMap[it.grn_number].total += parseFloat(it.base_amount) || 0;
+    });
+
+    tbody.innerHTML = grns.map(g => {
+      const m = itemMap[g.grn_number] || { count: 0, total: 0 };
+      return `<tr>
+        <td><strong>${esc(g.grn_number)}</strong></td>
+        <td>${g.grn_date || '—'}</td>
+        <td class="center">${m.count}</td>
+        <td class="num">₹${m.total.toLocaleString('en-IN', {minimumFractionDigits:2,maximumFractionDigits:2})}</td>
+        <td>${esc(g.received_by || '—')}</td>
+        <td><span class="badge ${g.status === 'Verified' ? 'badge-success' : 'badge-warn'}">${esc(g.status)}</span></td>
+      </tr>`;
+    }).join('');
+  } catch(e) {
+    tbody.innerHTML = `<tr><td colspan="6" class="center muted">Error: ${e.message}</td></tr>`;
+  }
+}
+
+// ============================================================
 // SUPABASE API LAYER
 // Replaces Apps Script apiGet / apiPost
 // ============================================================
@@ -4029,6 +4409,7 @@ async function apiSaveHOC(data) {
       hoc_number: data.hocNumber, sno: it.sno, description: it.description, uom: it.uom||null,
       ho_qty: it.hoQty, prev_cumulative_qty: it.prevCumulativeQty, this_period_qty: it.thisPeriodQty,
       cumulative_qty: it.cumulativeQty, unit_rate: it.unitRate, cert_value: it.certValue,
+      wbs_code: it.wbs_code||null, wbs_activity: it.wbs_activity||null, cost_subhead: it.cost_subhead||null,
     }));
     if (items.length) {
       const { error: cite } = await sb.from('ho_certification_items').insert(items);
@@ -4146,7 +4527,7 @@ async function apiSaveHOB(data) {
     if ((data.items||[]).length) {
       await sb.from('ho_bill_items').insert(data.items.map(it => ({
         bill_number: data.billNumber, sno: it.sno, description: it.description,
-        uom: it.uom||null, this_period_qty: it.thisPeriodQty, unit_rate: it.unitRate, amount: it.amount,
+        uom: it.uom||null, this_period_qty: it.thisPeriodQty, wbs_code: it.wbs_code||null, wbs_activity: it.wbs_activity||null, cost_subhead: it.cost_subhead||null, unit_rate: it.unitRate, amount: it.amount,
       })));
     }
     if ((data.extraLines||[]).length) {
@@ -4738,7 +5119,8 @@ async function apiGetWOCDetails(wocNumber) {
     'Prev Cumulative Qty': r.prev_cumulative_qty, 'This Period Qty': r.this_period_qty,
     'Cumulative Qty': r.cumulative_qty, 'Prev Cumulative Pct': r.prev_cumulative_pct,
     'This Period Pct': r.this_period_pct, 'Cumulative Pct': r.cumulative_pct,
-    'Unit Rate': r.unit_rate, 'Cert Value': r.cert_value, 'S.No': r.sno
+    'Unit Rate': r.unit_rate, 'Cert Value': r.cert_value, 'S.No': r.sno,
+    'WBS Code': r.wbs_code, 'WBS Activity': r.wbs_activity, 'Cost Subhead': r.cost_subhead
   }))};
 }
 
@@ -4798,6 +5180,7 @@ async function apiSaveWOC(data) {
         this_period_qty: it.thisPeriodQty||0, cumulative_qty: it.cumulativeQty||0,
         prev_cumulative_pct: it.prevCumulativePct||0, this_period_pct: it.thisPeriodPct||0,
         cumulative_pct: it.cumulativePct||0, unit_rate: it.unitRate, cert_value: it.certValue,
+        wbs_code: it.wbs_code||null, wbs_activity: it.wbs_activity||null, cost_subhead: it.cost_subhead||null,
         })));
     }
     _cacheBust('wocList','unbilledWOCs','woList');
@@ -4913,7 +5296,8 @@ async function apiSaveWOB(data) {
       await sb.from('wo_bill_items').insert(data.items.map(it => ({
         bill_number: data.billNumber, sno: it.sno, description: it.description,
         uom: it.uom||null, this_period_qty: it.thisPeriodQty, unit_rate: it.unitRate,
-        amount: it.amount
+        amount: it.amount,
+        wbs_code: it.wbs_code||null, wbs_activity: it.wbs_activity||null, cost_subhead: it.cost_subhead||null
       })));
     }
     if ((data.extraLines||[]).length) {
@@ -5555,6 +5939,7 @@ async function initApp() {
       apiLoadMasters().catch(e  => console.error('Masters:', e)),
       apiLoadMaterials().catch(e => console.error('Materials:', e)),
       apiLoadCostHeads().catch(e => console.error('CostHeads:', e)),
+      apiLoadWBS().catch(e => console.error('WBS:', e)),
       loadHOList().catch(e      => console.error('HOList:', e)),
       loadWOList().catch(e      => console.error('WOList:', e)),
     ]);
@@ -6090,6 +6475,213 @@ async function confirmActivityDelete(code, desc) {
     await apiLoadMasters(); renderAllMasters();
   } catch(e) { toast('Error: '+e.message,'error'); }
   finally { pbDone(); }
+}
+
+// ============================================================
+// WBS + COST SUBHEAD TYPEAHEADS (MIS, HOC, WOC)
+// ============================================================
+
+// Helper: given a cost_subhead value, return the parent costhead
+function _chParent(sub) {
+  if (!sub) return '';
+  const row = (_chData||[]).find(r => (r.cost_subhead||'').toLowerCase() === sub.toLowerCase());
+  return row ? row.costhead : '';
+}
+
+// ── MIS: WBS typeahead ────────────────────────────────────────
+function misWbsTypeahead(i) {
+  const inp = document.getElementById('misWbs_'+i);
+  const res = document.getElementById('misWbsRes_'+i);
+  if (!inp || !res) return;
+  const q = (inp.value||'').trim().toLowerCase();
+  const rows = (_wbsData||[]).filter(r => r.wbs_code && r.wbs_activity && r.wbs_activity !== '__pending__');
+  const filtered = q ? rows.filter(r =>
+    (r.wbs_activity||'').toLowerCase().includes(q) ||
+    (r.wbs_code||'').toLowerCase().includes(q) ||
+    (r.wbs_group||'').toLowerCase().includes(q)
+  ) : rows;
+  const matches = filtered.slice(0,15);
+  if (!matches.length) { res.style.display='none'; return; }
+  res.innerHTML = matches.map(r =>
+    `<div style="padding:6px 10px;cursor:pointer;" onmousedown="event.preventDefault();misWbsSelect(${i},'${r.wbs_code.replace(/'/g,"\\'")}','${r.wbs_activity.replace(/'/g,"\\'")}')">`+
+    `<span style="font-family:monospace;font-size:10px;color:var(--accent);">${esc(r.wbs_code)}</span> `+
+    `${esc(r.wbs_activity)}`+
+    `<div style="font-size:10px;color:var(--muted);">${esc(r.wbs_group||'')}${r.wbs_sub_group?' › '+esc(r.wbs_sub_group):''}</div>`+
+    `</div>`
+  ).join('');
+  res.style.display='';
+}
+function misWbsHide(i) {
+  const res = document.getElementById('misWbsRes_'+i);
+  if (res) res.style.display='none';
+}
+function misWbsSelect(i, code, activity) {
+  const inp = document.getElementById('misWbs_'+i);
+  if (inp) { inp.value = activity; inp.dataset.wbsCode = code; inp.readOnly = true; }
+  const res = document.getElementById('misWbsRes_'+i);
+  if (res) res.style.display='none';
+  const pill = document.getElementById('misWbs_'+i+'_pill');
+  if (pill) {
+    pill.style.display='';
+    pill.innerHTML='<span style="display:inline-block;padding:1px 7px;background:var(--panel-2);border:1px solid var(--border);border-radius:10px;font-size:10px;font-family:monospace;color:var(--accent);">'+esc(code)+'</span>';
+  }
+  // inject clear button
+  const btnId = 'misWbs_'+i+'_clrBtn';
+  if (inp && !document.getElementById(btnId)) {
+    const btn = document.createElement('button');
+    btn.type='button'; btn.id=btnId; btn.textContent='✕';
+    btn.style.cssText='position:absolute;right:4px;top:50%;transform:translateY(-50%);padding:2px 6px;border:1px solid #cbd5e1;background:#f8fafc;color:#64748b;border-radius:3px;cursor:pointer;font-size:11px;';
+    btn.onclick=(ev)=>{ev.preventDefault();ev.stopPropagation();
+      inp.value=''; inp.readOnly=false; delete inp.dataset.wbsCode;
+      if(pill){pill.style.display='none';pill.innerHTML='';}
+      btn.remove();
+    };
+    if(inp.parentNode) inp.parentNode.appendChild(btn);
+  }
+}
+
+// ── MIS: Cost Subhead typeahead ───────────────────────────────
+function misCshTypeahead(i) {
+  const inp = document.getElementById('misCsh_'+i);
+  const res = document.getElementById('misCshRes_'+i);
+  if (!inp || !res) return;
+  const q = (inp.value||'').trim().toLowerCase();
+  const subs = [...new Set((_chData||[]).filter(r=>r.cost_subhead).map(r=>r.cost_subhead))].sort();
+  const filtered = q ? subs.filter(s => s.toLowerCase().includes(q) || _chParent(s).toLowerCase().includes(q)) : subs;
+  if (!filtered.length) { res.style.display='none'; return; }
+  res.innerHTML = filtered.map(s =>
+    `<div style="padding:6px 10px;cursor:pointer;" onmousedown="event.preventDefault();misCshSelect(${i},'${s.replace(/'/g,"\\'")}')">`+
+    `${esc(s)}<div style="font-size:10px;color:var(--muted);">${esc(_chParent(s))}</div></div>`
+  ).join('');
+  res.style.display='';
+}
+function misCshHide(i) {
+  const res = document.getElementById('misCshRes_'+i);
+  if (res) res.style.display='none';
+}
+function misCshSelect(i, sub) {
+  const inp = document.getElementById('misCsh_'+i);
+  if (inp) { inp.value = sub; inp.dataset.cshVal = sub; inp.readOnly = true; }
+  const res = document.getElementById('misCshRes_'+i);
+  if (res) res.style.display='none';
+  const pill = document.getElementById('misCsh_'+i+'_pill');
+  const parent = _chParent(sub);
+  if (pill) {
+    pill.style.display='';
+    pill.innerHTML='<span style="display:inline-block;padding:1px 7px;background:var(--panel-2);border:1px solid var(--border);border-radius:10px;font-size:10px;color:var(--muted);">'+esc(parent)+' › '+esc(sub)+'</span>';
+  }
+  const btnId = 'misCsh_'+i+'_clrBtn';
+  if (inp && !document.getElementById(btnId)) {
+    const btn = document.createElement('button');
+    btn.type='button'; btn.id=btnId; btn.textContent='✕';
+    btn.style.cssText='position:absolute;right:4px;top:50%;transform:translateY(-50%);padding:2px 6px;border:1px solid #cbd5e1;background:#f8fafc;color:#64748b;border-radius:3px;cursor:pointer;font-size:11px;';
+    btn.onclick=(ev)=>{ev.preventDefault();ev.stopPropagation();
+      inp.value=''; inp.readOnly=false; delete inp.dataset.cshVal;
+      if(pill){pill.style.display='none';pill.innerHTML='';}
+      btn.remove();
+    };
+    if(inp.parentNode) inp.parentNode.appendChild(btn);
+  }
+}
+
+// ── HOC/WOC: shared WBS typeahead (operates on input element directly) ─
+function hocWbsTypeahead(inp) {
+  const res = inp.nextElementSibling;
+  if (!res) return;
+  const q = (inp.value||'').trim().toLowerCase();
+  const rows = (_wbsData||[]).filter(r => r.wbs_code && r.wbs_activity && r.wbs_activity !== '__pending__');
+  const filtered = q ? rows.filter(r =>
+    (r.wbs_activity||'').toLowerCase().includes(q) ||
+    (r.wbs_code||'').toLowerCase().includes(q) ||
+    (r.wbs_group||'').toLowerCase().includes(q)
+  ) : rows;
+  const matches = filtered.slice(0,15);
+  if (!matches.length) { res.style.display='none'; return; }
+  res.innerHTML = matches.map(r => {
+    const safeCode = r.wbs_code.replace(/'/g,"\\'");
+    const safeAct  = r.wbs_activity.replace(/'/g,"\\'");
+    return `<div style="padding:6px 10px;cursor:pointer;" onmousedown="event.preventDefault();hocWbsSelect(this,'${safeCode}','${safeAct}')">`+
+      `<span style="font-family:monospace;font-size:10px;color:var(--accent);">${esc(r.wbs_code)}</span> `+
+      `${esc(r.wbs_activity)}<div style="font-size:10px;color:var(--muted);">${esc(r.wbs_group||'')}${r.wbs_sub_group?' › '+esc(r.wbs_sub_group):''}</div></div>`;
+  }).join('');
+  res.style.display='';
+}
+function hocWbsHide(inp) {
+  const res = inp.nextElementSibling;
+  if (res) res.style.display='none';
+}
+function hocWbsSelect(el, code, activity) {
+  const res  = el.parentNode;
+  const inp  = res.previousElementSibling;
+  const pill = res.nextElementSibling;
+  if (inp) { inp.value = activity; inp.dataset.wbsCode = code; inp.readOnly = true; }
+  res.style.display = 'none';
+  if (pill) {
+    pill.style.display='';
+    pill.innerHTML='<span style="display:inline-block;padding:1px 7px;background:var(--panel-2);border:1px solid var(--border);border-radius:10px;font-size:10px;font-family:monospace;color:var(--accent);">'+esc(code)+'</span>';
+  }
+}
+
+// ── HOC/WOC: shared Cost Subhead typeahead ────────────────────
+function hocCshTypeahead(inp) {
+  const res = inp.nextElementSibling;
+  if (!res) return;
+  const q = (inp.value||'').trim().toLowerCase();
+  const subs = [...new Set((_chData||[]).filter(r=>r.cost_subhead).map(r=>r.cost_subhead))].sort();
+  const filtered = q ? subs.filter(s => s.toLowerCase().includes(q) || _chParent(s).toLowerCase().includes(q)) : subs;
+  if (!filtered.length) { res.style.display='none'; return; }
+  res.innerHTML = filtered.map(s => {
+    const safe = s.replace(/'/g,"\\'");
+    return `<div style="padding:6px 10px;cursor:pointer;" onmousedown="event.preventDefault();hocCshSelect(this,'${safe}')">`+
+      `${esc(s)}<div style="font-size:10px;color:var(--muted);">${esc(_chParent(s))}</div></div>`;
+  }).join('');
+  res.style.display='';
+}
+function hocCshHide(inp) {
+  const res = inp.nextElementSibling;
+  if (res) res.style.display='none';
+}
+function hocCshSelect(el, sub) {
+  const res  = el.parentNode;
+  const inp  = res.previousElementSibling;
+  const pill = res.nextElementSibling;
+  if (inp) { inp.value = sub; inp.dataset.cshVal = sub; inp.readOnly = true; }
+  res.style.display='none';
+  const parent = _chParent(sub);
+  if (pill) {
+    pill.style.display='';
+    pill.innerHTML='<span style="display:inline-block;padding:1px 7px;background:var(--panel-2);border:1px solid var(--border);border-radius:10px;font-size:10px;color:var(--muted);">'+esc(parent)+' › '+esc(sub)+'</span>';
+  }
+}
+
+// ── Cost Head tree: inline suggestions for Add Head / Add Subhead ─
+function _chHeadSuggest() {
+  const inp  = document.getElementById('ch_newhead_input');
+  const sugg = document.getElementById('ch_newhead_sugg');
+  if (!inp || !sugg) return;
+  const q = inp.value.trim().toLowerCase();
+  if (!q) { sugg.style.display='none'; return; }
+  const heads = [...new Set((_chData||[]).map(r=>r.costhead))].sort();
+  const subs  = [...new Set((_chData||[]).filter(r=>r.cost_subhead).map(r=>r.cost_subhead))].sort();
+  const all   = [...heads.map(h=>({v:h,type:'Head'})), ...subs.map(s=>({v:s,type:'Subhead'}))];
+  const matches = all.filter(x=>x.v.toLowerCase().includes(q)).slice(0,10);
+  if (!matches.length) { sugg.style.display='none'; return; }
+  sugg.innerHTML = matches.map(x=>`<div style="padding:5px 10px;cursor:default;font-size:12px;"><strong>${esc(x.v)}</strong> <span style="font-size:10px;color:var(--muted);">(existing ${x.type})</span></div>`).join('');
+  sugg.style.display='';
+}
+function _chSubSuggest(inp) {
+  const wrap = inp.parentNode;
+  let sugg = wrap.querySelector('.ch_sub_sugg');
+  if (!sugg) return;
+  const q = inp.value.trim().toLowerCase();
+  if (!q) { sugg.style.display='none'; return; }
+  const heads = [...new Set((_chData||[]).map(r=>r.costhead))].sort();
+  const subs  = [...new Set((_chData||[]).filter(r=>r.cost_subhead).map(r=>r.cost_subhead))].sort();
+  const all   = [...heads.map(h=>({v:h,type:'Head'})), ...subs.map(s=>({v:s,type:'Subhead'}))];
+  const matches = all.filter(x=>x.v.toLowerCase().includes(q)).slice(0,10);
+  if (!matches.length) { sugg.style.display='none'; return; }
+  sugg.innerHTML = matches.map(x=>`<div style="padding:5px 10px;cursor:default;font-size:12px;"><strong>${esc(x.v)}</strong> <span style="font-size:10px;color:var(--muted);">(existing ${x.type})</span></div>`).join('');
+  sugg.style.display='';
 }
 
 // ============================================================
@@ -6989,10 +7581,25 @@ async function onHOCHOChange() {
   tbody.innerHTML = items.map((it, i) => {
     const prevQty = prevQtyMap[it['Description']] || 0;
     const remaining = Math.max(0, num(it['Qty']) - prevQty);
+    const actCode = it['Activity Code']||'';
+    const actMaster = actCode ? (state.masters?.activities||[]).find(a=>a['Activity Code']===actCode) : null;
+    const preCsh = actMaster ? (actMaster['Cost Subhead']||'') : '';
     return `<tr>
       <td class="center">${i+1}</td>
       <td>${esc(it['Description'])}</td>
       <td class="center">${esc(it['UOM'])}</td>
+      <td style="min-width:160px;"><div style="position:relative;">
+        <input class="hoc_wbs" placeholder="Type WBS…" autocomplete="off" style="width:100%;font-size:11px;"
+          oninput="hocWbsTypeahead(this)" onblur="setTimeout(()=>hocWbsHide(this),200)">
+        <div class="hoc_wbs_res" style="display:none;position:absolute;top:100%;left:0;right:0;background:var(--input-bg);border:1px solid var(--accent);border-radius:4px;max-height:160px;overflow-y:auto;z-index:9999;font-size:11px;"></div>
+        <div class="hoc_wbs_pill" style="display:none;margin-top:2px;"></div>
+      </div></td>
+      <td style="min-width:140px;"><div style="position:relative;">
+        <input class="hoc_csh" placeholder="Type subhead…" value="${esc(preCsh)}" autocomplete="off" style="width:100%;font-size:11px;"
+          oninput="hocCshTypeahead(this)" onblur="setTimeout(()=>hocCshHide(this),200)">
+        <div class="hoc_csh_res" style="display:none;position:absolute;top:100%;left:0;right:0;background:var(--input-bg);border:1px solid var(--accent);border-radius:4px;max-height:160px;overflow-y:auto;z-index:9999;font-size:11px;"></div>
+        <div class="hoc_csh_pill" style="display:none;margin-top:2px;">${preCsh?'<span style="display:inline-block;padding:1px 7px;background:var(--panel-2);border:1px solid var(--border);border-radius:10px;font-size:10px;color:var(--muted);">'+esc(_chParent(preCsh))+'</span>':''}</div>
+      </div></td>
       <td class="num mono" data-hoqty="${num(it['Qty'])}">${fmtINR(it['Qty'])}</td>
       <td class="num mono">${fmtINR(prevQty)}</td>
       <td><input type="number" class="hoc_thisQty" min="0" max="${remaining}" step="0.001" placeholder="0" style="width:85px;text-align:right;"
@@ -7042,7 +7649,11 @@ function getHOCFormData() {
     const prevQ  = num(tr.querySelector('.hoc_thisQty').dataset.prevqty);
     const thisQ  = num(tr.querySelector('.hoc_thisQty').value);
     const rate   = num(tr.querySelector('.hoc_thisQty').dataset.rate);
-    items.push({ sno: i+1, description: desc, uom, hoQty, prevCumulativeQty: prevQ, thisPeriodQty: thisQ, cumulativeQty: prevQ + thisQ, unitRate: rate, certValue: thisQ * rate });
+    const wbsInp = tr.querySelector('.hoc_wbs');
+    const cshInp = tr.querySelector('.hoc_csh');
+    items.push({ sno: i+1, description: desc, uom, hoQty, prevCumulativeQty: prevQ, thisPeriodQty: thisQ, cumulativeQty: prevQ + thisQ, unitRate: rate, certValue: thisQ * rate,
+      wbs_code: wbsInp?.dataset?.wbsCode||null, wbs_activity: wbsInp?.value?.trim()||null,
+      cost_subhead: cshInp?.dataset?.cshVal||cshInp?.value?.trim()||null });
   });
   const gross = items.reduce((s,x) => s + x.certValue, 0);
   return {
@@ -8145,10 +8756,25 @@ async function onWOCWOChange() {
     const hoQty    = num(it['Qty']);
     const prevVal  = isPct ? prev.pct : prev.qty;
     const maxVal   = isPct ? Math.max(0, 100 - prev.pct) : Math.max(0, hoQty - prev.qty);
+    const wocActCode = it['Activity Code']||'';
+    const wocActMaster = wocActCode ? (state.masters?.activities||[]).find(a=>a['Activity Code']===wocActCode) : null;
+    const wocPreCsh = wocActMaster ? (wocActMaster['Cost Subhead']||'') : '';
     return `<tr>
       <td class="center">${i+1}</td>
       <td>${esc(it['Description'])}</td>
       <td class="center">${esc(it['UOM'])}</td>
+      <td style="min-width:160px;"><div style="position:relative;">
+        <input class="woc_wbs" placeholder="Type WBS…" autocomplete="off" style="width:100%;font-size:11px;"
+          oninput="hocWbsTypeahead(this)" onblur="setTimeout(()=>hocWbsHide(this),200)">
+        <div class="hoc_wbs_res" style="display:none;position:absolute;top:100%;left:0;right:0;background:var(--input-bg);border:1px solid var(--accent);border-radius:4px;max-height:160px;overflow-y:auto;z-index:9999;font-size:11px;"></div>
+        <div class="hoc_wbs_pill" style="display:none;margin-top:2px;"></div>
+      </div></td>
+      <td style="min-width:140px;"><div style="position:relative;">
+        <input class="woc_csh" placeholder="Type subhead…" value="${esc(wocPreCsh)}" autocomplete="off" style="width:100%;font-size:11px;"
+          oninput="hocCshTypeahead(this)" onblur="setTimeout(()=>hocCshHide(this),200)">
+        <div class="hoc_csh_res" style="display:none;position:absolute;top:100%;left:0;right:0;background:var(--input-bg);border:1px solid var(--accent);border-radius:4px;max-height:160px;overflow-y:auto;z-index:9999;font-size:11px;"></div>
+        <div class="hoc_csh_pill" style="display:none;margin-top:2px;">${wocPreCsh?'<span style="display:inline-block;padding:1px 7px;background:var(--panel-2);border:1px solid var(--border);border-radius:10px;font-size:10px;color:var(--muted);">'+esc(_chParent(wocPreCsh))+'</span>':''}</div>
+      </div></td>
       <td class="num mono" data-hoqty="${hoQty}">${fmtINR(hoQty)}</td>
       <td class="num mono">${isPct ? prevVal.toFixed(2)+'%' : fmtINR(prevVal)}</td>
       <td><input type="number" class="woc_thisVal" min="0" max="${maxVal}" step="${isPct?'0.1':'0.001'}" placeholder="0"
@@ -8159,8 +8785,6 @@ async function onWOCWOChange() {
       <td class="num mono woc_cumVal">${isPct ? prevVal.toFixed(2)+'%' : fmtINR(prevVal)}</td>
       <td class="num mono">${fmtINR(it['Unit Rate'])}</td>
       <td class="num mono woc_certVal">0.00</td>
-      <td><div style="position:relative;">
-      </div></td>
     </tr>`;
   }).join('');
 }
@@ -8214,12 +8838,16 @@ async function saveWOC_direct() {
     const rate   = num(inp?.dataset.rate);
     const hoQty  = num(inp?.dataset.hoqty);
     const certVal= isPct ? (hoQty*rate*thisVal/100) : thisVal*rate;
+    const wocWbsInp = tr.querySelector('.woc_wbs');
+    const wocCshInp = tr.querySelector('.woc_csh');
     items.push({
       sno:i+1, description:tr.cells[1].textContent.trim(), uom:tr.cells[2].textContent.trim(),
       woQty:hoQty, prevCumulativeQty:isPct?0:prev, thisPeriodQty:isPct?0:thisVal,
       cumulativeQty:isPct?0:(prev+thisVal), prevCumulativePct:isPct?prev:0,
       thisPeriodPct:isPct?thisVal:0, cumulativePct:isPct?(prev+thisVal):0,
       unitRate:rate, certValue:certVal,
+      wbs_code: wocWbsInp?.dataset?.wbsCode||null, wbs_activity: wocWbsInp?.value?.trim()||null,
+      cost_subhead: wocCshInp?.dataset?.cshVal||wocCshInp?.value?.trim()||null,
     });
   });
   if (!hasQty) { toast('Enter quantity or % for at least one item','error'); return; }
@@ -8424,14 +9052,15 @@ async function onWOBWOCChange() {
     const amt = num(it['Cert Value']);
     gross += amt;
     const thisPeriodLabel = it['This Period Pct']>0 ? it['This Period Pct'].toFixed(2)+'%' : fmtINR(it['This Period Qty']);
-
-    return `<tr>
-      <td class="center">${i+1}</td><td>${esc(it['Description'])}</td><td class="center">${esc(it['UOM'])}</td>
+    const wbsPill = it['WBS Activity'] ? `<div style="margin-top:2px;"><span style="display:inline-block;padding:1px 7px;background:var(--panel-2);border:1px solid var(--border);border-radius:10px;font-size:10px;font-family:monospace;color:var(--accent);">${esc(it['WBS Code']||'')}</span> <span style="font-size:11px;color:var(--muted);">${esc(it['WBS Activity'])}</span></div>` : '';
+    const cshPill = it['Cost Subhead'] ? `<div style="margin-top:2px;"><span style="display:inline-block;padding:1px 7px;background:var(--panel-2);border:1px solid var(--border);border-radius:10px;font-size:10px;color:var(--muted);">${esc(_chParent(it['Cost Subhead']))} &rsaquo; ${esc(it['Cost Subhead'])}</span></div>` : '';
+    return `<tr data-wbs-code="${esc(it['WBS Code']||'')}" data-wbs-activity="${esc(it['WBS Activity']||'')}" data-cost-subhead="${esc(it['Cost Subhead']||'')}">
+      <td class="center">${i+1}</td>
+      <td>${esc(it['Description'])}${wbsPill}${cshPill}</td>
+      <td class="center">${esc(it['UOM'])}</td>
       <td class="num mono">${thisPeriodLabel}</td>
       <td class="num mono">${fmtINR(it['Unit Rate'])}</td>
       <td class="num mono">${fmtINR(amt)}</td>
-      <td><div style="position:relative;">
-      </div></td>
     </tr>`;
   }).join('');
   document.getElementById('wob_grossAmt').textContent = fmtINR(gross);
@@ -8502,6 +9131,7 @@ async function saveWOB_direct() {
       sno:i+1, description:tr.cells[1].textContent.trim(), uom:tr.cells[2].textContent.trim(),
       thisPeriodQty:num(tr.cells[3].textContent)||0, unitRate:num(tr.cells[4].textContent),
       amount:num(tr.cells[5].textContent),
+      wbs_code: tr.dataset.wbsCode||null, wbs_activity: tr.dataset.wbsActivity||null, cost_subhead: tr.dataset.costSubhead||null
     });
   });
 
@@ -9982,7 +10612,7 @@ function renderPrintPRR(d) {
 // ============================================================
 // PURCHASE MODULE — TAB NAVIGATION
 // ============================================================
-const PU_TABS = ['mir','rfq','po','grn','pob','mis','stock'];
+const PU_TABS = ['mir','rfq','po','grn','pob','mis','stock','openstock'];
 
 function switchPUTab(tab) {
   PU_TABS.forEach(t => {
@@ -9998,6 +10628,7 @@ function switchPUTab(tab) {
   if (tab === 'pob')   loadPOBList();
   if (tab === 'mis')   { loadMISList(); }
   if (tab === 'stock') loadStockBalance();
+  if (tab === 'openstock') { if (hasRole('Admin')) loadOSHistory(); else toast('Admin access only','error'); }
 }
 
 // puState is defined early in the file (after ROLE_PERMS) so initApp can use it
@@ -10182,9 +10813,13 @@ function chAddHead() {
   div.id = 'ch_newhead_wrap';
   div.style.cssText = 'display:flex;gap:6px;align-items:center;margin-bottom:12px;flex-wrap:wrap;';
   div.innerHTML = '<span style="font-weight:600;color:var(--accent);">New Cost Head:</span>' +
+    '<div style="position:relative;display:inline-block;">' +
     '<input id="ch_newhead_input" placeholder="e.g. Civil Works, MEP, Finishes" autocomplete="off"' +
     ' style="padding:6px 10px;border:1px solid var(--accent);border-radius:4px;font-size:12px;width:260px;background:var(--input-bg);color:var(--text);"' +
+    ' oninput="_chHeadSuggest()"' +
     ' onkeydown="if(event.key===\'Enter\')chSaveNewHead();if(event.key===\'Escape\')document.getElementById(\'ch_newhead_wrap\').remove()">' +
+    '<div id="ch_newhead_sugg" style="display:none;position:absolute;top:100%;left:0;right:0;background:var(--input-bg);border:1px solid var(--accent);border-radius:4px;max-height:160px;overflow-y:auto;z-index:9999;font-size:12px;"></div>' +
+    '</div>' +
     '<button class="btn btn-primary btn-sm" onclick="chSaveNewHead()">Save</button>' +
     '<button class="btn btn-ghost btn-sm" onclick="document.getElementById(\'ch_newhead_wrap\').remove()">&#10005;</button>';
   wrap.insertBefore(div, wrap.firstChild);
@@ -10197,6 +10832,9 @@ async function chSaveNewHead() {
   if (!val) { toast('Enter a cost head name','error'); return; }
   if (_chData.find(r => r.costhead.toLowerCase() === val.toLowerCase())) {
     toast('Cost Head already exists','error'); return;
+  }
+  if (_chData.find(r => (r.cost_subhead||'').toLowerCase() === val.toLowerCase())) {
+    toast('"'+val+'" already exists as a Cost Subhead — names must be unique across all heads and subheads','error'); return;
   }
   pbShow('Saving...');
   try {
@@ -10223,10 +10861,14 @@ function chAddSub(head, headId) {
   wrap.style.cssText = 'display:flex;gap:6px;align-items:center;margin:6px 0;flex-wrap:wrap;';
   const safeHead = head.replace(/'/g, "\\'");
   wrap.innerHTML = '<span style="font-size:12px;color:var(--muted);">New Cost Subhead:</span>' +
+    '<div style="position:relative;display:inline-block;">' +
     '<input class="tree-inline-input" placeholder="e.g. RCC Columns, Foundation, Tiling" autocomplete="off"' +
     ' style="padding:6px 10px;border:1px solid var(--accent);border-radius:4px;font-size:12px;width:260px;background:var(--input-bg);color:var(--text);"' +
+    ' oninput="_chSubSuggest(this)"' +
     ' onkeydown="if(event.key===\'Enter\')chSaveSub(this,\''+safeHead+'\');if(event.key===\'Escape\')this.closest(\'.tree-inline-wrap\').remove()">' +
-    '<button class="btn btn-primary btn-sm" onclick="chSaveSub(this.previousElementSibling,\''+safeHead+'\')">Save</button>' +
+    '<div class="ch_sub_sugg" style="display:none;position:absolute;top:100%;left:0;right:0;background:var(--input-bg);border:1px solid var(--accent);border-radius:4px;max-height:160px;overflow-y:auto;z-index:9999;font-size:12px;"></div>' +
+    '</div>' +
+    '<button class="btn btn-primary btn-sm" onclick="chSaveSub(this.previousElementSibling.querySelector(\'input\'),\''+safeHead+'\')">Save</button>' +
     '<button class="btn btn-ghost btn-sm" onclick="this.closest(\'.tree-inline-wrap\').remove()">&#10005;</button>';
   c.appendChild(wrap);
   wrap.querySelector('input').focus();
@@ -10235,8 +10877,12 @@ function chAddSub(head, headId) {
 async function chSaveSub(inp, head) {
   const val = (inp?.value||'').trim();
   if (!val) { toast('Enter a sub cost head name','error'); return; }
-  if (_chData.find(r => r.costhead===head && (r.cost_subhead||'').toLowerCase()===val.toLowerCase())) {
-    toast('Cost Subhead already exists under this head','error'); return;
+  if (_chData.find(r => (r.cost_subhead||'').toLowerCase()===val.toLowerCase())) {
+    const existing = _chData.find(r => (r.cost_subhead||'').toLowerCase()===val.toLowerCase());
+    toast('"'+val+'" already exists as a Cost Subhead under "'+existing.costhead+'" — subhead names must be globally unique','error'); return;
+  }
+  if (_chData.find(r => r.costhead.toLowerCase()===val.toLowerCase())) {
+    toast('"'+val+'" already exists as a Cost Head — names must be unique','error'); return;
   }
   pbShow('Saving...');
   try {
@@ -10385,9 +11031,7 @@ function _fuzzyScore(target, query) {
 
 function renderMaterialMaster() {
   const q   = (document.getElementById('mm_search')?.value || '').trim();
-  const chf = (document.getElementById('mm_chFilter')?.value || '').trim().toLowerCase();
   let rows = puState.materials;
-  if (chf) rows = rows.filter(m => (m.costhead||'').toLowerCase().includes(chf));
 
   // Fuzzy search across name, cost_subhead, material_code, uom
   if (q) {
@@ -10563,10 +11207,8 @@ async function saveMaterialMaster() {
   }
   const name = document.getElementById('mm_name').value.trim();
   const uom  = document.getElementById('mm_uom').value.trim();
-  const ch   = document.getElementById('mm_costhead').value.trim();
   if (!name) { toast('Material name required','error'); return; }
   if (!uom)  { toast('UOM required','error'); return; }
-  if (!ch)   { toast('Cost Head required','error'); return; }
   // Duplicate check — composite key on (name + UOM), normalised
   const nameKey = _normKey(name);
   const uomKey  = _normKey(uom);
@@ -10581,15 +11223,14 @@ async function saveMaterialMaster() {
     const lastNum = last?.length ? parseInt((last[0].material_code||'MAT000').replace('MAT',''))||0 : 0;
     const code = 'MAT' + String(lastNum + 1).padStart(3, '0');
     const { error } = await sb.from('pu_material_master').insert({
-      material_code: code, material_name: name, uom, costhead: ch,
-      cost_subhead: document.getElementById('mm_costsubhead').value.trim()||null,
+      material_code: code, material_name: name, uom,
       hsn_code: document.getElementById('mm_hsn').value.trim()||null,
       specification: document.getElementById('mm_spec').value.trim()||null,
       created_by: state.userId, created_by_name: state.userName,
     });
     if (error) throw new Error(error.message);
     flashSuccess('Material ' + code + ' added');
-    ['mm_name','mm_uom','mm_costhead','mm_costsubhead','mm_hsn','mm_spec'].forEach(id => {
+    ['mm_name','mm_uom','mm_hsn','mm_spec'].forEach(id => {
       const el = document.getElementById(id); if (el) el.value = '';
     });
     const dupBox = document.getElementById('mm_name_dup');
@@ -10620,22 +11261,7 @@ function openMatEdit(code) {
       </div>
     </div>
     <div class="grid-4" style="margin-bottom:18px;">
-      <div class="field" style="position:relative;">
-        <label class="req">Cost Head</label>
-        <input id="me_costhead" value="${esc(m.costhead||'')}" autocomplete="off" style="width:100%;"
-          oninput="chFuzzy('me_costhead','me_costhead_list','me_costsubhead','me_costsubhead_list')"
-          onfocus="chFuzzy('me_costhead','me_costhead_list','me_costsubhead','me_costsubhead_list')"
-          onblur="setTimeout(()=>chHide('me_costhead_list'),200)">
-        <div id="me_costhead_list" class="ch-dropdown" style="display:none;"></div>
-      </div>
-      <div class="field" style="position:relative;">
-        <label>Cost Subhead</label>
-        <input id="me_costsubhead" value="${esc(m.cost_subhead||'')}" autocomplete="off" style="width:100%;"
-          oninput="chFuzzySub('me_costsubhead','me_costsubhead_list','me_costhead')"
-          onfocus="chFuzzySub('me_costsubhead','me_costsubhead_list','me_costhead')"
-          onblur="setTimeout(()=>chHide('me_costsubhead_list'),200)">
-        <div id="me_costsubhead_list" class="ch-dropdown" style="display:none;"></div>
-      </div>
+
       <div class="field">
         <label>HSN Code</label>
         <input id="me_hsn" value="${esc(m.hsn_code||'')}" style="width:100%;">
@@ -10662,15 +11288,12 @@ async function updateMaterialMaster(code) {
 
   const name   = (document.getElementById('me_name')?.value   || '').trim();
   const uom    = (document.getElementById('me_uom')?.value    || '').trim();
-  const cat    = (document.getElementById('me_costhead')?.value || '').trim();
-  const subcat = (document.getElementById('me_costsubhead')?.value  || '').trim();
   const hsn    = (document.getElementById('me_hsn')?.value     || '').trim();
   const spec   = (document.getElementById('me_spec')?.value    || '').trim();
   const reason = (document.getElementById('me_reason')?.value  || '').trim();
 
   if (!name)   { toast('Material name is required','error'); return; }
   if (!uom)    { toast('UOM is required','error'); return; }
-  if (!cat)    { toast('Cost Head is required','error'); return; }
   if (!reason) { toast('Reason for edit is required','error'); return; }
 
   // Duplicate check — same name+UOM on a different material code
@@ -10695,8 +11318,7 @@ async function updateMaterialMaster(code) {
     const { error: updErr } = await sb.from('pu_material_master').update({
       material_name: name,
       uom,
-      costhead:      cat,
-      cost_subhead:  subcat || null,
+
       hsn_code:      hsn    || null,
       specification: spec   || null,
       updated_by:      state.userId,
@@ -10709,8 +11331,7 @@ async function updateMaterialMaster(code) {
     const changes = {};
     if (before.material_name !== name)          changes.material_name  = { from: before.material_name,          to: name };
     if (before.uom           !== uom)           changes.uom            = { from: before.uom,                    to: uom };
-    if ((before.costhead||'') !== cat)          changes.costhead       = { from: before.costhead||'',           to: cat };
-    if ((before.cost_subhead||'') !== subcat)   changes.cost_subhead   = { from: before.cost_subhead||'',       to: subcat };
+
     if ((before.hsn_code||'') !== hsn)          changes.hsn_code       = { from: before.hsn_code||'',           to: hsn };
     if ((before.specification||'') !== spec)    changes.specification  = { from: before.specification||'',      to: spec };
 
@@ -10719,10 +11340,9 @@ async function updateMaterialMaster(code) {
       material_name:    name,
       changed_fields:   JSON.stringify(changes),
       before_snapshot:  JSON.stringify({
-        material_name: before.material_name, uom: before.uom, costhead: before.costhead,
-        cost_subhead: before.cost_subhead, hsn_code: before.hsn_code, specification: before.specification,
+        material_name: before.material_name, uom: before.uom, hsn_code: before.hsn_code, specification: before.specification,
       }),
-      after_snapshot:   JSON.stringify({ material_name: name, uom, costhead: cat, cost_subhead: subcat, hsn_code: hsn, specification: spec }),
+      after_snapshot:   JSON.stringify({ material_name: name, uom, hsn_code: hsn, specification: spec }),
       edit_reason:      reason,
       edited_by:        state.userId,
       edited_by_name:   state.userName,
@@ -14339,29 +14959,7 @@ async function onPOBPOChange() {
     </label>`).join('');
   // Load PO GST info
   const {data:po}=await sb.from('pu_po_orders').select('gst_mode,cgst_pct,sgst_pct,igst_pct').eq('po_number',poNum).single();
-  if((po?.gst_mode||'overall')==='per_line'){
-    // Per-line mode: group items by rate combination into display slabs
-    const {data:poItems}=await sb.from('pu_po_items').select('base_amount,cgst_pct,sgst_pct,igst_pct').eq('po_number',poNum);
-    const slabMap={};
-    let totalBase=0;
-    (poItems||[]).forEach(it=>{
-      const b=num(it.base_amount)||0;
-      const c=num(it.cgst_pct)||0, s=num(it.sgst_pct)||0, g=num(it.igst_pct)||0;
-      const key=c+'|'+s+'|'+g;
-      if(!slabMap[key]) slabMap[key]={cgst:c,sgst:s,igst:g,base:0,gstAmt:0};
-      slabMap[key].base+=b;
-      slabMap[key].gstAmt+=b*(c+s+g)/100;
-      totalBase+=b;
-    });
-    const slabs=Object.values(slabMap);
-    // Blended effective rates stored for savePOB compatibility (cgst_pct/sgst_pct columns)
-    const effCGST=totalBase>0?Math.round((slabs.reduce((a,sl)=>a+sl.base*sl.cgst/100,0)/totalBase)*100*100)/100:0;
-    const effSGST=totalBase>0?Math.round((slabs.reduce((a,sl)=>a+sl.base*sl.sgst/100,0)/totalBase)*100*100)/100:0;
-    const effIGST=totalBase>0?Math.round((slabs.reduce((a,sl)=>a+sl.base*sl.igst/100,0)/totalBase)*100*100)/100:0;
-    _pobGSTInfo={mode:'per_line',cgst:effCGST,sgst:effSGST,igst:effIGST,slabs};
-  } else {
-    _pobGSTInfo={mode:'overall',cgst:po?.cgst_pct||0,sgst:po?.sgst_pct||0,igst:po?.igst_pct||0,slabs:null};
-  }
+  _pobGSTInfo={mode:po?.gst_mode||'overall',cgst:po?.cgst_pct||0,sgst:po?.sgst_pct||0,igst:po?.igst_pct||0};
 }
 
 async function onPOBGRNSelect() {
@@ -14385,6 +14983,8 @@ async function onPOBGRNSelect() {
     </tr>`;
   }).join('')||'<tr><td colspan="8" class="center muted">No items</td></tr>';
   document.getElementById('pob_s_gross').textContent=fmtINR(grossAmt);
+  const gstPct=_pobGSTInfo.cgst+_pobGSTInfo.sgst+_pobGSTInfo.igst;
+  document.getElementById('pob_s_gstLabel').textContent='GST ('+gstPct+'%)';
   recalcPOBTotals();
 }
 
@@ -14405,118 +15005,34 @@ function addPOBExtraLine() {
   tr.innerHTML=`
     <td><input placeholder="Description" style="width:180px;"></td>
     <td><select><option value="Addition">Addition</option><option value="Deduction">Deduction</option></select></td>
-    <td><select onchange="pobToggleGSTPct(this)" ><option value="Before GST">Before GST</option><option value="After GST">After GST</option></select></td>
-    <td class="pobGstPctCell"><input type="number" step="0.01" value="18" style="width:70px;text-align:right;" oninput="recalcPOBTotals()"></td>
+    <td><select><option value="Before GST">Before GST</option><option value="After GST">After GST</option></select></td>
     <td><input type="number" step="0.01" style="width:100px;text-align:right;" oninput="recalcPOBTotals()"></td>
     <td><button class="btn btn-ghost btn-sm" onclick="this.closest('tr').remove();recalcPOBTotals()">✕</button></td>`;
   document.getElementById('pob_extraBody').appendChild(tr);
 }
 
-function pobToggleGSTPct(sel) {
-  const gstCell=sel.closest('tr').querySelector('.pobGstPctCell');
-  if(gstCell) gstCell.style.display=sel.value==='Before GST'?'':'none';
-  recalcPOBTotals();
-}
-
 function recalcPOBTotals() {
   const gross=num(document.getElementById('pob_s_gross')?.textContent);
-
-  // ── Collect extra lines ──────────────────────────────────────────────────
-  const beforeLines=[], afterLines=[];
+  let extraBefore=0, extraAfter=0;
   document.querySelectorAll('#pob_extraBody tr').forEach(tr=>{
     const cells=tr.cells;
-    const desc=(cells[0]?.querySelector('input')?.value||'').trim()||'—';
-    const gstPct=num(cells[3]?.querySelector('input')?.value||0);  // GST % cell
-    const amt=num(cells[4]?.querySelector('input')?.value||0);     // Amount cell
+    const amt=num(cells[3]?.querySelector('input')?.value||0);
     const type=cells[1]?.querySelector('select')?.value;
     const timing=cells[2]?.querySelector('select')?.value;
     const signed=type==='Addition'?amt:-amt;
-    if(timing==='Before GST') beforeLines.push({desc,signed,gstPct});
-    else afterLines.push({desc,signed,gstPct:0});
+    if(timing==='Before GST') extraBefore+=signed; else extraAfter+=signed;
   });
-  const extraBefore=beforeLines.reduce((a,l)=>a+l.signed,0);
-  const extraAfter=afterLines.reduce((a,l)=>a+l.signed,0);
-
-  // ── Render Before-GST rows: description + indented GST line ─────────────
-  const dynEl=document.getElementById('pob_s_dynamic');
-  if(dynEl) dynEl.innerHTML=beforeLines.map(l=>{
-    const gstAmt=l.signed*l.gstPct/100;
-    const gstRow=l.gstPct>0
-      ? `<tr><td style="padding:2px 8px 4px 20px;color:var(--muted);font-size:11.5px;">GST @${l.gstPct}%</td>`+
-        `<td class="num" style="padding:2px 8px 4px 8px;font-size:11.5px;">${fmtINR(gstAmt)}</td></tr>`
-      : '';
-    return `<tr><td style="padding:4px 8px;color:var(--muted);">${l.signed>=0?'Add':'Less'}: ${l.desc}</td>`+
-           `<td class="num" style="padding:4px 8px;">${(l.signed>=0?'+':'')+fmtINR(l.signed)}</td></tr>${gstRow}`;
-  }).join('');
-
-  // ── Taxable Value = Gross + Before-GST extra amounts (ex-tax) ───────────
   const taxable=gross+extraBefore;
-  document.getElementById('pob_s_taxable').textContent=fmtINR(taxable);
-
-  // ── Material GST: computed on gross only, split by slab ─────────────────
-  let matCGST=0, matSGST=0, matIGST=0;
-  if(_pobGSTInfo.mode==='per_line' && _pobGSTInfo.slabs && _pobGSTInfo.slabs.length){
-    const totalPOBase=_pobGSTInfo.slabs.reduce((a,sl)=>a+sl.base,0);
-    _pobGSTInfo.slabs.forEach(sl=>{
-      const portion=totalPOBase>0?(sl.base/totalPOBase):0;
-      const slabBase=gross*portion;
-      matCGST+=slabBase*sl.cgst/100;
-      matSGST+=slabBase*sl.sgst/100;
-      matIGST+=slabBase*sl.igst/100;
-    });
-  } else {
-    matCGST=gross*(_pobGSTInfo.cgst||0)/100;
-    matSGST=gross*(_pobGSTInfo.sgst||0)/100;
-    matIGST=gross*(_pobGSTInfo.igst||0)/100;
-  }
-
-  // ── Extra-line GST: split assuming same CGST/SGST/IGST ratio as material ─
-  // For Before-GST extra lines, each line carries its own GST %
-  // Split into CGST/SGST/IGST using same ratio as the PO's material rates
-  const matTotalPct=(_pobGSTInfo.cgst||0)+(_pobGSTInfo.sgst||0)+(_pobGSTInfo.igst||0);
-  let extraCGST=0, extraSGST=0, extraIGST=0;
-  beforeLines.forEach(l=>{
-    const lineGST=l.signed*l.gstPct/100;
-    if((_pobGSTInfo.igst||0)>0){
-      // IGST regime
-      extraIGST+=lineGST;
-    } else {
-      // CGST+SGST regime — split equally (half each)
-      extraCGST+=lineGST/2;
-      extraSGST+=lineGST/2;
-    }
-  });
-
-  // ── Combined GST totals ──────────────────────────────────────────────────
-  const totalCGST=matCGST+extraCGST;
-  const totalSGST=matSGST+extraSGST;
-  const totalIGST=matIGST+extraIGST;
-  const gst=totalCGST+totalSGST+totalIGST;
-
-  const gstEl=document.getElementById('pob_s_gst_rows');
-  if(gstEl){
-    let html='';
-    if(totalCGST>0) html+=`<tr><td style="padding:4px 8px;color:var(--muted);">Total CGST</td>`+
-      `<td class="num" style="padding:4px 8px;">${fmtINR(totalCGST)}</td></tr>`;
-    if(totalSGST>0) html+=`<tr><td style="padding:4px 8px;color:var(--muted);">Total SGST</td>`+
-      `<td class="num" style="padding:4px 8px;">${fmtINR(totalSGST)}</td></tr>`;
-    if(totalIGST>0) html+=`<tr><td style="padding:4px 8px;color:var(--muted);">Total IGST</td>`+
-      `<td class="num" style="padding:4px 8px;">${fmtINR(totalIGST)}</td></tr>`;
-    if(!html) html=`<tr><td style="padding:4px 8px;color:var(--muted);">GST</td>`+
-      `<td class="num" style="padding:4px 8px;">0.00</td></tr>`;
-    gstEl.innerHTML=html;
-  }
-
-  // ── After-GST rows ───────────────────────────────────────────────────────
-  const afterEl=document.getElementById('pob_s_after_rows');
-  if(afterEl) afterEl.innerHTML=afterLines.map(l=>
-    `<tr><td style="padding:4px 8px;color:var(--muted);">${l.signed>=0?'Add':'Less'}: ${l.desc}</td>`+
-    `<td class="num" style="padding:4px 8px;">${(l.signed>=0?'+':'')+fmtINR(l.signed)}</td></tr>`
-  ).join('');
-
+  const gstPct=(_pobGSTInfo.cgst||0)+(_pobGSTInfo.sgst||0)+(_pobGSTInfo.igst||0);
+  const gst=taxable*gstPct/100;
   const invoice=taxable+gst+extraAfter;
   const hold=num(document.getElementById('pob_holdAmt')?.value);
   const net=invoice-hold;
+  document.getElementById('pob_s_extraBefore').textContent=(extraBefore>=0?'+':'')+fmtINR(extraBefore);
+  document.getElementById('pob_s_taxable').textContent=fmtINR(taxable);
+  document.getElementById('pob_s_gstLabel').textContent='GST ('+gstPct+'%)';
+  document.getElementById('pob_s_gst').textContent=fmtINR(gst);
+  document.getElementById('pob_s_extraAfter').textContent=(extraAfter>=0?'+':'')+fmtINR(extraAfter);
   document.getElementById('pob_s_invoice').textContent=fmtINR(invoice);
   document.getElementById('pob_s_net').textContent=fmtINR(net);
   const f=document.getElementById('pobForm');
@@ -15111,12 +15627,24 @@ async function addMISItem() {
       <div class="typeahead-results" id="misMatRes_${i}" style="min-width:340px;position:absolute;top:100%;left:0;z-index:9999;box-shadow:0 4px 16px rgba(0,0,0,.15);"></div>
       <input type="hidden" id="misMatBal_${i}" value="0">
       <input type="hidden" id="misMatRate_${i}" value="0">
+      <div id="misMat_${i}_pill" style="display:none;margin-top:3px;"></div>
     </div></td>
     <td><input id="misUom_${i}" class="pu_uom" style="width:60px;" readonly></td>
+    <td style="min-width:180px;"><div style="position:relative;">
+      <input id="misWbs_${i}" placeholder="Type WBS activity…" autocomplete="off" style="width:100%;font-size:12px;"
+        oninput="misWbsTypeahead(${i})" onblur="setTimeout(()=>misWbsHide(${i}),200)">
+      <div id="misWbsRes_${i}" style="display:none;position:absolute;top:100%;left:0;right:0;background:var(--input-bg);border:1px solid var(--accent);border-radius:4px;max-height:180px;overflow-y:auto;z-index:9999;box-shadow:0 4px 12px rgba(0,0,0,.15);font-size:12px;"></div>
+      <div id="misWbs_${i}_pill" style="display:none;margin-top:3px;"></div>
+    </div></td>
+    <td style="min-width:160px;"><div style="position:relative;">
+      <input id="misCsh_${i}" placeholder="Type subhead…" autocomplete="off" style="width:100%;font-size:12px;"
+        oninput="misCshTypeahead(${i})" onblur="setTimeout(()=>misCshHide(${i}),200)">
+      <div id="misCshRes_${i}" style="display:none;position:absolute;top:100%;left:0;right:0;background:var(--input-bg);border:1px solid var(--accent);border-radius:4px;max-height:180px;overflow-y:auto;z-index:9999;box-shadow:0 4px 12px rgba(0,0,0,.15);font-size:12px;"></div>
+      <div id="misCsh_${i}_pill" style="display:none;margin-top:3px;"></div>
+    </div></td>
     <td class="num" id="misBalance_${i}" style="font-weight:600;color:var(--accent);">—</td>
     <td><input type="number" id="misQty_${i}" class="num" style="width:90px;" step="0.001" oninput="recalcMISRow(${i})"></td>
-    <td style="min-width:160px;"><div style="position:relative;">
-    </div></td>
+    <td style="min-width:160px;"><div style="position:relative;"></div></td>
     <td class="num" id="misRate_${i}">—</td>
     <td class="num" id="misAmt_${i}">—</td>
     <td><button class="btn btn-ghost btn-sm" onclick="this.closest('tr').remove()">✕</button></td>`;
@@ -15164,7 +15692,7 @@ function misMaterialTypeahead(i) {
 // Confirm a selection from the material-master dropdown for row i.
 // Locks the input (readOnly + ✕ clear button) so manual entry is impossible —
 // users must either pick from the dropdown or clear and retry.
-function selectMISMaterial(i, name, uom, balance, rate) {
+function selectMISMaterial(i, name, uom, balance, rate, matCode) {
   const bal = parseFloat(balance||0);
 
   // Hard block: zero or negative stock — cannot be issued
@@ -15179,9 +15707,14 @@ function selectMISMaterial(i, name, uom, balance, rate) {
   }
 
   const inp = document.getElementById('misMat_'+i);
-  if (inp) { inp.value = name; inp.readOnly = true; }
+  if (inp) { inp.value = name; inp.readOnly = true; inp.dataset.matCode = matCode||''; }
   const res = document.getElementById('misMatRes_'+i);
   if (res) { res.classList.remove('show'); res.style.display='none'; }
+  const matPill = document.getElementById('misMat_'+i+'_pill');
+  if (matPill && matCode) {
+    matPill.style.display='';
+    matPill.innerHTML='<span style="display:inline-block;padding:1px 7px;background:var(--panel-2);border:1px solid var(--border);border-radius:10px;font-size:10px;font-family:monospace;color:var(--accent);">'+esc(matCode)+'</span>';
+  }
   document.getElementById('misUom_'+i).value = uom || '';
   document.getElementById('misMatBal_'+i).value  = bal;
   document.getElementById('misMatRate_'+i).value = rate || 0;
@@ -15291,10 +15824,16 @@ async function saveMIS() {
     const uom     = ri!=null ? (document.getElementById('misUom_'+ri)?.value || '') : '';
     const balance = ri!=null ? parseFloat(document.getElementById('misMatBal_'+ri)?.value || 0) : 0;
     const rate    = ri!=null ? parseFloat(document.getElementById('misMatRate_'+ri)?.value || 0) : 0;
+    const wbsCode = document.getElementById('misWbs_'+ri)?.dataset?.wbsCode||null;
+    const wbsAct  = document.getElementById('misWbs_'+ri)?.value?.trim()||null;
+    const csh     = document.getElementById('misCsh_'+ri)?.dataset?.cshVal||null;
+    if (!wbsCode) { toast('Row '+(items.length+1)+': select a WBS Activity','error'); return; }
+    if (!csh)     { toast('Row '+(items.length+1)+': select a Cost Subhead','error'); return; }
     items.push({sno:items.length+1, material_name:mat, uom:uom,
       qty_issued:qty, stock_before:balance,
       stock_after:Math.max(0, balance - qty),
-      unit_rate:rate, amount:qty*rate});
+      unit_rate:rate, amount:qty*rate,
+      wbs_code:wbsCode, wbs_activity:wbsAct, cost_subhead:csh});
   });
   if(!items.length){toast('Add at least one item','error');return;}
 
@@ -16588,6 +17127,7 @@ function applyPurchaseSubTabVisibility() {
     'pob':   ['Planning/ QS','Project Manager','Admin'],
     'mis':   ['Store Executive','Site Manager','Project Manager','Admin'],
     'stock': ['Store Executive','Site Manager','Planning/ QS','Project Manager','Admin'],
+    'openstock': ['Admin'],
   };
   Object.entries(puTabRules).forEach(([tab, roles]) => {
     const el = document.querySelector('.sub-tab[data-putab="'+tab+'"]');
