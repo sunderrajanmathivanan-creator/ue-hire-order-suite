@@ -17452,7 +17452,7 @@ async function loadTrackerA() {
     // Fetch line items for the MIRs in view (with WBS sub activity)
     const mirNumsInView = mirs.map(function(m){ return m.mir_number; });
     const itemsRes = await sb.from('pu_mir_items')
-      .select('mir_number,sno,material_name,uom,qty_required,wbs_sub_activity,item_status')
+      .select('mir_number,sno,material_name,uom,qty_required,wbs_code,item_status')
       .in('mir_number', mirNumsInView).order('sno');
     const mirItems = itemsRes.data || [];
     const itemsByMir = {};
@@ -17608,7 +17608,7 @@ async function loadTrackerA() {
               '<th style="padding:5px 8px;text-align:left;border-bottom:1px solid #d8e2ef;">Material</th>'+
               '<th style="padding:5px 8px;text-align:left;width:60px;border-bottom:1px solid #d8e2ef;">UOM</th>'+
               '<th style="padding:5px 8px;text-align:right;width:80px;border-bottom:1px solid #d8e2ef;">Qty</th>'+
-              '<th style="padding:5px 8px;text-align:left;border-bottom:1px solid #d8e2ef;">WBS Sub Activity</th>'+
+              '<th style="padding:5px 8px;text-align:left;border-bottom:1px solid #d8e2ef;">WBS Code</th>'+
               '<th style="padding:5px 8px;text-align:left;width:140px;border-bottom:1px solid #d8e2ef;">Status</th>'+
             '</tr></thead><tbody>';
         pendingItems.forEach(function(it){
@@ -17622,7 +17622,7 @@ async function loadTrackerA() {
             '<td style="padding:4px 8px;border-bottom:1px solid #eef2f8;">'+esc(it.material_name||'—')+'</td>'+
             '<td style="padding:4px 8px;border-bottom:1px solid #eef2f8;">'+esc(it.uom||'')+'</td>'+
             '<td style="padding:4px 8px;border-bottom:1px solid #eef2f8;text-align:right;" class="mono">'+(it.qty_required!=null?Number(it.qty_required).toLocaleString('en-IN'):'')+'</td>'+
-            '<td style="padding:4px 8px;border-bottom:1px solid #eef2f8;">'+esc(it.wbs_sub_activity||'—')+'</td>'+
+            '<td style="padding:4px 8px;border-bottom:1px solid #eef2f8;">'+esc(it.wbs_code||'—')+'</td>'+
             '<td style="padding:4px 8px;border-bottom:1px solid #eef2f8;"><span class="status '+cls+'" style="font-size:9px;">'+esc(label)+'</span></td>'+
           '</tr>';
         });
