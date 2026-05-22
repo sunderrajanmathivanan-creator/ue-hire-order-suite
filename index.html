@@ -3997,6 +3997,7 @@ async function confirmOSUpload() {
       grn_number: grnNumber,
       sno: i + 1,
       material_name: r.material_name,
+      material_code: r.material_code || null,
       uom: r.uom,
       this_grn_qty: r.qty,
       total_received_qty: r.qty,
@@ -12190,7 +12191,7 @@ async function saveRFQQuote(rfqNum, sno, itemCount) {
     const gst  = parseFloat(document.getElementById(`rqGST_${idx}`)?.value)||18;
     grand += item.qty_required * rate * (1 + gst/100);
     return {
-      rfq_number:rfqNum, material_name:item.material_name, uom:item.uom,
+      rfq_number:rfqNum, material_code:item.material_code||null, material_name:item.material_name, uom:item.uom,
       qty_required:item.qty_required, unit_rate:rate, gst_pct:gst,
       amount:item.qty_required*rate*(1+gst/100),
     };
@@ -14379,6 +14380,7 @@ async function onGRNPOChange() {
       <td><input type="number" id="grnRecv_${i}" class="num" style="width:90px;" step="0.001"
         min="0" max="${balance}" placeholder="0"
         data-mat="${esc(it.material_name)}" data-uom="${esc(it.uom)}"
+        data-matcode="${esc(it.material_code||'')}"
         data-poqty="${num(it.qty)}" data-prev="${prev}" data-balance="${balance}"
         data-rate="${num(it.unit_rate)}" data-sno="${it.sno}"
         oninput="recalcGRNRow(${i})" ${balance<=0?'disabled':''}></td>
@@ -14416,7 +14418,7 @@ async function saveGRN() {
     const qty=parseFloat(inp.value)||0;
     if(qty<=0) return;
     entries.push({
-      sno:entries.length+1, material_name:inp.dataset.mat, uom:inp.dataset.uom,
+      sno:entries.length+1, material_code:inp.dataset.matcode||null, material_name:inp.dataset.mat, uom:inp.dataset.uom,
       po_qty:parseFloat(inp.dataset.poqty)||0,
       prev_received_qty:parseFloat(inp.dataset.prev)||0,
       this_grn_qty:qty,
@@ -14702,6 +14704,7 @@ async function saveCashGRN() {
     if (!matCode) { toast('Select "' + matName + '" from the material dropdown','error'); return; }
     entries.push({
       sno: entries.length + 1,
+      material_code: matCode || null,
       material_name: matName,
       uom: uom,
       po_qty: 0,                    // not applicable for cash
@@ -14925,9 +14928,6 @@ function renderPOBList() {
     const stCls=b.status.toLowerCase().replace(/\s/g,'-');
     let acts=`<button class="btn btn-ghost btn-sm" onclick="viewPOB('${esc(b.bill_number)}')">View</button>
               <button class="btn btn-ghost btn-sm" onclick="printPOB('${esc(b.bill_number)}')">🖨</button>`;
-    if(perms.canApprovePOB && b.status==='Pending Approval')
-      acts+=` <button class="btn btn-primary btn-sm" onclick="approvePOB('${esc(b.bill_number)}')">Approve</button>
-              <button class="btn btn-danger btn-sm" onclick="rejectDoc('POB','${esc(b.bill_number)}')">Reject</button>`;
     const cashBadge = b.is_cash_purchase
       ? ' <span style="font-size:10px;background:#ad6800;color:#fff;padding:1px 6px;border-radius:3px;font-weight:600;vertical-align:middle;">DIRECT</span>'
       : '';
@@ -14987,9 +14987,14 @@ async function onPOBPOChange() {
       <input type="checkbox" class="pob_grnChk" value="${esc(g.grn_number)}" onchange="onPOBGRNSelect()">
       <span><strong>${esc(g.grn_number)}</strong> · ${fmtDate(g.grn_date)} · Inv: ${esc(g.invoice_no||'—')}</span>
     </label>`).join('');
-  // Load PO GST info
-  const {data:po}=await sb.from('pu_po_orders').select('gst_mode,cgst_pct,sgst_pct,igst_pct').eq('po_number',poNum).single();
-  _pobGSTInfo={mode:po?.gst_mode||'overall',cgst:po?.cgst_pct||0,sgst:po?.sgst_pct||0,igst:po?.igst_pct||0};
+  // Load PO GST info + per-line rates if per_line mode
+  const [{data:po},{data:poItems}]=await Promise.all([
+    sb.from('pu_po_orders').select('gst_mode,cgst_pct,sgst_pct,igst_pct').eq('po_number',poNum).single(),
+    sb.from('pu_po_items').select('material_name,cgst_pct,sgst_pct,igst_pct').eq('po_number',poNum),
+  ]);
+  const itemGSTMap={};
+  (poItems||[]).forEach(it=>{ itemGSTMap[it.material_name]={cgst:it.cgst_pct||0,sgst:it.sgst_pct||0,igst:it.igst_pct||0}; });
+  _pobGSTInfo={mode:po?.gst_mode||'overall',cgst:po?.cgst_pct||0,sgst:po?.sgst_pct||0,igst:po?.igst_pct||0,itemMap:itemGSTMap};
 }
 
 async function onPOBGRNSelect() {
@@ -14999,17 +15004,29 @@ async function onPOBGRNSelect() {
   document.getElementById('pob_billDetails').style.display='';
   const {data:grnItems}=await sb.from('pu_grn_items').select('*').in('grn_number',_pobSelectedGRNs).order('grn_number').order('sno');
   _pobLineItems=grnItems||[];
+  const isPerLine = _pobGSTInfo.mode === 'per_line';
+  // Attach line-item GST from PO to each GRN item
+  _pobLineItems.forEach(it => {
+    const g = isPerLine ? (_pobGSTInfo.itemMap[it.material_name]||{cgst:0,sgst:0,igst:0}) : {cgst:_pobGSTInfo.cgst||0,sgst:_pobGSTInfo.sgst||0,igst:_pobGSTInfo.igst||0};
+    it._cgst_pct = g.cgst; it._sgst_pct = g.sgst; it._igst_pct = g.igst;
+    it._cgst_amt = parseFloat((num(it.base_amount)*g.cgst/100).toFixed(2));
+    it._sgst_amt = parseFloat((num(it.base_amount)*g.sgst/100).toFixed(2));
+    it._igst_amt = parseFloat((num(it.base_amount)*g.igst/100).toFixed(2));
+    it._total_amt= num(it.base_amount) + it._cgst_amt + it._sgst_amt + it._igst_amt;
+  });
   let grossAmt=0;
   document.getElementById('pob_itemsBody').innerHTML=_pobLineItems.map((it,i)=>{
     grossAmt+=num(it.base_amount);
+    const gstDetail = isPerLine
+      ? `<span style="font-size:10px;color:var(--muted);">${it._cgst_pct>0?'C:'+it._cgst_pct+'% ':''}${it._sgst_pct>0?'S:'+it._sgst_pct+'% ':''}${it._igst_pct>0?'I:'+it._igst_pct+'%':''}</span>`
+      : '';
     return `<tr>
       <td>${i+1}</td><td class="mono" style="font-size:11px;">${esc(it.grn_number)}</td>
       <td>${esc(it.material_name)}</td><td>${esc(it.uom)}</td>
       <td class="num">${fmtINR(it.this_grn_qty)}</td>
       <td class="num">${fmtINR(it.unit_rate)}</td>
       <td class="num">${fmtINR(it.base_amount)}</td>
-      <td><div style="position:relative;width:200px;">
-      </div></td>
+      <td class="num" style="color:var(--muted);font-size:12px;">${fmtINR(it._total_amt)}${gstDetail}</td>
     </tr>`;
   }).join('')||'<tr><td colspan="8" class="center muted">No items</td></tr>';
   document.getElementById('pob_s_gross').textContent=fmtINR(grossAmt);
@@ -15041,8 +15058,9 @@ function addPOBExtraLine() {
 
 function recalcPOBTotals() {
   const gross=num(document.getElementById('pob_s_gross')?.textContent);
+  const isPerLine = _pobGSTInfo.mode === 'per_line';
 
-  // ── Collect extra lines ──────────────────────────────────────────────────
+  // ── Collect extra lines ───────────────────────────────────────────────────────────────────────────
   const beforeLines=[], afterLines=[];
   document.querySelectorAll('#pob_extraBody tr').forEach(tr=>{
     const cells=tr.cells;
@@ -15056,18 +15074,27 @@ function recalcPOBTotals() {
   });
   const extraBefore=beforeLines.reduce((a,l)=>a+l.signed,0);
   const extraAfter=afterLines.reduce((a,l)=>a+l.signed,0);
-
   const taxable=gross+extraBefore;
-  const gstPct=(_pobGSTInfo.cgst||0)+(_pobGSTInfo.sgst||0)+(_pobGSTInfo.igst||0);
-  const gst=taxable*gstPct/100;
-  const cgstAmt=taxable*(_pobGSTInfo.cgst||0)/100;
-  const sgstAmt=taxable*(_pobGSTInfo.sgst||0)/100;
-  const igstAmt=taxable*(_pobGSTInfo.igst||0)/100;
+
+  // ── GST: per_line sums from items; overall applies % to taxable ────────────────────
+  let cgstAmt=0, sgstAmt=0, igstAmt=0;
+  if(isPerLine){
+    _pobLineItems.forEach(it=>{
+      cgstAmt+=num(it._cgst_amt||0);
+      sgstAmt+=num(it._sgst_amt||0);
+      igstAmt+=num(it._igst_amt||0);
+    });
+  } else {
+    cgstAmt=taxable*(_pobGSTInfo.cgst||0)/100;
+    sgstAmt=taxable*(_pobGSTInfo.sgst||0)/100;
+    igstAmt=taxable*(_pobGSTInfo.igst||0)/100;
+  }
+  const gst=cgstAmt+sgstAmt+igstAmt;
   const invoice=taxable+gst+extraAfter;
   const hold=num(document.getElementById('pob_holdAmt')?.value);
   const net=invoice-hold;
 
-  // ── Render: Before-GST lines individually ───────────────────────────────
+  // ── Render: Before-GST lines individually ─────────────────────────────────────────────────
   const dynEl=document.getElementById('pob_s_dynamic');
   if(dynEl) dynEl.innerHTML=beforeLines.map(l=>
     `<tr><td style="padding:4px 8px;color:var(--muted);">${l.signed>=0?'Add':'Less'}: ${l.desc}</td>`+
@@ -15076,22 +15103,25 @@ function recalcPOBTotals() {
 
   document.getElementById('pob_s_taxable').textContent=fmtINR(taxable);
 
-  // ── Render: CGST / SGST / IGST split ────────────────────────────────────
+  // ── Render: CGST / SGST / IGST — no % shown for per_line mode ─────────────────────────────
   const gstEl=document.getElementById('pob_s_gst_rows');
   if(gstEl){
     let html='';
-    if(cgstAmt>0) html+=`<tr><td style="padding:4px 8px;color:var(--muted);">Total CGST</td>`+
+    const cgstLabel=isPerLine?'Total CGST':`Total CGST${_pobGSTInfo.cgst>0?' ('+_pobGSTInfo.cgst+'%)':''}`;
+    const sgstLabel=isPerLine?'Total SGST':`Total SGST${_pobGSTInfo.sgst>0?' ('+_pobGSTInfo.sgst+'%)':''}`;
+    const igstLabel=isPerLine?'Total IGST':`Total IGST${_pobGSTInfo.igst>0?' ('+_pobGSTInfo.igst+'%)':''}`;
+    if(cgstAmt>0) html+=`<tr><td style="padding:4px 8px;color:var(--muted);">${cgstLabel}</td>`+
       `<td class="num" style="padding:4px 8px;">${fmtINR(cgstAmt)}</td></tr>`;
-    if(sgstAmt>0) html+=`<tr><td style="padding:4px 8px;color:var(--muted);">Total SGST</td>`+
+    if(sgstAmt>0) html+=`<tr><td style="padding:4px 8px;color:var(--muted);">${sgstLabel}</td>`+
       `<td class="num" style="padding:4px 8px;">${fmtINR(sgstAmt)}</td></tr>`;
-    if(igstAmt>0) html+=`<tr><td style="padding:4px 8px;color:var(--muted);">Total IGST</td>`+
+    if(igstAmt>0) html+=`<tr><td style="padding:4px 8px;color:var(--muted);">${igstLabel}</td>`+
       `<td class="num" style="padding:4px 8px;">${fmtINR(igstAmt)}</td></tr>`;
     if(!html) html=`<tr><td style="padding:4px 8px;color:var(--muted);">GST</td>`+
       `<td class="num" style="padding:4px 8px;">0.00</td></tr>`;
     gstEl.innerHTML=html;
   }
 
-  // ── Render: After-GST lines individually ────────────────────────────────
+  // ── Render: After-GST lines individually ──────────────────────────────────────────────────────────────
   const afterEl=document.getElementById('pob_s_after_rows');
   if(afterEl) afterEl.innerHTML=afterLines.map(l=>
     `<tr><td style="padding:4px 8px;color:var(--muted);">${l.signed>=0?'Add':'Less'}: ${l.desc}</td>`+
@@ -15102,9 +15132,9 @@ function recalcPOBTotals() {
   document.getElementById('pob_s_net').textContent=fmtINR(net);
   const f=document.getElementById('pobForm');
   if(f){f.dataset.invoice=invoice;f.dataset.net=net;f.dataset.gst=gst;
+    f.dataset.cgst=cgstAmt;f.dataset.sgst=sgstAmt;f.dataset.igst=igstAmt;
     f.dataset.extraBefore=extraBefore;f.dataset.extraAfter=extraAfter;f.dataset.gross=gross;}
 }
-
 function calcPOBPayDue() {
   const invDate=document.getElementById('pob_vendorInvDate')?.value;
   const days=num(document.getElementById('pob_creditPeriod')?.value)||0;
@@ -15125,11 +15155,14 @@ async function savePOB() {
   if(!invDate){toast('Invoice Date required','error');return;}
   if(!_pobSelectedGRNs.length){toast('Select at least one GRN','error');return;}
   const f=document.getElementById('pobForm');
-  const gross=parseFloat(f.dataset.gross||0);
+  const gross  =parseFloat(f.dataset.gross||0);
   const invoice=parseFloat(f.dataset.invoice||0);
-  const net=parseFloat(f.dataset.net||0);
-  const gst=parseFloat(f.dataset.gst||0);
-  const vendor=document.getElementById('pob_vendor').value;
+  const net    =parseFloat(f.dataset.net||0);
+  const gst    =parseFloat(f.dataset.gst||0);
+  const cgstAmt=parseFloat(f.dataset.cgst||0);
+  const sgstAmt=parseFloat(f.dataset.sgst||0);
+  const igstAmt=parseFloat(f.dataset.igst||0);
+  const vendor =document.getElementById('pob_vendor').value;
   pbShow('Saving POB…');
   try {
     const billNumber=await nextPUDocNumber('POB');
@@ -15139,11 +15172,12 @@ async function savePOB() {
       credit_period:num(document.getElementById('pob_creditPeriod').value)||30,
       inv_pay_due:document.getElementById('pob_invPayDue').value||null,
       grn_numbers:_pobSelectedGRNs.join(', '),
+      gst_mode:_pobGSTInfo.mode||'overall',
       gross_amount:gross,
-      cgst_pct:_pobGSTInfo.cgst||0, sgst_pct:_pobGSTInfo.sgst||0, igst_pct:_pobGSTInfo.igst||0,
-      cgst_amount:gst*(_pobGSTInfo.cgst||0)/((_pobGSTInfo.cgst||0)+(_pobGSTInfo.sgst||0)+(_pobGSTInfo.igst||1)),
-      sgst_amount:gst*(_pobGSTInfo.sgst||0)/((_pobGSTInfo.cgst||0)+(_pobGSTInfo.sgst||0)+(_pobGSTInfo.igst||1)),
-      igst_amount:gst*(_pobGSTInfo.igst||0)/((_pobGSTInfo.cgst||0)+(_pobGSTInfo.sgst||0)+(_pobGSTInfo.igst||1)),
+      cgst_pct:_pobGSTInfo.mode==='per_line'?0:(_pobGSTInfo.cgst||0),
+      sgst_pct:_pobGSTInfo.mode==='per_line'?0:(_pobGSTInfo.sgst||0),
+      igst_pct:_pobGSTInfo.mode==='per_line'?0:(_pobGSTInfo.igst||0),
+      cgst_amount:cgstAmt, sgst_amount:sgstAmt, igst_amount:igstAmt,
       tds_pct:0, tds_amount:0,
       hold_amount:num(document.getElementById('pob_holdAmt').value),
       hold_description:document.getElementById('pob_holdDesc')?.value||null,
@@ -15153,414 +15187,237 @@ async function savePOB() {
       status:'Pending Approval',
     });
     if(error) throw new Error(error.message);
-    await sb.from('pu_po_bill_items').insert(_pobLineItems.map((it,i)=>({
-      bill_number:billNumber,sno:i+1,grn_number:it.grn_number,
-      material_name:it.material_name,uom:it.uom,qty:it.this_grn_qty,
-      unit_rate:it.unit_rate,base_amount:it.base_amount,
-    })));
-    const extraLines=[];
+
+    // Build all items (material rows + extra lines) for single insert
+    const allItems = [];
+    _pobLineItems.forEach((it,i)=>{
+      allItems.push({
+        bill_number:billNumber, sno:i+1, row_type:'material',
+        grn_number:it.grn_number, material_name:it.material_name,
+        material_code:it.material_code||null, uom:it.uom,
+        qty:it.this_grn_qty, unit_rate:it.unit_rate, base_amount:it.base_amount,
+        cgst_pct:it._cgst_pct||0, sgst_pct:it._sgst_pct||0, igst_pct:it._igst_pct||0,
+        cgst_amount:it._cgst_amt||0, sgst_amount:it._sgst_amt||0, igst_amount:it._igst_amt||0,
+        total_amount:it._total_amt||it.base_amount,
+      });
+    });
+    const matCount = allItems.length;
     document.querySelectorAll('#pob_extraBody tr').forEach((tr,i)=>{
       const cells=tr.cells;
-      extraLines.push({bill_number:billNumber,sno:i+1,
+      allItems.push({
+        bill_number:billNumber, sno:matCount+i+1, row_type:'extra',
         description:cells[0]?.querySelector('input')?.value||null,
         line_type:cells[1]?.querySelector('select')?.value,
         timing:cells[2]?.querySelector('select')?.value,
-        amount:num(cells[3]?.querySelector('input')?.value)});
+        extra_amount:num(cells[3]?.querySelector('input')?.value),
+      });
     });
-    if(extraLines.length) await sb.from('pu_po_bill_extra_lines').insert(extraLines);
+    if(allItems.length) await sb.from('pu_po_bill_items').insert(allItems);
+
     await sb.from('pu_grn').update({status:'Partially Billed'}).in('grn_number',_pobSelectedGRNs);
     flashSuccess('POB '+billNumber+' submitted for PM approval');
     closePOBForm(); loadPOBList();
   } catch(e){toast('Error: '+e.message,'error');}
   finally{pbDone();}
 }
-
 function closePOBForm() {
   document.getElementById('pobForm').style.display='none';
   document.getElementById('pobListCard').style.display='block';
   _pobSelectedGRNs=[]; _pobLineItems=[]; _pobGSTInfo={};
 }
 
-// =====================================================================
-// CASH PURCHASE BILL — parallel POB flow, no PO required
-// Anchored on vendor (not PO); GRNs filtered to vendor's verified cash GRNs.
-// GST entered manually (no PO to inherit from).
-// Inserts into pu_po_bills with is_cash_purchase=true, po_number=null.
-// Downstream PRR/payment flow uses the same pu_po_bills table → automatic.
-// =====================================================================
 
-let _cpobSelectedGRNs = [], _cpobLineItems = [], _cpobExtraCount = 0;
+async function viewPOB(billNum) {
+  pbShow('Loading bill…');
+  const [{data:h},{data:items},{data:extraLines},{data:prevBills}] = await Promise.all([
+    sb.from('pu_po_bills').select('*').eq('bill_number',billNum).single(),
+    sb.from('pu_po_bill_items').select('*').eq('bill_number',billNum).order('sno'),
+    sb.from('pu_po_bill_items').select('*').eq('bill_number',billNum).eq('row_type','extra').order('sno'),
+    sb.from('pu_po_bills').select('bill_number,po_number,status').neq('bill_number',billNum).neq('status','Rejected').neq('status','Pending Approval'),
+  ]);
+  pbDone();
+  if(!h){toast('Bill not found','error');return;}
 
-async function newCashPOB() {
-  if (!hasPerm('canCreatePOB')) { toast('Only Planning/QS can create bills','error'); return; }
-  document.getElementById('pobForm').style.display = 'none';
-  document.getElementById('cashPobForm').style.display = 'block';
-  document.getElementById('pobListCard').style.display = 'none';
-  // Reset all fields
-  document.getElementById('cpob_number').value = 'POB/' + currentFY() + '/—— (auto)';
-  document.getElementById('cpob_date').value = today();
-  document.getElementById('cpob_vendorSearch').value = '';
-  document.getElementById('cpob_vendorName').value = '';
-  document.getElementById('cpob_vendor').value = '';
-  document.getElementById('cpob_vendorInvNo').value = '';
-  document.getElementById('cpob_vendorInvDate').value = '';
-  document.getElementById('cpob_creditPeriod').value = '0';        // cash = paid immediately
-  document.getElementById('cpob_invPayDue').value = '';
-  document.getElementById('cpob_holdAmt').value = '0';
-  document.getElementById('cpob_holdDesc').value = '';
-  document.getElementById('cpob_remarks').value = '';
-  document.getElementById('cpob_gstType').value = 'cgst_sgst';
-  document.getElementById('cpob_cgstPct').value = '9';
-  document.getElementById('cpob_sgstPct').value = '9';
-  document.getElementById('cpob_igstPct').value = '18';
-  onCashPobGSTTypeChange();
-  document.getElementById('cpob_grnCard').style.display = 'none';
-  document.getElementById('cpob_billDetails').style.display = 'none';
-  document.getElementById('cpob_itemsBody').innerHTML = '';
-  document.getElementById('cpob_extraBody').innerHTML = '';
-  document.getElementById('cpob_selectedGRNs').textContent = 'None';
-  document.getElementById('cpob_grnCheckList').innerHTML = '';
-  _cpobSelectedGRNs = []; _cpobLineItems = []; _cpobExtraCount = 0;
-  window.scrollTo(0, 0);
-}
-
-function closeCashPOBForm() {
-  document.getElementById('cashPobForm').style.display = 'none';
-  document.getElementById('pobListCard').style.display = 'block';
-  _cpobSelectedGRNs = []; _cpobLineItems = [];
-}
-
-// ── Vendor typeahead — only vendors with unbilled verified cash GRNs ───
-async function cpobVendorTypeahead() {
-  const inp = document.getElementById('cpob_vendorSearch');
-  const res = document.getElementById('cpob_vendorRes');
-  if (!inp || !res) return;
-  // Fetch distinct vendors with verified+unbilled cash GRNs.
-  // We cache the list on the form's dataset to avoid repeated DB hits.
-  let candidates = window._cpobVendorCandidates;
-  if (!candidates) {
-    const { data } = await sb.from('pu_grn')
-      .select('vendor_name')
-      .eq('is_cash_purchase', true)
-      .in('status', ['Verified','Partially Billed'])
-      .order('vendor_name');
-    const seen = new Set();
-    candidates = [];
-    (data||[]).forEach(g => {
-      const v = (g.vendor_name||'').trim();
-      if (v && !seen.has(v)) { seen.add(v); candidates.push(v); }
-    });
-    window._cpobVendorCandidates = candidates;
+  // ── Previous bills for same vendor ──────────────────────────────────────
+  const vendorPrevBills = (prevBills||[]).filter(b=>b.vendor_name===undefined); // vendor_name not in select, fetch separately
+  // Fetch all prev bill items for this vendor from approved bills
+  const {data:allVendorBills} = await sb.from('pu_po_bills')
+    .select('bill_number,po_number,status')
+    .eq('vendor_name', h.vendor_name)
+    .neq('bill_number', billNum)
+    .in('status',['Unpaid','Paid']);
+  const prevBillNums = (allVendorBills||[]).map(b=>b.bill_number);
+  const prevPONums   = [...new Set((allVendorBills||[]).map(b=>b.po_number).filter(Boolean))];
+  let prevItemsData = [];
+  if(prevBillNums.length){
+    const {data:pi} = await sb.from('pu_po_bill_items').select('*').in('bill_number',prevBillNums);
+    prevItemsData = pi||[];
   }
-  const q = (inp.value||'').trim().toLowerCase();
-  const matches = q
-    ? candidates.filter(v => v.toLowerCase().includes(q)).slice(0, 15)
-    : candidates.slice(0, 15);
-  if (!matches.length) {
-    res.innerHTML = '<div style="padding:10px;color:var(--muted);font-size:12px;">No vendor with billable cash GRNs.</div>';
-  } else {
-    res.innerHTML = matches.map(v => {
-      const safe = esc(v).replace(/'/g, "\\'");
-      return `<div class="typeahead-item" onmousedown="event.preventDefault();cpobPickVendor('${safe}')"><strong>${esc(v)}</strong></div>`;
-    }).join('');
-  }
-  res.classList.add('show');
-}
 
-async function cpobPickVendor(name) {
-  document.getElementById('cpob_vendorName').value = name;
-  document.getElementById('cpob_vendor').value = name;
-  document.getElementById('cpob_vendorSearch').value = name;
-  document.getElementById('cpob_vendorRes')?.classList.remove('show');
-  // Load this vendor's verified cash GRNs
-  await onCashPobVendorChange(name);
-}
-
-function cpobClearVendor() {
-  document.getElementById('cpob_vendorName').value = '';
-  document.getElementById('cpob_vendor').value = '';
-  document.getElementById('cpob_vendorSearch').value = '';
-  document.getElementById('cpob_vendorRes')?.classList.remove('show');
-  document.getElementById('cpob_grnCard').style.display = 'none';
-  document.getElementById('cpob_billDetails').style.display = 'none';
-  document.getElementById('cpob_grnCheckList').innerHTML = '';
-  document.getElementById('cpob_selectedGRNs').textContent = 'None';
-  _cpobSelectedGRNs = []; _cpobLineItems = [];
-  document.getElementById('cpob_vendorSearch').focus();
-}
-
-// Refresh candidate cache when leaving the form (so next time it's fresh)
-function _cpobInvalidateCache() { window._cpobVendorCandidates = null; }
-
-async function onCashPobVendorChange(vendorName) {
-  if (!vendorName) { document.getElementById('cpob_grnCard').style.display = 'none'; return; }
-  const { data: grns } = await sb.from('pu_grn').select('*')
-    .eq('is_cash_purchase', true)
-    .eq('vendor_name', vendorName)
-    .in('status', ['Verified','Partially Billed'])
-    .order('grn_number');
-  document.getElementById('cpob_grnCard').style.display = grns?.length ? '' : 'none';
-  if (!grns?.length) { toast('No verified cash GRNs for this vendor','warn'); return; }
-  document.getElementById('cpob_grnCheckList').innerHTML = (grns||[]).map(g => `
-    <label style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--border);cursor:pointer;">
-      <input type="checkbox" class="cpob_grnChk" value="${esc(g.grn_number)}" onchange="onCashPobGRNSelect()">
-      <span><strong>${esc(g.grn_number)}</strong> · ${fmtDate(g.grn_date)} · ${esc(g.cash_purchase_ref||'Direct Purchase')} · Inv: ${esc(g.invoice_no||'—')}</span>
-    </label>`).join('');
-}
-
-function cpobSelectAllGRNs(state) {
-  document.querySelectorAll('.cpob_grnChk').forEach(c => { c.checked = !!state; });
-  onCashPobGRNSelect();
-}
-
-async function onCashPobGRNSelect() {
-  _cpobSelectedGRNs = [...document.querySelectorAll('.cpob_grnChk:checked')].map(c => c.value);
-  document.getElementById('cpob_selectedGRNs').textContent = _cpobSelectedGRNs.length ? _cpobSelectedGRNs.join(', ') : 'None';
-  if (!_cpobSelectedGRNs.length) { document.getElementById('cpob_billDetails').style.display = 'none'; return; }
-  document.getElementById('cpob_billDetails').style.display = '';
-  const { data: grnItems } = await sb.from('pu_grn_items').select('*')
-    .in('grn_number', _cpobSelectedGRNs).order('grn_number').order('sno');
-  _cpobLineItems = grnItems || [];
-  // Render items with editable rate inputs
-  document.getElementById('cpob_itemsBody').innerHTML = _cpobLineItems.map((it, i) => {
-    return `<tr>
-      <td>${i+1}</td>
-      <td class="mono" style="font-size:11px;">${esc(it.grn_number)}</td>
-      <td>${esc(it.material_name)}</td>
-      <td>${esc(it.uom)}</td>
-      <td class="num">${fmtINR(it.this_grn_qty)}</td>
-      <td class="num"><input type="number" id="cpobRate_${i}" class="num" step="0.01" value="${num(it.unit_rate).toFixed(2)}" style="width:110px;text-align:right;" oninput="cpobRecalcLine(${i})"></td>
-      <td class="num" id="cpobAmt_${i}">${fmtINR(it.base_amount)}</td>
-      <td class="typeahead" style="position:relative;width:200px;">
-      </td>
-    </tr>`;
-  }).join('') || '<tr><td colspan="8" class="center muted">No items</td></tr>';
-  recalcCashPobTotals();
-}
-
-function cpobRecalcLine(i) {
-  const qty  = num(_cpobLineItems[i]?.this_grn_qty);
-  const rate = num(document.getElementById('cpobRate_'+i)?.value);
-  const amt  = qty * rate;
-  // Mutate the in-memory line item so save uses the edited rate
-  if (_cpobLineItems[i]) {
-    _cpobLineItems[i].unit_rate  = rate;
-    _cpobLineItems[i].base_amount = amt;
-  }
-  const cell = document.getElementById('cpobAmt_'+i);
-  if (cell) cell.textContent = fmtINR(amt);
-  recalcCashPobTotals();
-}
-
-function onCashPobGSTTypeChange() {
-  const t = document.getElementById('cpob_gstType').value;
-  document.getElementById('cpob_cgstWrap').style.display = (t==='cgst_sgst') ? '' : 'none';
-  document.getElementById('cpob_sgstWrap').style.display = (t==='cgst_sgst') ? '' : 'none';
-  document.getElementById('cpob_igstWrap').style.display = (t==='igst')      ? '' : 'none';
-  if (t === 'none') {
-    document.getElementById('cpob_cgstPct').value = '0';
-    document.getElementById('cpob_sgstPct').value = '0';
-    document.getElementById('cpob_igstPct').value = '0';
-  }
-  recalcCashPobTotals();
-}
-
-function _cashPobGSTPct() {
-  const t = document.getElementById('cpob_gstType').value;
-  if (t === 'none') return { cgst:0, sgst:0, igst:0, total:0 };
-  if (t === 'igst') {
-    const i = num(document.getElementById('cpob_igstPct').value);
-    return { cgst:0, sgst:0, igst:i, total:i };
-  }
-  const c = num(document.getElementById('cpob_cgstPct').value);
-  const s = num(document.getElementById('cpob_sgstPct').value);
-  return { cgst:c, sgst:s, igst:0, total:c+s };
-}
-
-function addCashPobExtraLine() {
-  const i = _cpobExtraCount++;
-  const tr = document.createElement('tr'); tr.id = 'cpobExtra_'+i;
-  tr.innerHTML = `
-    <td><input placeholder="Description" style="width:180px;"></td>
-    <td><select><option value="Addition">Addition</option><option value="Deduction">Deduction</option></select></td>
-    <td><select><option value="Before GST">Before GST</option><option value="After GST">After GST</option></select></td>
-    <td><input type="number" step="0.01" style="width:100px;text-align:right;" oninput="recalcCashPobTotals()"></td>
-    <td><button class="btn btn-ghost btn-sm" onclick="this.closest('tr').remove();recalcCashPobTotals()">✕</button></td>`;
-  document.getElementById('cpob_extraBody').appendChild(tr);
-}
-
-function recalcCashPobTotals() {
-  // Sum gross from current line items (uses live mutated rates)
-  let gross = 0;
-  _cpobLineItems.forEach(it => { gross += num(it.base_amount); });
-
-  // ── Collect extra lines ──────────────────────────────────────────────────
-  const beforeLines = [], afterLines = [];
-  document.querySelectorAll('#cpob_extraBody tr').forEach(tr => {
-    const cells = tr.cells;
-    const desc  = (cells[0]?.querySelector('input')?.value || '').trim() || '—';
-    const amt    = num(cells[3]?.querySelector('input')?.value || 0);
-    const type   = cells[1]?.querySelector('select')?.value;
-    const timing = cells[2]?.querySelector('select')?.value;
-    const signed = type === 'Addition' ? amt : -amt;
-    if (timing === 'Before GST') beforeLines.push({desc, signed});
-    else afterLines.push({desc, signed});
+  // Build prev totals map: material_name → {qty, amount}
+  const prevMap = {};
+  prevItemsData.forEach(it=>{
+    const k = it.material_name;
+    if(!prevMap[k]) prevMap[k]={qty:0,amount:0};
+    prevMap[k].qty    += num(it.qty);
+    prevMap[k].amount += num(it.base_amount);
   });
-  const extraBefore = beforeLines.reduce((a,l) => a+l.signed, 0);
-  const extraAfter  = afterLines.reduce((a,l) => a+l.signed, 0);
 
-  const taxable  = gross + extraBefore;
-  const gstInfo  = _cashPobGSTPct();
-  const gst      = taxable * gstInfo.total / 100;
-  const cgstAmt  = taxable * gstInfo.cgst / 100;
-  const sgstAmt  = taxable * gstInfo.sgst / 100;
-  const igstAmt  = taxable * gstInfo.igst / 100;
-  const invoice  = taxable + gst + extraAfter;
-  const hold     = num(document.getElementById('cpob_holdAmt')?.value);
-  const net      = invoice - hold;
+  const isCash = !!h.is_cash_purchase;
+  const stCls  = h.status==='Approved'||h.status==='Unpaid'||h.status==='Paid'?'approved':h.status==='Rejected'?'rejected':'pending-approval';
+  const cashBadge = isCash
+    ? ' <span style="font-size:11px;background:#ad6800;color:#fff;padding:2px 8px;border-radius:3px;font-weight:600;vertical-align:middle;">CASH PURCHASE</span>'
+    : '';
+  const refField = isCash
+    ? `<div><label class="muted" style="font-size:11px;">SOURCE</label><div style="font-style:italic;">Direct Purchase</div></div>`
+    : `<div><label class="muted" style="font-size:11px;">PO</label><div class="mono">${esc(h.po_number||'')}</div></div>`;
 
-  document.getElementById('cpob_s_gross').textContent = fmtINR(gross);
+  // ── Previous POs card ────────────────────────────────────────────────────
+  const prevPOCard = prevPONums.length ? `
+    <div style="margin-bottom:14px;padding:10px 14px;background:var(--panel-2);border:1px solid var(--border);border-radius:6px;">
+      <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;">
+        Previous Approved Bills — PO Numbers Considered
+      </div>
+      <div style="display:flex;flex-wrap:wrap;gap:6px;">
+        ${prevPONums.map(p=>`<span class="mono" style="padding:2px 10px;background:var(--panel);border:1px solid var(--border);border-radius:12px;font-size:12px;">${esc(p)}</span>`).join('')}
+      </div>
+    </div>` : `<div style="margin-bottom:14px;padding:8px 14px;background:var(--panel-2);border:1px solid var(--border);border-radius:6px;font-size:12px;color:var(--muted);">No prior approved bills for this vendor.</div>`;
 
-  // ── Render: Before-GST lines individually (no GST sub-row) ──────────────
-  const dynEl = document.getElementById('cpob_s_dynamic');
-  if (dynEl) dynEl.innerHTML = beforeLines.map(l =>
-    `<tr><td style="padding:4px 8px;color:var(--muted);">${l.signed>=0?'Add':'Less'}: ${l.desc}</td>`+
-    `<td class="num" style="padding:4px 8px;">${(l.signed>=0?'+':'')+fmtINR(l.signed)}</td></tr>`
-  ).join('');
+  // ── Bill Line Items ──────────────────────────────────────────────────────
+  const lineRows = (items||[]).map((it,i)=>`<tr>
+    <td style="text-align:center;">${it.sno||i+1}</td>
+    <td class="mono" style="font-size:11px;">${esc(it.grn_number||'')}</td>
+    <td>${esc(it.material_name)}</td>
+    <td style="text-align:center;">${esc(it.uom)}</td>
+    <td style="text-align:right;">${fmtINR(it.qty)}</td>
+    <td style="text-align:right;">${fmtINR(it.unit_rate)}</td>
+    <td style="text-align:right;font-weight:600;">${fmtINR(it.base_amount)}</td>
+  </tr>`).join('');
 
-  document.getElementById('cpob_s_taxable').textContent = fmtINR(taxable);
+  // ── Extra / Deduction Lines ──────────────────────────────────────────────
+  const extraRows = (extraLines||[]).length ? (extraLines||[]).map(el=>`<tr>
+    <td>${esc(el.description||'—')}</td>
+    <td><span style="padding:1px 8px;border-radius:10px;font-size:11px;font-weight:600;
+      background:${el.line_type==='Addition'?'#d1fae520':'#fee2e220'};
+      color:${el.line_type==='Addition'?'#059669':'#dc2626'};
+      border:1px solid ${el.line_type==='Addition'?'#6ee7b7':'#fca5a5'};">
+      ${esc(el.line_type||'')}</span></td>
+    <td>${esc(el.timing||'')}</td>
+    <td style="text-align:right;font-weight:600;color:${el.line_type==='Addition'?'#059669':'#dc2626'};">
+      ${el.line_type==='Addition'?'+':'−'}${fmtINR(Math.abs(num(el.extra_amount||el.amount||0)))}</td>
+  </tr>`).join('') : `<tr><td colspan="4" style="text-align:center;color:var(--muted);font-size:12px;">No additional or deduction lines.</td></tr>`;
 
-  // ── Render: CGST / SGST / IGST split ────────────────────────────────────
-  const gstEl = document.getElementById('cpob_s_gst_rows');
-  if (gstEl) {
-    let html = '';
-    if (cgstAmt > 0) html += `<tr><td style="padding:4px 8px;color:var(--muted);">Total CGST</td>`+
-      `<td class="num" style="padding:4px 8px;">${fmtINR(cgstAmt)}</td></tr>`;
-    if (sgstAmt > 0) html += `<tr><td style="padding:4px 8px;color:var(--muted);">Total SGST</td>`+
-      `<td class="num" style="padding:4px 8px;">${fmtINR(sgstAmt)}</td></tr>`;
-    if (igstAmt > 0) html += `<tr><td style="padding:4px 8px;color:var(--muted);">Total IGST</td>`+
-      `<td class="num" style="padding:4px 8px;">${fmtINR(igstAmt)}</td></tr>`;
-    if (!html) html = `<tr><td style="padding:4px 8px;color:var(--muted);">GST</td>`+
-      `<td class="num" style="padding:4px 8px;">0.00</td></tr>`;
-    gstEl.innerHTML = html;
-  }
+  // ── Bill Computation ─────────────────────────────────────────────────────
+  const gross   = num(h.gross_amount);
+  const beforeLines=[], afterLines=[];
+  (extraLines||[]).forEach(el=>{
+    const signed = el.line_type==='Addition' ? num(el.extra_amount||el.amount||0) : -num(el.extra_amount||el.amount||0);
+    if(el.timing==='Before GST') beforeLines.push({desc:el.description||'—', signed});
+    else afterLines.push({desc:el.description||'—', signed});
+  });
+  const extraBefore = beforeLines.reduce((a,l)=>a+l.signed,0);
+  const extraAfter  = afterLines.reduce((a,l)=>a+l.signed,0);
+  const taxable = gross + extraBefore;
+  const cgstAmt = num(h.cgst_amount), sgstAmt=num(h.sgst_amount), igstAmt=num(h.igst_amount);
+  const invoice = num(h.invoice_value);
+  const hold    = num(h.hold_amount);
+  const net     = num(h.net_payable);
 
-  // ── Render: After-GST lines individually ────────────────────────────────
-  const afterEl = document.getElementById('cpob_s_after_rows');
-  if (afterEl) afterEl.innerHTML = afterLines.map(l =>
-    `<tr><td style="padding:4px 8px;color:var(--muted);">${l.signed>=0?'Add':'Less'}: ${l.desc}</td>`+
-    `<td class="num" style="padding:4px 8px;">${(l.signed>=0?'+':'')+fmtINR(l.signed)}</td></tr>`
-  ).join('');
+  const compRow = (label, val, bold, accent) =>
+    `<tr><td style="padding:5px 10px;font-size:12px;${bold?'font-weight:700;':''}">${label}</td>
+     <td style="padding:5px 10px;text-align:right;font-size:12px;${bold?'font-weight:700;':''}${accent?'color:var(--accent);':''}">${fmtINR(val)}</td></tr>`;
 
-  document.getElementById('cpob_s_invoice').textContent = fmtINR(invoice);
-  document.getElementById('cpob_s_net').textContent = fmtINR(net);
-  const f = document.getElementById('cashPobForm');
-  if (f) {
-    f.dataset.gross = gross; f.dataset.invoice = invoice; f.dataset.net = net; f.dataset.gst = gst;
-    f.dataset.extraBefore = extraBefore; f.dataset.extraAfter = extraAfter;
-    f.dataset.cgst = gstInfo.cgst; f.dataset.sgst = gstInfo.sgst; f.dataset.igst = gstInfo.igst;
-  }
-}
+  const computationRows = [
+    compRow('Gross Amount', gross, false, false),
+    ...beforeLines.map(l=>compRow(`${l.signed>=0?'Add':'Less'}: ${l.desc}`, l.signed, false, false)),
+    compRow('Taxable Value', taxable, true, false),
+    ...(cgstAmt>0?[compRow('Total CGST', cgstAmt, false, false)]:[]),
+    ...(sgstAmt>0?[compRow('Total SGST', sgstAmt, false, false)]:[]),
+    ...(igstAmt>0?[compRow('Total IGST', igstAmt, false, false)]:[]),
+    ...afterLines.map(l=>compRow(`${l.signed>=0?'Add':'Less'}: ${l.desc}`, l.signed, false, false)),
+    compRow('Invoice Value', invoice, true, false),
+    ...(hold>0?[compRow('Less: Hold Amount', -hold, false, false)]:[]),
+    `<tr style="background:var(--accent);"><td style="padding:6px 10px;font-size:13px;font-weight:700;color:#fff;">Net Payable (₹)</td>
+     <td style="padding:6px 10px;text-align:right;font-size:13px;font-weight:700;color:#fff;">${fmtINR(net)}</td></tr>`,
+  ].join('');
 
-function calcCashPobPayDue() {
-  const invDate = document.getElementById('cpob_vendorInvDate')?.value;
-  const days = num(document.getElementById('cpob_creditPeriod')?.value) || 0;
-  if (!invDate) return;
-  const d = new Date(invDate);
-  d.setDate(d.getDate() + days);
-  document.getElementById('cpob_invPayDue').value = d.toISOString().slice(0,10);
-}
+  // ── Action buttons ───────────────────────────────────────────────────────
+  const perms = mergedPerms();
+  const isPending = h.status === 'Pending Approval';
+  const actionBtns = `
+    <button class="btn btn-ghost btn-sm" onclick="printPOB('${esc(billNum)}')">🖨 Print</button>
+    ${perms.canApprovePOB && isPending
+      ? `<button class="btn btn-primary btn-sm" onclick="approvePOB('${esc(billNum)}');closeModal();">✔ Approve</button>
+         <button class="btn btn-danger btn-sm" onclick="closeModal();rejectDoc('POB','${esc(billNum)}')">✕ Reject</button>`
+      : ''}
+    <button class="btn btn-ghost" onclick="closeModal()">Close</button>`;
 
-async function saveCashPOB() {
-  if (!hasPerm('canCreatePOB')) { toast('Only Planning/QS can create bills','error'); return; }
-  const vendor = document.getElementById('cpob_vendorName').value.trim();
-  const date   = document.getElementById('cpob_date').value;
-  const invNo  = document.getElementById('cpob_vendorInvNo').value.trim();
-  const invDate= document.getElementById('cpob_vendorInvDate').value;
-  if (!vendor) { toast('Select a vendor','error'); return; }
-  if (!date)   { toast('Bill date required','error'); return; }
-  if (!invNo)  { toast('Vendor Invoice No. required','error'); return; }
-  if (!invDate){ toast('Invoice Date required','error'); return; }
-  if (!_cpobSelectedGRNs.length) { toast('Select at least one cash GRN','error'); return; }
-  // Validate rates
-  for (let i = 0; i < _cpobLineItems.length; i++) {
-    const r = num(document.getElementById('cpobRate_'+i)?.value);
-    if (r <= 0) { toast('Rate must be > 0 for line ' + (i+1),'error'); return; }
-  }
-  // Recalc to make sure dataset is up-to-date with any last edit
-  recalcCashPobTotals();
-  const f = document.getElementById('cashPobForm');
-  const gross   = num(f.dataset.gross);
-  const invoice = num(f.dataset.invoice);
-  const net     = num(f.dataset.net);
-  const gst     = num(f.dataset.gst);
-  const cgst    = num(f.dataset.cgst);
-  const sgst    = num(f.dataset.sgst);
-  const igst    = num(f.dataset.igst);
-  const gstTotal = cgst + sgst + igst;
-  // GST amount split
-  const cgstAmt = gstTotal > 0 ? gst * cgst / gstTotal : 0;
-  const sgstAmt = gstTotal > 0 ? gst * sgst / gstTotal : 0;
-  const igstAmt = gstTotal > 0 ? gst * igst / gstTotal : 0;
+  openModal(`
+    <h3 style="margin-bottom:14px;">POB — ${esc(h.bill_number)}${cashBadge}
+      <span class="status ${stCls}" style="margin-left:8px;font-size:12px;">${esc(h.status)}</span>
+    </h3>
 
-  pbShow('Saving Direct Purchase Bill…');
-  try {
-    const billNumber = await nextPUDocNumber('POB');
-    calcCashPobPayDue();
-    const { error } = await sb.from('pu_po_bills').insert({
-      bill_number: billNumber, bill_date: date,
-      po_number: null,
-      is_cash_purchase: true,
-      vendor_name: vendor,
-      vendor_inv_no: invNo, vendor_inv_date: invDate,
-      credit_period: num(document.getElementById('cpob_creditPeriod').value) || 0,
-      inv_pay_due: document.getElementById('cpob_invPayDue').value || null,
-      grn_numbers: _cpobSelectedGRNs.join(', '),
-      gross_amount: gross,
-      cgst_pct: cgst, sgst_pct: sgst, igst_pct: igst,
-      cgst_amount: cgstAmt, sgst_amount: sgstAmt, igst_amount: igstAmt,
-      tds_pct: 0, tds_amount: 0,
-      hold_amount: num(document.getElementById('cpob_holdAmt').value),
-      hold_description: document.getElementById('cpob_holdDesc')?.value || null,
-      invoice_value: invoice, net_payable: net,
-      prepared_by: state.userName, prepared_by_id: state.userId,
-      remarks: document.getElementById('cpob_remarks').value || null,
-      status: 'Pending Approval',
-    });
-    if (error) throw new Error(error.message);
+    <!-- Header summary -->
+    <div class="grid-3" style="margin-bottom:14px;">
+      ${refField}
+      <div><label class="muted" style="font-size:11px;">VENDOR</label><div>${esc(h.vendor_name)}</div></div>
+      <div><label class="muted" style="font-size:11px;">BILL DATE</label><div>${fmtDate(h.bill_date)}</div></div>
+      <div><label class="muted" style="font-size:11px;">GRNs</label><div style="font-size:12px;">${esc(h.grn_numbers||'—')}</div></div>
+      <div><label class="muted" style="font-size:11px;">VENDOR INVOICE</label><div>${esc(h.vendor_inv_no||'—')}</div></div>
+      <div><label class="muted" style="font-size:11px;">INVOICE DATE</label><div>${h.vendor_inv_date?fmtDate(h.vendor_inv_date):'—'}</div></div>
+    </div>
 
-    await sb.from('pu_po_bill_items').insert(_cpobLineItems.map((it, i) => ({
-      bill_number: billNumber, sno: i+1, grn_number: it.grn_number,
-      material_name: it.material_name, uom: it.uom, qty: it.this_grn_qty,
-      unit_rate: it.unit_rate, base_amount: it.base_amount,
-    })));
+    <!-- Previous POs card -->
+    ${prevPOCard}
 
-    // Extra lines
-    const extraLines = [];
-    document.querySelectorAll('#cpob_extraBody tr').forEach((tr, i) => {
-      const cells = tr.cells;
-      extraLines.push({
-        bill_number: billNumber, sno: i+1,
-        description: cells[0]?.querySelector('input')?.value || null,
-        line_type: cells[1]?.querySelector('select')?.value,
-        timing: cells[2]?.querySelector('select')?.value,
-        amount: num(cells[3]?.querySelector('input')?.value),
-      });
-    });
-    if (extraLines.length) await sb.from('pu_po_bill_extra_lines').insert(extraLines);
+    <!-- Bill Line Items -->
+    <div style="font-size:12px;font-weight:700;color:var(--accent);margin-bottom:6px;text-transform:uppercase;letter-spacing:.5px;">
+      Bill Line Items <span style="color:var(--muted);font-weight:400;font-size:11px;">(from selected GRNs)</span>
+    </div>
+    <div style="overflow-x:auto;margin-bottom:16px;">
+      <table style="width:100%;border-collapse:collapse;font-size:12px;">
+        <thead><tr style="background:var(--panel-2);">
+          <th style="padding:6px 8px;text-align:center;border-bottom:2px solid var(--border);width:32px;">#</th>
+          <th style="padding:6px 8px;border-bottom:2px solid var(--border);">GRN</th>
+          <th style="padding:6px 8px;border-bottom:2px solid var(--border);">Material</th>
+          <th style="padding:6px 8px;text-align:center;border-bottom:2px solid var(--border);">UOM</th>
+          <th style="padding:6px 8px;text-align:right;border-bottom:2px solid var(--border);">Qty</th>
+          <th style="padding:6px 8px;text-align:right;border-bottom:2px solid var(--border);">Rate (₹)</th>
+          <th style="padding:6px 8px;text-align:right;border-bottom:2px solid var(--border);">Base Amt (₹)</th>
+        </tr></thead>
+        <tbody>${lineRows}</tbody>
+        <tfoot><tr style="background:var(--panel-2);">
+          <td colspan="6" style="padding:6px 8px;text-align:right;font-weight:700;font-size:12px;">Gross Amount</td>
+          <td style="padding:6px 8px;text-align:right;font-weight:700;font-size:13px;color:var(--accent);">${fmtINR(gross)}</td>
+        </tr></tfoot>
+      </table>
+    </div>
 
-    // Flip GRNs to Partially Billed (same as regular flow)
-    await sb.from('pu_grn').update({ status: 'Partially Billed' }).in('grn_number', _cpobSelectedGRNs);
+    <!-- Additional / Deduction Lines -->
+    <div style="font-size:12px;font-weight:700;color:var(--accent);margin-bottom:6px;text-transform:uppercase;letter-spacing:.5px;">Additional / Deduction Lines</div>
+    <div style="overflow-x:auto;margin-bottom:16px;">
+      <table style="width:100%;border-collapse:collapse;font-size:12px;">
+        <thead><tr style="background:var(--panel-2);">
+          <th style="padding:6px 8px;border-bottom:2px solid var(--border);">Description</th>
+          <th style="padding:6px 8px;border-bottom:2px solid var(--border);width:110px;">Type</th>
+          <th style="padding:6px 8px;border-bottom:2px solid var(--border);width:100px;">Timing</th>
+          <th style="padding:6px 8px;text-align:right;border-bottom:2px solid var(--border);width:120px;">Amount (₹)</th>
+        </tr></thead>
+        <tbody>${extraRows}</tbody>
+      </table>
+    </div>
 
-    flashSuccess('Direct Purchase Bill ' + billNumber + ' submitted for PM approval');
-    _cpobInvalidateCache();
-    closeCashPOBForm();
-    loadPOBList();
-  } catch (e) {
-    toast('Error: ' + e.message, 'error');
-  } finally {
-    pbDone();
-  }
+    <!-- Bill Computation -->
+    <div style="font-size:12px;font-weight:700;color:var(--accent);margin-bottom:6px;text-transform:uppercase;letter-spacing:.5px;">Bill Computation</div>
+    <div style="display:flex;justify-content:flex-end;margin-bottom:20px;">
+      <table style="width:320px;border-collapse:collapse;border:1px solid var(--border);">
+        <tbody>${computationRows}</tbody>
+      </table>
+    </div>
+
+    <!-- Actions -->
+    <div class="actions-row" style="justify-content:flex-end;gap:8px;">${actionBtns}</div>
+  `, 'large');
 }
 
 async function approvePOB(billNum) {
@@ -15593,29 +15450,308 @@ async function approvePOB(billNum) {
   } finally { pbDone(); }
 }
 
-async function viewPOB(billNum) {
-  pbShow('Loading…');
-  const {data:h}=await sb.from('pu_po_bills').select('*').eq('bill_number',billNum).single();
+
+async function printPOB(billNum) {
+  pbShow('Building print…');
+
+  // ── Fetch current bill + items (all row_types) + vendor details ───────────
+  const [{data:h},{data:allItems}] = await Promise.all([
+    sb.from('pu_po_bills').select('*').eq('bill_number',billNum).single(),
+    sb.from('pu_po_bill_items').select('*').eq('bill_number',billNum).order('sno'),
+  ]);
+
+  const matItems   = (allItems||[]).filter(it=>it.row_type==='material');
+  const extraLines = (allItems||[]).filter(it=>it.row_type==='extra');
+
+  // ── Fetch vendor full details ─────────────────────────────────────────────
+  const {data:vendorRec} = await sb.from('ho_vendors')
+    .select('vendor_name,address,gstin,pan,contact_person,phone,bank_name,branch,bank_account,ifsc')
+    .eq('vendor_name', h.vendor_name).maybeSingle();
+
+  // ── Fetch all prior approved bills for same vendor ────────────────────────
+  const {data:priorBills} = await sb.from('pu_po_bills')
+    .select('bill_number,po_number,hold_amount')
+    .eq('vendor_name', h.vendor_name)
+    .neq('bill_number', billNum)
+    .in('status',['Unpaid','Paid']);
+  const priorBillNums = (priorBills||[]).map(b=>b.bill_number);
+  const priorPONums   = [...new Set((priorBills||[]).map(b=>b.po_number).filter(Boolean))];
+  let priorMatItems = [], priorExtraLines = [];
+  if(priorBillNums.length){
+    const {data:pi} = await sb.from('pu_po_bill_items').select('*').in('bill_number',priorBillNums);
+    priorMatItems   = (pi||[]).filter(it=>it.row_type==='material');
+    priorExtraLines = (pi||[]).filter(it=>it.row_type==='extra');
+  }
   pbDone();
   if(!h){toast('Bill not found','error');return;}
-  const isCash = !!h.is_cash_purchase;
-  const cashBadge = isCash
-    ? ' <span style="font-size:11px;background:#ad6800;color:#fff;padding:2px 8px;border-radius:3px;font-weight:600;vertical-align:middle;">CASH PURCHASE</span>'
+
+  const fmtI = v => (parseFloat(v)||0).toLocaleString('en-IN',{minimumFractionDigits:2,maximumFractionDigits:2});
+  const n    = v => parseFloat(v)||0;
+
+  // ── Vendor details block ──────────────────────────────────────────────────
+  const vd = vendorRec || {};
+  const vendorBlock = `
+    <div style="font-size:8pt;line-height:1.6;">
+      <div style="font-weight:700;font-size:9.5pt;margin-bottom:2pt;">${esc(h.vendor_name)}</div>
+      ${vd.address   ? `<div>${esc(vd.address)}</div>`:''}
+      ${vd.gstin     ? `<div><strong>GSTIN:</strong> ${esc(vd.gstin)}</div>`:''}
+      ${vd.pan       ? `<div><strong>PAN:</strong> ${esc(vd.pan)}</div>`:''}
+      ${vd.contact_person||vd.phone ? `<div><strong>Contact:</strong> ${[vd.contact_person,vd.phone].filter(Boolean).map(esc).join(' | ')}</div>`:''}
+      ${vd.bank_name ? `<div style="margin-top:3pt;border-top:0.5pt solid #ddd;padding-top:2pt;"><strong>Bank:</strong> ${esc(vd.bank_name)}${vd.branch?', '+esc(vd.branch):''}</div>`:''}
+      ${vd.bank_account ? `<div><strong>A/C:</strong> ${esc(vd.bank_account)}</div>`:''}
+      ${vd.ifsc      ? `<div><strong>IFSC:</strong> ${esc(vd.ifsc)}</div>`:''}
+    </div>`;
+
+  // ── PO numbers card ───────────────────────────────────────────────────────
+  const allPOs = [...new Set([...(h.po_number?[h.po_number]:[]),...priorPONums])];
+  const poCard = allPOs.length
+    ? `<div class="addr-box"><div class="addr-hdr">PO Numbers Considered (all bills — this vendor)</div>
+       <div class="addr-body">${allPOs.map(p=>`<span style="display:inline-block;margin:1pt 4pt 1pt 0;padding:1pt 6pt;background:#e8ecf2;border-radius:3pt;font-family:monospace;font-size:8pt;">${esc(p)}</span>`).join('')}</div></div>`
     : '';
-  const refField = isCash
-    ? `<div><label class="muted" style="font-size:11px;">SOURCE</label><div style="font-style:italic;">Direct Purchase</div></div>`
-    : `<div><label class="muted" style="font-size:11px;">PO</label><div class="mono">${esc(h.po_number||'')}</div></div>`;
-  openModal(`<h3>POB — ${esc(h.bill_number)}${cashBadge}</h3>
-    <div class="grid-3" style="margin-bottom:10px;">
-      ${refField}
-      <div><label class="muted" style="font-size:11px;">VENDOR</label><div>${esc(h.vendor_name)}</div></div>
-      <div><label class="muted" style="font-size:11px;">STATUS</label><div>${esc(h.status)}</div></div>
-      <div><label class="muted" style="font-size:11px;">GRNs</label><div>${esc(h.grn_numbers||'—')}</div></div>
-      <div><label class="muted" style="font-size:11px;">INVOICE VALUE</label><div style="font-weight:600;">${fmtINRSym(h.invoice_value)}</div></div>
-      <div><label class="muted" style="font-size:11px;">NET PAYABLE</label><div style="font-weight:700;color:var(--accent);">${fmtINRSym(h.net_payable)}</div></div>
+
+  // ── Build prev totals per material ────────────────────────────────────────
+  const prevMap = {};
+  priorMatItems.forEach(it=>{
+    const k = it.material_name;
+    if(!prevMap[k]) prevMap[k]={qty:0,amount:0};
+    prevMap[k].qty    += n(it.qty);
+    prevMap[k].amount += n(it.base_amount);
+  });
+
+  // ── Description table rows (material rows only, skip extra) ───────────────
+  const descRows = matItems.map((it,i)=>{
+    const prev    = prevMap[it.material_name]||{qty:0,amount:0};
+    const prevQty = prev.qty, prevAmt = prev.amount;
+    const prevRate= prevQty>0 ? prevAmt/prevQty : n(it.unit_rate);
+    const currQty = n(it.qty), currRate = n(it.unit_rate), currAmt = n(it.base_amount);
+    const cumQty  = prevQty + currQty;
+    const cumAmt  = prevAmt + currAmt;
+    const cumRate = cumQty>0 ? cumAmt/cumQty : currRate;
+    return `<tr>
+      <td class="c" style="border-left:2pt solid #555;">${it.sno||i+1}</td>
+      <td>${esc(it.material_name||'')}</td>
+      <td class="c">${esc(it.uom||'')}</td>
+      <td class="r prev-col" style="border-left:2.5pt solid #1e3a5f;">${fmtI(prevQty)}</td>
+      <td class="r prev-col">${fmtI(prevRate)}</td>
+      <td class="r prev-col">${fmtI(prevAmt)}</td>
+      <td class="r curr-col" style="border-left:2.5pt solid #1565a0;">${fmtI(currQty)}</td>
+      <td class="r curr-col">${fmtI(currRate)}</td>
+      <td class="r curr-col">${fmtI(currAmt)}</td>
+      <td class="r cum-col"  style="border-left:2.5pt solid #155a38;">${fmtI(cumQty)}</td>
+      <td class="r cum-col">${fmtI(cumRate)}</td>
+      <td class="r cum-col">${fmtI(cumAmt)}</td>
+    </tr>`;
+  }).join('');
+
+  // ── Bill computation totals ───────────────────────────────────────────────
+  const prevGross = priorMatItems.reduce((s,it)=>s+n(it.base_amount),0);
+  const prevBeforeLines=[], prevAfterLines=[];
+  priorExtraLines.forEach(el=>{
+    const signed = el.line_type==='Addition' ? n(el.extra_amount||el.amount) : -n(el.extra_amount||el.amount);
+    if(el.timing==='Before GST') prevBeforeLines.push({desc:el.description||'—',signed});
+    else prevAfterLines.push({desc:el.description||'—',signed});
+  });
+  const prevExtraBefore = prevBeforeLines.reduce((a,l)=>a+l.signed,0);
+  const prevExtraAfter  = prevAfterLines.reduce((a,l)=>a+l.signed,0);
+
+  const currGross = n(h.gross_amount);
+  const currBeforeLines=[], currAfterLines=[];
+  extraLines.forEach(el=>{
+    const signed = el.line_type==='Addition' ? n(el.extra_amount||el.amount) : -n(el.extra_amount||el.amount);
+    if(el.timing==='Before GST') currBeforeLines.push({desc:el.description||'—',signed});
+    else currAfterLines.push({desc:el.description||'—',signed});
+  });
+  const currExtraBefore = currBeforeLines.reduce((a,l)=>a+l.signed,0);
+  const currExtraAfter  = currAfterLines.reduce((a,l)=>a+l.signed,0);
+
+  // GST prev: sum from prior bill items (actual stored amounts, not re-computed)
+  const prevCGST = priorMatItems.reduce((s,it)=>s+n(it.cgst_amount),0);
+  const prevSGST = priorMatItems.reduce((s,it)=>s+n(it.sgst_amount),0);
+  const prevIGST = priorMatItems.reduce((s,it)=>s+n(it.igst_amount),0);
+  const prevGST  = prevCGST + prevSGST + prevIGST;
+
+  const prevTaxable = prevGross + prevExtraBefore;
+  const prevInvoice = prevTaxable + prevGST + prevExtraAfter;
+  const prevHold    = (priorBills||[]).reduce((s,b)=>s+n(b.hold_amount),0);
+  const prevNet     = prevInvoice - prevHold;
+
+  const currTaxable = currGross + currExtraBefore;
+  const currCGST    = n(h.cgst_amount);
+  const currSGST    = n(h.sgst_amount);
+  const currIGST    = n(h.igst_amount);
+  const currGSTamt  = currCGST + currSGST + currIGST;
+  const currInvoice = n(h.invoice_value);
+  const currHold    = n(h.hold_amount);
+  const currNet     = n(h.net_payable);
+
+  const cumGross    = prevGross + currGross;
+  const cumTaxable  = prevTaxable + currTaxable;
+  const cumCGST     = prevCGST + currCGST;
+  const cumSGST     = prevSGST + currSGST;
+  const cumIGST     = prevIGST + currIGST;
+  const cumGST      = prevGST  + currGSTamt;
+  const cumInvoice  = prevInvoice + currInvoice;
+  const cumHold     = prevHold + currHold;
+  const cumNet      = prevNet  + currNet;
+
+  // Merge extra line maps
+  const allBeforeMap={}, allAfterMap={};
+  [...prevBeforeLines,...currBeforeLines].forEach(l=>{
+    allBeforeMap[l.desc]=allBeforeMap[l.desc]||{desc:l.desc,prev:0,curr:0};
+  });
+  prevBeforeLines.forEach(l=>{allBeforeMap[l.desc].prev+=l.signed;});
+  currBeforeLines.forEach(l=>{allBeforeMap[l.desc].curr+=l.signed;});
+  [...prevAfterLines,...currAfterLines].forEach(l=>{
+    allAfterMap[l.desc]=allAfterMap[l.desc]||{desc:l.desc,prev:0,curr:0};
+  });
+  prevAfterLines.forEach(l=>{allAfterMap[l.desc].prev+=l.signed;});
+  currAfterLines.forEach(l=>{allAfterMap[l.desc].curr+=l.signed;});
+
+  // compRow3: no % in GST labels
+  const compRow3=(label,pv,cv,cumV,bold,grand)=>
+    `<tr${grand?' class="grand"':''}>
+      <td${bold?' style="font-weight:700;"':''}>${label}</td>
+      <td class="r prev-td"${bold?' style="font-weight:700;"':''}>${fmtI(pv)}</td>
+      <td class="r curr-td"${bold?' style="font-weight:700;"':''}>${fmtI(cv)}</td>
+      <td class="r cum-td"${bold?' style="font-weight:700;"':''}>${fmtI(cumV)}</td>
+    </tr>`;
+
+  const compRows = [
+    compRow3('Gross Amount', prevGross, currGross, cumGross, true, false),
+    ...Object.values(allBeforeMap).map(l=>compRow3(
+      `${(l.prev+l.curr)>=0?'Add':'Less'}: ${l.desc}`, l.prev, l.curr, l.prev+l.curr, false, false)),
+    compRow3('Taxable Value', prevTaxable, currTaxable, cumTaxable, true, false),
+    ...(cumCGST>0?[compRow3('Total CGST', prevCGST, currCGST, cumCGST, false, false)]:[]),
+    ...(cumSGST>0?[compRow3('Total SGST', prevSGST, currSGST, cumSGST, false, false)]:[]),
+    ...(cumIGST>0?[compRow3('Total IGST', prevIGST, currIGST, cumIGST, false, false)]:[]),
+    ...Object.values(allAfterMap).map(l=>compRow3(
+      `${(l.prev+l.curr)>=0?'Add':'Less'}: ${l.desc}`, l.prev, l.curr, l.prev+l.curr, false, false)),
+    compRow3('Invoice Value', prevInvoice, currInvoice, cumInvoice, true, false),
+    ...(cumHold>0?[compRow3('Less: Hold Amount', -prevHold, -currHold, -cumHold, false, false)]:[]),
+    compRow3('NET PAYABLE', prevNet, currNet, cumNet, true, true),
+  ].join('');
+
+  openPrintOverlay(`${printStyles()}
+  <style>
+    /* ── Group column colours ── */
+    .prev-col { background:#eef2f7; color:#111; }
+    .curr-col { background:#dbeafe; color:#0a2a5e; }
+    .cum-col  { background:#dcfce7; color:#0a3d20; }
+
+    /* ── Description table header ── */
+    table.items { border-collapse:collapse; width:100%; font-size:7.5pt; }
+    table.items thead { position:sticky; top:0; z-index:10; }
+    table.items th.grp-prev { background:#1e3a5f; color:#fff; text-align:center; padding:3pt 4pt; font-size:8pt; border:1pt solid #fff; }
+    table.items th.grp-curr { background:#1565a0; color:#fff; text-align:center; padding:3pt 4pt; font-size:8pt; border:1pt solid #fff; }
+    table.items th.grp-cum  { background:#155a38; color:#fff; text-align:center; padding:3pt 4pt; font-size:8pt; border:1pt solid #fff; }
+    table.items th.sub-prev { background:#2a4f80; color:#fff; text-align:right;  padding:2pt 4pt; font-size:7.5pt; font-weight:600; border:0.5pt solid #3a5f90; }
+    table.items th.sub-curr { background:#1976d2; color:#fff; text-align:right;  padding:2pt 4pt; font-size:7.5pt; font-weight:600; border:0.5pt solid #42a5f5; }
+    table.items th.sub-cum  { background:#2e7d32; color:#fff; text-align:right;  padding:2pt 4pt; font-size:7.5pt; font-weight:600; border:0.5pt solid #66bb6a; }
+    table.items th.sub-c    { text-align:center; }
+    table.items td          { padding:2pt 4pt; border:0.5pt solid #c8d0da; }
+    table.items tfoot td    { padding:3pt 6pt; font-weight:700; border-top:1.5pt solid #1e3a5f; }
+
+    /* ── Bill computation table ── */
+    .totals { width:100%; border-collapse:collapse; margin-bottom:10pt; break-inside:avoid; }
+    .totals td { padding:3pt 8pt; font-size:8.5pt; border:0.5pt solid #c8d0da; }
+    .totals td:first-child { font-weight:600; background:#f0f5fb; width:200pt; }
+    .totals td.r { text-align:right; }
+    .totals td.prev-td { background:#eef2f7; color:#111; border-left:2.5pt solid #1e3a5f; }
+    .totals td.curr-td { background:#dbeafe; color:#0a2a5e; border-left:2.5pt solid #1565a0; }
+    .totals td.cum-td  { background:#dcfce7; color:#0a3d20; border-left:2.5pt solid #155a38; }
+    .totals tr.grand td             { font-weight:700; font-size:10pt; }
+    .totals tr.grand td:first-child { background:#1e3a5f; color:#fff; }
+    .totals tr.grand td.prev-td     { background:#1e3a5f; color:#fff; border-left:2.5pt solid #fff; }
+    .totals tr.grand td.curr-td     { background:#1565a0; color:#fff; border-left:2.5pt solid #fff; }
+    .totals tr.grand td.cum-td      { background:#155a38; color:#fff; border-left:2.5pt solid #fff; }
+  </style>
+
+  <div class="pd-top">
+    <div><div class="co-name">${CO_NAME}</div><div class="co-detail">${CO_ADDR}<br>GSTIN: ${CO_GSTIN}</div></div>
+    <div><div class="doc-title">GRN BILL ABSTRACT</div>
+      <table class="doc-meta">
+        <tr><td>Bill No.</td><td>${esc(billNum)}</td></tr>
+        <tr><td>Date</td><td>${fmtDate(h.bill_date)}</td></tr>
+        ${h.po_number?`<tr><td>PO No.</td><td>${esc(h.po_number)}</td></tr>`:''}
+        <tr><td>Vendor Inv.</td><td>${esc(h.vendor_inv_no||'—')}</td></tr>
+        <tr><td>Inv. Date</td><td>${h.vendor_inv_date?fmtDate(h.vendor_inv_date):'—'}</td></tr>
+        <tr><td>GRNs</td><td style="font-size:7.5pt;">${esc(h.grn_numbers||'—')}</td></tr>
+      </table>
     </div>
-    <div class="actions-row"><button class="btn btn-ghost" onclick="closeModal()">Close</button></div>`);
+  </div>
+
+  <div class="addr-row">
+    <div class="addr-box" style="flex:1.2;">
+      <div class="addr-hdr">Vendor</div>
+      <div class="addr-body">${vendorBlock}</div>
+    </div>
+    ${poCard}
+  </div>
+
+  <!-- Description Table -->
+  <table class="items">
+    <thead>
+      <tr>
+        <th rowspan="2" style="background:#1e3a5f;color:#fff;width:22pt;vertical-align:middle;text-align:center;border:0.5pt solid #2a4f80;">#</th>
+        <th rowspan="2" style="background:#1e3a5f;color:#fff;vertical-align:middle;border:0.5pt solid #2a4f80;">Material Description</th>
+        <th rowspan="2" style="background:#1e3a5f;color:#fff;width:30pt;vertical-align:middle;text-align:center;border:0.5pt solid #2a4f80;">UOM</th>
+        <th colspan="3" class="grp-prev" style="border-left:2.5pt solid #fff;">Previous</th>
+        <th colspan="3" class="grp-curr" style="border-left:2.5pt solid #fff;">Current</th>
+        <th colspan="3" class="grp-cum"  style="border-left:2.5pt solid #fff;">Cumulative</th>
+      </tr>
+      <tr>
+        <th class="sub-prev" style="width:48pt;border-left:2.5pt solid #fff;">Qty</th>
+        <th class="sub-prev" style="width:48pt;">Rate</th>
+        <th class="sub-prev" style="width:52pt;">Amount</th>
+        <th class="sub-curr" style="width:48pt;border-left:2.5pt solid #fff;">Qty</th>
+        <th class="sub-curr" style="width:48pt;">Rate</th>
+        <th class="sub-curr" style="width:52pt;">Amount</th>
+        <th class="sub-cum"  style="width:48pt;border-left:2.5pt solid #fff;">Qty</th>
+        <th class="sub-cum"  style="width:48pt;">Rate</th>
+        <th class="sub-cum"  style="width:52pt;">Amount</th>
+      </tr>
+    </thead>
+    <tbody>${descRows}</tbody>
+    <tfoot>
+      <tr>
+        <td colspan="3" style="background:#e8ecf2;border-left:2pt solid #555;">Gross Amount</td>
+        <td class="r prev-col" colspan="2" style="border-left:2.5pt solid #1e3a5f;background:#eef2f7;"></td>
+        <td class="r prev-col" style="font-weight:700;">${fmtI(prevGross)}</td>
+        <td class="r curr-col" colspan="2" style="border-left:2.5pt solid #1565a0;background:#dbeafe;"></td>
+        <td class="r curr-col" style="font-weight:700;">${fmtI(currGross)}</td>
+        <td class="r cum-col"  colspan="2" style="border-left:2.5pt solid #155a38;background:#dcfce7;"></td>
+        <td class="r cum-col"  style="font-weight:700;">${fmtI(cumGross)}</td>
+      </tr>
+    </tfoot>
+  </table>
+
+  <!-- Bill Computation Table -->
+  <div style="margin-top:10pt;font-size:9pt;font-weight:700;color:#1e3a5f;margin-bottom:4pt;letter-spacing:.3pt;">BILL COMPUTATION</div>
+  <table class="totals">
+    <thead><tr>
+      <th style="padding:4pt 8pt;background:#1e3a5f;color:#fff;font-size:8.5pt;border:0.5pt solid #2a4f80;text-align:left;">Description</th>
+      <th style="padding:4pt 8pt;background:#1e3a5f;color:#fff;font-size:8.5pt;border-left:2.5pt solid #fff;text-align:right;width:110pt;">Previous (₹)</th>
+      <th style="padding:4pt 8pt;background:#1565a0;color:#fff;font-size:8.5pt;border-left:2.5pt solid #fff;text-align:right;width:110pt;">Current (₹)</th>
+      <th style="padding:4pt 8pt;background:#155a38;color:#fff;font-size:8.5pt;border-left:2.5pt solid #fff;text-align:right;width:110pt;">Cumulative (₹)</th>
+    </tr></thead>
+    <tbody>${compRows}</tbody>
+  </table>
+
+  <div class="footer-row">
+    ${h.remarks?`<div class="footer-box"><div class="footer-hdr">Remarks</div>${esc(h.remarks)}</div>`:'<div></div>'}
+    <div style="text-align:right;"><div class="sign-box">Verified By<br>${CO_NAME}</div></div>
+  </div>`);
 }
+
+// =====================================================================
+// CASH PURCHASE BILL — parallel POB flow, no PO required
+// Anchored on vendor (not PO); GRNs filtered to vendor's verified cash GRNs.
+// GST entered manually (no PO to inherit from).
+// Inserts into pu_po_bills with is_cash_purchase=true, po_number=null.
+// Downstream PRR/payment flow uses the same pu_po_bills table → automatic.
+// =====================================================================
+
+let _cpobSelectedGRNs = [], _cpobLineItems = [], _cpobExtraCount = 0;
 
 // ============================================================
 // MIS — MATERIAL ISSUE
@@ -15927,10 +16063,11 @@ async function saveMIS() {
     const uom     = ri!=null ? (document.getElementById('misUom_'+ri)?.value || '') : '';
     const balance = ri!=null ? parseFloat(document.getElementById('misMatBal_'+ri)?.value || 0) : 0;
     const rate    = ri!=null ? parseFloat(document.getElementById('misMatRate_'+ri)?.value || 0) : 0;
-    const wbsCode = document.getElementById('misWbs_'+ri)?.dataset?.wbsCode||null;
-    const wbsAct  = document.getElementById('misWbs_'+ri)?.value?.trim()||null;
-    const csh     = document.getElementById('misCsh_'+ri)?.dataset?.cshVal||null;
-    items.push({sno:items.length+1, material_name:mat, uom:uom,
+    const wbsCode  = document.getElementById('misWbs_'+ri)?.dataset?.wbsCode||null;
+    const wbsAct   = document.getElementById('misWbs_'+ri)?.value?.trim()||null;
+    const csh      = document.getElementById('misCsh_'+ri)?.dataset?.cshVal||null;
+    const matCode  = matInp?.dataset?.matCode||null;
+    items.push({sno:items.length+1, material_code:matCode, material_name:mat, uom:uom,
       qty_issued:qty, stock_before:balance,
       stock_after:Math.max(0, balance - qty),
       unit_rate:rate, amount:qty*rate,
@@ -16623,56 +16760,382 @@ async function printRFQ(rfqNum) {
   </div>`);
 }
 
-async function printPOB(billNum) {
-  pbShow('Building print…');
-  const [{data:h},{data:items}] = await Promise.all([
-    sb.from('pu_po_bills').select('*').eq('bill_number',billNum).single(),
-    sb.from('pu_po_bill_items').select('*').eq('bill_number',billNum).order('sno'),
-  ]);
-  pbDone();
-  if (!h) { toast('Bill not found','error'); return; }
-  const fmtI = n => (n||0).toLocaleString('en-IN',{minimumFractionDigits:2,maximumFractionDigits:2});
-  const rows = (items||[]).map((it,i) => `<tr>
-    <td class="c">${it.sno||i+1}</td><td class="mono" style="font-size:8pt;">${esc(it.grn_number||'')}</td>
-    <td>${esc(it.material_name)}</td><td class="c">${esc(it.uom)}</td>
-    <td class="r">${fmtI(it.qty)}</td><td class="r">₹ ${fmtI(it.unit_rate)}</td>
-    <td class="r">₹ ${fmtI(it.base_amount)}</td>
-  </tr>`).join('');
-  const totals = `<tr><td>Gross Amount</td><td>₹ ${fmtI(h.gross_amount)}</td></tr>
-    ${h.extra_before_gst?`<tr><td>Add (Pre-GST)</td><td>₹ ${fmtI(h.extra_before_gst)}</td></tr>`:''}
-    <tr><td>CGST (${h.cgst_pct||0}%)</td><td>₹ ${fmtI(h.cgst_amount)}</td></tr>
-    <tr><td>SGST (${h.sgst_pct||0}%)</td><td>₹ ${fmtI(h.sgst_amount)}</td></tr>
-    ${h.igst_amount>0?`<tr><td>IGST</td><td>₹ ${fmtI(h.igst_amount)}</td></tr>`:''}
-    ${h.extra_after_gst?`<tr><td>Add (Post-GST)</td><td>₹ ${fmtI(h.extra_after_gst)}</td></tr>`:''}
-    <tr><td>Invoice Value</td><td>₹ ${fmtI(h.invoice_value)}</td></tr>
-    ${h.hold_amount>0?`<tr><td>Hold</td><td>— ₹ ${fmtI(h.hold_amount)}</td></tr>`:''}
-    <tr class="grand"><td>NET PAYABLE</td><td>₹ ${fmtI(h.net_payable)}</td></tr>`;
-  openPrintOverlay(`${printStyles()}
-  <div class="pd-top">
-    <div><div class="co-name">${CO_NAME}</div><div class="co-detail">${CO_ADDR}<br>GSTIN: ${CO_GSTIN}</div></div>
-    <div><div class="doc-title">GRN BILL ABSTRACT</div>
-      <table class="doc-meta"><tr><td>Bill No.</td><td>${esc(billNum)}</td></tr>
-      <tr><td>Date</td><td>${fmtDate(h.bill_date)}</td></tr>
-      <tr><td>PO No.</td><td>${esc(h.po_number)}</td></tr>
-      <tr><td>Vendor Inv.</td><td>${esc(h.vendor_inv_no||'—')}</td></tr>
-      <tr><td>Inv. Date</td><td>${h.vendor_inv_date?fmtDate(h.vendor_inv_date):'—'}</td></tr>
-      </table>
-    </div>
-  </div>
-  <div class="addr-row">
-    <div class="addr-box"><div class="addr-hdr">Vendor</div><div class="addr-body"><strong>${esc(h.vendor_name)}</strong></div></div>
-    <div class="addr-box"><div class="addr-hdr">GRNs Included</div><div class="addr-body" style="font-size:8pt;">${esc(h.grn_numbers||'—')}</div></div>
-  </div>
-  <table class="items"><thead><tr>
-    <th class="c">#</th><th>GRN No.</th><th>Material</th><th class="c">UOM</th>
-    <th class="r">Qty</th><th class="r">Rate</th><th class="r">Amount (₹)</th>
-  </tr></thead><tbody>${rows}</tbody></table>
-  <div class="totals-wrap"><table class="totals">${totals}</table></div>
-  <div class="footer-row">
-    ${h.remarks?`<div class="footer-box"><div class="footer-hdr">Remarks</div>${esc(h.remarks)}</div>`:'<div></div>'}
-    <div style="text-align:right;"><div class="sign-box">Verified By<br>${CO_NAME}</div></div>
-  </div>`);
+async function newCashPOB() {
+  if (!hasPerm('canCreatePOB')) { toast('Only Planning/QS can create bills','error'); return; }
+  document.getElementById('pobForm').style.display = 'none';
+  document.getElementById('cashPobForm').style.display = 'block';
+  document.getElementById('pobListCard').style.display = 'none';
+  // Reset all fields
+  document.getElementById('cpob_number').value = 'POB/' + currentFY() + '/—— (auto)';
+  document.getElementById('cpob_date').value = today();
+  document.getElementById('cpob_vendorSearch').value = '';
+  document.getElementById('cpob_vendorName').value = '';
+  document.getElementById('cpob_vendor').value = '';
+  document.getElementById('cpob_vendorInvNo').value = '';
+  document.getElementById('cpob_vendorInvDate').value = '';
+  document.getElementById('cpob_creditPeriod').value = '0';        // cash = paid immediately
+  document.getElementById('cpob_invPayDue').value = '';
+  document.getElementById('cpob_holdAmt').value = '0';
+  document.getElementById('cpob_holdDesc').value = '';
+  document.getElementById('cpob_remarks').value = '';
+  document.getElementById('cpob_gstType').value = 'cgst_sgst';
+  document.getElementById('cpob_cgstPct').value = '9';
+  document.getElementById('cpob_sgstPct').value = '9';
+  document.getElementById('cpob_igstPct').value = '18';
+  onCashPobGSTTypeChange();
+  document.getElementById('cpob_grnCard').style.display = 'none';
+  document.getElementById('cpob_billDetails').style.display = 'none';
+  document.getElementById('cpob_itemsBody').innerHTML = '';
+  document.getElementById('cpob_extraBody').innerHTML = '';
+  document.getElementById('cpob_selectedGRNs').textContent = 'None';
+  document.getElementById('cpob_grnCheckList').innerHTML = '';
+  _cpobSelectedGRNs = []; _cpobLineItems = []; _cpobExtraCount = 0;
+  window.scrollTo(0, 0);
 }
+
+function closeCashPOBForm() {
+  document.getElementById('cashPobForm').style.display = 'none';
+  document.getElementById('pobListCard').style.display = 'block';
+  _cpobSelectedGRNs = []; _cpobLineItems = [];
+}
+
+// ── Vendor typeahead — only vendors with unbilled verified cash GRNs ───
+async function cpobVendorTypeahead() {
+  const inp = document.getElementById('cpob_vendorSearch');
+  const res = document.getElementById('cpob_vendorRes');
+  if (!inp || !res) return;
+  // Fetch distinct vendors with verified+unbilled cash GRNs.
+  // We cache the list on the form's dataset to avoid repeated DB hits.
+  let candidates = window._cpobVendorCandidates;
+  if (!candidates) {
+    const { data } = await sb.from('pu_grn')
+      .select('vendor_name')
+      .eq('is_cash_purchase', true)
+      .in('status', ['Verified','Partially Billed'])
+      .order('vendor_name');
+    const seen = new Set();
+    candidates = [];
+    (data||[]).forEach(g => {
+      const v = (g.vendor_name||'').trim();
+      if (v && !seen.has(v)) { seen.add(v); candidates.push(v); }
+    });
+    window._cpobVendorCandidates = candidates;
+  }
+  const q = (inp.value||'').trim().toLowerCase();
+  const matches = q
+    ? candidates.filter(v => v.toLowerCase().includes(q)).slice(0, 15)
+    : candidates.slice(0, 15);
+  if (!matches.length) {
+    res.innerHTML = '<div style="padding:10px;color:var(--muted);font-size:12px;">No vendor with billable cash GRNs.</div>';
+  } else {
+    res.innerHTML = matches.map(v => {
+      const safe = esc(v).replace(/'/g, "\\'");
+      return `<div class="typeahead-item" onmousedown="event.preventDefault();cpobPickVendor('${safe}')"><strong>${esc(v)}</strong></div>`;
+    }).join('');
+  }
+  res.classList.add('show');
+}
+
+async function cpobPickVendor(name) {
+  document.getElementById('cpob_vendorName').value = name;
+  document.getElementById('cpob_vendor').value = name;
+  document.getElementById('cpob_vendorSearch').value = name;
+  document.getElementById('cpob_vendorRes')?.classList.remove('show');
+  // Load this vendor's verified cash GRNs
+  await onCashPobVendorChange(name);
+}
+
+function cpobClearVendor() {
+  document.getElementById('cpob_vendorName').value = '';
+  document.getElementById('cpob_vendor').value = '';
+  document.getElementById('cpob_vendorSearch').value = '';
+  document.getElementById('cpob_vendorRes')?.classList.remove('show');
+  document.getElementById('cpob_grnCard').style.display = 'none';
+  document.getElementById('cpob_billDetails').style.display = 'none';
+  document.getElementById('cpob_grnCheckList').innerHTML = '';
+  document.getElementById('cpob_selectedGRNs').textContent = 'None';
+  _cpobSelectedGRNs = []; _cpobLineItems = [];
+  document.getElementById('cpob_vendorSearch').focus();
+}
+
+// Refresh candidate cache when leaving the form (so next time it's fresh)
+function _cpobInvalidateCache() { window._cpobVendorCandidates = null; }
+
+async function onCashPobVendorChange(vendorName) {
+  if (!vendorName) { document.getElementById('cpob_grnCard').style.display = 'none'; return; }
+  const { data: grns } = await sb.from('pu_grn').select('*')
+    .eq('is_cash_purchase', true)
+    .eq('vendor_name', vendorName)
+    .in('status', ['Verified','Partially Billed'])
+    .order('grn_number');
+  document.getElementById('cpob_grnCard').style.display = grns?.length ? '' : 'none';
+  if (!grns?.length) { toast('No verified cash GRNs for this vendor','warn'); return; }
+  document.getElementById('cpob_grnCheckList').innerHTML = (grns||[]).map(g => `
+    <label style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--border);cursor:pointer;">
+      <input type="checkbox" class="cpob_grnChk" value="${esc(g.grn_number)}" onchange="onCashPobGRNSelect()">
+      <span><strong>${esc(g.grn_number)}</strong> · ${fmtDate(g.grn_date)} · ${esc(g.cash_purchase_ref||'Direct Purchase')} · Inv: ${esc(g.invoice_no||'—')}</span>
+    </label>`).join('');
+}
+
+function cpobSelectAllGRNs(state) {
+  document.querySelectorAll('.cpob_grnChk').forEach(c => { c.checked = !!state; });
+  onCashPobGRNSelect();
+}
+
+async function onCashPobGRNSelect() {
+  _cpobSelectedGRNs = [...document.querySelectorAll('.cpob_grnChk:checked')].map(c => c.value);
+  document.getElementById('cpob_selectedGRNs').textContent = _cpobSelectedGRNs.length ? _cpobSelectedGRNs.join(', ') : 'None';
+  if (!_cpobSelectedGRNs.length) { document.getElementById('cpob_billDetails').style.display = 'none'; return; }
+  document.getElementById('cpob_billDetails').style.display = '';
+  const { data: grnItems } = await sb.from('pu_grn_items').select('*')
+    .in('grn_number', _cpobSelectedGRNs).order('grn_number').order('sno');
+  _cpobLineItems = grnItems || [];
+  // Render items with editable rate inputs
+  document.getElementById('cpob_itemsBody').innerHTML = _cpobLineItems.map((it, i) => {
+    return `<tr>
+      <td>${i+1}</td>
+      <td class="mono" style="font-size:11px;">${esc(it.grn_number)}</td>
+      <td>${esc(it.material_name)}</td>
+      <td>${esc(it.uom)}</td>
+      <td class="num">${fmtINR(it.this_grn_qty)}</td>
+      <td class="num"><input type="number" id="cpobRate_${i}" class="num" step="0.01" value="${num(it.unit_rate).toFixed(2)}" style="width:110px;text-align:right;" oninput="cpobRecalcLine(${i})"></td>
+      <td class="num" id="cpobAmt_${i}">${fmtINR(it.base_amount)}</td>
+      <td class="typeahead" style="position:relative;width:200px;">
+      </td>
+    </tr>`;
+  }).join('') || '<tr><td colspan="8" class="center muted">No items</td></tr>';
+  recalcCashPobTotals();
+}
+
+function cpobRecalcLine(i) {
+  const qty  = num(_cpobLineItems[i]?.this_grn_qty);
+  const rate = num(document.getElementById('cpobRate_'+i)?.value);
+  const amt  = qty * rate;
+  // Mutate the in-memory line item so save uses the edited rate
+  if (_cpobLineItems[i]) {
+    _cpobLineItems[i].unit_rate  = rate;
+    _cpobLineItems[i].base_amount = amt;
+  }
+  const cell = document.getElementById('cpobAmt_'+i);
+  if (cell) cell.textContent = fmtINR(amt);
+  recalcCashPobTotals();
+}
+
+function onCashPobGSTTypeChange() {
+  const t = document.getElementById('cpob_gstType').value;
+  document.getElementById('cpob_cgstWrap').style.display = (t==='cgst_sgst') ? '' : 'none';
+  document.getElementById('cpob_sgstWrap').style.display = (t==='cgst_sgst') ? '' : 'none';
+  document.getElementById('cpob_igstWrap').style.display = (t==='igst')      ? '' : 'none';
+  if (t === 'none') {
+    document.getElementById('cpob_cgstPct').value = '0';
+    document.getElementById('cpob_sgstPct').value = '0';
+    document.getElementById('cpob_igstPct').value = '0';
+  }
+  recalcCashPobTotals();
+}
+
+function _cashPobGSTPct() {
+  const t = document.getElementById('cpob_gstType').value;
+  if (t === 'none') return { cgst:0, sgst:0, igst:0, total:0 };
+  if (t === 'igst') {
+    const i = num(document.getElementById('cpob_igstPct').value);
+    return { cgst:0, sgst:0, igst:i, total:i };
+  }
+  const c = num(document.getElementById('cpob_cgstPct').value);
+  const s = num(document.getElementById('cpob_sgstPct').value);
+  return { cgst:c, sgst:s, igst:0, total:c+s };
+}
+
+function addCashPobExtraLine() {
+  const i = _cpobExtraCount++;
+  const tr = document.createElement('tr'); tr.id = 'cpobExtra_'+i;
+  tr.innerHTML = `
+    <td><input placeholder="Description" style="width:180px;"></td>
+    <td><select><option value="Addition">Addition</option><option value="Deduction">Deduction</option></select></td>
+    <td><select><option value="Before GST">Before GST</option><option value="After GST">After GST</option></select></td>
+    <td><input type="number" step="0.01" style="width:100px;text-align:right;" oninput="recalcCashPobTotals()"></td>
+    <td><button class="btn btn-ghost btn-sm" onclick="this.closest('tr').remove();recalcCashPobTotals()">✕</button></td>`;
+  document.getElementById('cpob_extraBody').appendChild(tr);
+}
+
+function recalcCashPobTotals() {
+  // Sum gross from current line items (uses live mutated rates)
+  let gross = 0;
+  _cpobLineItems.forEach(it => { gross += num(it.base_amount); });
+
+  // ── Collect extra lines ──────────────────────────────────────────────────
+  const beforeLines = [], afterLines = [];
+  document.querySelectorAll('#cpob_extraBody tr').forEach(tr => {
+    const cells = tr.cells;
+    const desc  = (cells[0]?.querySelector('input')?.value || '').trim() || '—';
+    const amt    = num(cells[3]?.querySelector('input')?.value || 0);
+    const type   = cells[1]?.querySelector('select')?.value;
+    const timing = cells[2]?.querySelector('select')?.value;
+    const signed = type === 'Addition' ? amt : -amt;
+    if (timing === 'Before GST') beforeLines.push({desc, signed});
+    else afterLines.push({desc, signed});
+  });
+  const extraBefore = beforeLines.reduce((a,l) => a+l.signed, 0);
+  const extraAfter  = afterLines.reduce((a,l) => a+l.signed, 0);
+
+  const taxable  = gross + extraBefore;
+  const gstInfo  = _cashPobGSTPct();
+  const gst      = taxable * gstInfo.total / 100;
+  const cgstAmt  = taxable * gstInfo.cgst / 100;
+  const sgstAmt  = taxable * gstInfo.sgst / 100;
+  const igstAmt  = taxable * gstInfo.igst / 100;
+  const invoice  = taxable + gst + extraAfter;
+  const hold     = num(document.getElementById('cpob_holdAmt')?.value);
+  const net      = invoice - hold;
+
+  document.getElementById('cpob_s_gross').textContent = fmtINR(gross);
+
+  // ── Render: Before-GST lines individually (no GST sub-row) ──────────────
+  const dynEl = document.getElementById('cpob_s_dynamic');
+  if (dynEl) dynEl.innerHTML = beforeLines.map(l =>
+    `<tr><td style="padding:4px 8px;color:var(--muted);">${l.signed>=0?'Add':'Less'}: ${l.desc}</td>`+
+    `<td class="num" style="padding:4px 8px;">${(l.signed>=0?'+':'')+fmtINR(l.signed)}</td></tr>`
+  ).join('');
+
+  document.getElementById('cpob_s_taxable').textContent = fmtINR(taxable);
+
+  // ── Render: CGST / SGST / IGST split ────────────────────────────────────
+  const gstEl = document.getElementById('cpob_s_gst_rows');
+  if (gstEl) {
+    let html = '';
+    if (cgstAmt > 0) html += `<tr><td style="padding:4px 8px;color:var(--muted);">Total CGST</td>`+
+      `<td class="num" style="padding:4px 8px;">${fmtINR(cgstAmt)}</td></tr>`;
+    if (sgstAmt > 0) html += `<tr><td style="padding:4px 8px;color:var(--muted);">Total SGST</td>`+
+      `<td class="num" style="padding:4px 8px;">${fmtINR(sgstAmt)}</td></tr>`;
+    if (igstAmt > 0) html += `<tr><td style="padding:4px 8px;color:var(--muted);">Total IGST</td>`+
+      `<td class="num" style="padding:4px 8px;">${fmtINR(igstAmt)}</td></tr>`;
+    if (!html) html = `<tr><td style="padding:4px 8px;color:var(--muted);">GST</td>`+
+      `<td class="num" style="padding:4px 8px;">0.00</td></tr>`;
+    gstEl.innerHTML = html;
+  }
+
+  // ── Render: After-GST lines individually ────────────────────────────────
+  const afterEl = document.getElementById('cpob_s_after_rows');
+  if (afterEl) afterEl.innerHTML = afterLines.map(l =>
+    `<tr><td style="padding:4px 8px;color:var(--muted);">${l.signed>=0?'Add':'Less'}: ${l.desc}</td>`+
+    `<td class="num" style="padding:4px 8px;">${(l.signed>=0?'+':'')+fmtINR(l.signed)}</td></tr>`
+  ).join('');
+
+  document.getElementById('cpob_s_invoice').textContent = fmtINR(invoice);
+  document.getElementById('cpob_s_net').textContent = fmtINR(net);
+  const f = document.getElementById('cashPobForm');
+  if (f) {
+    f.dataset.gross = gross; f.dataset.invoice = invoice; f.dataset.net = net; f.dataset.gst = gst;
+    f.dataset.extraBefore = extraBefore; f.dataset.extraAfter = extraAfter;
+    f.dataset.cgst = gstInfo.cgst; f.dataset.sgst = gstInfo.sgst; f.dataset.igst = gstInfo.igst;
+  }
+}
+
+function calcCashPobPayDue() {
+  const invDate = document.getElementById('cpob_vendorInvDate')?.value;
+  const days = num(document.getElementById('cpob_creditPeriod')?.value) || 0;
+  if (!invDate) return;
+  const d = new Date(invDate);
+  d.setDate(d.getDate() + days);
+  document.getElementById('cpob_invPayDue').value = d.toISOString().slice(0,10);
+}
+
+async function saveCashPOB() {
+  if (!hasPerm('canCreatePOB')) { toast('Only Planning/QS can create bills','error'); return; }
+  const vendor = document.getElementById('cpob_vendorName').value.trim();
+  const date   = document.getElementById('cpob_date').value;
+  const invNo  = document.getElementById('cpob_vendorInvNo').value.trim();
+  const invDate= document.getElementById('cpob_vendorInvDate').value;
+  if (!vendor) { toast('Select a vendor','error'); return; }
+  if (!date)   { toast('Bill date required','error'); return; }
+  if (!invNo)  { toast('Vendor Invoice No. required','error'); return; }
+  if (!invDate){ toast('Invoice Date required','error'); return; }
+  if (!_cpobSelectedGRNs.length) { toast('Select at least one cash GRN','error'); return; }
+  for (let i = 0; i < _cpobLineItems.length; i++) {
+    const r = num(document.getElementById('cpobRate_'+i)?.value);
+    if (r <= 0) { toast('Rate must be > 0 for line ' + (i+1),'error'); return; }
+  }
+  recalcCashPobTotals();
+  const f = document.getElementById('cashPobForm');
+  const gross   = num(f.dataset.gross);
+  const invoice = num(f.dataset.invoice);
+  const net     = num(f.dataset.net);
+  const gst     = num(f.dataset.gst);
+  const cgst    = num(f.dataset.cgst);
+  const sgst    = num(f.dataset.sgst);
+  const igst    = num(f.dataset.igst);
+  const gstTotal = cgst + sgst + igst;
+  const cgstAmt = gstTotal > 0 ? gst * cgst / gstTotal : 0;
+  const sgstAmt = gstTotal > 0 ? gst * sgst / gstTotal : 0;
+  const igstAmt = gstTotal > 0 ? gst * igst / gstTotal : 0;
+
+  pbShow('Saving Direct Purchase Bill…');
+  try {
+    const billNumber = await nextPUDocNumber('POB');
+    calcCashPobPayDue();
+    const { error } = await sb.from('pu_po_bills').insert({
+      bill_number: billNumber, bill_date: date,
+      po_number: null, is_cash_purchase: true,
+      vendor_name: vendor,
+      vendor_inv_no: invNo, vendor_inv_date: invDate,
+      credit_period: num(document.getElementById('cpob_creditPeriod').value) || 0,
+      inv_pay_due: document.getElementById('cpob_invPayDue').value || null,
+      grn_numbers: _cpobSelectedGRNs.join(', '),
+      gst_mode: 'overall',
+      gross_amount: gross,
+      cgst_pct: cgst, sgst_pct: sgst, igst_pct: igst,
+      cgst_amount: cgstAmt, sgst_amount: sgstAmt, igst_amount: igstAmt,
+      tds_pct: 0, tds_amount: 0,
+      hold_amount: num(document.getElementById('cpob_holdAmt').value),
+      hold_description: document.getElementById('cpob_holdDesc')?.value || null,
+      invoice_value: invoice, net_payable: net,
+      prepared_by: state.userName, prepared_by_id: state.userId,
+      remarks: document.getElementById('cpob_remarks').value || null,
+      status: 'Pending Approval',
+    });
+    if (error) throw new Error(error.message);
+
+    // Build all items (material rows + extra lines) for single insert
+    const allItems = [];
+    _cpobLineItems.forEach((it, i) => {
+      const base = num(it.base_amount);
+      allItems.push({
+        bill_number: billNumber, sno: i+1, row_type: 'material',
+        grn_number: it.grn_number, material_name: it.material_name,
+        material_code: it.material_code||null, uom: it.uom,
+        qty: it.this_grn_qty, unit_rate: it.unit_rate, base_amount: base,
+        cgst_pct: cgst, sgst_pct: sgst, igst_pct: igst,
+        cgst_amount: parseFloat((base*cgst/100).toFixed(2)),
+        sgst_amount: parseFloat((base*sgst/100).toFixed(2)),
+        igst_amount: parseFloat((base*igst/100).toFixed(2)),
+        total_amount: parseFloat((base*(1+(cgst+sgst+igst)/100)).toFixed(2)),
+      });
+    });
+    const matCount = allItems.length;
+    document.querySelectorAll('#cpob_extraBody tr').forEach((tr, i) => {
+      const cells = tr.cells;
+      allItems.push({
+        bill_number: billNumber, sno: matCount+i+1, row_type: 'extra',
+        description: cells[0]?.querySelector('input')?.value || null,
+        line_type: cells[1]?.querySelector('select')?.value,
+        timing: cells[2]?.querySelector('select')?.value,
+        extra_amount: num(cells[3]?.querySelector('input')?.value),
+      });
+    });
+    if (allItems.length) await sb.from('pu_po_bill_items').insert(allItems);
+
+    await sb.from('pu_grn').update({ status: 'Partially Billed' }).in('grn_number', _cpobSelectedGRNs);
+    flashSuccess('Direct Purchase Bill ' + billNumber + ' submitted for PM approval');
+    _cpobInvalidateCache();
+    closeCashPOBForm();
+    loadPOBList();
+  } catch (e) {
+    toast('Error: ' + e.message, 'error');
+  } finally {
+    pbDone();
+  }
+}
+
 
 // ============================================================
 // CONTRACTOR MASTER
