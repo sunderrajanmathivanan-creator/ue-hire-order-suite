@@ -15930,13 +15930,11 @@ async function saveMIS() {
     const wbsCode = document.getElementById('misWbs_'+ri)?.dataset?.wbsCode||null;
     const wbsAct  = document.getElementById('misWbs_'+ri)?.value?.trim()||null;
     const csh     = document.getElementById('misCsh_'+ri)?.dataset?.cshVal||null;
-    if (!wbsCode) { toast('Row '+(items.length+1)+': select a WBS Activity','error'); return; }
-    if (!csh)     { toast('Row '+(items.length+1)+': select a Cost Subhead','error'); return; }
     items.push({sno:items.length+1, material_name:mat, uom:uom,
       qty_issued:qty, stock_before:balance,
       stock_after:Math.max(0, balance - qty),
       unit_rate:rate, amount:qty*rate,
-      wbs_code:wbsCode, wbs_activity:wbsAct, cost_subhead:csh});
+      wbs_code:wbsCode||null, wbs_activity:wbsAct||null, cost_subhead:csh||null});
   });
   if(!items.length){toast('Add at least one item','error');return;}
 
@@ -15946,15 +15944,16 @@ async function saveMIS() {
   // The view already deducts reserved_qty (pending MIS) from balance_qty.
   pbShow('Checking live stock availability…');
   const matNames = [...new Set(items.map(it => it.material_name))];
+  const matNamesLower = matNames.map(n => n.toLowerCase().trim());
   const {data:liveStock, error:stockErr} = await sb.from('pu_stock_balance')
     .select('material_name,balance_qty,reserved_qty,uom')
-    .in('material_name', matNames);
+    .in('material_name', matNamesLower);
   pbDone();
   if (stockErr) { toast('Stock check failed: '+stockErr.message,'error'); return; }
   const liveMap = {};
-  (liveStock||[]).forEach(s => { liveMap[s.material_name] = parseFloat(s.balance_qty||0); });
+  (liveStock||[]).forEach(s => { liveMap[s.material_name.toLowerCase().trim()] = parseFloat(s.balance_qty||0); });
   for (const it of items) {
-    const available = liveMap[it.material_name] ?? 0;
+    const available = liveMap[it.material_name.toLowerCase().trim()] ?? 0;
     if (it.qty_issued > available) {
       toast(`Cannot issue ${it.material_name}: only ${fmtINR(available)} ${it.uom} available right now (includes reservations from other pending MIS). Reduce qty or wait for pending approvals to clear.`,'error',8000);
       return;
@@ -15962,7 +15961,7 @@ async function saveMIS() {
   }
   // Update stock_before from live values so the MIS record is accurate
   items.forEach(it => {
-    it.stock_before = liveMap[it.material_name] ?? it.stock_before;
+    it.stock_before = liveMap[it.material_name.toLowerCase().trim()] ?? it.stock_before;
     it.stock_after  = Math.max(0, it.stock_before - it.qty_issued);
   });
   pbShow('Saving MIS…');
