@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Penguin-Procurement Suite v42 — Urban Excellence LLP · Poetry of Earth</title>
+<title>Penguin-Procurement Suite v61 — Urban Excellence LLP · Poetry of Earth</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
 /* ============================================================
@@ -301,15 +301,6 @@ td input, td select { padding: 5px 6px; background: var(--input-bg); color: var(
 .dash-card.ok { --card-color: #16a34a; }
 .dash-card.muted-card { --card-color: #64748b; }
 .dash-card .dc-count.loading { font-size: 18px; color: var(--muted); }
-.tracker-wrap { overflow-x: auto; }
-.tracker-table { width: 100%; border-collapse: collapse; font-size: 11.5px; min-width: 900px; }
-.tracker-table th { background: #e8ecf2; padding: 8px 10px; text-align: left; font-weight: 700; color: #1e3a5f; font-size: 11px; text-transform: uppercase; letter-spacing: 0.3px; border-bottom: 2px solid #c3d0e0; white-space: nowrap; }
-.tracker-table td { padding: 7px 10px; border-bottom: 1px solid #eef2f8; vertical-align: middle; }
-.tracker-table tr:hover td { background: #f8fbff; }
-.tracker-table tr.parent-row { cursor: pointer; }
-.tracker-table tr.parent-row td { font-weight: 600; background: #f0f5fb; }
-.tracker-table tr.child-row td { background: #fff; padding-left: 24px; }
-.tracker-table tr.child-row td:first-child { padding-left: 32px; color: var(--muted); }
 .milestone-row { display: flex; align-items: center; gap: 0; }
 .ms { display: flex; flex-direction: column; align-items: center; position: relative; min-width: 68px; }
 .ms-dot { width: 14px; height: 14px; border-radius: 50%; flex-shrink: 0; z-index: 1; }
@@ -371,12 +362,6 @@ td input, td select { padding: 5px 6px; background: var(--input-bg); color: var(
   .dash-day-grid { grid-template-columns: 1fr; }
   .ddc-body { grid-template-columns: 1fr; gap: 0; }
 }
-.tracker-filters { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-bottom: 12px; }
-.tracker-filters select, .tracker-filters input[type="date"] { padding: 6px 10px; background: var(--input-bg); color: var(--text); border: 1px solid var(--border); border-radius: 4px; font-size: 12px; }
-.dash-sub-tabs { display: flex; gap: 4px; margin-bottom: 16px; border-bottom: 2px solid var(--border); }
-.dash-sub-tab { padding: 7px 14px; cursor: pointer; color: var(--muted); font-size: 12px; font-weight: 600; border-bottom: 2px solid transparent; transition: all 0.15s; }
-.dash-sub-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
-.dash-sub-tab:hover { color: var(--text); }
 
 /* Progress bar */
 #progressBar { position:fixed; bottom:0; right:0; width:280px; background:#fff; border:1px solid var(--border); border-bottom:none; border-radius:8px 8px 0 0; padding:10px 14px 8px; box-shadow:0 -4px 16px rgba(30,58,95,0.12); z-index:3000; display:none; }
@@ -550,70 +535,6 @@ input[type="number"] {
     </div>
   </div>
 
-  <!-- SECTION 2: TRACKERS -->
-  <div class="dash-section">
-    <div class="dash-section-title">📍 Process Trackers</div>
-    <div class="dash-sub-tabs">
-      <div class="dash-sub-tab active" onclick="switchDashTracker('procurement')" id="dtt-procurement">Tracker A — MIR → GRN</div>
-      <div class="dash-sub-tab" onclick="switchDashTracker('billing')" id="dtt-billing">Tracker B — Billing → Payment</div>
-    </div>
-
-    <div id="dash-tracker-procurement">
-      <div class="tracker-filters">
-        <label style="font-size:12px;color:var(--muted);">From:</label>
-        <input type="date" id="trk_a_from" onchange="loadTrackerA()">
-        <label style="font-size:12px;color:var(--muted);">To:</label>
-        <input type="date" id="trk_a_to" onchange="loadTrackerA()">
-        <button class="btn btn-ghost btn-sm" onclick="loadTrackerA()">↻ Refresh</button>
-      </div>
-      <div class="card" style="padding:0;overflow:hidden;">
-        <div class="tracker-wrap">
-          <table class="tracker-table">
-            <thead><tr>
-              <th style="width:110px;">MIR #</th>
-              <th style="width:130px;">Purpose</th>
-              <th style="min-width:600px;">Milestones</th>
-              <th style="width:80px;">Status</th>
-            </tr></thead>
-            <tbody id="tracker_a_body">
-              <tr><td colspan="4" class="center muted" style="padding:24px;">Loading…</td></tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
-    </div>
-
-    <div id="dash-tracker-billing" style="display:none;">
-      <div class="tracker-filters">
-        <label style="font-size:12px;color:var(--muted);">From:</label>
-        <input type="date" id="trk_b_from" onchange="loadTrackerB()">
-        <label style="font-size:12px;color:var(--muted);">To:</label>
-        <input type="date" id="trk_b_to" onchange="loadTrackerB()">
-        <select id="trk_b_type" onchange="loadTrackerB()" style="min-width:160px;">
-          <option value="">All Types</option>
-          <option value="purchase">Purchase (GRN→Payment)</option>
-          <option value="ho">Hire Orders</option>
-          <option value="wo">Work Orders</option>
-        </select>
-        <button class="btn btn-ghost btn-sm" onclick="loadTrackerB()">↻ Refresh</button>
-      </div>
-      <div class="card" style="padding:0;overflow:hidden;">
-        <div class="tracker-wrap">
-          <table class="tracker-table">
-            <thead><tr>
-              <th style="width:120px;">Order #</th>
-              <th style="width:120px;">Vendor</th>
-              <th style="min-width:580px;">Milestones</th>
-              <th style="width:80px;">Status</th>
-            </tr></thead>
-            <tbody id="tracker_b_body">
-              <tr><td colspan="4" class="center muted" style="padding:24px;">Loading…</td></tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
-    </div>
-  </div>
 
 </div><!-- /mod-dashboard -->
 
@@ -744,31 +665,39 @@ input[type="number"] {
   <!-- HO List -->
   <div class="card" id="hoListCard">
     <h3>Hire Orders <span class="badge-count" id="ho_listBadge">0</span></h3>
-    <div class="row" style="margin-bottom:10px;">
-      <input id="hoSearch" placeholder="Search HO #, vendor, scope…" style="padding:7px 10px;background:var(--input-bg);color:var(--text);border:1px solid var(--border);border-radius:4px;flex:1;max-width:320px;" oninput="renderHOList()">
-      <select id="hoStatusFilter" style="padding:7px;background:var(--input-bg);color:var(--text);border:1px solid var(--border);border-radius:4px;" onchange="renderHOList()">
-        <option value="">All Statuses</option>
-        <option value="Open">Open</option>
-        <option value="Active">Active</option>
-        <option value="Completed">Completed</option>
-        <option value="Short-Closed">Short-Closed</option>
-        <option value="Cancelled">Cancelled</option>
-        <option value="Pending Approval">Pending Approval</option>
-        <option value="Rejected">Rejected</option>
-        <option value="Rejected - Correction">Returned for Correction</option>
-      </select>
-    </div>
+      <div id="hoLegendCard" style="border:1px solid var(--border);border-radius:6px;margin-bottom:14px;overflow:hidden;">
+        <div onclick="toggleLegend('hoLegend')" style="display:flex;align-items:center;justify-content:space-between;padding:8px 14px;cursor:pointer;background:var(--input-bg);user-select:none;">
+          <span style="font-size:12px;font-weight:600;color:var(--text-muted);letter-spacing:.03em;">STATUS REFERENCE</span>
+          <span id="hoLegendChev" style="font-size:13px;color:var(--text-muted);transition:transform .2s;">&#9658;</span>
+        </div>
+        <div id="hoLegendBody" style="display:none;padding:12px 14px 14px;">
+          <div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:5px;"><span style="font-size:11px;font-weight:500;padding:2px 8px;border-radius:20px;background:#fef9c3;color:#854d0e;white-space:nowrap;min-width:120px;text-align:center;flex-shrink:0;">Pending Approval</span><span style="font-size:11px;color:var(--text-muted);line-height:1.4;">Newly created; awaiting Admin/PM approval</span></div>
+          <div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:5px;"><span style="font-size:11px;font-weight:500;padding:2px 8px;border-radius:20px;background:#dbeafe;color:#1e40af;white-space:nowrap;min-width:120px;text-align:center;flex-shrink:0;">Open</span><span style="font-size:11px;color:var(--text-muted);line-height:1.4;">Approved and active, no work started yet</span></div>
+          <div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:5px;"><span style="font-size:11px;font-weight:500;padding:2px 8px;border-radius:20px;background:#d1fae5;color:#065f46;white-space:nowrap;min-width:120px;text-align:center;flex-shrink:0;">Active</span><span style="font-size:11px;color:var(--text-muted);line-height:1.4;">Work is underway</span></div>
+          <div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:5px;"><span style="font-size:11px;font-weight:500;padding:2px 8px;border-radius:20px;background:#d1fae5;color:#065f46;white-space:nowrap;min-width:120px;text-align:center;flex-shrink:0;">Completed</span><span style="font-size:11px;color:var(--text-muted);line-height:1.4;">All work/items completed</span></div>
+          <div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:5px;"><span style="font-size:11px;font-weight:500;padding:2px 8px;border-radius:20px;background:#e0e7ff;color:#3730a3;white-space:nowrap;min-width:120px;text-align:center;flex-shrink:0;">Short-Closed</span><span style="font-size:11px;color:var(--text-muted);line-height:1.4;">Closed before full completion</span></div>
+          <div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:5px;"><span style="font-size:11px;font-weight:500;padding:2px 8px;border-radius:20px;background:#f3f4f6;color:#374151;white-space:nowrap;min-width:120px;text-align:center;flex-shrink:0;">Cancelled</span><span style="font-size:11px;color:var(--text-muted);line-height:1.4;">Cancelled; no active items remain</span></div>
+          <div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:5px;"><span style="font-size:11px;font-weight:500;padding:2px 8px;border-radius:20px;background:#fee2e2;color:#991b1b;white-space:nowrap;min-width:120px;text-align:center;flex-shrink:0;">Rejected</span><span style="font-size:11px;color:var(--text-muted);line-height:1.4;">Rejected by approver; cannot proceed</span></div>
+          <div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:5px;"><span style="font-size:11px;font-weight:500;padding:2px 8px;border-radius:20px;background:#fff7ed;color:#92400e;white-space:nowrap;min-width:120px;text-align:center;flex-shrink:0;">Rejected - Correction</span><span style="font-size:11px;color:var(--text-muted);line-height:1.4;">Returned for correction; can be revised</span></div>
+        </div>
+      </div>
     <div class="table-wrap">
       <table>
-        <thead><tr>
-          <th onclick="sortTable('ho_listBody',0,this)" style="cursor:pointer;">HO Number ↕</th>
-          <th onclick="sortTable('ho_listBody',1,this)" style="cursor:pointer;">Date ↕</th>
-          <th onclick="sortTable('ho_listBody',2,this)" style="cursor:pointer;">Vendor ↕</th>
-          <th>Scope</th>
-          <th class="num" onclick="sortTable('ho_listBody',4,this,true)" style="cursor:pointer;">Order Value ↕</th>
-          <th onclick="sortTable('ho_listBody',5,this)" style="cursor:pointer;">Status ↕</th>
-          <th class="center">Actions</th>
-        </tr></thead>
+        <thead>
+          <tr>
+            <th>HO Number</th><th>Date</th><th>Vendor</th><th>Scope</th>
+            <th class="num">Order Value</th><th>Status</th><th class="center">Actions</th>
+          </tr>
+          <tr style="background:var(--input-bg);">
+            <td style="padding:4px 6px;"><input id="hoF_number" placeholder="Filter&#8230;" oninput="renderHOList()" style="width:100%;padding:4px 6px;font-size:11px;background:var(--bg);color:var(--text);border:1px solid var(--border);border-radius:4px;"></td>
+            <td style="padding:4px 6px;"><div style="display:flex;gap:4px;align-items:center;"><input type="date" id="hoF_dateFrom" oninput="renderHOList()" style="flex:1;padding:4px 5px;font-size:11px;background:var(--bg);color:var(--text);border:1px solid var(--border);border-radius:4px;"><span style="font-size:10px;color:var(--text-muted);">&#8594;</span><input type="date" id="hoF_dateTo" oninput="renderHOList()" style="flex:1;padding:4px 5px;font-size:11px;background:var(--bg);color:var(--text);border:1px solid var(--border);border-radius:4px;"></div></td>
+            <td style="padding:4px 6px;"><input id="hoF_vendor" placeholder="Filter&#8230;" oninput="renderHOList()" style="width:100%;padding:4px 6px;font-size:11px;background:var(--bg);color:var(--text);border:1px solid var(--border);border-radius:4px;"></td>
+            <td style="padding:4px 6px;"><input id="hoF_scope" placeholder="Filter&#8230;" oninput="renderHOList()" style="width:100%;padding:4px 6px;font-size:11px;background:var(--bg);color:var(--text);border:1px solid var(--border);border-radius:4px;"></td>
+            <td style="padding:4px 6px;"></td>
+            <td style="padding:4px 6px;"><select id="hoF_status" onchange="renderHOList()" style="width:100%;padding:4px 5px;font-size:11px;background:var(--bg);color:var(--text);border:1px solid var(--border);border-radius:4px;"><option value="">All</option><option>Pending Approval</option><option>Open</option><option>Active</option><option>Completed</option><option>Short-Closed</option><option>Cancelled</option><option>Rejected</option><option value="Rejected - Correction">Returned for Correction</option></select></td>
+            <td style="padding:4px 6px;text-align:center;"><button onclick="clearColFilters('hoF_number','hoF_vendor','hoF_scope','hoF_dateFrom','hoF_dateTo','hoF_status','renderHOList')" title="Clear" style="font-size:10px;padding:3px 8px;background:var(--input-bg);color:var(--text-muted);border:1px solid var(--border);border-radius:4px;cursor:pointer;">&#10005; Clear</button></td>
+          </tr>
+        </thead>
         <tbody id="ho_listBody"><tr><td colspan="7" class="center muted">Loading…</td></tr></tbody>
       </table>
     </div>
@@ -856,27 +785,35 @@ input[type="number"] {
   <!-- HOC List -->
   <div class="card" id="hocListCard">
     <h3>Hire Order Certifications <span class="badge-count" id="hoc_listBadge">0</span></h3>
-    <div class="row" style="margin-bottom:10px;">
-      <input id="hocSearch" placeholder="Search certification #, HO #, vendor…" style="padding:7px 10px;background:var(--input-bg);color:var(--text);border:1px solid var(--border);border-radius:4px;flex:1;max-width:320px;" oninput="renderHOCList()">
-      <select id="hocStatusFilter" style="padding:7px;background:var(--input-bg);color:var(--text);border:1px solid var(--border);border-radius:4px;" onchange="renderHOCList()">
-        <option value="">All Statuses</option>
-        <option value="Pending Approval">Pending Approval</option>
-        <option value="Unbilled">Unbilled</option>
-        <option value="Billed">Billed</option>
-        <option value="Rejected">Rejected</option>
-      </select>
-    </div>
+      <div id="hocLegendCard" style="border:1px solid var(--border);border-radius:6px;margin-bottom:14px;overflow:hidden;">
+        <div onclick="toggleLegend('hocLegend')" style="display:flex;align-items:center;justify-content:space-between;padding:8px 14px;cursor:pointer;background:var(--input-bg);user-select:none;">
+          <span style="font-size:12px;font-weight:600;color:var(--text-muted);letter-spacing:.03em;">STATUS REFERENCE</span>
+          <span id="hocLegendChev" style="font-size:13px;color:var(--text-muted);transition:transform .2s;">&#9658;</span>
+        </div>
+        <div id="hocLegendBody" style="display:none;padding:12px 14px 14px;">
+          <div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:5px;"><span style="font-size:11px;font-weight:500;padding:2px 8px;border-radius:20px;background:#fef9c3;color:#854d0e;white-space:nowrap;min-width:120px;text-align:center;flex-shrink:0;">Pending Approval</span><span style="font-size:11px;color:var(--text-muted);line-height:1.4;">Newly created; awaiting Admin/PM approval</span></div>
+          <div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:5px;"><span style="font-size:11px;font-weight:500;padding:2px 8px;border-radius:20px;background:#dbeafe;color:#1e40af;white-space:nowrap;min-width:120px;text-align:center;flex-shrink:0;">Unbilled</span><span style="font-size:11px;color:var(--text-muted);line-height:1.4;">Certified; not yet billed</span></div>
+          <div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:5px;"><span style="font-size:11px;font-weight:500;padding:2px 8px;border-radius:20px;background:#ede9fe;color:#4c1d95;white-space:nowrap;min-width:120px;text-align:center;flex-shrink:0;">Billed</span><span style="font-size:11px;color:var(--text-muted);line-height:1.4;">Fully billed</span></div>
+          <div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:5px;"><span style="font-size:11px;font-weight:500;padding:2px 8px;border-radius:20px;background:#fee2e2;color:#991b1b;white-space:nowrap;min-width:120px;text-align:center;flex-shrink:0;">Rejected</span><span style="font-size:11px;color:var(--text-muted);line-height:1.4;">Rejected by approver; cannot proceed</span></div>
+        </div>
+      </div>
     <div class="table-wrap">
       <table>
-        <thead><tr>
-          <th onclick="sortTable('hoc_listBody',0,this)" style="cursor:pointer;">Cert. Number ↕</th>
-          <th onclick="sortTable('hoc_listBody',1,this)" style="cursor:pointer;">Date ↕</th>
-          <th onclick="sortTable('hoc_listBody',2,this)" style="cursor:pointer;">HO Number ↕</th>
-          <th onclick="sortTable('hoc_listBody',3,this)" style="cursor:pointer;">Vendor ↕</th>
-          <th class="num" onclick="sortTable('hoc_listBody',4,this,true)" style="cursor:pointer;">Gross Value ↕</th>
-          <th onclick="sortTable('hoc_listBody',5,this)" style="cursor:pointer;">Status ↕</th>
-          <th class="center">Actions</th>
-        </tr></thead>
+        <thead>
+          <tr>
+            <th>Cert. Number</th><th>Date</th><th>HO Number</th><th>Vendor</th>
+            <th class="num">Gross Value</th><th>Status</th><th class="center">Actions</th>
+          </tr>
+          <tr style="background:var(--input-bg);">
+            <td style="padding:4px 6px;"><input id="hocF_number" placeholder="Filter&#8230;" oninput="renderHOCList()" style="width:100%;padding:4px 6px;font-size:11px;background:var(--bg);color:var(--text);border:1px solid var(--border);border-radius:4px;"></td>
+            <td style="padding:4px 6px;"><div style="display:flex;gap:4px;align-items:center;"><input type="date" id="hocF_dateFrom" oninput="renderHOCList()" style="flex:1;padding:4px 5px;font-size:11px;background:var(--bg);color:var(--text);border:1px solid var(--border);border-radius:4px;"><span style="font-size:10px;color:var(--text-muted);">&#8594;</span><input type="date" id="hocF_dateTo" oninput="renderHOCList()" style="flex:1;padding:4px 5px;font-size:11px;background:var(--bg);color:var(--text);border:1px solid var(--border);border-radius:4px;"></div></td>
+            <td style="padding:4px 6px;"><input id="hocF_honum" placeholder="Filter&#8230;" oninput="renderHOCList()" style="width:100%;padding:4px 6px;font-size:11px;background:var(--bg);color:var(--text);border:1px solid var(--border);border-radius:4px;"></td>
+            <td style="padding:4px 6px;"><input id="hocF_vendor" placeholder="Filter&#8230;" oninput="renderHOCList()" style="width:100%;padding:4px 6px;font-size:11px;background:var(--bg);color:var(--text);border:1px solid var(--border);border-radius:4px;"></td>
+            <td style="padding:4px 6px;"></td>
+            <td style="padding:4px 6px;"><select id="hocF_status" onchange="renderHOCList()" style="width:100%;padding:4px 5px;font-size:11px;background:var(--bg);color:var(--text);border:1px solid var(--border);border-radius:4px;"><option value="">All</option><option>Pending Approval</option><option>Unbilled</option><option>Billed</option><option>Rejected</option></select></td>
+            <td style="padding:4px 6px;text-align:center;"><button onclick="clearColFilters('hocF_number','hocF_vendor','hocF_honum','hocF_dateFrom','hocF_dateTo','hocF_status','renderHOCList')" title="Clear" style="font-size:10px;padding:3px 8px;background:var(--input-bg);color:var(--text-muted);border:1px solid var(--border);border-radius:4px;cursor:pointer;">&#10005; Clear</button></td>
+          </tr>
+        </thead>
         <tbody id="hoc_listBody"><tr><td colspan="7" class="center muted">Loading…</td></tr></tbody>
       </table>
     </div>
@@ -1072,32 +1009,39 @@ input[type="number"] {
   <!-- HOB List -->
   <div class="card" id="hobListCard">
     <h3>Hire Order Running Bills <span class="badge-count" id="hob_listBadge">0</span></h3>
-    <div class="row" style="margin-bottom:10px;">
-      <input id="hobSearch" placeholder="Search bill #, HO #, vendor…" style="padding:7px 10px;background:var(--input-bg);color:var(--text);border:1px solid var(--border);border-radius:4px;flex:1;max-width:320px;" oninput="renderHOBList()">
-      <select id="hobStatusFilter" style="padding:7px;background:var(--input-bg);color:var(--text);border:1px solid var(--border);border-radius:4px;" onchange="renderHOBList()">
-        <option value="">All</option>
-        <option value="Pending Approval">Pending Approval</option>
-        <option value="Unpaid">Unpaid</option>
-        <option value="Partial">Partial</option>
-        <option value="Paid">Paid</option>
-        <option value="Rejected">Rejected</option>
-      </select>
-    </div>
+      <div id="hobLegendCard" style="border:1px solid var(--border);border-radius:6px;margin-bottom:14px;overflow:hidden;">
+        <div onclick="toggleLegend('hobLegend')" style="display:flex;align-items:center;justify-content:space-between;padding:8px 14px;cursor:pointer;background:var(--input-bg);user-select:none;">
+          <span style="font-size:12px;font-weight:600;color:var(--text-muted);letter-spacing:.03em;">STATUS REFERENCE</span>
+          <span id="hobLegendChev" style="font-size:13px;color:var(--text-muted);transition:transform .2s;">&#9658;</span>
+        </div>
+        <div id="hobLegendBody" style="display:none;padding:12px 14px 14px;">
+          <div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:5px;"><span style="font-size:11px;font-weight:500;padding:2px 8px;border-radius:20px;background:#fef9c3;color:#854d0e;white-space:nowrap;min-width:120px;text-align:center;flex-shrink:0;">Pending Approval</span><span style="font-size:11px;color:var(--text-muted);line-height:1.4;">Newly created; awaiting Admin/PM approval</span></div>
+          <div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:5px;"><span style="font-size:11px;font-weight:500;padding:2px 8px;border-radius:20px;background:#fef3c7;color:#92400e;white-space:nowrap;min-width:120px;text-align:center;flex-shrink:0;">Unpaid</span><span style="font-size:11px;color:var(--text-muted);line-height:1.4;">Bill approved; payment pending</span></div>
+          <div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:5px;"><span style="font-size:11px;font-weight:500;padding:2px 8px;border-radius:20px;background:#fef3c7;color:#92400e;white-space:nowrap;min-width:120px;text-align:center;flex-shrink:0;">Partial</span><span style="font-size:11px;color:var(--text-muted);line-height:1.4;">Partially paid</span></div>
+          <div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:5px;"><span style="font-size:11px;font-weight:500;padding:2px 8px;border-radius:20px;background:#d1fae5;color:#065f46;white-space:nowrap;min-width:120px;text-align:center;flex-shrink:0;">Paid</span><span style="font-size:11px;color:var(--text-muted);line-height:1.4;">Fully paid</span></div>
+          <div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:5px;"><span style="font-size:11px;font-weight:500;padding:2px 8px;border-radius:20px;background:#fee2e2;color:#991b1b;white-space:nowrap;min-width:120px;text-align:center;flex-shrink:0;">Rejected</span><span style="font-size:11px;color:var(--text-muted);line-height:1.4;">Rejected by approver; cannot proceed</span></div>
+        </div>
+      </div>
     <div class="table-wrap">
       <table>
-        <thead><tr>
-          <th onclick="sortTable('hob_listBody',0,this)" style="cursor:pointer;">Bill Number ↕</th>
-          <th onclick="sortTable('hob_listBody',1,this)" style="cursor:pointer;">Date ↕</th>
-          <th onclick="sortTable('hob_listBody',2,this)" style="cursor:pointer;">HO Number ↕</th>
-          <th onclick="sortTable('hob_listBody',3,this)" style="cursor:pointer;">Cert. Number ↕</th>
-          <th onclick="sortTable('hob_listBody',4,this)" style="cursor:pointer;">Vendor ↕</th>
-          <th class="num" onclick="sortTable('hob_listBody',5,this,true)" style="cursor:pointer;">Invoice Value ↕</th>
-          <th class="num" onclick="sortTable('hob_listBody',6,this,true)" style="cursor:pointer;">Net Payable ↕</th>
-          <th class="num" onclick="sortTable('hob_listBody',7,this,true)" style="cursor:pointer;">Total Paid ↕</th>
-          <th class="num" onclick="sortTable('hob_listBody',8,this,true)" style="cursor:pointer;">Outstanding ↕</th>
-          <th onclick="sortTable('hob_listBody',9,this)" style="cursor:pointer;">Status ↕</th>
-          <th class="center">Actions</th>
-        </tr></thead>
+        <thead>
+          <tr>
+            <th>Bill Number</th><th>Date</th><th>HO Number</th><th>Cert. Number</th><th>Vendor</th>
+            <th class="num">Invoice Value</th><th class="num">Net Payable</th>
+            <th class="num">Total Paid</th><th class="num">Outstanding</th>
+            <th>Status</th><th class="center">Actions</th>
+          </tr>
+          <tr style="background:var(--input-bg);">
+            <td style="padding:4px 6px;"><input id="hobF_number" placeholder="Filter&#8230;" oninput="renderHOBList()" style="width:100%;padding:4px 6px;font-size:11px;background:var(--bg);color:var(--text);border:1px solid var(--border);border-radius:4px;"></td>
+            <td style="padding:4px 6px;"><div style="display:flex;gap:4px;align-items:center;"><input type="date" id="hobF_dateFrom" oninput="renderHOBList()" style="flex:1;padding:4px 5px;font-size:11px;background:var(--bg);color:var(--text);border:1px solid var(--border);border-radius:4px;"><span style="font-size:10px;color:var(--text-muted);">&#8594;</span><input type="date" id="hobF_dateTo" oninput="renderHOBList()" style="flex:1;padding:4px 5px;font-size:11px;background:var(--bg);color:var(--text);border:1px solid var(--border);border-radius:4px;"></div></td>
+            <td style="padding:4px 6px;"><input id="hobF_honum" placeholder="Filter&#8230;" oninput="renderHOBList()" style="width:100%;padding:4px 6px;font-size:11px;background:var(--bg);color:var(--text);border:1px solid var(--border);border-radius:4px;"></td>
+            <td style="padding:4px 6px;"><input id="hobF_certnum" placeholder="Filter&#8230;" oninput="renderHOBList()" style="width:100%;padding:4px 6px;font-size:11px;background:var(--bg);color:var(--text);border:1px solid var(--border);border-radius:4px;"></td>
+            <td style="padding:4px 6px;"><input id="hobF_vendor" placeholder="Filter&#8230;" oninput="renderHOBList()" style="width:100%;padding:4px 6px;font-size:11px;background:var(--bg);color:var(--text);border:1px solid var(--border);border-radius:4px;"></td>
+            <td style="padding:4px 6px;"></td><td style="padding:4px 6px;"></td><td style="padding:4px 6px;"></td><td style="padding:4px 6px;"></td>
+            <td style="padding:4px 6px;"><select id="hobF_status" onchange="renderHOBList()" style="width:100%;padding:4px 5px;font-size:11px;background:var(--bg);color:var(--text);border:1px solid var(--border);border-radius:4px;"><option value="">All</option><option>Pending Approval</option><option>Unpaid</option><option>Partial</option><option>Paid</option><option>Rejected</option></select></td>
+            <td style="padding:4px 6px;text-align:center;"><button onclick="clearColFilters('hobF_number','hobF_vendor','hobF_honum','hobF_certnum','hobF_dateFrom','hobF_dateTo','hobF_status','renderHOBList')" title="Clear" style="font-size:10px;padding:3px 8px;background:var(--input-bg);color:var(--text-muted);border:1px solid var(--border);border-radius:4px;cursor:pointer;">&#10005; Clear</button></td>
+          </tr>
+        </thead>
         <tbody id="hob_listBody"><tr><td colspan="11" class="center muted">Loading…</td></tr></tbody>
       </table>
     </div>
@@ -1210,29 +1154,40 @@ input[type="number"] {
   <!-- WO List -->
   <div class="card" id="woListCard">
     <h3>Work Orders <span class="badge-count" id="wo_listBadge">0</span></h3>
-    <div class="row" style="margin-bottom:10px;">
-      <input id="woSearch" placeholder="Search WO #, vendor, scope…" style="padding:7px 10px;background:var(--input-bg);color:var(--text);border:1px solid var(--border);border-radius:4px;flex:1;max-width:320px;" oninput="renderWOList()">
-      <select id="woStatusFilter" style="padding:7px;background:var(--input-bg);color:var(--text);border:1px solid var(--border);border-radius:4px;" onchange="renderWOList()">
-        <option value="">All Statuses</option>
-        <option value="Pending Approval">Pending Approval</option>
-        <option value="Open">Open</option><option value="Active">Active</option>
-        <option value="Completed">Completed</option><option value="Short-Closed">Short-Closed</option>
-        <option value="Terminated">Terminated</option><option value="Cancelled">Cancelled</option>
-        <option value="Rejected">Rejected</option><option value="Rejected - Correction">Returned for Correction</option>
-      </select>
-    </div>
+      <div id="woLegendCard" style="border:1px solid var(--border);border-radius:6px;margin-bottom:14px;overflow:hidden;">
+        <div onclick="toggleLegend('woLegend')" style="display:flex;align-items:center;justify-content:space-between;padding:8px 14px;cursor:pointer;background:var(--input-bg);user-select:none;">
+          <span style="font-size:12px;font-weight:600;color:var(--text-muted);letter-spacing:.03em;">STATUS REFERENCE</span>
+          <span id="woLegendChev" style="font-size:13px;color:var(--text-muted);transition:transform .2s;">&#9658;</span>
+        </div>
+        <div id="woLegendBody" style="display:none;padding:12px 14px 14px;">
+          <div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:5px;"><span style="font-size:11px;font-weight:500;padding:2px 8px;border-radius:20px;background:#fef9c3;color:#854d0e;white-space:nowrap;min-width:120px;text-align:center;flex-shrink:0;">Pending Approval</span><span style="font-size:11px;color:var(--text-muted);line-height:1.4;">Newly created; awaiting Admin/PM approval</span></div>
+          <div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:5px;"><span style="font-size:11px;font-weight:500;padding:2px 8px;border-radius:20px;background:#dbeafe;color:#1e40af;white-space:nowrap;min-width:120px;text-align:center;flex-shrink:0;">Open</span><span style="font-size:11px;color:var(--text-muted);line-height:1.4;">Approved and active, no work started yet</span></div>
+          <div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:5px;"><span style="font-size:11px;font-weight:500;padding:2px 8px;border-radius:20px;background:#d1fae5;color:#065f46;white-space:nowrap;min-width:120px;text-align:center;flex-shrink:0;">Active</span><span style="font-size:11px;color:var(--text-muted);line-height:1.4;">Work is underway</span></div>
+          <div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:5px;"><span style="font-size:11px;font-weight:500;padding:2px 8px;border-radius:20px;background:#d1fae5;color:#065f46;white-space:nowrap;min-width:120px;text-align:center;flex-shrink:0;">Completed</span><span style="font-size:11px;color:var(--text-muted);line-height:1.4;">All work/items completed</span></div>
+          <div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:5px;"><span style="font-size:11px;font-weight:500;padding:2px 8px;border-radius:20px;background:#e0e7ff;color:#3730a3;white-space:nowrap;min-width:120px;text-align:center;flex-shrink:0;">Short-Closed</span><span style="font-size:11px;color:var(--text-muted);line-height:1.4;">Closed before full completion</span></div>
+          <div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:5px;"><span style="font-size:11px;font-weight:500;padding:2px 8px;border-radius:20px;background:#fee2e2;color:#991b1b;white-space:nowrap;min-width:120px;text-align:center;flex-shrink:0;">Terminated</span><span style="font-size:11px;color:var(--text-muted);line-height:1.4;">Terminated; no further work</span></div>
+          <div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:5px;"><span style="font-size:11px;font-weight:500;padding:2px 8px;border-radius:20px;background:#f3f4f6;color:#374151;white-space:nowrap;min-width:120px;text-align:center;flex-shrink:0;">Cancelled</span><span style="font-size:11px;color:var(--text-muted);line-height:1.4;">Cancelled; no active items remain</span></div>
+          <div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:5px;"><span style="font-size:11px;font-weight:500;padding:2px 8px;border-radius:20px;background:#fee2e2;color:#991b1b;white-space:nowrap;min-width:120px;text-align:center;flex-shrink:0;">Rejected</span><span style="font-size:11px;color:var(--text-muted);line-height:1.4;">Rejected by approver; cannot proceed</span></div>
+          <div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:5px;"><span style="font-size:11px;font-weight:500;padding:2px 8px;border-radius:20px;background:#fff7ed;color:#92400e;white-space:nowrap;min-width:120px;text-align:center;flex-shrink:0;">Rejected - Correction</span><span style="font-size:11px;color:var(--text-muted);line-height:1.4;">Returned for correction; can be revised</span></div>
+        </div>
+      </div>
     <div class="table-wrap">
       <table>
-        <thead><tr>
-          <th onclick="sortTable('wo_listBody',0,this)" style="cursor:pointer;">WO Number ↕</th>
-          <th onclick="sortTable('wo_listBody',1,this)" style="cursor:pointer;">Date ↕</th>
-          <th onclick="sortTable('wo_listBody',2,this)" style="cursor:pointer;">Vendor ↕</th>
-          <th>Scope</th>
-          <th class="num" onclick="sortTable('wo_listBody',4,this,true)" style="cursor:pointer;">WO Value ↕</th>
-          <th>Cert Mode</th>
-          <th onclick="sortTable('wo_listBody',6,this)" style="cursor:pointer;">Status ↕</th>
-          <th class="center">Actions</th>
-        </tr></thead>
+        <thead>
+          <tr>
+            <th>WO Number</th><th>Date</th><th>Vendor</th><th>Scope</th>
+            <th class="num">WO Value</th><th>Cert Mode</th><th>Status</th><th class="center">Actions</th>
+          </tr>
+          <tr style="background:var(--input-bg);">
+            <td style="padding:4px 6px;"><input id="woF_number" placeholder="Filter&#8230;" oninput="renderWOList()" style="width:100%;padding:4px 6px;font-size:11px;background:var(--bg);color:var(--text);border:1px solid var(--border);border-radius:4px;"></td>
+            <td style="padding:4px 6px;"><div style="display:flex;gap:4px;align-items:center;"><input type="date" id="woF_dateFrom" oninput="renderWOList()" style="flex:1;padding:4px 5px;font-size:11px;background:var(--bg);color:var(--text);border:1px solid var(--border);border-radius:4px;"><span style="font-size:10px;color:var(--text-muted);">&#8594;</span><input type="date" id="woF_dateTo" oninput="renderWOList()" style="flex:1;padding:4px 5px;font-size:11px;background:var(--bg);color:var(--text);border:1px solid var(--border);border-radius:4px;"></div></td>
+            <td style="padding:4px 6px;"><input id="woF_vendor" placeholder="Filter&#8230;" oninput="renderWOList()" style="width:100%;padding:4px 6px;font-size:11px;background:var(--bg);color:var(--text);border:1px solid var(--border);border-radius:4px;"></td>
+            <td style="padding:4px 6px;"><input id="woF_scope" placeholder="Filter&#8230;" oninput="renderWOList()" style="width:100%;padding:4px 6px;font-size:11px;background:var(--bg);color:var(--text);border:1px solid var(--border);border-radius:4px;"></td>
+            <td style="padding:4px 6px;"></td><td style="padding:4px 6px;"></td>
+            <td style="padding:4px 6px;"><select id="woF_status" onchange="renderWOList()" style="width:100%;padding:4px 5px;font-size:11px;background:var(--bg);color:var(--text);border:1px solid var(--border);border-radius:4px;"><option value="">All</option><option>Pending Approval</option><option>Open</option><option>Active</option><option>Completed</option><option>Short-Closed</option><option>Terminated</option><option>Cancelled</option><option>Rejected</option><option value="Rejected - Correction">Returned for Correction</option></select></td>
+            <td style="padding:4px 6px;text-align:center;"><button onclick="clearColFilters('woF_number','woF_vendor','woF_scope','woF_dateFrom','woF_dateTo','woF_status','renderWOList')" title="Clear" style="font-size:10px;padding:3px 8px;background:var(--input-bg);color:var(--text-muted);border:1px solid var(--border);border-radius:4px;cursor:pointer;">&#10005; Clear</button></td>
+          </tr>
+        </thead>
         <tbody id="wo_listBody"><tr><td colspan="8" class="center muted">Loading…</td></tr></tbody>
       </table>
     </div>
@@ -1297,25 +1252,37 @@ input[type="number"] {
   <!-- WOC List -->
   <div class="card" id="wocListCard">
     <h3>WO Certifications <span class="badge-count" id="woc_listBadge">0</span></h3>
-    <div class="row" style="margin-bottom:10px;">
-      <input id="wocSearch" placeholder="Search WOC #, WO #, vendor…" style="padding:7px 10px;background:var(--input-bg);color:var(--text);border:1px solid var(--border);border-radius:4px;flex:1;max-width:320px;" oninput="renderWOCList()">
-      <select id="wocStatusFilter" style="padding:7px;background:var(--input-bg);color:var(--text);border:1px solid var(--border);border-radius:4px;" onchange="renderWOCList()">
-        <option value="">All Statuses</option>
-        <option value="Pending Approval">Pending Approval</option>
-        <option value="Unbilled">Unbilled</option><option value="Billed">Billed</option><option value="Rejected">Rejected</option>
-      </select>
-    </div>
+      <div id="wocLegendCard" style="border:1px solid var(--border);border-radius:6px;margin-bottom:14px;overflow:hidden;">
+        <div onclick="toggleLegend('wocLegend')" style="display:flex;align-items:center;justify-content:space-between;padding:8px 14px;cursor:pointer;background:var(--input-bg);user-select:none;">
+          <span style="font-size:12px;font-weight:600;color:var(--text-muted);letter-spacing:.03em;">STATUS REFERENCE</span>
+          <span id="wocLegendChev" style="font-size:13px;color:var(--text-muted);transition:transform .2s;">&#9658;</span>
+        </div>
+        <div id="wocLegendBody" style="display:none;padding:12px 14px 14px;">
+          <div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:5px;"><span style="font-size:11px;font-weight:500;padding:2px 8px;border-radius:20px;background:#fef9c3;color:#854d0e;white-space:nowrap;min-width:120px;text-align:center;flex-shrink:0;">Pending Approval</span><span style="font-size:11px;color:var(--text-muted);line-height:1.4;">Newly created; awaiting Admin/PM approval</span></div>
+          <div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:5px;"><span style="font-size:11px;font-weight:500;padding:2px 8px;border-radius:20px;background:#dbeafe;color:#1e40af;white-space:nowrap;min-width:120px;text-align:center;flex-shrink:0;">Unbilled</span><span style="font-size:11px;color:var(--text-muted);line-height:1.4;">Certified; not yet billed</span></div>
+          <div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:5px;"><span style="font-size:11px;font-weight:500;padding:2px 8px;border-radius:20px;background:#ede9fe;color:#4c1d95;white-space:nowrap;min-width:120px;text-align:center;flex-shrink:0;">Billed</span><span style="font-size:11px;color:var(--text-muted);line-height:1.4;">Fully billed</span></div>
+          <div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:5px;"><span style="font-size:11px;font-weight:500;padding:2px 8px;border-radius:20px;background:#fee2e2;color:#991b1b;white-space:nowrap;min-width:120px;text-align:center;flex-shrink:0;">Rejected</span><span style="font-size:11px;color:var(--text-muted);line-height:1.4;">Rejected by approver; cannot proceed</span></div>
+        </div>
+      </div>
     <div class="table-wrap">
-      <table><thead><tr>
-        <th onclick="sortTable('woc_listBody',0,this)" style="cursor:pointer;">Cert. Number ↕</th>
-        <th onclick="sortTable('woc_listBody',1,this)" style="cursor:pointer;">Date ↕</th>
-        <th onclick="sortTable('woc_listBody',2,this)" style="cursor:pointer;">WO Number ↕</th>
-        <th onclick="sortTable('woc_listBody',3,this)" style="cursor:pointer;">Vendor ↕</th>
-        <th class="num" onclick="sortTable('woc_listBody',4,this,true)" style="cursor:pointer;">Gross Value ↕</th>
-        <th onclick="sortTable('woc_listBody',5,this)" style="cursor:pointer;">Status ↕</th>
-        <th class="center">Actions</th>
-      </tr></thead>
-      <tbody id="woc_listBody"><tr><td colspan="7" class="center muted">Loading…</td></tr></tbody></table>
+      <table>
+        <thead>
+          <tr>
+            <th>Cert. Number</th><th>Date</th><th>WO Number</th><th>Vendor</th>
+            <th class="num">Gross Value</th><th>Status</th><th class="center">Actions</th>
+          </tr>
+          <tr style="background:var(--input-bg);">
+            <td style="padding:4px 6px;"><input id="wocF_number" placeholder="Filter&#8230;" oninput="renderWOCList()" style="width:100%;padding:4px 6px;font-size:11px;background:var(--bg);color:var(--text);border:1px solid var(--border);border-radius:4px;"></td>
+            <td style="padding:4px 6px;"><div style="display:flex;gap:4px;align-items:center;"><input type="date" id="wocF_dateFrom" oninput="renderWOCList()" style="flex:1;padding:4px 5px;font-size:11px;background:var(--bg);color:var(--text);border:1px solid var(--border);border-radius:4px;"><span style="font-size:10px;color:var(--text-muted);">&#8594;</span><input type="date" id="wocF_dateTo" oninput="renderWOCList()" style="flex:1;padding:4px 5px;font-size:11px;background:var(--bg);color:var(--text);border:1px solid var(--border);border-radius:4px;"></div></td>
+            <td style="padding:4px 6px;"><input id="wocF_wonum" placeholder="Filter&#8230;" oninput="renderWOCList()" style="width:100%;padding:4px 6px;font-size:11px;background:var(--bg);color:var(--text);border:1px solid var(--border);border-radius:4px;"></td>
+            <td style="padding:4px 6px;"><input id="wocF_vendor" placeholder="Filter&#8230;" oninput="renderWOCList()" style="width:100%;padding:4px 6px;font-size:11px;background:var(--bg);color:var(--text);border:1px solid var(--border);border-radius:4px;"></td>
+            <td style="padding:4px 6px;"></td>
+            <td style="padding:4px 6px;"><select id="wocF_status" onchange="renderWOCList()" style="width:100%;padding:4px 5px;font-size:11px;background:var(--bg);color:var(--text);border:1px solid var(--border);border-radius:4px;"><option value="">All</option><option>Pending Approval</option><option>Unbilled</option><option>Billed</option><option>Rejected</option></select></td>
+            <td style="padding:4px 6px;text-align:center;"><button onclick="clearColFilters('wocF_number','wocF_vendor','wocF_wonum','wocF_dateFrom','wocF_dateTo','wocF_status','renderWOCList')" title="Clear" style="font-size:10px;padding:3px 8px;background:var(--input-bg);color:var(--text-muted);border:1px solid var(--border);border-radius:4px;cursor:pointer;">&#10005; Clear</button></td>
+          </tr>
+        </thead>
+        <tbody id="woc_listBody"><tr><td colspan="7" class="center muted">Loading…</td></tr></tbody>
+      </table>
     </div>
   </div>
 </div><!-- /woTab-cert -->
@@ -1478,30 +1445,41 @@ input[type="number"] {
   <!-- WOB List -->
   <div class="card" id="wobListCard">
     <h3>WO Running Bills <span class="badge-count" id="wob_listBadge">0</span></h3>
-    <div class="row" style="margin-bottom:10px;">
-      <input id="wobSearch" placeholder="Search bill #, WO #, vendor…" style="padding:7px 10px;background:var(--input-bg);color:var(--text);border:1px solid var(--border);border-radius:4px;flex:1;max-width:320px;" oninput="renderWOBList()">
-      <select id="wobStatusFilter" style="padding:7px;background:var(--input-bg);color:var(--text);border:1px solid var(--border);border-radius:4px;" onchange="renderWOBList()">
-        <option value="">All</option>
-        <option value="Pending Approval">Pending Approval</option>
-        <option value="Unpaid">Unpaid</option><option value="Partial">Partial</option>
-        <option value="Paid">Paid</option><option value="Rejected">Rejected</option>
-      </select>
-    </div>
+      <div id="wobLegendCard" style="border:1px solid var(--border);border-radius:6px;margin-bottom:14px;overflow:hidden;">
+        <div onclick="toggleLegend('wobLegend')" style="display:flex;align-items:center;justify-content:space-between;padding:8px 14px;cursor:pointer;background:var(--input-bg);user-select:none;">
+          <span style="font-size:12px;font-weight:600;color:var(--text-muted);letter-spacing:.03em;">STATUS REFERENCE</span>
+          <span id="wobLegendChev" style="font-size:13px;color:var(--text-muted);transition:transform .2s;">&#9658;</span>
+        </div>
+        <div id="wobLegendBody" style="display:none;padding:12px 14px 14px;">
+          <div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:5px;"><span style="font-size:11px;font-weight:500;padding:2px 8px;border-radius:20px;background:#fef9c3;color:#854d0e;white-space:nowrap;min-width:120px;text-align:center;flex-shrink:0;">Pending Approval</span><span style="font-size:11px;color:var(--text-muted);line-height:1.4;">Newly created; awaiting Admin/PM approval</span></div>
+          <div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:5px;"><span style="font-size:11px;font-weight:500;padding:2px 8px;border-radius:20px;background:#fef3c7;color:#92400e;white-space:nowrap;min-width:120px;text-align:center;flex-shrink:0;">Unpaid</span><span style="font-size:11px;color:var(--text-muted);line-height:1.4;">Bill approved; payment pending</span></div>
+          <div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:5px;"><span style="font-size:11px;font-weight:500;padding:2px 8px;border-radius:20px;background:#fef3c7;color:#92400e;white-space:nowrap;min-width:120px;text-align:center;flex-shrink:0;">Partial</span><span style="font-size:11px;color:var(--text-muted);line-height:1.4;">Partially paid</span></div>
+          <div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:5px;"><span style="font-size:11px;font-weight:500;padding:2px 8px;border-radius:20px;background:#d1fae5;color:#065f46;white-space:nowrap;min-width:120px;text-align:center;flex-shrink:0;">Paid</span><span style="font-size:11px;color:var(--text-muted);line-height:1.4;">Fully paid</span></div>
+          <div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:5px;"><span style="font-size:11px;font-weight:500;padding:2px 8px;border-radius:20px;background:#fee2e2;color:#991b1b;white-space:nowrap;min-width:120px;text-align:center;flex-shrink:0;">Rejected</span><span style="font-size:11px;color:var(--text-muted);line-height:1.4;">Rejected by approver; cannot proceed</span></div>
+        </div>
+      </div>
     <div class="table-wrap">
-      <table><thead><tr>
-        <th onclick="sortTable('wob_listBody',0,this)" style="cursor:pointer;">Bill Number ↕</th>
-        <th onclick="sortTable('wob_listBody',1,this)" style="cursor:pointer;">Date ↕</th>
-        <th onclick="sortTable('wob_listBody',2,this)" style="cursor:pointer;">WO Number ↕</th>
-        <th onclick="sortTable('wob_listBody',3,this)" style="cursor:pointer;">Cert. Number ↕</th>
-        <th onclick="sortTable('wob_listBody',4,this)" style="cursor:pointer;">Vendor ↕</th>
-        <th class="num" onclick="sortTable('wob_listBody',5,this,true)" style="cursor:pointer;">Invoice Value ↕</th>
-        <th class="num" onclick="sortTable('wob_listBody',6,this,true)" style="cursor:pointer;">Net Payable ↕</th>
-        <th class="num" onclick="sortTable('wob_listBody',7,this,true)" style="cursor:pointer;">Total Paid ↕</th>
-        <th class="num" onclick="sortTable('wob_listBody',8,this,true)" style="cursor:pointer;">Outstanding ↕</th>
-        <th onclick="sortTable('wob_listBody',9,this)" style="cursor:pointer;">Status ↕</th>
-        <th class="center">Actions</th>
-      </tr></thead>
-      <tbody id="wob_listBody"><tr><td colspan="11" class="center muted">Loading…</td></tr></tbody></table>
+      <table>
+        <thead>
+          <tr>
+            <th>Bill Number</th><th>Date</th><th>WO Number</th><th>Cert. Number</th><th>Vendor</th>
+            <th class="num">Invoice Value</th><th class="num">Net Payable</th>
+            <th class="num">Total Paid</th><th class="num">Outstanding</th>
+            <th>Status</th><th class="center">Actions</th>
+          </tr>
+          <tr style="background:var(--input-bg);">
+            <td style="padding:4px 6px;"><input id="wobF_number" placeholder="Filter&#8230;" oninput="renderWOBList()" style="width:100%;padding:4px 6px;font-size:11px;background:var(--bg);color:var(--text);border:1px solid var(--border);border-radius:4px;"></td>
+            <td style="padding:4px 6px;"><div style="display:flex;gap:4px;align-items:center;"><input type="date" id="wobF_dateFrom" oninput="renderWOBList()" style="flex:1;padding:4px 5px;font-size:11px;background:var(--bg);color:var(--text);border:1px solid var(--border);border-radius:4px;"><span style="font-size:10px;color:var(--text-muted);">&#8594;</span><input type="date" id="wobF_dateTo" oninput="renderWOBList()" style="flex:1;padding:4px 5px;font-size:11px;background:var(--bg);color:var(--text);border:1px solid var(--border);border-radius:4px;"></div></td>
+            <td style="padding:4px 6px;"><input id="wobF_wonum" placeholder="Filter&#8230;" oninput="renderWOBList()" style="width:100%;padding:4px 6px;font-size:11px;background:var(--bg);color:var(--text);border:1px solid var(--border);border-radius:4px;"></td>
+            <td style="padding:4px 6px;"><input id="wobF_certnum" placeholder="Filter&#8230;" oninput="renderWOBList()" style="width:100%;padding:4px 6px;font-size:11px;background:var(--bg);color:var(--text);border:1px solid var(--border);border-radius:4px;"></td>
+            <td style="padding:4px 6px;"><input id="wobF_vendor" placeholder="Filter&#8230;" oninput="renderWOBList()" style="width:100%;padding:4px 6px;font-size:11px;background:var(--bg);color:var(--text);border:1px solid var(--border);border-radius:4px;"></td>
+            <td style="padding:4px 6px;"></td><td style="padding:4px 6px;"></td><td style="padding:4px 6px;"></td><td style="padding:4px 6px;"></td>
+            <td style="padding:4px 6px;"><select id="wobF_status" onchange="renderWOBList()" style="width:100%;padding:4px 5px;font-size:11px;background:var(--bg);color:var(--text);border:1px solid var(--border);border-radius:4px;"><option value="">All</option><option>Pending Approval</option><option>Unpaid</option><option>Partial</option><option>Paid</option><option>Rejected</option></select></td>
+            <td style="padding:4px 6px;text-align:center;"><button onclick="clearColFilters('wobF_number','wobF_vendor','wobF_wonum','wobF_certnum','wobF_dateFrom','wobF_dateTo','wobF_status','renderWOBList')" title="Clear" style="font-size:10px;padding:3px 8px;background:var(--input-bg);color:var(--text-muted);border:1px solid var(--border);border-radius:4px;cursor:pointer;">&#10005; Clear</button></td>
+          </tr>
+        </thead>
+        <tbody id="wob_listBody"><tr><td colspan="11" class="center muted">Loading…</td></tr></tbody>
+      </table>
     </div>
   </div>
 </div><!-- /woTab-billing -->
@@ -1994,71 +1972,32 @@ input[type="number"] {
 
   <!-- ACTIVITIES -->
   <div id="master-activities" class="hidden">
-    <div class="card" id="masterAddActivityCard">
-      <h3>Add Activity</h3>
-      <div class="grid-3">
-        <div class="field" style="grid-column:1/3;position:relative;"><label class="req">Activity Description</label><input id="ma_desc" placeholder="e.g. Tower Crane Hire — 10T capacity" oninput="maDupCheck()" autocomplete="off"></div>
-        <div class="field"><label class="req">UOM</label><input id="ma_uom" placeholder="e.g. Day, Month, Hour, Trip" oninput="maDupCheck()"></div>
-      </div>
-      <div id="ma_dup" style="display:none;margin-top:10px;padding:8px 10px;border-radius:4px;font-size:12px;color:var(--text);"></div>
-      <div class="grid-3" style="margin-top:12px;">
-        <div class="field"><label>Default Rate (₹)</label><input type="number" id="ma_rate" step="0.01" placeholder="0.00"></div>
-        <div class="field" style="position:relative;">
-          <label>Cost Head</label>
-          <input id="ma_costhead" placeholder="Type to search…" autocomplete="off" oninput="chFuzzy('ma_costhead','ma_costhead_list','ma_costsubhead','ma_costsubhead_list')" onfocus="chFuzzy('ma_costhead','ma_costhead_list','ma_costsubhead','ma_costsubhead_list')" onblur="setTimeout(()=>chHide('ma_costhead_list'),200)">
-          <div id="ma_costhead_list" class="ch-dropdown" style="display:none;"></div>
-        </div>
-        <div class="field" style="position:relative;">
-          <label>Cost Subhead</label>
-          <input id="ma_costsubhead" placeholder="Select Cost Head first…" autocomplete="off" oninput="chFuzzySub('ma_costsubhead','ma_costsubhead_list','ma_costhead')" onfocus="chFuzzySub('ma_costsubhead','ma_costsubhead_list','ma_costhead')" onblur="setTimeout(()=>chHide('ma_costsubhead_list'),200)">
-          <div id="ma_costsubhead_list" class="ch-dropdown" style="display:none;"></div>
-        </div>
-      </div>
-      <div class="actions-row"><button class="btn btn-primary" onclick="saveMaster('activity')">+ Add Activity</button></div>
-    </div>
     <div class="card">
-      <h3>Activity List</h3>
-      <div style="margin-bottom:10px;">
-        <input id="ma_search" placeholder="🔍 Search activities…" oninput="filterMasterTable('ma_search','ma_list')"
-          style="padding:7px 10px;background:var(--input-bg);color:var(--text);border:1px solid var(--border);border-radius:4px;width:260px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+        <div>
+          <h3 style="margin:0;border:none;padding:0;">Activity Master</h3>
+          <div class="section-sub">Grouped by Activity Group → Sub-head → Activity</div>
+        </div>
+        <button class="btn btn-primary btn-sm" id="amAddGroupBtn" onclick="amAddGroup()" style="display:none;">+ Activity Group</button>
       </div>
-      <div class="table-wrap">
-        <table><thead><tr><th>Code</th><th>Description</th><th>UOM</th><th>Cost Head</th><th>Cost Subhead</th><th class="num">Default Rate</th></tr></thead>
-        <tbody id="ma_list"><tr><td colspan="5" class="center muted">No activities.</td></tr></tbody></table>
+      <div id="am_tree_wrap">
+        <div class="center muted" style="padding:24px;">Loading…</div>
       </div>
     </div>
   </div>
 
   <!-- BOQ ITEMS -->
   <div id="master-materials" class="hidden">
-
-    <!-- ── Add Material card ── -->
-    <div class="card" id="masterAddMaterialCard">
-      <h3>Add Material</h3>
-      <div class="grid-3">
-        <div class="field" style="grid-column:1/3;position:relative;">
-          <label class="req">Material Name</label>
-          <input id="mm_name" placeholder="e.g. OPC Cement 53 Grade, TMT Fe500D 8mm" oninput="mmNameDupCheck()" autocomplete="off">
-          <div id="mm_name_dup" style="display:none;margin-top:6px;padding:8px 10px;background:rgba(255,193,7,0.08);border:1px solid rgba(255,193,7,0.4);border-radius:4px;font-size:12px;color:var(--text);"></div>
-        </div>
-        <div class="field"><label class="req">UOM</label><input id="mm_uom" placeholder="e.g. Bags, MT, Nos, RMT" oninput="mmNameDupCheck()"></div>
-      </div>
-      <div class="grid-3" style="margin-top:12px;">
-        <div class="field"><label>HSN Code</label><input id="mm_hsn" placeholder="e.g. 2523"></div>
-        <div class="field" style="grid-column:2/4;"><label>Specification</label><input id="mm_spec" placeholder="Grade / Brand / Standard"></div>
-      </div>
-      <div class="actions-row"><button class="btn btn-primary" onclick="saveMaterialMaster()">+ Add Material</button></div>
-    </div>
-
-    <!-- ── Material List card ── -->
     <div class="card">
-      <h3>Material List</h3>
-      <div class="row" style="margin-bottom:10px;">
-        <input id="mm_search" placeholder="Search materials…" style="padding:7px;background:var(--input-bg);color:var(--text);border:1px solid var(--border);border-radius:4px;width:220px;" oninput="renderMaterialMaster()">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+        <div>
+          <h3 style="margin:0;border:none;padding:0;">Material Master</h3>
+          <div class="section-sub">Grouped by Material Group → Sub-head → Material</div>
+        </div>
+        <button class="btn btn-primary btn-sm" id="mmAddGroupBtn" onclick="mmAddGroup()" style="display:none;">+ Material Group</button>
       </div>
-      <div class="table-wrap">
-        <table><thead><tr id="mm_thead"><th style="cursor:pointer;user-select:none;" onclick="_mmSortBy('material_code')">Code ⇅</th><th style="cursor:pointer;user-select:none;" onclick="_mmSortBy('material_name')">Name ⇅</th><th style="cursor:pointer;user-select:none;" onclick="_mmSortBy('uom')">UOM ⇅</th><th style="cursor:pointer;user-select:none;" onclick="_mmSortBy('hsn_code')">HSN ⇅</th><th style="cursor:pointer;user-select:none;" onclick="_mmSortBy('specification')">Specification ⇅</th><th style="width:70px;"></th></tr></thead>
-        <tbody id="mm_list"><tr><td colspan="7" class="center muted">No materials.</td></tr></tbody></table>
+      <div id="mm_tree_wrap">
+        <div class="center muted" style="padding:24px;">Loading…</div>
       </div>
     </div>
   </div>
@@ -2268,25 +2207,86 @@ input[type="number"] {
     </div>
     <!-- MIR List -->
     <div id="mirListCard" class="card">
-      <div class="row" style="margin-bottom:12px;">
-        <input id="mirSearch" placeholder="Search MIR…" style="padding:7px;background:var(--input-bg);color:var(--text);border:1px solid var(--border);border-radius:4px;width:220px;" oninput="renderMIRList()">
-        <select id="mirStatusFilter" style="padding:7px;background:var(--input-bg);color:var(--text);border:1px solid var(--border);border-radius:4px;" onchange="renderMIRList()">
-          <option value="">All Statuses</option>
-          <option value="Pending Approval">Pending Approval</option>
-          <option value="Approved">Approved</option>
-          <option value="Rejected">Rejected</option>
-          <option value="RFQ Raised">RFQ Raised</option>
-          <option value="PO Raised">PO Raised</option>
-          <option value="Closed">Closed</option>
-          <option value="Cancelled">Cancelled</option>
-        </select>
+
+      <!-- Status Legend Card (collapsible) -->
+      <div id="mirLegendCard" style="border:1px solid var(--border);border-radius:6px;margin-bottom:14px;overflow:hidden;">
+        <div onclick="toggleMIRLegend()" style="display:flex;align-items:center;justify-content:space-between;padding:8px 14px;cursor:pointer;background:var(--input-bg);user-select:none;">
+          <span style="font-size:12px;font-weight:600;color:var(--text-muted);letter-spacing:.03em;">STATUS REFERENCE</span>
+          <span id="mirLegendChevron" style="font-size:13px;color:var(--text-muted);transition:transform .2s;">▶</span>
+        </div>
+        <div id="mirLegendBody" style="display:none;padding:12px 14px 14px;">
+          <div style="display:grid;grid-template-columns:1fr 1px 1fr;gap:0;">
+            <!-- Header statuses -->
+            <div style="padding-right:14px;">
+              <div style="font-size:10px;font-weight:600;letter-spacing:.05em;color:var(--text-muted);margin-bottom:8px;">MIR HEADER STATUS</div>
+              <div style="display:flex;flex-direction:column;gap:5px;">
+                <div style="display:flex;align-items:flex-start;gap:8px;"><span style="font-size:11px;font-weight:500;padding:2px 8px;border-radius:20px;background:#fef9c3;color:#854d0e;white-space:nowrap;min-width:110px;text-align:center;flex-shrink:0;">Pending Approval</span><span style="font-size:11px;color:var(--text-muted);line-height:1.4;">Newly raised, awaiting Admin / PM sign-off</span></div>
+                <div style="display:flex;align-items:flex-start;gap:8px;"><span style="font-size:11px;font-weight:500;padding:2px 8px;border-radius:20px;background:#dcfce7;color:#166534;white-space:nowrap;min-width:110px;text-align:center;flex-shrink:0;">Approved</span><span style="font-size:11px;color:var(--text-muted);line-height:1.4;">Approved; items pending RFQ assignment</span></div>
+                <div style="display:flex;align-items:flex-start;gap:8px;"><span style="font-size:11px;font-weight:500;padding:2px 8px;border-radius:20px;background:#fee2e2;color:#991b1b;white-space:nowrap;min-width:110px;text-align:center;flex-shrink:0;">Rejected</span><span style="font-size:11px;color:var(--text-muted);line-height:1.4;">Rejected by approver; cannot proceed</span></div>
+                <div style="display:flex;align-items:flex-start;gap:8px;"><span style="font-size:11px;font-weight:500;padding:2px 8px;border-radius:20px;background:#fef3c7;color:#92400e;white-space:nowrap;min-width:110px;text-align:center;flex-shrink:0;">Partial RFQ</span><span style="font-size:11px;color:var(--text-muted);line-height:1.4;">Some items assigned to RFQ / PO, rest still pending</span></div>
+                <div style="display:flex;align-items:flex-start;gap:8px;"><span style="font-size:11px;font-weight:500;padding:2px 8px;border-radius:20px;background:#dbeafe;color:#1e40af;white-space:nowrap;min-width:110px;text-align:center;flex-shrink:0;">RFQ Raised</span><span style="font-size:11px;color:var(--text-muted);line-height:1.4;">All items have an active RFQ with vendors</span></div>
+                <div style="display:flex;align-items:flex-start;gap:8px;"><span style="font-size:11px;font-weight:500;padding:2px 8px;border-radius:20px;background:#ede9fe;color:#4c1d95;white-space:nowrap;min-width:110px;text-align:center;flex-shrink:0;">PO Raised</span><span style="font-size:11px;color:var(--text-muted);line-height:1.4;">All items covered under a Purchase Order</span></div>
+                <div style="display:flex;align-items:flex-start;gap:8px;"><span style="font-size:11px;font-weight:500;padding:2px 8px;border-radius:20px;background:#d1fae5;color:#065f46;white-space:nowrap;min-width:110px;text-align:center;flex-shrink:0;">Closed</span><span style="font-size:11px;color:var(--text-muted);line-height:1.4;">All items fully received via GRN</span></div>
+                <div style="display:flex;align-items:flex-start;gap:8px;"><span style="font-size:11px;font-weight:500;padding:2px 8px;border-radius:20px;background:#f3f4f6;color:#374151;white-space:nowrap;min-width:110px;text-align:center;flex-shrink:0;">Cancelled</span><span style="font-size:11px;color:var(--text-muted);line-height:1.4;">All POs cancelled; no active items remain</span></div>
+              </div>
+            </div>
+            <!-- Divider -->
+            <div style="background:var(--border);"></div>
+            <!-- Item statuses -->
+            <div style="padding-left:14px;">
+              <div style="font-size:10px;font-weight:600;letter-spacing:.05em;color:var(--text-muted);margin-bottom:8px;">MIR ITEM STATUS</div>
+              <div style="display:flex;flex-direction:column;gap:5px;">
+                <div style="display:flex;align-items:flex-start;gap:8px;"><span style="font-size:11px;font-weight:500;padding:2px 8px;border-radius:20px;background:#f3f4f6;color:#374151;white-space:nowrap;min-width:90px;text-align:center;flex-shrink:0;">Pending</span><span style="font-size:11px;color:var(--text-muted);line-height:1.4;">Item approved by MIR; RFQ not yet raised</span></div>
+                <div style="display:flex;align-items:flex-start;gap:8px;"><span style="font-size:11px;font-weight:500;padding:2px 8px;border-radius:20px;background:#dbeafe;color:#1e40af;white-space:nowrap;min-width:90px;text-align:center;flex-shrink:0;">RFQ Raised</span><span style="font-size:11px;color:var(--text-muted);line-height:1.4;">Item assigned to an RFQ for vendor quotation</span></div>
+                <div style="display:flex;align-items:flex-start;gap:8px;"><span style="font-size:11px;font-weight:500;padding:2px 8px;border-radius:20px;background:#ede9fe;color:#4c1d95;white-space:nowrap;min-width:90px;text-align:center;flex-shrink:0;">PO Raised</span><span style="font-size:11px;color:var(--text-muted);line-height:1.4;">PO issued to vendor covering this item</span></div>
+                <div style="display:flex;align-items:flex-start;gap:8px;"><span style="font-size:11px;font-weight:500;padding:2px 8px;border-radius:20px;background:#d1fae5;color:#065f46;white-space:nowrap;min-width:90px;text-align:center;flex-shrink:0;">Received</span><span style="font-size:11px;color:var(--text-muted);line-height:1.4;">Material received at site; GRN verified</span></div>
+                <div style="display:flex;align-items:flex-start;gap:8px;"><span style="font-size:11px;font-weight:500;padding:2px 8px;border-radius:20px;background:#bbf7d0;color:#065f46;white-space:nowrap;min-width:90px;text-align:center;flex-shrink:0;">Closed</span><span style="font-size:11px;color:var(--text-muted);line-height:1.4;">Item fully received and closed</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
+
+
+
       <div class="table-wrap">
         <table>
-          <thead><tr>
-            <th>MIR Number</th><th>Date</th><th>Required By</th><th>Purpose</th>
-            <th>Location</th><th>Raised By</th><th>Status</th><th>Actions</th>
-          </tr></thead>
+          <thead>
+            <tr>
+              <th>MIR Number</th><th>Date</th><th>Required By</th><th>Purpose</th>
+              <th>Location</th><th>Raised By</th><th>Status</th><th>Actions</th>
+            </tr>
+            <!-- Column filter row -->
+            <tr id="mirColFilterRow" style="background:var(--input-bg);">
+              <td style="padding:4px 6px;"><input id="mirF_number" placeholder="Filter…" oninput="renderMIRList()" style="width:100%;padding:4px 6px;font-size:11px;background:var(--bg);color:var(--text);border:1px solid var(--border);border-radius:4px;"></td>
+              <td style="padding:4px 6px;" colspan="2">
+                <div style="display:flex;gap:4px;align-items:center;">
+                  <input type="date" id="mirF_dateFrom" oninput="renderMIRList()" title="Date from" style="flex:1;padding:4px 5px;font-size:11px;background:var(--bg);color:var(--text);border:1px solid var(--border);border-radius:4px;">
+                  <span style="font-size:10px;color:var(--text-muted);">→</span>
+                  <input type="date" id="mirF_dateTo" oninput="renderMIRList()" title="Date to" style="flex:1;padding:4px 5px;font-size:11px;background:var(--bg);color:var(--text);border:1px solid var(--border);border-radius:4px;">
+                </div>
+              </td>
+              <td style="padding:4px 6px;"><input id="mirF_purpose" placeholder="Filter…" oninput="renderMIRList()" style="width:100%;padding:4px 6px;font-size:11px;background:var(--bg);color:var(--text);border:1px solid var(--border);border-radius:4px;"></td>
+              <td style="padding:4px 6px;"><input id="mirF_location" placeholder="Filter…" oninput="renderMIRList()" style="width:100%;padding:4px 6px;font-size:11px;background:var(--bg);color:var(--text);border:1px solid var(--border);border-radius:4px;"></td>
+              <td style="padding:4px 6px;"><input id="mirF_raisedBy" placeholder="Filter…" oninput="renderMIRList()" style="width:100%;padding:4px 6px;font-size:11px;background:var(--bg);color:var(--text);border:1px solid var(--border);border-radius:4px;"></td>
+              <td style="padding:4px 6px;">
+                <select id="mirF_status" onchange="renderMIRList()" style="width:100%;padding:4px 5px;font-size:11px;background:var(--bg);color:var(--text);border:1px solid var(--border);border-radius:4px;">
+                  <option value="">All</option>
+                  <option value="Pending Approval">Pending Approval</option>
+                  <option value="Approved">Approved</option>
+                  <option value="Rejected">Rejected</option>
+                  <option value="Partial RFQ">Partial RFQ</option>
+                  <option value="RFQ Raised">RFQ Raised</option>
+                  <option value="PO Raised">PO Raised</option>
+                  <option value="Closed">Closed</option>
+                  <option value="Cancelled">Cancelled</option>
+                </select>
+              </td>
+              <td style="padding:4px 6px;text-align:center;">
+                <button onclick="clearMIRColFilters()" title="Clear all column filters" style="font-size:10px;padding:3px 8px;background:var(--input-bg);color:var(--text-muted);border:1px solid var(--border);border-radius:4px;cursor:pointer;">✕ Clear</button>
+              </td>
+            </tr>
+          </thead>
           <tbody id="mir_listBody"><tr><td colspan="8" class="center muted">Loading…</td></tr></tbody>
         </table>
       </div>
@@ -2473,29 +2473,44 @@ input[type="number"] {
     </div>
     <!-- PO List -->
     <div id="poListCard" class="card">
-      <div class="row" style="margin-bottom:12px;">
-        <input id="poSearch" placeholder="Search POs…" style="padding:7px;background:var(--input-bg);color:var(--text);border:1px solid var(--border);border-radius:4px;width:220px;" oninput="renderPOList()">
-        <select id="poStatusFilter" style="padding:7px;background:var(--input-bg);color:var(--text);border:1px solid var(--border);border-radius:4px;" onchange="renderPOList()">
-          <option value="">All Statuses</option>
-          <option value="Pending Approval">Pending Approval</option>
-          <option value="Open">Open</option>
-          <option value="Partial Receipt">Partial Receipt</option>
-          <option value="Fully Received">Fully Received</option>
-          <option value="Closed">Closed</option>
-          <option value="Rejected">Rejected</option>
-          <option value="Rejected - Correction">Returned for Correction</option>
-          <option value="Cancelled">Cancelled</option>
-          <option value="Short-Closed">Short-Closed</option>
-        </select>
+      <div id="poLegendCard" style="border:1px solid var(--border);border-radius:6px;margin-bottom:14px;overflow:hidden;">
+        <div onclick="toggleLegend('poLegend')" style="display:flex;align-items:center;justify-content:space-between;padding:8px 14px;cursor:pointer;background:var(--input-bg);user-select:none;">
+          <span style="font-size:12px;font-weight:600;color:var(--text-muted);letter-spacing:.03em;">STATUS REFERENCE</span>
+          <span id="poLegendChev" style="font-size:13px;color:var(--text-muted);transition:transform .2s;">&#9658;</span>
+        </div>
+        <div id="poLegendBody" style="display:none;padding:12px 14px 14px;">
+          <div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:5px;"><span style="font-size:11px;font-weight:500;padding:2px 8px;border-radius:20px;background:#fef9c3;color:#854d0e;white-space:nowrap;min-width:120px;text-align:center;flex-shrink:0;">Pending Approval</span><span style="font-size:11px;color:var(--text-muted);line-height:1.4;">Newly created; awaiting Admin/PM approval</span></div>
+          <div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:5px;"><span style="font-size:11px;font-weight:500;padding:2px 8px;border-radius:20px;background:#dbeafe;color:#1e40af;white-space:nowrap;min-width:120px;text-align:center;flex-shrink:0;">Open</span><span style="font-size:11px;color:var(--text-muted);line-height:1.4;">Approved and active, no work started yet</span></div>
+          <div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:5px;"><span style="font-size:11px;font-weight:500;padding:2px 8px;border-radius:20px;background:#fef3c7;color:#92400e;white-space:nowrap;min-width:120px;text-align:center;flex-shrink:0;">Partial Receipt</span><span style="font-size:11px;color:var(--text-muted);line-height:1.4;">Some items received, balance pending</span></div>
+          <div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:5px;"><span style="font-size:11px;font-weight:500;padding:2px 8px;border-radius:20px;background:#d1fae5;color:#065f46;white-space:nowrap;min-width:120px;text-align:center;flex-shrink:0;">Fully Received</span><span style="font-size:11px;color:var(--text-muted);line-height:1.4;">All items received at site</span></div>
+          <div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:5px;"><span style="font-size:11px;font-weight:500;padding:2px 8px;border-radius:20px;background:#d1fae5;color:#065f46;white-space:nowrap;min-width:120px;text-align:center;flex-shrink:0;">Closed</span><span style="font-size:11px;color:var(--text-muted);line-height:1.4;">All items completed and closed</span></div>
+          <div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:5px;"><span style="font-size:11px;font-weight:500;padding:2px 8px;border-radius:20px;background:#fee2e2;color:#991b1b;white-space:nowrap;min-width:120px;text-align:center;flex-shrink:0;">Rejected</span><span style="font-size:11px;color:var(--text-muted);line-height:1.4;">Rejected by approver; cannot proceed</span></div>
+          <div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:5px;"><span style="font-size:11px;font-weight:500;padding:2px 8px;border-radius:20px;background:#fff7ed;color:#92400e;white-space:nowrap;min-width:120px;text-align:center;flex-shrink:0;">Rejected - Correction</span><span style="font-size:11px;color:var(--text-muted);line-height:1.4;">Returned for correction; can be revised</span></div>
+          <div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:5px;"><span style="font-size:11px;font-weight:500;padding:2px 8px;border-radius:20px;background:#f3f4f6;color:#374151;white-space:nowrap;min-width:120px;text-align:center;flex-shrink:0;">Cancelled</span><span style="font-size:11px;color:var(--text-muted);line-height:1.4;">Cancelled; no active items remain</span></div>
+          <div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:5px;"><span style="font-size:11px;font-weight:500;padding:2px 8px;border-radius:20px;background:#e0e7ff;color:#3730a3;white-space:nowrap;min-width:120px;text-align:center;flex-shrink:0;">Short-Closed</span><span style="font-size:11px;color:var(--text-muted);line-height:1.4;">Closed before full completion</span></div>
+        </div>
       </div>
       <div class="table-wrap">
         <table>
-          <thead><tr>
-            <th>PO Number</th><th>Date</th><th>Vendor</th><th>QC Ref</th><th>MIR Ref</th>
-            <th class="num">Basic Value</th><th class="num">Grand Total</th>
-            <th>Status</th><th>Actions</th>
-          </tr></thead>
-          <tbody id="po_listBody"><tr><td colspan="8" class="center muted">Loading…</td></tr></tbody>
+          <thead>
+            <tr>
+              <th>PO Number</th><th>Date</th><th>Vendor</th><th>QC Ref</th><th>MIR Ref</th>
+              <th class="num">Basic Value</th><th class="num">Grand Total</th>
+              <th>Status</th><th>Actions</th>
+            </tr>
+            <tr style="background:var(--input-bg);">
+              <td style="padding:4px 6px;"><input id="poF_number" placeholder="Filter&#8230;" oninput="renderPOList()" style="width:100%;padding:4px 6px;font-size:11px;background:var(--bg);color:var(--text);border:1px solid var(--border);border-radius:4px;"></td>
+              <td style="padding:4px 6px;"><div style="display:flex;gap:4px;align-items:center;"><input type="date" id="poF_dateFrom" oninput="renderPOList()" style="flex:1;padding:4px 5px;font-size:11px;background:var(--bg);color:var(--text);border:1px solid var(--border);border-radius:4px;"><span style="font-size:10px;color:var(--text-muted);">&#8594;</span><input type="date" id="poF_dateTo" oninput="renderPOList()" style="flex:1;padding:4px 5px;font-size:11px;background:var(--bg);color:var(--text);border:1px solid var(--border);border-radius:4px;"></div></td>
+              <td style="padding:4px 6px;"><input id="poF_vendor" placeholder="Filter&#8230;" oninput="renderPOList()" style="width:100%;padding:4px 6px;font-size:11px;background:var(--bg);color:var(--text);border:1px solid var(--border);border-radius:4px;"></td>
+              <td style="padding:4px 6px;"><input id="poF_qcref" placeholder="Filter&#8230;" oninput="renderPOList()" style="width:100%;padding:4px 6px;font-size:11px;background:var(--bg);color:var(--text);border:1px solid var(--border);border-radius:4px;"></td>
+              <td style="padding:4px 6px;"><input id="poF_mirref" placeholder="Filter&#8230;" oninput="renderPOList()" style="width:100%;padding:4px 6px;font-size:11px;background:var(--bg);color:var(--text);border:1px solid var(--border);border-radius:4px;"></td>
+              <td style="padding:4px 6px;"></td>
+              <td style="padding:4px 6px;"></td>
+              <td style="padding:4px 6px;"><select id="poF_status" onchange="renderPOList()" style="width:100%;padding:4px 5px;font-size:11px;background:var(--bg);color:var(--text);border:1px solid var(--border);border-radius:4px;"><option value="">All</option><option>Pending Approval</option><option>Open</option><option>Partial Receipt</option><option>Fully Received</option><option>Closed</option><option>Rejected</option><option value="Rejected - Correction">Returned for Correction</option><option>Cancelled</option><option>Short-Closed</option></select></td>
+              <td style="padding:4px 6px;text-align:center;"><button onclick="clearColFilters('poF_number','poF_vendor','poF_qcref','poF_mirref','poF_dateFrom','poF_dateTo','poF_status','renderPOList')" title="Clear" style="font-size:10px;padding:3px 8px;background:var(--input-bg);color:var(--text-muted);border:1px solid var(--border);border-radius:4px;cursor:pointer;">&#10005; Clear</button></td>
+            </tr>
+          </thead>
+          <tbody id="po_listBody"><tr><td colspan="9" class="center muted">Loading…</td></tr></tbody>
         </table>
       </div>
     </div>
@@ -2619,30 +2634,46 @@ input[type="number"] {
 
     <!-- GRN List -->
     <div id="grnListCard" class="card">
-      <div class="row" style="margin-bottom:12px;">
-        <input id="grnSearch" placeholder="Search GRNs…" style="padding:7px;background:var(--input-bg);color:var(--text);border:1px solid var(--border);border-radius:4px;width:220px;" oninput="renderGRNList()">
-        <select id="grnStatusFilter" style="padding:7px;background:var(--input-bg);color:var(--text);border:1px solid var(--border);border-radius:4px;" onchange="renderGRNList()">
-          <option value="">All Statuses</option>
-          <option value="Pending Verification">Pending Verification</option>
-          <option value="Verified">Verified</option>
-          <option value="Partially Billed">Partially Billed</option>
-          <option value="Billed">Billed</option>
-          <option value="Rejected">Rejected</option>
-        </select>
-        <select id="grnSourceFilter" style="padding:7px;background:var(--input-bg);color:var(--text);border:1px solid var(--border);border-radius:4px;" onchange="renderGRNList()" title="Filter by source">
+      <div id="grnLegendCard" style="border:1px solid var(--border);border-radius:6px;margin-bottom:14px;overflow:hidden;">
+        <div onclick="toggleLegend('grnLegend')" style="display:flex;align-items:center;justify-content:space-between;padding:8px 14px;cursor:pointer;background:var(--input-bg);user-select:none;">
+          <span style="font-size:12px;font-weight:600;color:var(--text-muted);letter-spacing:.03em;">STATUS REFERENCE</span>
+          <span id="grnLegendChev" style="font-size:13px;color:var(--text-muted);transition:transform .2s;">&#9658;</span>
+        </div>
+        <div id="grnLegendBody" style="display:none;padding:12px 14px 14px;">
+          <div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:5px;"><span style="font-size:11px;font-weight:500;padding:2px 8px;border-radius:20px;background:#fef9c3;color:#854d0e;white-space:nowrap;min-width:120px;text-align:center;flex-shrink:0;">Pending Verification</span><span style="font-size:11px;color:var(--text-muted);line-height:1.4;">GRN saved; pending store verification</span></div>
+          <div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:5px;"><span style="font-size:11px;font-weight:500;padding:2px 8px;border-radius:20px;background:#dcfce7;color:#166534;white-space:nowrap;min-width:120px;text-align:center;flex-shrink:0;">Verified</span><span style="font-size:11px;color:var(--text-muted);line-height:1.4;">Verified by store; ready for billing</span></div>
+          <div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:5px;"><span style="font-size:11px;font-weight:500;padding:2px 8px;border-radius:20px;background:#fef3c7;color:#92400e;white-space:nowrap;min-width:120px;text-align:center;flex-shrink:0;">Partially Billed</span><span style="font-size:11px;color:var(--text-muted);line-height:1.4;">Partially included in a bill</span></div>
+          <div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:5px;"><span style="font-size:11px;font-weight:500;padding:2px 8px;border-radius:20px;background:#ede9fe;color:#4c1d95;white-space:nowrap;min-width:120px;text-align:center;flex-shrink:0;">Billed</span><span style="font-size:11px;color:var(--text-muted);line-height:1.4;">Fully billed</span></div>
+          <div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:5px;"><span style="font-size:11px;font-weight:500;padding:2px 8px;border-radius:20px;background:#fee2e2;color:#991b1b;white-space:nowrap;min-width:120px;text-align:center;flex-shrink:0;">Rejected</span><span style="font-size:11px;color:var(--text-muted);line-height:1.4;">Rejected by approver; cannot proceed</span></div>
+        </div>
+      </div>
+      <div style="display:flex;gap:8px;margin-bottom:10px;align-items:center;">
+        <select id="grnSourceFilter" style="padding:6px;background:var(--input-bg);color:var(--text);border:1px solid var(--border);border-radius:4px;font-size:12px;" onchange="renderGRNList()" title="Filter by source">
           <option value="">All Sources</option>
           <option value="po">PO-based only</option>
           <option value="cash">Direct Purchase only</option>
         </select>
-        <button class="btn btn-ghost" onclick="downloadGRNList()" title="Download filtered GRNs + all line items as CSV">📥 Download CSV</button>
+        <button class="btn btn-ghost btn-sm" onclick="downloadGRNList()" title="Download filtered GRNs + all line items as CSV">&#128229; Download CSV</button>
       </div>
       <div class="table-wrap">
         <table>
-          <thead><tr>
-            <th>GRN Number</th><th>Date</th><th>PO Number</th><th>Vendor</th>
-            <th>Challan / Invoice</th><th>Received By</th><th>Verified By</th>
-            <th>Status</th><th>Actions</th>
-          </tr></thead>
+          <thead>
+            <tr>
+              <th>GRN Number</th><th>Date</th><th>PO Number</th><th>Vendor</th>
+              <th>Challan / Invoice</th><th>Received By</th><th>Verified By</th>
+              <th>Status</th><th>Actions</th>
+            </tr>
+            <tr style="background:var(--input-bg);">
+              <td style="padding:4px 6px;"><input id="grnF_number" placeholder="Filter&#8230;" oninput="renderGRNList()" style="width:100%;padding:4px 6px;font-size:11px;background:var(--bg);color:var(--text);border:1px solid var(--border);border-radius:4px;"></td>
+              <td style="padding:4px 6px;"><div style="display:flex;gap:4px;align-items:center;"><input type="date" id="grnF_dateFrom" oninput="renderGRNList()" style="flex:1;padding:4px 5px;font-size:11px;background:var(--bg);color:var(--text);border:1px solid var(--border);border-radius:4px;"><span style="font-size:10px;color:var(--text-muted);">&#8594;</span><input type="date" id="grnF_dateTo" oninput="renderGRNList()" style="flex:1;padding:4px 5px;font-size:11px;background:var(--bg);color:var(--text);border:1px solid var(--border);border-radius:4px;"></div></td>
+              <td style="padding:4px 6px;"><input id="grnF_po" placeholder="Filter&#8230;" oninput="renderGRNList()" style="width:100%;padding:4px 6px;font-size:11px;background:var(--bg);color:var(--text);border:1px solid var(--border);border-radius:4px;"></td>
+              <td style="padding:4px 6px;"><input id="grnF_vendor" placeholder="Filter&#8230;" oninput="renderGRNList()" style="width:100%;padding:4px 6px;font-size:11px;background:var(--bg);color:var(--text);border:1px solid var(--border);border-radius:4px;"></td>
+              <td style="padding:4px 6px;"><input id="grnF_challan" placeholder="Filter&#8230;" oninput="renderGRNList()" style="width:100%;padding:4px 6px;font-size:11px;background:var(--bg);color:var(--text);border:1px solid var(--border);border-radius:4px;"></td>
+              <td style="padding:4px 6px;"></td><td style="padding:4px 6px;"></td>
+              <td style="padding:4px 6px;"><select id="grnF_status" onchange="renderGRNList()" style="width:100%;padding:4px 5px;font-size:11px;background:var(--bg);color:var(--text);border:1px solid var(--border);border-radius:4px;"><option value="">All</option><option>Pending Verification</option><option>Verified</option><option>Partially Billed</option><option>Billed</option><option>Rejected</option></select></td>
+              <td style="padding:4px 6px;text-align:center;"><button onclick="clearColFilters('grnF_number','grnF_vendor','grnF_po','grnF_challan','grnF_dateFrom','grnF_dateTo','grnF_status','renderGRNList')" title="Clear" style="font-size:10px;padding:3px 8px;background:var(--input-bg);color:var(--text-muted);border:1px solid var(--border);border-radius:4px;cursor:pointer;">&#10005; Clear</button></td>
+            </tr>
+          </thead>
           <tbody id="grn_listBody"><tr><td colspan="9" class="center muted">Loading…</td></tr></tbody>
         </table>
       </div>
@@ -2876,17 +2907,21 @@ input[type="number"] {
 
     <!-- POB List -->
     <div id="pobListCard" class="card">
-      <div class="row" style="margin-bottom:12px;">
-        <input id="pobSearch" placeholder="Search POB…" style="padding:7px;background:var(--input-bg);color:var(--text);border:1px solid var(--border);border-radius:4px;width:220px;" oninput="renderPOBList()">
-        <select id="pobStatusFilter" style="padding:7px;background:var(--input-bg);color:var(--text);border:1px solid var(--border);border-radius:4px;" onchange="renderPOBList()">
-          <option value="">All Statuses</option>
-          <option value="Pending Approval">Pending Approval</option>
-          <option value="Unpaid">Unpaid</option>
-          <option value="Partial">Partial</option>
-          <option value="Paid">Paid</option>
-          <option value="Rejected">Rejected</option>
-        </select>
-        <select id="pobSourceFilter" style="padding:7px;background:var(--input-bg);color:var(--text);border:1px solid var(--border);border-radius:4px;" onchange="renderPOBList()" title="Filter by source">
+      <div id="pobLegendCard" style="border:1px solid var(--border);border-radius:6px;margin-bottom:14px;overflow:hidden;">
+        <div onclick="toggleLegend('pobLegend')" style="display:flex;align-items:center;justify-content:space-between;padding:8px 14px;cursor:pointer;background:var(--input-bg);user-select:none;">
+          <span style="font-size:12px;font-weight:600;color:var(--text-muted);letter-spacing:.03em;">STATUS REFERENCE</span>
+          <span id="pobLegendChev" style="font-size:13px;color:var(--text-muted);transition:transform .2s;">&#9658;</span>
+        </div>
+        <div id="pobLegendBody" style="display:none;padding:12px 14px 14px;">
+          <div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:5px;"><span style="font-size:11px;font-weight:500;padding:2px 8px;border-radius:20px;background:#fef9c3;color:#854d0e;white-space:nowrap;min-width:120px;text-align:center;flex-shrink:0;">Pending Approval</span><span style="font-size:11px;color:var(--text-muted);line-height:1.4;">Newly created; awaiting Admin/PM approval</span></div>
+          <div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:5px;"><span style="font-size:11px;font-weight:500;padding:2px 8px;border-radius:20px;background:#fef3c7;color:#92400e;white-space:nowrap;min-width:120px;text-align:center;flex-shrink:0;">Unpaid</span><span style="font-size:11px;color:var(--text-muted);line-height:1.4;">Bill approved; payment pending</span></div>
+          <div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:5px;"><span style="font-size:11px;font-weight:500;padding:2px 8px;border-radius:20px;background:#fef3c7;color:#92400e;white-space:nowrap;min-width:120px;text-align:center;flex-shrink:0;">Partial</span><span style="font-size:11px;color:var(--text-muted);line-height:1.4;">Partially paid</span></div>
+          <div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:5px;"><span style="font-size:11px;font-weight:500;padding:2px 8px;border-radius:20px;background:#d1fae5;color:#065f46;white-space:nowrap;min-width:120px;text-align:center;flex-shrink:0;">Paid</span><span style="font-size:11px;color:var(--text-muted);line-height:1.4;">Fully paid</span></div>
+          <div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:5px;"><span style="font-size:11px;font-weight:500;padding:2px 8px;border-radius:20px;background:#fee2e2;color:#991b1b;white-space:nowrap;min-width:120px;text-align:center;flex-shrink:0;">Rejected</span><span style="font-size:11px;color:var(--text-muted);line-height:1.4;">Rejected by approver; cannot proceed</span></div>
+        </div>
+      </div>
+      <div style="margin-bottom:10px;">
+        <select id="pobSourceFilter" style="padding:6px;background:var(--input-bg);color:var(--text);border:1px solid var(--border);border-radius:4px;font-size:12px;" onchange="renderPOBList()" title="Filter by source">
           <option value="">All Sources</option>
           <option value="po">PO-based only</option>
           <option value="cash">Direct Purchase only</option>
@@ -2894,12 +2929,23 @@ input[type="number"] {
       </div>
       <div class="table-wrap">
         <table>
-          <thead><tr>
-            <th>Bill Number</th><th>Date</th><th>PO Number</th><th>Vendor</th>
-            <th>GRNs</th><th class="num">Invoice Value</th>
-            <th class="num">Net Payable</th><th class="num">Paid</th><th class="num">Outstanding</th>
-            <th>Status</th><th>Actions</th>
-          </tr></thead>
+          <thead>
+            <tr>
+              <th>Bill Number</th><th>Date</th><th>PO Number</th><th>Vendor</th>
+              <th>GRNs</th><th class="num">Invoice Value</th>
+              <th class="num">Net Payable</th><th class="num">Paid</th><th class="num">Outstanding</th>
+              <th>Status</th><th>Actions</th>
+            </tr>
+            <tr style="background:var(--input-bg);">
+              <td style="padding:4px 6px;"><input id="pobF_number" placeholder="Filter&#8230;" oninput="renderPOBList()" style="width:100%;padding:4px 6px;font-size:11px;background:var(--bg);color:var(--text);border:1px solid var(--border);border-radius:4px;"></td>
+              <td style="padding:4px 6px;"><div style="display:flex;gap:4px;align-items:center;"><input type="date" id="pobF_dateFrom" oninput="renderPOBList()" style="flex:1;padding:4px 5px;font-size:11px;background:var(--bg);color:var(--text);border:1px solid var(--border);border-radius:4px;"><span style="font-size:10px;color:var(--text-muted);">&#8594;</span><input type="date" id="pobF_dateTo" oninput="renderPOBList()" style="flex:1;padding:4px 5px;font-size:11px;background:var(--bg);color:var(--text);border:1px solid var(--border);border-radius:4px;"></div></td>
+              <td style="padding:4px 6px;"><input id="pobF_po" placeholder="Filter&#8230;" oninput="renderPOBList()" style="width:100%;padding:4px 6px;font-size:11px;background:var(--bg);color:var(--text);border:1px solid var(--border);border-radius:4px;"></td>
+              <td style="padding:4px 6px;"><input id="pobF_vendor" placeholder="Filter&#8230;" oninput="renderPOBList()" style="width:100%;padding:4px 6px;font-size:11px;background:var(--bg);color:var(--text);border:1px solid var(--border);border-radius:4px;"></td>
+              <td style="padding:4px 6px;"></td><td style="padding:4px 6px;"></td><td style="padding:4px 6px;"></td><td style="padding:4px 6px;"></td><td style="padding:4px 6px;"></td>
+              <td style="padding:4px 6px;"><select id="pobF_status" onchange="renderPOBList()" style="width:100%;padding:4px 5px;font-size:11px;background:var(--bg);color:var(--text);border:1px solid var(--border);border-radius:4px;"><option value="">All</option><option>Pending Approval</option><option>Unpaid</option><option>Partial</option><option>Paid</option><option>Rejected</option></select></td>
+              <td style="padding:4px 6px;text-align:center;"><button onclick="clearColFilters('pobF_number','pobF_vendor','pobF_po','pobF_dateFrom','pobF_dateTo','pobF_status','renderPOBList')" title="Clear" style="font-size:10px;padding:3px 8px;background:var(--input-bg);color:var(--text-muted);border:1px solid var(--border);border-radius:4px;cursor:pointer;">&#10005; Clear</button></td>
+            </tr>
+          </thead>
           <tbody id="pob_listBody"><tr><td colspan="11" class="center muted">Loading…</td></tr></tbody>
         </table>
       </div>
@@ -2966,17 +3012,36 @@ input[type="number"] {
     </div>
     <!-- MIS List -->
     <div id="misListCard" class="card">
-      <div class="row" style="margin-bottom:12px;">
-        <input id="misSearch" placeholder="Search MIS…" style="padding:7px;background:var(--input-bg);color:var(--text);border:1px solid var(--border);border-radius:4px;width:220px;" oninput="renderMISList()">
+      <div id="misLegendCard" style="border:1px solid var(--border);border-radius:6px;margin-bottom:14px;overflow:hidden;">
+        <div onclick="toggleLegend('misLegend')" style="display:flex;align-items:center;justify-content:space-between;padding:8px 14px;cursor:pointer;background:var(--input-bg);user-select:none;">
+          <span style="font-size:12px;font-weight:600;color:var(--text-muted);letter-spacing:.03em;">STATUS REFERENCE</span>
+          <span id="misLegendChev" style="font-size:13px;color:var(--text-muted);transition:transform .2s;">&#9658;</span>
+        </div>
+        <div id="misLegendBody" style="display:none;padding:12px 14px 14px;">
+          <div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:5px;"><span style="font-size:11px;font-weight:500;padding:2px 8px;border-radius:20px;background:#fef9c3;color:#854d0e;white-space:nowrap;min-width:120px;text-align:center;flex-shrink:0;">Pending Approval</span><span style="font-size:11px;color:var(--text-muted);line-height:1.4;">Newly created; awaiting Admin/PM approval</span></div>
+          <div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:5px;"><span style="font-size:11px;font-weight:500;padding:2px 8px;border-radius:20px;background:#dcfce7;color:#166534;white-space:nowrap;min-width:120px;text-align:center;flex-shrink:0;">Approved</span><span style="font-size:11px;color:var(--text-muted);line-height:1.4;">Approved and ready to proceed</span></div>
+          <div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:5px;"><span style="font-size:11px;font-weight:500;padding:2px 8px;border-radius:20px;background:#fee2e2;color:#991b1b;white-space:nowrap;min-width:120px;text-align:center;flex-shrink:0;">Rejected</span><span style="font-size:11px;color:var(--text-muted);line-height:1.4;">Rejected by approver; cannot proceed</span></div>
+        </div>
       </div>
       <div class="table-wrap">
         <table>
-          <thead><tr>
-            <th>MIS Number</th><th>Date</th><th>Issued To</th>
-            <th>Issued By</th><th class="num">Total Value</th>
-            <th>Status</th><th>Actions</th>
-          </tr></thead>
-          <tbody id="mis_listBody"><tr><td colspan="8" class="center muted">Loading…</td></tr></tbody>
+          <thead>
+            <tr>
+              <th>MIS Number</th><th>Date</th><th>Issued To</th>
+              <th>Issued By</th><th class="num">Total Value</th>
+              <th>Status</th><th>Actions</th>
+            </tr>
+            <tr style="background:var(--input-bg);">
+              <td style="padding:4px 6px;"><input id="misF_number" placeholder="Filter&#8230;" oninput="renderMISList()" style="width:100%;padding:4px 6px;font-size:11px;background:var(--bg);color:var(--text);border:1px solid var(--border);border-radius:4px;"></td>
+              <td style="padding:4px 6px;"><div style="display:flex;gap:4px;align-items:center;"><input type="date" id="misF_dateFrom" oninput="renderMISList()" style="flex:1;padding:4px 5px;font-size:11px;background:var(--bg);color:var(--text);border:1px solid var(--border);border-radius:4px;"><span style="font-size:10px;color:var(--text-muted);">&#8594;</span><input type="date" id="misF_dateTo" oninput="renderMISList()" style="flex:1;padding:4px 5px;font-size:11px;background:var(--bg);color:var(--text);border:1px solid var(--border);border-radius:4px;"></div></td>
+              <td style="padding:4px 6px;"><input id="misF_issuedTo" placeholder="Filter&#8230;" oninput="renderMISList()" style="width:100%;padding:4px 6px;font-size:11px;background:var(--bg);color:var(--text);border:1px solid var(--border);border-radius:4px;"></td>
+              <td style="padding:4px 6px;"><input id="misF_issuedBy" placeholder="Filter&#8230;" oninput="renderMISList()" style="width:100%;padding:4px 6px;font-size:11px;background:var(--bg);color:var(--text);border:1px solid var(--border);border-radius:4px;"></td>
+              <td style="padding:4px 6px;"></td>
+              <td style="padding:4px 6px;"><select id="misF_status" onchange="renderMISList()" style="width:100%;padding:4px 5px;font-size:11px;background:var(--bg);color:var(--text);border:1px solid var(--border);border-radius:4px;"><option value="">All</option><option>Pending Approval</option><option>Approved</option><option>Rejected</option></select></td>
+              <td style="padding:4px 6px;text-align:center;"><button onclick="clearColFilters('misF_number','misF_issuedTo','misF_issuedBy','misF_dateFrom','misF_dateTo','misF_status','renderMISList')" title="Clear" style="font-size:10px;padding:3px 8px;background:var(--input-bg);color:var(--text-muted);border:1px solid var(--border);border-radius:4px;cursor:pointer;">&#10005; Clear</button></td>
+            </tr>
+          </thead>
+          <tbody id="mis_listBody"><tr><td colspan="7" class="center muted">Loading…</td></tr></tbody>
         </table>
       </div>
     </div>
@@ -3763,7 +3828,7 @@ function pbDone() {
 // LOCAL CACHE
 // ============================================================
 const _cache = {};
-const CACHE_TTL = 45000;
+const CACHE_TTL = 180000; // 3 minutes — safe for a small team (5 users)
 const CACHEABLE = ['masters','hoList','hocList','hobList','openHOs','unbilledHOCs','unpaidBills','prrList','arrList','hrrList','allRequests','billsWithHold'];
 
 function _cacheGet(key) {
@@ -5906,9 +5971,11 @@ function switchMasterTab(tab) {
     if (stab) stab.classList.toggle('active', t === tab);
   });
   if (tab === 'materials') {
-    Promise.all([apiLoadCostHeads(), apiLoadMaterials()]).then(() => { renderMaterialMaster(); });
+    Promise.all([apiLoadCostHeads(), apiLoadMaterials()]).then(() => { renderMaterialTree(); });
   }
-  if (tab === 'activities') { apiLoadCostHeads(); }
+  if (tab === 'activities') {
+    Promise.all([apiLoadCostHeads(), apiLoadMasters()]).then(() => { renderActivityTree(); });
+  }
   if (tab === 'contractors') { renderContractorMaster(); }
   if (tab === 'costheads') { apiLoadCostHeads().then(() => renderCostHeadTree()); }
   if (tab === 'wbslocation') { Promise.all([apiLoadWBS(), apiLoadLocations()]).then(() => { renderWBSTree(); renderLocTree(); }); }
@@ -5978,8 +6045,8 @@ function renderAllMasters() {
     const el = document.getElementById(id);
     if (el) el.innerHTML = html;
   };
-  ['masterAddVendorCard','masterAddActivityCard','masterAddBoqCard','masterAddServiceCard',
-   'masterAddMaterialCard','masterAddContractorCard'].forEach(id => {
+  ['masterAddVendorCard','masterAddBoqCard','masterAddServiceCard',
+   'masterAddContractorCard'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.style.display = canAdd ? '' : 'none';
   });
@@ -5995,16 +6062,8 @@ function renderAllMasters() {
         <button class="btn btn-danger btn-sm" onclick="openVendorDelete('${esc(v['Vendor Code']||'')}','${esc(v['Vendor Name'])}')">🗑 Delete</button></td>` : ''}
     </tr>`).join('') || `<tr><td colspan="${isAdmin?7:6}" class="center muted">No vendors.</td></tr>`);
 
-  // Activities
-  setHTML('ma_list', (m.activities||[]).map(a =>
-    `<tr>
-      <td class="mono" style="color:var(--accent);">${esc(a['Activity Code']||'')}</td>
-      <td>${esc(a['Activity Description'])}</td><td>${esc(a['UOM'])}</td>
-      <td>${esc(a['Cost Head']||'')}</td><td>${esc(a['Cost Subhead']||'')}</td><td class="num mono">${fmtINR(a['Default Rate']||0)}</td>
-      ${isAdmin ? `<td class="center">
-        <button class="btn btn-ghost btn-sm" onclick="openActivityEdit('${esc(a['Activity Code']||'')}')">✏ Edit</button>
-        <button class="btn btn-danger btn-sm" onclick="openActivityDelete('${esc(a['Activity Code']||'')}','${esc(a['Activity Description'])}')">🗑 Delete</button></td>` : ''}
-    </tr>`).join('') || `<tr><td colspan="${isAdmin?7:6}" class="center muted">No activities.</td></tr>`);
+  // Activities — rendered separately via renderActivityTree()
+  // (called from switchMasterTab and after any save/delete)
 
   // BOQ — two-level grouped display
   const l1Items = (m.boqItems||[]).filter(b => b['Level'] === 1);
@@ -7070,11 +7129,15 @@ async function loadHOList() {
 
 function renderHOList() {
   const tbody = document.getElementById('ho_listBody');
-  const q = document.getElementById('hoSearch').value.toLowerCase();
-  const sf = document.getElementById('hoStatusFilter').value;
+  const fNum=gvl('hoF_number'), fVen=gvl('hoF_vendor'), fSc=gvl('hoF_scope');
+  const fSt=gv('hoF_status'), fFrom=gv('hoF_dateFrom'), fTo=gv('hoF_dateTo');
   let rows = state.hireOrders;
-  if (q)  rows = rows.filter(o => ['HO Number','Vendor Name','Scope'].some(f => String(o[f]||'').toLowerCase().includes(q)));
-  if (sf) rows = rows.filter(o => o['Status'] === sf);
+  if(fNum)  rows=rows.filter(o=>(o['HO Number']||'').toLowerCase().includes(fNum));
+  if(fVen)  rows=rows.filter(o=>(o['Vendor Name']||'').toLowerCase().includes(fVen));
+  if(fSc)   rows=rows.filter(o=>(o['Scope']||'').toLowerCase().includes(fSc));
+  if(fSt)   rows=rows.filter(o=>o['Status']===fSt);
+  if(fFrom) rows=rows.filter(o=>o['Date']&&o['Date']>=fFrom);
+  if(fTo)   rows=rows.filter(o=>o['Date']&&o['Date']<=fTo);
   if (!rows.length) { tbody.innerHTML = '<tr><td colspan="7" class="center muted">No hire orders found.</td></tr>'; return; }
 
   const perms = mergedPerms();
@@ -7499,11 +7562,15 @@ async function loadHOCList() {
 
 function renderHOCList() {
   const tbody = document.getElementById('hoc_listBody');
-  const q  = document.getElementById('hocSearch').value.toLowerCase();
-  const sf = document.getElementById('hocStatusFilter').value;
+  const fNum=gvl('hocF_number'), fHO=gvl('hocF_honum'), fVen=gvl('hocF_vendor');
+  const fSt=gv('hocF_status'), fFrom=gv('hocF_dateFrom'), fTo=gv('hocF_dateTo');
   let rows = state.certifications;
-  if (q)  rows = rows.filter(c => ['HOC Number','HO Number','Vendor Name'].some(f => String(c[f]||'').toLowerCase().includes(q)));
-  if (sf) rows = rows.filter(c => c['Status'] === sf);
+  if(fNum)  rows=rows.filter(c=>(c['HOC Number']||'').toLowerCase().includes(fNum));
+  if(fHO)   rows=rows.filter(c=>(c['HO Number']||'').toLowerCase().includes(fHO));
+  if(fVen)  rows=rows.filter(c=>(c['Vendor Name']||'').toLowerCase().includes(fVen));
+  if(fSt)   rows=rows.filter(c=>c['Status']===fSt);
+  if(fFrom) rows=rows.filter(c=>c['Date']&&c['Date']>=fFrom);
+  if(fTo)   rows=rows.filter(c=>c['Date']&&c['Date']<=fTo);
   if (!rows.length) { tbody.innerHTML = '<tr><td colspan="7" class="center muted">No certifications found.</td></tr>'; return; }
 
   const perms = mergedPerms();
@@ -7817,11 +7884,16 @@ async function loadHOBList() {
 
 function renderHOBList() {
   const tbody = document.getElementById('hob_listBody');
-  const q  = document.getElementById('hobSearch').value.toLowerCase();
-  const sf = document.getElementById('hobStatusFilter').value;
+  const fNum=gvl('hobF_number'), fHO=gvl('hobF_honum'), fCert=gvl('hobF_certnum'), fVen=gvl('hobF_vendor');
+  const fSt=gv('hobF_status'), fFrom=gv('hobF_dateFrom'), fTo=gv('hobF_dateTo');
   let rows = state.bills;
-  if (q)  rows = rows.filter(b => ['Bill Number','HO Number','HOC Number'].some(f => String(b[f]||'').toLowerCase().includes(q)));
-  if (sf) rows = rows.filter(b => b['Status'] === sf);
+  if(fNum)  rows=rows.filter(b=>(b['Bill Number']||'').toLowerCase().includes(fNum));
+  if(fHO)   rows=rows.filter(b=>(b['HO Number']||'').toLowerCase().includes(fHO));
+  if(fCert) rows=rows.filter(b=>(b['HOC Number']||'').toLowerCase().includes(fCert));
+  if(fVen)  rows=rows.filter(b=>(b['Vendor Name']||'').toLowerCase().includes(fVen));
+  if(fSt)   rows=rows.filter(b=>b['Status']===fSt);
+  if(fFrom) rows=rows.filter(b=>b['Date']&&b['Date']>=fFrom);
+  if(fTo)   rows=rows.filter(b=>b['Date']&&b['Date']<=fTo);
   if (!rows.length) { tbody.innerHTML = '<tr><td colspan="11" class="center muted">No bills found.</td></tr>'; return; }
 
   const perms = mergedPerms();
@@ -8692,11 +8764,15 @@ async function loadWOList() {
 function renderWOList() {
   const tbody = document.getElementById('wo_listBody');
   if (!tbody) return;
-  const q = (document.getElementById('woSearch')?.value || '').toLowerCase();
-  const sf = document.getElementById('woStatusFilter')?.value || '';
+  const fNum=gvl('woF_number'), fVen=gvl('woF_vendor'), fSc=gvl('woF_scope');
+  const fSt=gv('woF_status'), fFrom=gv('woF_dateFrom'), fTo=gv('woF_dateTo');
   let rows = state.workOrders || [];
-  if (q)  rows = rows.filter(o => ['WO Number','Vendor Name','Scope'].some(f => String(o[f]||'').toLowerCase().includes(q)));
-  if (sf) rows = rows.filter(o => o['Status'] === sf);
+  if(fNum)  rows=rows.filter(o=>(o['WO Number']||'').toLowerCase().includes(fNum));
+  if(fVen)  rows=rows.filter(o=>(o['Vendor Name']||'').toLowerCase().includes(fVen));
+  if(fSc)   rows=rows.filter(o=>(o['Scope']||'').toLowerCase().includes(fSc));
+  if(fSt)   rows=rows.filter(o=>o['Status']===fSt);
+  if(fFrom) rows=rows.filter(o=>o['Date']&&o['Date']>=fFrom);
+  if(fTo)   rows=rows.filter(o=>o['Date']&&o['Date']<=fTo);
   if (!rows.length) { tbody.innerHTML = '<tr><td colspan="8" class="center muted">No work orders found.</td></tr>'; return; }
 
   const perms = mergedPerms();
@@ -9101,11 +9177,15 @@ async function loadWOCList() {
 
 function renderWOCList() {
   const tbody = document.getElementById('woc_listBody'); if (!tbody) return;
-  const q = (document.getElementById('wocSearch')?.value||'').toLowerCase();
-  const sf = document.getElementById('wocStatusFilter')?.value||'';
+  const fNum=gvl('wocF_number'), fWO=gvl('wocF_wonum'), fVen=gvl('wocF_vendor');
+  const fSt=gv('wocF_status'), fFrom=gv('wocF_dateFrom'), fTo=gv('wocF_dateTo');
   let rows = state.woCertifications||[];
-  if (q)  rows = rows.filter(c => ['WOC Number','WO Number','Vendor Name'].some(f => String(c[f]||'').toLowerCase().includes(q)));
-  if (sf) rows = rows.filter(c => c['Status']===sf);
+  if(fNum)  rows=rows.filter(c=>(c['WOC Number']||'').toLowerCase().includes(fNum));
+  if(fWO)   rows=rows.filter(c=>(c['WO Number']||'').toLowerCase().includes(fWO));
+  if(fVen)  rows=rows.filter(c=>(c['Vendor Name']||'').toLowerCase().includes(fVen));
+  if(fSt)   rows=rows.filter(c=>c['Status']===fSt);
+  if(fFrom) rows=rows.filter(c=>c['Date']&&c['Date']>=fFrom);
+  if(fTo)   rows=rows.filter(c=>c['Date']&&c['Date']<=fTo);
   if (!rows.length) { tbody.innerHTML = '<tr><td colspan="7" class="center muted">No certifications found.</td></tr>'; return; }
   const perms = mergedPerms();
   tbody.innerHTML = rows.map(c => {
@@ -9374,11 +9454,16 @@ async function loadWOBList() {
 
 function renderWOBList() {
   const tbody = document.getElementById('wob_listBody'); if (!tbody) return;
-  const q = (document.getElementById('wobSearch')?.value||'').toLowerCase();
-  const sf = document.getElementById('wobStatusFilter')?.value||'';
+  const fNum=gvl('wobF_number'), fWO=gvl('wobF_wonum'), fCert=gvl('wobF_certnum'), fVen=gvl('wobF_vendor');
+  const fSt=gv('wobF_status'), fFrom=gv('wobF_dateFrom'), fTo=gv('wobF_dateTo');
   let rows = state.woBills||[];
-  if (q)  rows = rows.filter(b => ['Bill Number','WO Number','WOC Number'].some(f => String(b[f]||'').toLowerCase().includes(q)));
-  if (sf) rows = rows.filter(b => b['Status']===sf);
+  if(fNum)  rows=rows.filter(b=>(b['Bill Number']||'').toLowerCase().includes(fNum));
+  if(fWO)   rows=rows.filter(b=>(b['WO Number']||'').toLowerCase().includes(fWO));
+  if(fCert) rows=rows.filter(b=>(b['WOC Number']||'').toLowerCase().includes(fCert));
+  if(fVen)  rows=rows.filter(b=>(b['Vendor Name']||'').toLowerCase().includes(fVen));
+  if(fSt)   rows=rows.filter(b=>b['Status']===fSt);
+  if(fFrom) rows=rows.filter(b=>b['Date']&&b['Date']>=fFrom);
+  if(fTo)   rows=rows.filter(b=>b['Date']&&b['Date']<=fTo);
   if (!rows.length) { tbody.innerHTML = '<tr><td colspan="11" class="center muted">No bills found.</td></tr>'; return; }
   const perms = mergedPerms();
   tbody.innerHTML = rows.map(b => {
@@ -11063,7 +11148,7 @@ function switchPUTab(tab) {
     if (stab) stab.classList.toggle('active', t === tab);
   });
   if (tab === 'mir')   { loadMIRList(); }
-  if (tab === 'rfq')   { loadRFQList(); loadQCList(); }
+  if (tab === 'rfq')   { Promise.all([loadRFQList(), loadQCList()]); }
   if (tab === 'po')    loadPOList();
   if (tab === 'grn')   loadGRNList();
   if (tab === 'pob')   loadPOBList();
@@ -11077,6 +11162,458 @@ function switchPUTab(tab) {
 // Purchase tab is handled by main tab click handler (see switchPUTab call in tab nav section)
 
 // ============================================================
+// ============================================================
+// ACTIVITY MASTER — TREE RENDER & INLINE ADD
+// ============================================================
+function renderActivityTree() {
+  const wrap = document.getElementById('am_tree_wrap');
+  if (!wrap) return;
+  const canAdd = hasRole('Admin') || hasRole('Planning/ QS');
+  const isAdmin = hasRole('Admin');
+  const btn = document.getElementById('amAddGroupBtn');
+  if (btn) btn.style.display = canAdd ? '' : 'none';
+
+  const acts = state.masters.activities || [];
+  // Only show activities that have both costhead and cost_subhead assigned
+  const grouped = acts.filter(a => a['Cost Head'] && a['Cost Subhead']);
+
+  if (!grouped.length && !canAdd) {
+    wrap.innerHTML = '<div class="center muted" style="padding:24px;">No activities defined.</div>';
+    return;
+  }
+
+  // Build tree: group → sub-head → [activities]
+  const tree = {};
+  grouped.forEach(a => {
+    const g = a['Cost Head'];
+    const s = a['Cost Subhead'];
+    if (!tree[g]) tree[g] = {};
+    if (!tree[g][s]) tree[g][s] = [];
+    tree[g][s].push(a);
+  });
+
+  let html = '<div style="font-size:13px;">';
+  Object.keys(tree).sort().forEach(grp => {
+    const grpId = 'amg_' + btoa(encodeURIComponent(grp)).replace(/[^a-z0-9]/gi,'');
+    const totalActs = Object.values(tree[grp]).reduce((s,a)=>s+a.length,0);
+    html += `
+    <div style="margin-bottom:12px;">
+      <div style="display:flex;align-items:center;gap:8px;padding:8px 10px;background:#dde6f0;border-radius:6px;cursor:pointer;" onclick="amToggle('${grpId}_ch')">
+        <span style="font-size:15px;">▾</span>
+        <span style="font-weight:700;color:#1e3a5f;font-size:14px;">📁 ${esc(grp)}</span>
+        <span class="badge-count">${totalActs} activit${totalActs!==1?'ies':'y'}</span>
+        <span style="flex:1;"></span>
+        ${canAdd ? `<button class="btn btn-primary btn-sm" onclick="event.stopPropagation();amAddSub('${esc(grp)}','${grpId}')">+ Sub-head</button>` : ''}
+      </div>
+      <div id="${grpId}_ch" style="margin-left:24px;margin-top:4px;">
+        <div id="${grpId}_inline"></div>`;
+
+    Object.keys(tree[grp]).sort().forEach(sub => {
+      const subId = 'ams_' + btoa(encodeURIComponent(grp+'|'+sub)).replace(/[^a-z0-9]/gi,'');
+      const items = tree[grp][sub];
+      html += `
+        <div style="margin-bottom:8px;margin-top:6px;">
+          <div style="display:flex;align-items:center;gap:8px;padding:6px 10px;background:#eef1f6;border-left:3px solid var(--accent);border-radius:4px;cursor:pointer;" onclick="amToggle('${subId}_ch')">
+            <span style="font-size:13px;">▾</span>
+            <span style="font-weight:600;color:var(--accent);">📂 ${esc(sub)}</span>
+            <span style="flex:1;"></span>
+            ${canAdd ? `<button class="btn btn-primary btn-sm" onclick="event.stopPropagation();amAddActivity('${esc(grp)}','${esc(sub)}','${subId}')">+ Activity</button>` : ''}
+          </div>
+          <div id="${subId}_ch" style="margin-left:22px;margin-top:4px;">
+            <div id="${subId}_inline"></div>`;
+
+      items.sort((a,b) => (a['Activity Description']||'').localeCompare(b['Activity Description']||'')).forEach(a => {
+        html += `
+            <div style="display:flex;align-items:center;gap:8px;padding:4px 10px;border-bottom:1px solid #f1f5f9;" id="amact_${esc(a['Activity Code'])}">
+              <span style="font-family:monospace;font-size:11px;font-weight:700;color:var(--accent);min-width:60px;">${esc(a['Activity Code'])}</span>
+              <span id="amact_lbl_${esc(a['Activity Code'])}">${esc(a['Activity Description'])}</span>
+              <span style="color:var(--muted);font-size:11px;">${esc(a['UOM'])}</span>
+              <span style="color:var(--muted);font-size:11px;">${a['Default Rate'] ? fmtINRSym(a['Default Rate']) : ''}</span>
+              <span style="flex:1;"></span>
+              ${isAdmin ? `<button class="btn btn-ghost btn-sm" onclick="openActivityEdit('${esc(a['Activity Code'])}')">✏</button>
+              <button class="btn btn-danger btn-sm" onclick="openActivityDelete('${esc(a['Activity Code'])}','${esc(a['Activity Description'])}')">🗑</button>` : ''}
+            </div>`;
+      });
+
+      html += `</div></div>`;  // close subId_ch + sub div
+    });
+
+    html += `</div></div>`;  // close grpId_ch + grp div
+  });
+
+  html += '</div>';
+  wrap.innerHTML = html;
+}
+
+function amToggle(id) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  const hidden = el.style.display === 'none';
+  el.style.display = hidden ? '' : 'none';
+  const parent = el.previousElementSibling;
+  if (parent) { const c = parent.querySelector('span:first-child'); if (c) c.textContent = hidden ? '▾' : '▸'; }
+}
+
+function amAddGroup() {
+  if (!hasRole('Admin') && !hasRole('Planning/ QS')) { toast('Not permitted','error'); return; }
+  const wrap = document.getElementById('am_tree_wrap');
+  let ex = document.getElementById('am_newgrp_wrap'); if (ex) { ex.querySelector('input').focus(); return; }
+  const div = document.createElement('div');
+  div.id = 'am_newgrp_wrap';
+  div.style.cssText = 'display:flex;gap:6px;align-items:center;margin-bottom:12px;flex-wrap:wrap;';
+  div.innerHTML = '<span style="font-weight:600;color:var(--accent);">New Activity Group:</span>' +
+    '<input id="am_newgrp_input" placeholder="e.g. Hire Charges, Civil Works" autocomplete="off"' +
+    ' style="padding:6px 10px;border:1px solid var(--accent);border-radius:4px;font-size:12px;width:280px;background:var(--input-bg);color:var(--text);"' +
+    ' onkeydown="if(event.key===\'Enter\')amSaveNewGroup();if(event.key===\'Escape\')document.getElementById(\'am_newgrp_wrap\').remove()">' +
+    '<button class="btn btn-primary btn-sm" onclick="amSaveNewGroup()">Save</button>' +
+    '<button class="btn btn-ghost btn-sm" onclick="document.getElementById(\'am_newgrp_wrap\').remove()">✕</button>';
+  wrap.insertBefore(div, wrap.firstChild);
+  div.querySelector('input').focus();
+}
+
+// Group is just a costhead value — we create a placeholder activity with no desc to anchor it,
+// but actually we just create a synthetic first sub-head prompt so user adds activities properly.
+// In practice: groups exist because activities have that costhead. No separate group table needed.
+// So "Add Group" creates the group name in _chData (pu_cost_heads) so it shows in dropdowns too.
+async function amSaveNewGroup() {
+  const inp = document.getElementById('am_newgrp_input');
+  const val = (inp?.value||'').trim();
+  if (!val) { toast('Enter a group name','error'); return; }
+  const exists = (state.masters.activities||[]).some(a => (a['Cost Head']||'').toLowerCase() === val.toLowerCase());
+  if (exists) { toast('Group already exists','error'); return; }
+  // Also add to cost_heads so it appears in typeaheads
+  const alreadyInCH = _chData.some(r => r.costhead.toLowerCase() === val.toLowerCase());
+  if (!alreadyInCH) {
+    await sb.from('pu_cost_heads').insert({ costhead: val, cost_subhead: null, is_active: true, created_by: state.userId, created_at: new Date().toISOString() });
+    await apiLoadCostHeads();
+  }
+  toast('Activity Group "'+val+'" ready — add a Sub-head to start adding activities','success');
+  document.getElementById('am_newgrp_wrap')?.remove();
+  // Re-render with a prompt to add sub-head — but group has no activities yet so won't appear in tree.
+  // We'll show a transient message instead.
+}
+
+function amAddSub(grp, grpId) {
+  if (!hasRole('Admin') && !hasRole('Planning/ QS')) { toast('Not permitted','error'); return; }
+  const inlineId = grpId + '_inline';
+  const c = document.getElementById(inlineId); if (!c) return;
+  const ex = c.querySelector('.tree-inline-wrap'); if (ex) ex.remove();
+  const wrap = document.createElement('div');
+  wrap.className = 'tree-inline-wrap';
+  wrap.style.cssText = 'display:flex;gap:6px;align-items:center;margin:6px 0;flex-wrap:wrap;';
+  wrap.innerHTML = `<span style="font-size:12px;color:var(--muted);">New Activity Sub-head:</span>
+    <input class="tree-inline-input" placeholder="e.g. Tower Crane, Batching Plant" autocomplete="off"
+      style="padding:6px 10px;border:1px solid var(--accent);border-radius:4px;font-size:12px;width:280px;background:var(--input-bg);color:var(--text);"
+      onkeydown="if(event.key==='Enter')amSaveNewSub(this,'${esc(grp)}','${grpId}');if(event.key==='Escape')this.closest('.tree-inline-wrap').remove()">
+    <button class="btn btn-primary btn-sm" onclick="amSaveNewSub(this.previousElementSibling,'${esc(grp)}','${grpId}')">Save</button>
+    <button class="btn btn-ghost btn-sm" onclick="this.closest('.tree-inline-wrap').remove()">✕</button>`;
+  c.appendChild(wrap);
+  wrap.querySelector('input').focus();
+}
+
+async function amSaveNewSub(inp, grp) {
+  const val = (inp?.value||'').trim();
+  if (!val) { toast('Enter a sub-head name','error'); return; }
+  const dup = (state.masters.activities||[]).some(a => (a['Cost Head']||'').toLowerCase()===grp.toLowerCase() && (a['Cost Subhead']||'').toLowerCase()===val.toLowerCase());
+  if (dup) { toast('Sub-head already exists in this group','error'); return; }
+  // Create in pu_cost_heads so typeaheads work
+  const already = _chData.some(r => r.costhead.toLowerCase()===grp.toLowerCase() && (r.cost_subhead||'').toLowerCase()===val.toLowerCase());
+  if (!already) {
+    pbShow('Saving…');
+    const { error } = await sb.from('pu_cost_heads').insert({ costhead: grp, cost_subhead: val, is_active: true, created_by: state.userId, created_at: new Date().toISOString() });
+    pbDone();
+    if (error) { toast('Error: '+error.message,'error'); return; }
+    await apiLoadCostHeads();
+  }
+  toast('Sub-head "'+val+'" added — click + Activity to add entries','success');
+  inp.closest?.('.tree-inline-wrap')?.remove();
+}
+
+function amAddActivity(grp, sub, subId) {
+  if (!hasRole('Admin') && !hasRole('Planning/ QS')) { toast('Not permitted','error'); return; }
+  const inlineId = subId + '_inline';
+  const c = document.getElementById(inlineId); if (!c) return;
+  const ex = c.querySelector('.tree-inline-wrap'); if (ex) ex.remove();
+  const wrap = document.createElement('div');
+  wrap.className = 'tree-inline-wrap';
+  wrap.style.cssText = 'padding:10px;background:var(--input-bg);border:1px solid var(--accent);border-radius:6px;margin:6px 0;';
+  wrap.innerHTML = `
+    <div style="display:grid;grid-template-columns:2fr 1fr 1fr;gap:8px;margin-bottom:8px;">
+      <div><label style="font-size:11px;color:var(--muted);display:block;margin-bottom:3px;">Activity Description *</label>
+        <input id="am_new_desc" placeholder="e.g. Tower Crane Hire — 10T" autocomplete="off"
+          style="width:100%;padding:6px 8px;border:1px solid var(--border);border-radius:4px;font-size:12px;background:var(--bg);color:var(--text);"
+          onkeydown="if(event.key==='Escape')this.closest('.tree-inline-wrap').remove()"></div>
+      <div><label style="font-size:11px;color:var(--muted);display:block;margin-bottom:3px;">UOM *</label>
+        <input id="am_new_uom" placeholder="Day / Month / Nos" autocomplete="off"
+          style="width:100%;padding:6px 8px;border:1px solid var(--border);border-radius:4px;font-size:12px;background:var(--bg);color:var(--text);"></div>
+      <div><label style="font-size:11px;color:var(--muted);display:block;margin-bottom:3px;">Default Rate (₹)</label>
+        <input type="number" id="am_new_rate" placeholder="0.00" step="0.01"
+          style="width:100%;padding:6px 8px;border:1px solid var(--border);border-radius:4px;font-size:12px;background:var(--bg);color:var(--text);"></div>
+    </div>
+    <div style="display:flex;gap:6px;">
+      <button class="btn btn-primary btn-sm" onclick="amSaveActivity('${esc(grp)}','${esc(sub)}')">Save Activity</button>
+      <button class="btn btn-ghost btn-sm" onclick="this.closest('.tree-inline-wrap').remove()">Cancel</button>
+    </div>`;
+  c.appendChild(wrap);
+  wrap.querySelector('#am_new_desc').focus();
+}
+
+async function amSaveActivity(grp, sub) {
+  if (!hasRole('Admin') && !hasRole('Planning/ QS')) { toast('Not permitted','error'); return; }
+  const desc = (document.getElementById('am_new_desc')?.value||'').trim();
+  const uom  = (document.getElementById('am_new_uom')?.value||'').trim();
+  const rate = parseFloat(document.getElementById('am_new_rate')?.value)||0;
+  if (!desc) { toast('Activity description required','error'); return; }
+  if (!uom)  { toast('UOM required','error'); return; }
+  const descKey = _normKey(desc);
+  const dup = (state.masters.activities||[]).find(a => _normKey(a['Activity Description'])===descKey);
+  if (dup) { toast('Activity "'+desc+'" already exists ('+dup['Activity Code']+')','error'); return; }
+  pbShow('Saving activity…');
+  try {
+    const { data: last } = await sb.from('ho_activities').select('activity_code').order('activity_code',{ascending:false}).limit(1);
+    const nextNum = last?.length ? (parseInt((last[0].activity_code||'ACT000').replace('ACT',''))||0)+1 : 1;
+    const code = 'ACT' + String(nextNum).padStart(3,'0');
+    const { error } = await sb.from('ho_activities').insert({
+      activity_code: code, activity_description: desc, uom, default_rate: rate,
+      costhead: grp, cost_subhead: sub, created_by: state.userId
+    });
+    if (error) throw new Error(error.message);
+    flashSuccess('Activity '+code+' added');
+    _cacheBust('masters'); state.mastersCached = false;
+    await apiLoadMasters();
+    renderActivityTree();
+  } catch(e) { toast('Error: '+e.message,'error'); }
+  finally { pbDone(); }
+}
+
+// ============================================================
+// MATERIAL MASTER — TREE RENDER & INLINE ADD
+// ============================================================
+function renderMaterialTree() {
+  const wrap = document.getElementById('mm_tree_wrap');
+  if (!wrap) return;
+  const canAdd = hasRole('Admin') || hasRole('Planning/ QS');
+  const isAdmin = hasRole('Admin');
+  const btn = document.getElementById('mmAddGroupBtn');
+  if (btn) btn.style.display = canAdd ? '' : 'none';
+
+  // Only show materials that have both costhead and cost_subhead
+  const mats = (puState.materials||[]).filter(m => m.costhead && m.cost_subhead);
+
+  if (!mats.length && !canAdd) {
+    wrap.innerHTML = '<div class="center muted" style="padding:24px;">No materials defined.</div>';
+    return;
+  }
+
+  // Build tree: group → sub-head → [materials]
+  const tree = {};
+  mats.forEach(m => {
+    const g = m.costhead;
+    const s = m.cost_subhead;
+    if (!tree[g]) tree[g] = {};
+    if (!tree[g][s]) tree[g][s] = [];
+    tree[g][s].push(m);
+  });
+
+  let html = '<div style="font-size:13px;">';
+  Object.keys(tree).sort().forEach(grp => {
+    const grpId = 'mmg_' + btoa(encodeURIComponent(grp)).replace(/[^a-z0-9]/gi,'');
+    const totalMats = Object.values(tree[grp]).reduce((s,a)=>s+a.length,0);
+    html += `
+    <div style="margin-bottom:12px;">
+      <div style="display:flex;align-items:center;gap:8px;padding:8px 10px;background:#dde6f0;border-radius:6px;cursor:pointer;" onclick="mmToggle('${grpId}_ch')">
+        <span style="font-size:15px;">▾</span>
+        <span style="font-weight:700;color:#1e3a5f;font-size:14px;">📁 ${esc(grp)}</span>
+        <span class="badge-count">${totalMats} material${totalMats!==1?'s':''}</span>
+        <span style="flex:1;"></span>
+        ${canAdd ? `<button class="btn btn-primary btn-sm" onclick="event.stopPropagation();mmAddSub('${esc(grp)}','${grpId}')">+ Sub-head</button>` : ''}
+      </div>
+      <div id="${grpId}_ch" style="margin-left:24px;margin-top:4px;">
+        <div id="${grpId}_inline"></div>`;
+
+    Object.keys(tree[grp]).sort().forEach(sub => {
+      const subId = 'mms_' + btoa(encodeURIComponent(grp+'|'+sub)).replace(/[^a-z0-9]/gi,'');
+      const items = tree[grp][sub];
+      html += `
+        <div style="margin-bottom:8px;margin-top:6px;">
+          <div style="display:flex;align-items:center;gap:8px;padding:6px 10px;background:#eef1f6;border-left:3px solid var(--accent);border-radius:4px;cursor:pointer;" onclick="mmToggle('${subId}_ch')">
+            <span style="font-size:13px;">▾</span>
+            <span style="font-weight:600;color:var(--accent);">📂 ${esc(sub)}</span>
+            <span style="flex:1;"></span>
+            ${canAdd ? `<button class="btn btn-primary btn-sm" onclick="event.stopPropagation();mmAddMaterial('${esc(grp)}','${esc(sub)}','${subId}')">+ Material</button>` : ''}
+          </div>
+          <div id="${subId}_ch" style="margin-left:22px;margin-top:4px;">
+            <div id="${subId}_inline"></div>`;
+
+      items.sort((a,b)=>(a.material_name||'').localeCompare(b.material_name||'')).forEach(m => {
+        html += `
+            <div style="display:flex;align-items:center;gap:8px;padding:5px 10px;border-bottom:1px solid #f1f5f9;" id="mmmat_${esc(m.material_code)}">
+              <span style="font-family:monospace;font-size:11px;font-weight:700;color:var(--accent);min-width:60px;">${esc(m.material_code)}</span>
+              <span style="flex:1;">${esc(m.material_name)}</span>
+              <span style="color:var(--muted);font-size:11px;min-width:50px;">${esc(m.uom)}</span>
+              ${m.hsn_code ? `<span style="color:var(--muted);font-size:11px;">HSN: ${esc(m.hsn_code)}</span>` : ''}
+              ${m.estimated_rate ? `<span style="font-size:11px;color:var(--text);font-weight:600;">Est: ${fmtINRSym(m.estimated_rate)}</span>` : ''}
+              ${m.specification ? `<span style="color:var(--muted);font-size:11px;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${esc(m.specification)}</span>` : ''}
+              <span style="flex:1;"></span>
+              ${isAdmin ? `<button class="btn btn-ghost btn-sm" onclick="openMatEdit('${esc(m.material_code)}')">✏</button>
+              <button class="btn btn-ghost btn-sm" style="color:var(--danger);" onclick="deleteMatItem('${esc(m.material_code)}','${esc(m.material_name).replace(/'/g,"\\'")}')">🗑</button>` : ''}
+            </div>`;
+      });
+
+      html += `</div></div>`;  // close subId_ch + sub div
+    });
+
+    html += `</div></div>`;  // close grpId_ch + grp div
+  });
+
+  html += '</div>';
+  wrap.innerHTML = html;
+}
+
+function mmToggle(id) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  const hidden = el.style.display === 'none';
+  el.style.display = hidden ? '' : 'none';
+  const parent = el.previousElementSibling;
+  if (parent) { const c = parent.querySelector('span:first-child'); if (c) c.textContent = hidden ? '▾' : '▸'; }
+}
+
+function mmAddGroup() {
+  if (!hasRole('Admin') && !hasRole('Planning/ QS')) { toast('Not permitted','error'); return; }
+  const wrap = document.getElementById('mm_tree_wrap');
+  let ex = document.getElementById('mm_newgrp_wrap'); if (ex) { ex.querySelector('input').focus(); return; }
+  const div = document.createElement('div');
+  div.id = 'mm_newgrp_wrap';
+  div.style.cssText = 'display:flex;gap:6px;align-items:center;margin-bottom:12px;flex-wrap:wrap;';
+  div.innerHTML = '<span style="font-weight:600;color:var(--accent);">New Material Group:</span>' +
+    '<input id="mm_newgrp_input" placeholder="e.g. Structural Steel, Concrete" autocomplete="off"' +
+    ' style="padding:6px 10px;border:1px solid var(--accent);border-radius:4px;font-size:12px;width:280px;background:var(--input-bg);color:var(--text);"' +
+    ' onkeydown="if(event.key===\'Enter\')mmSaveNewGroup();if(event.key===\'Escape\')document.getElementById(\'mm_newgrp_wrap\').remove()">' +
+    '<button class="btn btn-primary btn-sm" onclick="mmSaveNewGroup()">Save</button>' +
+    '<button class="btn btn-ghost btn-sm" onclick="document.getElementById(\'mm_newgrp_wrap\').remove()">✕</button>';
+  wrap.insertBefore(div, wrap.firstChild);
+  div.querySelector('input').focus();
+}
+
+async function mmSaveNewGroup() {
+  const inp = document.getElementById('mm_newgrp_input');
+  const val = (inp?.value||'').trim();
+  if (!val) { toast('Enter a group name','error'); return; }
+  const exists = (puState.materials||[]).some(m => (m.costhead||'').toLowerCase()===val.toLowerCase());
+  if (exists) { toast('Group already exists','error'); return; }
+  const alreadyInCH = _chData.some(r => r.costhead.toLowerCase()===val.toLowerCase());
+  if (!alreadyInCH) {
+    await sb.from('pu_cost_heads').insert({ costhead: val, cost_subhead: null, is_active: true, created_by: state.userId, created_at: new Date().toISOString() });
+    await apiLoadCostHeads();
+  }
+  toast('Material Group "'+val+'" ready — add a Sub-head to start adding materials','success');
+  document.getElementById('mm_newgrp_wrap')?.remove();
+}
+
+function mmAddSub(grp, grpId) {
+  if (!hasRole('Admin') && !hasRole('Planning/ QS')) { toast('Not permitted','error'); return; }
+  const inlineId = grpId + '_inline';
+  const c = document.getElementById(inlineId); if (!c) return;
+  const ex = c.querySelector('.tree-inline-wrap'); if (ex) ex.remove();
+  const wrap = document.createElement('div');
+  wrap.className = 'tree-inline-wrap';
+  wrap.style.cssText = 'display:flex;gap:6px;align-items:center;margin:6px 0;flex-wrap:wrap;';
+  wrap.innerHTML = `<span style="font-size:12px;color:var(--muted);">New Material Sub-head:</span>
+    <input class="tree-inline-input" placeholder="e.g. TMT Bars, Cement" autocomplete="off"
+      style="padding:6px 10px;border:1px solid var(--accent);border-radius:4px;font-size:12px;width:280px;background:var(--input-bg);color:var(--text);"
+      onkeydown="if(event.key==='Enter')mmSaveNewSub(this,'${esc(grp)}');if(event.key==='Escape')this.closest('.tree-inline-wrap').remove()">
+    <button class="btn btn-primary btn-sm" onclick="mmSaveNewSub(this.previousElementSibling,'${esc(grp)}')">Save</button>
+    <button class="btn btn-ghost btn-sm" onclick="this.closest('.tree-inline-wrap').remove()">✕</button>`;
+  c.appendChild(wrap);
+  wrap.querySelector('input').focus();
+}
+
+async function mmSaveNewSub(inp, grp) {
+  const val = (inp?.value||'').trim();
+  if (!val) { toast('Enter a sub-head name','error'); return; }
+  const dup = (puState.materials||[]).some(m => (m.costhead||'').toLowerCase()===grp.toLowerCase() && (m.cost_subhead||'').toLowerCase()===val.toLowerCase());
+  if (dup) { toast('Sub-head already exists in this group','error'); return; }
+  const already = _chData.some(r => r.costhead.toLowerCase()===grp.toLowerCase() && (r.cost_subhead||'').toLowerCase()===val.toLowerCase());
+  if (!already) {
+    pbShow('Saving…');
+    const { error } = await sb.from('pu_cost_heads').insert({ costhead: grp, cost_subhead: val, is_active: true, created_by: state.userId, created_at: new Date().toISOString() });
+    pbDone();
+    if (error) { toast('Error: '+error.message,'error'); return; }
+    await apiLoadCostHeads();
+  }
+  toast('Sub-head "'+val+'" added — click + Material to add entries','success');
+  inp.closest?.('.tree-inline-wrap')?.remove();
+}
+
+function mmAddMaterial(grp, sub, subId) {
+  if (!hasRole('Admin') && !hasRole('Planning/ QS')) { toast('Not permitted','error'); return; }
+  const inlineId = subId + '_inline';
+  const c = document.getElementById(inlineId); if (!c) return;
+  const ex = c.querySelector('.tree-inline-wrap'); if (ex) ex.remove();
+  const wrap = document.createElement('div');
+  wrap.className = 'tree-inline-wrap';
+  wrap.style.cssText = 'padding:10px;background:var(--input-bg);border:1px solid var(--accent);border-radius:6px;margin:6px 0;';
+  wrap.innerHTML = `
+    <div style="display:grid;grid-template-columns:2fr 1fr 1fr 1fr;gap:8px;margin-bottom:8px;">
+      <div><label style="font-size:11px;color:var(--muted);display:block;margin-bottom:3px;">Material Name *</label>
+        <input id="mm_new_name" placeholder="e.g. OPC Cement 53 Grade" autocomplete="off"
+          style="width:100%;padding:6px 8px;border:1px solid var(--border);border-radius:4px;font-size:12px;background:var(--bg);color:var(--text);"
+          onkeydown="if(event.key==='Escape')this.closest('.tree-inline-wrap').remove()"></div>
+      <div><label style="font-size:11px;color:var(--muted);display:block;margin-bottom:3px;">UOM *</label>
+        <input id="mm_new_uom" placeholder="Bags / MT / Nos"
+          style="width:100%;padding:6px 8px;border:1px solid var(--border);border-radius:4px;font-size:12px;background:var(--bg);color:var(--text);"></div>
+      <div><label style="font-size:11px;color:var(--muted);display:block;margin-bottom:3px;">HSN Code</label>
+        <input id="mm_new_hsn" placeholder="e.g. 2523"
+          style="width:100%;padding:6px 8px;border:1px solid var(--border);border-radius:4px;font-size:12px;background:var(--bg);color:var(--text);"></div>
+      <div><label style="font-size:11px;color:var(--muted);display:block;margin-bottom:3px;">Est. Rate (₹)</label>
+        <input type="number" id="mm_new_est_rate" placeholder="0.00" step="0.01"
+          style="width:100%;padding:6px 8px;border:1px solid var(--border);border-radius:4px;font-size:12px;background:var(--bg);color:var(--text);"></div>
+    </div>
+    <div style="margin-bottom:8px;">
+      <label style="font-size:11px;color:var(--muted);display:block;margin-bottom:3px;">Specification</label>
+      <input id="mm_new_spec" placeholder="Grade / Brand / Standard"
+        style="width:100%;padding:6px 8px;border:1px solid var(--border);border-radius:4px;font-size:12px;background:var(--bg);color:var(--text);">
+    </div>
+    <div style="display:flex;gap:6px;">
+      <button class="btn btn-primary btn-sm" onclick="mmSaveMaterial('${esc(grp)}','${esc(sub)}')">Save Material</button>
+      <button class="btn btn-ghost btn-sm" onclick="this.closest('.tree-inline-wrap').remove()">Cancel</button>
+    </div>`;
+  c.appendChild(wrap);
+  wrap.querySelector('#mm_new_name').focus();
+}
+
+async function mmSaveMaterial(grp, sub) {
+  if (!hasRole('Admin') && !hasRole('Planning/ QS')) { toast('Not permitted','error'); return; }
+  const name    = (document.getElementById('mm_new_name')?.value||'').trim();
+  const uom     = (document.getElementById('mm_new_uom')?.value||'').trim();
+  const hsn     = (document.getElementById('mm_new_hsn')?.value||'').trim()||null;
+  const spec    = (document.getElementById('mm_new_spec')?.value||'').trim()||null;
+  const estRate = parseFloat(document.getElementById('mm_new_est_rate')?.value)||null;
+  if (!name) { toast('Material name required','error'); return; }
+  if (!uom)  { toast('UOM required','error'); return; }
+  const nameKey = _normKey(name), uomKey = _normKey(uom);
+  const dup = (puState.materials||[]).find(m => _normKey(m.material_name)===nameKey && _normKey(m.uom)===uomKey);
+  if (dup) { toast('Material "'+name+'" with UOM "'+uom+'" already exists ('+dup.material_code+')','error'); return; }
+  pbShow('Saving material…');
+  try {
+    const { data: last } = await sb.from('pu_material_master').select('material_code').order('material_code',{ascending:false}).limit(1);
+    const lastNum = last?.length ? parseInt((last[0].material_code||'MAT000').replace('MAT',''))||0 : 0;
+    const code = 'MAT' + String(lastNum+1).padStart(3,'0');
+    const { error } = await sb.from('pu_material_master').insert({
+      material_code: code, material_name: name, uom,
+      hsn_code: hsn, specification: spec, estimated_rate: estRate,
+      costhead: grp, cost_subhead: sub,
+      created_by: state.userId, created_by_name: state.userName,
+    });
+    if (error) throw new Error(error.message);
+    flashSuccess('Material '+code+' added');
+    await apiLoadMaterials();
+    renderMaterialTree();
+  } catch(e) { toast('Error: '+e.message,'error'); }
+  finally { pbDone(); }
+}
+
 // MATERIAL MASTER
 // ============================================================
 async function apiLoadMaterials() {
@@ -11470,71 +12007,7 @@ function _fuzzyScore(target, query) {
 }
 // ──────────────────────────────────────────────────────────────
 
-function renderMaterialMaster() {
-  const q   = (document.getElementById('mm_search')?.value || '').trim();
-  let rows = puState.materials;
-
-  // Fuzzy search across name, cost_subhead, material_code, uom
-  if (q) {
-    rows = rows.map(m => {
-      const score = Math.max(
-        _fuzzyScore(m.material_name    || '', q),
-        _fuzzyScore(m.cost_subhead     || '', q) * 0.8,
-        _fuzzyScore(m.costhead         || '', q) * 0.8,
-        _fuzzyScore(m.material_code    || '', q) * 0.9,
-        _fuzzyScore(m.uom              || '', q) * 0.6,
-        _fuzzyScore(m.specification    || '', q) * 0.5
-      );
-      return { m, score };
-    }).filter(x => x.score > 0)
-      .sort((a, b) => b.score - a.score)
-      .map(x => x.m);
-  }
-
-  // Sort (only when no search query — search results sorted by relevance)
-  if (!q) {
-    const col = _mmSort.col;
-    const dir = _mmSort.dir;
-    rows = [...rows].sort((a, b) => {
-      const av = (a[col] || '').toString().toLowerCase();
-      const bv = (b[col] || '').toString().toLowerCase();
-      return av < bv ? -dir : av > bv ? dir : 0;
-    });
-  }
-
-  // Sortable header
-  const cols = [
-    { key: 'material_code',  label: 'Code' },
-    { key: 'material_name',  label: 'Name' },
-    { key: 'costhead',       label: 'Cost Head' },
-    { key: 'cost_subhead',   label: 'Cost Subhead' },
-    { key: 'uom',            label: 'UOM' },
-    { key: 'hsn_code',       label: 'HSN' },
-    { key: 'specification',  label: 'Specification' },
-  ];
-  const thStyle = 'cursor:pointer;user-select:none;white-space:nowrap;';
-  const thead = document.getElementById('mm_thead');
-  if (thead) {
-    thead.innerHTML = cols.map(c =>
-      `<th style="${thStyle}" onclick="_mmSortBy('${c.key}')">${c.label}${q ? '' : _mmSortIndicator(c.key)}</th>`
-    ).join('') + '<th style="width:70px;"></th>';
-  }
-
-  document.getElementById('mm_list').innerHTML = rows.map(m => `
-    <tr>
-      <td class="mono">${esc(m.material_code)}</td>
-      <td>${esc(m.material_name)}</td>
-      <td>${esc(m.costhead||'')}</td>
-      <td>${esc(m.cost_subhead||'')}</td>
-      <td>${esc(m.uom)}</td>
-      <td>${esc(m.hsn_code||'—')}</td>
-      <td>${esc(m.specification||'—')}</td>
-      ${hasRole('Admin') ? `<td style="white-space:nowrap;">
-        <button class="btn btn-ghost btn-sm" onclick="openMatEdit('${esc(m.material_code)}')">✏</button>
-        <button class="btn btn-ghost btn-sm" style="color:var(--danger);" onclick="deleteMatItem('${esc(m.material_code)}','${esc(m.material_name).replace(/'/g,"\\'")}')">🗑</button>
-      </td>` : '<td></td>'}
-    </tr>`).join('') || '<tr><td colspan="8" class="center muted">No materials found.</td></tr>';
-}
+function renderMaterialMaster() { renderMaterialTree(); } // legacy shim — tree is now canonical
 
 // ── Material Delete (Admin only, downstream-safe) ─────────────
 async function deleteMatItem(code, name) {
@@ -11702,7 +12175,6 @@ function openMatEdit(code) {
       </div>
     </div>
     <div class="grid-4" style="margin-bottom:18px;">
-
       <div class="field">
         <label>HSN Code</label>
         <input id="me_hsn" value="${esc(m.hsn_code||'')}" style="width:100%;">
@@ -11710,6 +12182,10 @@ function openMatEdit(code) {
       <div class="field">
         <label>Specification</label>
         <input id="me_spec" value="${esc(m.specification||'')}" style="width:100%;">
+      </div>
+      <div class="field">
+        <label>Estimated Rate (&#8377;)</label>
+        <input type="number" id="me_est_rate" value="${esc(String(m.estimated_rate||''))}" step="0.01" placeholder="0.00" style="width:100%;">
       </div>
     </div>
     <div class="field" style="margin-bottom:18px;">
@@ -11727,11 +12203,12 @@ function openMatEdit(code) {
 async function updateMaterialMaster(code) {
   if (!hasRole('Admin')) { toast('Only Admin can edit materials','error'); return; }
 
-  const name   = (document.getElementById('me_name')?.value   || '').trim();
-  const uom    = (document.getElementById('me_uom')?.value    || '').trim();
-  const hsn    = (document.getElementById('me_hsn')?.value     || '').trim();
-  const spec   = (document.getElementById('me_spec')?.value    || '').trim();
-  const reason = (document.getElementById('me_reason')?.value  || '').trim();
+  const name     = (document.getElementById('me_name')?.value     || '').trim();
+  const uom      = (document.getElementById('me_uom')?.value      || '').trim();
+  const hsn      = (document.getElementById('me_hsn')?.value       || '').trim();
+  const spec     = (document.getElementById('me_spec')?.value      || '').trim();
+  const estRate  = parseFloat(document.getElementById('me_est_rate')?.value) || null;
+  const reason   = (document.getElementById('me_reason')?.value    || '').trim();
 
   if (!name)   { toast('Material name is required','error'); return; }
   if (!uom)    { toast('UOM is required','error'); return; }
@@ -11757,11 +12234,11 @@ async function updateMaterialMaster(code) {
   try {
     // 1. Update the material row
     const { error: updErr } = await sb.from('pu_material_master').update({
-      material_name: name,
+      material_name:  name,
       uom,
-
-      hsn_code:      hsn    || null,
-      specification: spec   || null,
+      hsn_code:       hsn      || null,
+      specification:  spec     || null,
+      estimated_rate: estRate,
       updated_by:      state.userId,
       updated_by_name: state.userName,
       updated_at:      now,
@@ -11770,20 +12247,21 @@ async function updateMaterialMaster(code) {
 
     // 2. Write audit log row
     const changes = {};
-    if (before.material_name !== name)          changes.material_name  = { from: before.material_name,          to: name };
-    if (before.uom           !== uom)           changes.uom            = { from: before.uom,                    to: uom };
-
-    if ((before.hsn_code||'') !== hsn)          changes.hsn_code       = { from: before.hsn_code||'',           to: hsn };
-    if ((before.specification||'') !== spec)    changes.specification  = { from: before.specification||'',      to: spec };
+    if (before.material_name !== name)                              changes.material_name  = { from: before.material_name,           to: name };
+    if (before.uom           !== uom)                               changes.uom            = { from: before.uom,                     to: uom };
+    if ((before.hsn_code||'') !== hsn)                              changes.hsn_code       = { from: before.hsn_code||'',            to: hsn };
+    if ((before.specification||'') !== spec)                        changes.specification  = { from: before.specification||'',       to: spec };
+    if ((before.estimated_rate||null) !== estRate)                  changes.estimated_rate = { from: before.estimated_rate||null,    to: estRate };
 
     const { error: logErr } = await sb.from('pu_material_edit_log').insert({
       material_code:    code,
       material_name:    name,
       changed_fields:   JSON.stringify(changes),
       before_snapshot:  JSON.stringify({
-        material_name: before.material_name, uom: before.uom, hsn_code: before.hsn_code, specification: before.specification,
+        material_name: before.material_name, uom: before.uom, hsn_code: before.hsn_code,
+        specification: before.specification, estimated_rate: before.estimated_rate||null,
       }),
-      after_snapshot:   JSON.stringify({ material_name: name, uom, hsn_code: hsn, specification: spec }),
+      after_snapshot:   JSON.stringify({ material_name: name, uom, hsn_code: hsn, specification: spec, estimated_rate: estRate }),
       edit_reason:      reason,
       edited_by:        state.userId,
       edited_by_name:   state.userName,
@@ -12091,31 +12569,75 @@ function selectMaterialItem(inputId, resultsId, name, uom, matCode) {
 let _mirItemC = 0;
 
 async function loadMIRList() {
-  const { data } = await sb.from('pu_mir').select('*').order('created_at', { ascending: false });
-  puState.mirList = data||[];
-  // Also load all mir_items to track line-item level status
-  if (data?.length) {
-    const mirNums = data.map(m => m.mir_number);
-    const { data: allItems } = await sb.from('pu_mir_items')
-      .select('mir_number,sno,material_name,uom,qty_required,item_status,rfq_number,po_number,specification')
-      .in('mir_number', mirNums).order('sno');
-    puState.mirItemsMap = {};
-    (allItems||[]).forEach(it => {
-      if (!puState.mirItemsMap[it.mir_number]) puState.mirItemsMap[it.mir_number] = [];
-      puState.mirItemsMap[it.mir_number].push(it);
-    });
-  } else {
-    puState.mirItemsMap = {};
-  }
+  // Fire both queries in parallel — no sequential wait
+  const [mirRes, itemsRes] = await Promise.all([
+    sb.from('pu_mir').select('*').order('created_at', { ascending: false }),
+    sb.from('pu_mir_items').select(
+      'mir_number,sno,material_name,uom,qty_required,item_status,rfq_number,po_number,specification'
+    ).order('sno')
+  ]);
+  puState.mirList = mirRes.data || [];
+  puState.mirItemsMap = {};
+  (itemsRes.data || []).forEach(it => {
+    if (!puState.mirItemsMap[it.mir_number]) puState.mirItemsMap[it.mir_number] = [];
+    puState.mirItemsMap[it.mir_number].push(it);
+  });
+  renderMIRList();
+}
+
+
+function toggleLegend(id) {
+  const body = document.getElementById(id + 'Body');
+  const chev = document.getElementById(id + 'Chev');
+  if (!body) return;
+  const open = body.style.display !== 'none';
+  body.style.display = open ? 'none' : 'block';
+  if (chev) chev.style.transform = open ? '' : 'rotate(90deg)';
+}
+
+function clearColFilters() {
+  const ids = Array.from(arguments);
+  const renderFn = ids.pop();
+  ids.forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+  if (typeof window[renderFn] === 'function') window[renderFn]();
+}
+
+function gv(id) { const e = document.getElementById(id); return e ? (e.value || '') : ''; }
+function gvl(id) { return gv(id).toLowerCase(); }
+
+function toggleMIRLegend() {
+  const body = document.getElementById('mirLegendBody');
+  const chev = document.getElementById('mirLegendChevron');
+  if (!body) return;
+  const open = body.style.display !== 'none';
+  body.style.display = open ? 'none' : 'block';
+  chev.style.transform = open ? '' : 'rotate(90deg)';
+}
+
+function clearMIRColFilters() {
+  ['mirF_number','mirF_purpose','mirF_location','mirF_raisedBy','mirF_dateFrom','mirF_dateTo'].forEach(id => {
+    const el = document.getElementById(id); if (el) el.value = '';
+  });
+  const sel = document.getElementById('mirF_status'); if (sel) sel.value = '';
   renderMIRList();
 }
 
 function renderMIRList() {
-  const q  = (document.getElementById('mirSearch')?.value||'').toLowerCase();
-  const sf = document.getElementById('mirStatusFilter')?.value||'';
+  const fNum    = gvl('mirF_number');
+  const fPurp   = gvl('mirF_purpose');
+  const fLoc    = gvl('mirF_location');
+  const fRaised = gvl('mirF_raisedBy');
+  const fStCol  = gv('mirF_status');
+  const fDateFrom = gv('mirF_dateFrom');
+  const fDateTo   = gv('mirF_dateTo');
   let rows = puState.mirList;
-  if (q)  rows = rows.filter(m => m.mir_number.toLowerCase().includes(q)||(m.purpose||'').toLowerCase().includes(q));
-  if (sf) rows = rows.filter(m => m.status === sf);
+  if (fNum)     rows = rows.filter(m => (m.mir_number||'').toLowerCase().includes(fNum));
+  if (fPurp)    rows = rows.filter(m => (m.purpose||'').toLowerCase().includes(fPurp));
+  if (fLoc)     rows = rows.filter(m => (m.location_name||'').toLowerCase().includes(fLoc));
+  if (fRaised)  rows = rows.filter(m => (m.raised_by||'').toLowerCase().includes(fRaised));
+  if (fStCol)   rows = rows.filter(m => (m.status||'Pending Approval') === fStCol);
+  if (fDateFrom) rows = rows.filter(m => m.mir_date && m.mir_date >= fDateFrom);
+  if (fDateTo)   rows = rows.filter(m => m.mir_date && m.mir_date <= fDateTo);
   const perms = mergedPerms();
   document.getElementById('mir_listBody').innerHTML = rows.map(m => {
     const st = m.status||'Pending Approval';
@@ -13792,11 +14314,16 @@ async function loadPOList() {
 }
 
 function renderPOList() {
-  const q=(document.getElementById('poSearch')?.value||'').toLowerCase();
-  const sf=document.getElementById('poStatusFilter')?.value||'';
+  const fNum=gvl('poF_number'), fVen=gvl('poF_vendor'), fQC=gvl('poF_qcref'), fMIR=gvl('poF_mirref');
+  const fSt=gv('poF_status'), fFrom=gv('poF_dateFrom'), fTo=gv('poF_dateTo');
   let rows=puState.poList;
-  if(q) rows=rows.filter(p=>p.po_number.toLowerCase().includes(q)||p.vendor_name.toLowerCase().includes(q));
-  if(sf) rows=rows.filter(p=>p.status===sf);
+  if(fNum)  rows=rows.filter(p=>(p.po_number||'').toLowerCase().includes(fNum));
+  if(fVen)  rows=rows.filter(p=>(p.vendor_name||'').toLowerCase().includes(fVen));
+  if(fQC)   rows=rows.filter(p=>(p.qc_number||'').toLowerCase().includes(fQC));
+  if(fMIR)  rows=rows.filter(p=>(p.mir_number||'').toLowerCase().includes(fMIR));
+  if(fSt)   rows=rows.filter(p=>p.status===fSt);
+  if(fFrom) rows=rows.filter(p=>p.po_date&&p.po_date>=fFrom);
+  if(fTo)   rows=rows.filter(p=>p.po_date&&p.po_date<=fTo);
   document.getElementById('po_listBody').innerHTML=rows.map(p=>{
     const stCls=p.status.toLowerCase().replace(/[\s/]+/g,'-');
     const canRevise = hasPerm('canCreatePO') && p.status === 'Rejected - Correction';
@@ -14640,12 +15167,17 @@ async function loadGRNList() {
 }
 
 function renderGRNList() {
-  const q=(document.getElementById('grnSearch')?.value||'').toLowerCase();
-  const sf=document.getElementById('grnStatusFilter')?.value||'';
-  const src=document.getElementById('grnSourceFilter')?.value||'';
+  const fNum=gvl('grnF_number'), fVen=gvl('grnF_vendor'), fPO=gvl('grnF_po'), fCh=gvl('grnF_challan');
+  const fSt=gv('grnF_status'), fFrom=gv('grnF_dateFrom'), fTo=gv('grnF_dateTo');
+  const src=gv('grnSourceFilter');
   let rows=puState.grnList;
-  if(q) rows=rows.filter(g=>g.grn_number.toLowerCase().includes(q)||g.vendor_name.toLowerCase().includes(q)||(g.po_number||'').toLowerCase().includes(q)||(g.cash_purchase_ref||'').toLowerCase().includes(q));
-  if(sf) rows=rows.filter(g=>g.status===sf);
+  if(fNum)  rows=rows.filter(g=>(g.grn_number||'').toLowerCase().includes(fNum));
+  if(fVen)  rows=rows.filter(g=>(g.vendor_name||'').toLowerCase().includes(fVen));
+  if(fPO)   rows=rows.filter(g=>(g.po_number||'').toLowerCase().includes(fPO));
+  if(fCh)   rows=rows.filter(g=>(g.challan_number||g.invoice_number||'').toLowerCase().includes(fCh));
+  if(fSt)   rows=rows.filter(g=>g.status===fSt);
+  if(fFrom) rows=rows.filter(g=>g.grn_date&&g.grn_date>=fFrom);
+  if(fTo)   rows=rows.filter(g=>g.grn_date&&g.grn_date<=fTo);
   if(src==='cash') rows=rows.filter(g=>g.is_cash_purchase);
   else if(src==='po') rows=rows.filter(g=>!g.is_cash_purchase);
   const perms=mergedPerms();
@@ -14677,17 +15209,18 @@ function renderGRNList() {
 // One row per line item, with GRN header columns repeated on each row
 // (denormalized) so users can filter/pivot in Excel directly.
 async function downloadGRNList() {
-  // Determine which GRNs to export — apply same search/status/source filter as table
-  const q  = (document.getElementById('grnSearch')?.value||'').toLowerCase();
-  const sf = document.getElementById('grnStatusFilter')?.value||'';
-  const src= document.getElementById('grnSourceFilter')?.value||'';
+  // Determine which GRNs to export — apply same column filters as table
+  const fNum=gvl('grnF_number'), fVen=gvl('grnF_vendor'), fPO=gvl('grnF_po');
+  const fSt=gv('grnF_status'), fFrom=gv('grnF_dateFrom'), fTo=gv('grnF_dateTo');
+  const src= gv('grnSourceFilter');
   let grns = puState.grnList || [];
-  if (q)  grns = grns.filter(g => (g.grn_number||'').toLowerCase().includes(q) ||
-                                   (g.vendor_name||'').toLowerCase().includes(q) ||
-                                   (g.po_number||'').toLowerCase().includes(q) ||
-                                   (g.cash_purchase_ref||'').toLowerCase().includes(q));
-  if (sf) grns = grns.filter(g => g.status === sf);
-  if (src==='cash') grns = grns.filter(g => g.is_cash_purchase);
+  if(fNum)  grns=grns.filter(g=>(g.grn_number||'').toLowerCase().includes(fNum));
+  if(fVen)  grns=grns.filter(g=>(g.vendor_name||'').toLowerCase().includes(fVen));
+  if(fPO)   grns=grns.filter(g=>(g.po_number||'').toLowerCase().includes(fPO));
+  if(fSt)   grns=grns.filter(g=>g.status===fSt);
+  if(fFrom) grns=grns.filter(g=>g.grn_date&&g.grn_date>=fFrom);
+  if(fTo)   grns=grns.filter(g=>g.grn_date&&g.grn_date<=fTo);
+  if(src==='cash') grns=grns.filter(g=>g.is_cash_purchase);
   else if (src==='po') grns = grns.filter(g => !g.is_cash_purchase);
   if (!grns.length) { toast('No GRNs to download (check filters)', 'info'); return; }
 
@@ -15355,12 +15888,16 @@ async function loadPOBList() {
 }
 
 function renderPOBList() {
-  const q=(document.getElementById('pobSearch')?.value||'').toLowerCase();
-  const sf=document.getElementById('pobStatusFilter')?.value||'';
-  const src=document.getElementById('pobSourceFilter')?.value||'';
+  const fNum=gvl('pobF_number'), fVen=gvl('pobF_vendor'), fPO=gvl('pobF_po');
+  const fSt=gv('pobF_status'), fFrom=gv('pobF_dateFrom'), fTo=gv('pobF_dateTo');
+  const src=gv('pobSourceFilter');
   let rows=puState.pobList;
-  if(q) rows=rows.filter(b=>b.bill_number.toLowerCase().includes(q)||b.vendor_name.toLowerCase().includes(q)||(b.po_number||'').toLowerCase().includes(q));
-  if(sf) rows=rows.filter(b=>b.status===sf);
+  if(fNum)  rows=rows.filter(b=>(b.bill_number||'').toLowerCase().includes(fNum));
+  if(fVen)  rows=rows.filter(b=>(b.vendor_name||'').toLowerCase().includes(fVen));
+  if(fPO)   rows=rows.filter(b=>(b.po_number||'').toLowerCase().includes(fPO));
+  if(fSt)   rows=rows.filter(b=>b.status===fSt);
+  if(fFrom) rows=rows.filter(b=>b.bill_date&&b.bill_date>=fFrom);
+  if(fTo)   rows=rows.filter(b=>b.bill_date&&b.bill_date<=fTo);
   if(src==='cash') rows=rows.filter(b=>b.is_cash_purchase);
   else if(src==='po') rows=rows.filter(b=>!b.is_cash_purchase);
   const perms=mergedPerms();
@@ -15519,11 +16056,23 @@ function recalcPOBTotals() {
   // ── GST: per_line sums from items; overall applies % to taxable ────────────────────
   let cgstAmt=0, sgstAmt=0, igstAmt=0;
   if(isPerLine){
+    // For per_line: GST is sum of line GST amounts, but taxable base includes extraBefore.
+    // Apportion extraBefore across items by base_amount ratio, then compute extra GST.
+    const grossBase = _pobLineItems.reduce((s,it)=>s+num(it.base_amount),0);
     _pobLineItems.forEach(it=>{
       cgstAmt+=num(it._cgst_amt||0);
       sgstAmt+=num(it._sgst_amt||0);
       igstAmt+=num(it._igst_amt||0);
     });
+    // Add GST on extraBefore: apportion by ratio, using weighted avg GST rates
+    if(extraBefore!==0 && grossBase>0){
+      const avgCGST = cgstAmt/grossBase*100;
+      const avgSGST = sgstAmt/grossBase*100;
+      const avgIGST = igstAmt/grossBase*100;
+      cgstAmt += parseFloat((extraBefore*avgCGST/100).toFixed(2));
+      sgstAmt += parseFloat((extraBefore*avgSGST/100).toFixed(2));
+      igstAmt += parseFloat((extraBefore*avgIGST/100).toFixed(2));
+    }
   } else {
     cgstAmt=taxable*(_pobGSTInfo.cgst||0)/100;
     sgstAmt=taxable*(_pobGSTInfo.sgst||0)/100;
@@ -16218,9 +16767,15 @@ async function loadMISList() {
 }
 
 function renderMISList() {
-  const q=(document.getElementById('misSearch')?.value||'').toLowerCase();
+  const fNum=gvl('misF_number'), fTo2=gvl('misF_issuedTo'), fBy=gvl('misF_issuedBy');
+  const fSt=gv('misF_status'), fFrom=gv('misF_dateFrom'), fToD=gv('misF_dateTo');
   let rows=puState.misList;
-  if(q) rows=rows.filter(m=>m.mis_number.toLowerCase().includes(q)||(m.issued_to||'').toLowerCase().includes(q));
+  if(fNum)  rows=rows.filter(m=>(m.mis_number||'').toLowerCase().includes(fNum));
+  if(fTo2)  rows=rows.filter(m=>(m.issued_to||'').toLowerCase().includes(fTo2));
+  if(fBy)   rows=rows.filter(m=>(m.issued_by||'').toLowerCase().includes(fBy));
+  if(fSt)   rows=rows.filter(m=>m.status===fSt);
+  if(fFrom) rows=rows.filter(m=>m.mis_date&&m.mis_date>=fFrom);
+  if(fToD)  rows=rows.filter(m=>m.mis_date&&m.mis_date<=fToD);
   const perms=mergedPerms();
   document.getElementById('mis_listBody').innerHTML=rows.map(m=>{
     const its=puState.misLedger.filter(it=>it.mis_number===m.mis_number);
@@ -18157,11 +18712,7 @@ async function loadDashboard(force) {
     return;
   }
   _dashLastLoaded = now;
-  await Promise.all([
-    loadDashPendingCards(),
-    loadTrackerA(),
-    loadTrackerB(),
-  ]);
+  await loadDashPendingCards();
 }
 
 const DASH_CARD_DEFS = {
@@ -18351,27 +18902,27 @@ function navDash(mainTab, subTab, statusFilter) {
     if (mainTab === 'ho') {
       if (subTab) switchHOTab(subTab);
       if (statusFilter) {
-        const sf = document.getElementById('hoStatusFilter');
+        const sf = document.getElementById('hoF_status');
         if (sf && subTab==='orders') { sf.value = statusFilter; renderHOList(); }
-        const hocSf = document.getElementById('hocStatusFilter');
+        const hocSf = document.getElementById('hocF_status');
         if (hocSf && subTab==='cert') { hocSf.value = statusFilter; renderHOCList(); }
-        const hobSf = document.getElementById('hobStatusFilter');
+        const hobSf = document.getElementById('hobF_status');
         if (hobSf && subTab==='billing') { hobSf.value = statusFilter; renderHOBList(); }
       }
     } else if (mainTab === 'wo') {
       if (subTab) switchWOTab(subTab);
       if (statusFilter) {
-        const sf = document.getElementById('woStatusFilter');
+        const sf = document.getElementById('woF_status');
         if (sf && subTab==='orders') { sf.value = statusFilter; renderWOList(); }
-        const wocSf = document.getElementById('wocStatusFilter');
+        const wocSf = document.getElementById('wocF_status');
         if (wocSf && subTab==='cert') { wocSf.value = statusFilter; renderWOCList(); }
-        const wobSf = document.getElementById('wobStatusFilter');
+        const wobSf = document.getElementById('wobF_status');
         if (wobSf && subTab==='billing') { wobSf.value = statusFilter; renderWOBList(); }
       }
     } else if (mainTab === 'purchase') {
       if (subTab) switchPUTab(subTab);
       if (statusFilter) {
-        const filterMap = { mir:'mirStatusFilter', grn:'grnStatusFilter', po:'poStatusFilter', pob:'pobStatusFilter' };
+        const filterMap = { mir:'mirF_status', grn:'grnF_status', po:'poF_status', pob:'pobF_status' };
         const filterId = filterMap[subTab];
         if (filterId) { const sf = document.getElementById(filterId); if (sf) sf.value = statusFilter; }
         const renderMap = { mir: typeof renderMIRList !== 'undefined' ? renderMIRList : null,
@@ -18415,444 +18966,6 @@ function fmtDateShort(d) {
   } catch (e) { return d; }
 }
 
-function trackerDateRange(fromId, toId) {
-  const toDate = new Date();
-  const fromDate = new Date();
-  fromDate.setDate(fromDate.getDate() - 30);
-  const fromEl = document.getElementById(fromId);
-  const toEl = document.getElementById(toId);
-  if (fromEl && !fromEl.value) fromEl.value = fromDate.toISOString().slice(0,10);
-  if (toEl && !toEl.value) toEl.value = toDate.toISOString().slice(0,10);
-  return { from: (fromEl ? fromEl.value : fromDate.toISOString().slice(0,10)), to: (toEl ? toEl.value : toDate.toISOString().slice(0,10)) };
-}
-
-// Tracker A: single MIR open at a time (accordion). null = all collapsed (default).
-let _trkAOpenMir = null;
-// Back-compat aliases (no longer referenced by tracker but kept to avoid breaking other code)
-let _trkACollapsed = new Set();
-let _trkAExpanded = new Set();
-
-async function loadTrackerA() {
-  const tbody = document.getElementById('tracker_a_body');
-  if (!tbody) return;
-  tbody.innerHTML = '<tr><td colspan="4" class="center muted" style="padding:20px;">Loading…</td></tr>';
-  const range = trackerDateRange('trk_a_from', 'trk_a_to');
-  const from = range.from;
-
-  try {
-    const results = await Promise.all([
-      sb.from('pu_mir').select('mir_number,mir_date,purpose,status,approved_by,approved_at')
-        .or('mir_date.gte.'+from+',status.not.in.(Closed,Rejected)').order('mir_date',{ascending:false}),
-      sb.from('pu_rfq').select('rfq_number,rfq_date,mir_number,status')
-        .or('rfq_date.gte.'+from+',status.not.in.(Approved,PO Raised)'),
-      sb.from('pu_quote_comparison').select('qc_number,qc_date,rfq_number,status,approved_at')
-        .or('qc_date.gte.'+from+',status.not.in.(PO Raised,Rejected)'),
-      sb.from('pu_po_orders').select('po_number,po_date,qc_number,mir_number,status,grand_total,approved_at'),
-      sb.from('pu_grn').select('grn_number,grn_date,po_number,status,verified_by')
-        .or('grn_date.gte.'+from+',status.not.in.(Verified,Rejected)'),
-    ]);
-    const mirs = results[0].data || [];
-    const rfqs = results[1].data || [];
-    const qcs  = results[2].data || [];
-    const pos  = results[3].data || [];
-    const grns = results[4].data || [];
-
-    if (!mirs.length) {
-      tbody.innerHTML = '<tr><td colspan="4" class="center muted" style="padding:20px;">No MIRs found in range.</td></tr>';
-      return;
-    }
-
-    // Fetch line items for the MIRs in view (with WBS sub activity)
-    const mirNumsInView = mirs.map(function(m){ return m.mir_number; });
-    const itemsRes = await sb.from('pu_mir_items')
-      .select('mir_number,sno,material_name,uom,qty_required,wbs_code,item_status')
-      .in('mir_number', mirNumsInView).order('sno');
-    const mirItems = itemsRes.data || [];
-    const itemsByMir = {};
-    mirItems.forEach(function(it){
-      if (!itemsByMir[it.mir_number]) itemsByMir[it.mir_number] = [];
-      itemsByMir[it.mir_number].push(it);
-    });
-
-    const rfqByMir = {}; rfqs.forEach(function(r){ if(r.mir_number){ if(!rfqByMir[r.mir_number]) rfqByMir[r.mir_number]=[]; rfqByMir[r.mir_number].push(r); } });
-    const qcByRfq = {}; qcs.forEach(function(q){ if(q.rfq_number){ if(!qcByRfq[q.rfq_number]) qcByRfq[q.rfq_number]=[]; qcByRfq[q.rfq_number].push(q); } });
-    const poByMir = {}; pos.forEach(function(p){ if(p.mir_number){ if(!poByMir[p.mir_number]) poByMir[p.mir_number]=[]; poByMir[p.mir_number].push(p); } });
-    const poByQc = {}; pos.forEach(function(p){ if(p.qc_number){ if(!poByQc[p.qc_number]) poByQc[p.qc_number]=[]; poByQc[p.qc_number].push(p); } });
-    const grnByPo = {}; grns.forEach(function(g){ if(!g.po_number) return; /* skip cash GRNs */ if(!grnByPo[g.po_number]) grnByPo[g.po_number]=[]; grnByPo[g.po_number].push(g); });
-
-    let html = '';
-    mirs.forEach(function(mir) {
-      const mirRFQs = rfqByMir[mir.mir_number] || [];
-      const mirPOs = poByMir[mir.mir_number] || [];
-      const mirQCs = mirRFQs.flatMap(function(r){ return qcByRfq[r.rfq_number] || []; });
-      const qcPOs = mirQCs.flatMap(function(q){ return poByQc[q.qc_number] || []; });
-      const allPOMap = new Map();
-      mirPOs.concat(qcPOs).forEach(function(p){ allPOMap.set(p.po_number, p); });
-      const allPOs = Array.from(allPOMap.values());
-
-      const mirRejected  = mir.status === 'Rejected';
-      const mirApproved  = mir.status !== 'Pending Approval' && mir.status !== 'Rejected';
-      const qcAllRejected = mirRFQs.length > 0 && mirQCs.length > 0 && mirQCs.every(function(q){ return q.status === 'Rejected'; });
-
-      // Parent row milestones — strictly MIR stage only
-      const sMirRaised   = 'done';
-      const sMirApproved = mirRejected ? 'rejected' : mirApproved ? 'done' : 'active';
-      const parentMilestones = [
-        dashMs(sMirRaised,   'MIR Raised',   mir.mir_date),
-        dashMs(sMirApproved, 'MIR Approved', mir.approved_at),
-      ];
-
-      // Split MIR items into "on a PO" vs "pending procurement"
-      const thisItems = itemsByMir[mir.mir_number] || [];
-      const pendingItems = thisItems.filter(function(it){
-        const st = it.item_status || 'Pending';
-        return st === 'Pending' || st === 'RFQ Raised';
-      });
-
-      const isExpanded = _trkAOpenMir === mir.mir_number;
-      const chevronParts = [];
-      if (allPOs.length)        chevronParts.push(allPOs.length+' PO'+(allPOs.length!==1?'s':''));
-      if (pendingItems.length)  chevronParts.push(pendingItems.length+' pending item'+(pendingItems.length!==1?'s':''));
-      const hasChildren = allPOs.length > 0 || pendingItems.length > 0;
-
-      // Parent header indicator (no overall status — but show special cases)
-      let parentStatus = '';
-      if (mirRejected) {
-        parentStatus = '<span class="status rejected" style="font-size:10px;">MIR Rejected</span>';
-      } else if (qcAllRejected && !allPOs.length) {
-        parentStatus = '<span class="status rejected" style="font-size:10px;">All QCs Rejected</span>';
-      } else if (!mirApproved) {
-        parentStatus = '<span class="status pending-approval" style="font-size:10px;">Pending Approval</span>';
-      }
-
-      html += '<tr class="parent-row" onclick="toggleTrkARow(\''+esc(mir.mir_number)+'\')">'+
-        '<td class="mono" style="font-size:11px;">'+esc(mir.mir_number)+'</td>'+
-        '<td style="font-size:11px;">'+esc(mir.purpose||'—')+
-          (hasChildren?'<br><span class="expand-btn">'+(isExpanded?'▼':'▶')+' '+chevronParts.join(' · ')+'</span>':'')+
-        '</td>'+
-        '<td>'+renderMilestoneRow(parentMilestones)+'</td>'+
-        '<td>'+parentStatus+'</td>'+
-      '</tr>';
-
-      if (!isExpanded) return;
-
-      // ── PO CHILD ROWS ──
-      allPOs.forEach(function(po) {
-        const poGRNs = grnByPo[po.po_number] || [];
-        // Was this PO raised via an RFQ/QC, or direct?
-        const poViaQC = !!po.qc_number;
-        // RFQ associated with this PO (via its QC)
-        let rfqForPO = null, qcForPO = null;
-        if (poViaQC) {
-          qcForPO = qcs.find(function(q){ return q.qc_number === po.qc_number; });
-          if (qcForPO) {
-            rfqForPO = rfqs.find(function(r){ return r.rfq_number === qcForPO.rfq_number; });
-          }
-        }
-        const directPOPath = !poViaQC;
-
-        // Milestone states
-        const isPoRejected   = po.status === 'Rejected';
-        const isPoCancelled  = po.status === 'Cancelled';
-        const isPoOpen       = ['Open','Partial Receipt','Fully Received','Short-Closed'].indexOf(po.status) >= 0;
-        const isPoPending    = po.status === 'Pending Approval';
-
-        const sRfq = directPOPath ? 'pending'
-                   : rfqForPO ? 'done'
-                   : 'active';
-        const sQc  = directPOPath ? 'pending'
-                   : qcForPO && qcForPO.status === 'Approved' ? 'done'
-                   : qcForPO && qcForPO.status === 'Rejected' ? 'rejected'
-                   : qcForPO ? 'active'
-                   : 'pending';
-        const sPoCreated  = 'done';
-        const sPoApproved = isPoRejected ? 'rejected'
-                          : isPoCancelled ? 'rejected'
-                          : isPoOpen ? 'done'
-                          : 'active';
-
-        // GRN rollup across all GRNs for this PO (non-rejected counted)
-        const activeGRNs = poGRNs.filter(function(g){ return g.status !== 'Rejected'; });
-        const verifiedGRNs = poGRNs.filter(function(g){ return ['Verified','Partially Billed','Billed'].indexOf(g.status) >= 0; });
-        const grnReceived = activeGRNs.length > 0;
-        const allVerified = grnReceived && activeGRNs.every(function(g){ return ['Verified','Partially Billed','Billed'].indexOf(g.status) >= 0; });
-        const sGrnRcv = !isPoOpen ? 'pending'
-                      : grnReceived ? 'done'
-                      : 'active';
-        const sGrnVer = !isPoOpen ? 'pending'
-                      : allVerified && grnReceived ? 'done'
-                      : grnReceived ? 'active'
-                      : 'pending';
-
-        // Tooltip for GRN dots — list all GRNs with no, date, status
-        const grnTooltip = poGRNs.length
-          ? poGRNs.map(function(g){ return g.grn_number+' ('+fmtDateShort(g.grn_date)+', '+g.status+')'; }).join('\n')
-          : 'No GRNs yet';
-        const grnCountSuffix = activeGRNs.length > 0 ? ' ('+activeGRNs.length+')' : '';
-
-        const poMilestones = [
-          dashMs(sRfq, 'RFQ Raised'+(directPOPath?' (skipped)':''), rfqForPO ? rfqForPO.rfq_date : null),
-          dashMs(sQc,  'QC Approved'+(directPOPath?' (skipped)':''), qcForPO && qcForPO.status==='Approved' ? qcForPO.approved_at : null),
-          dashMs(sPoCreated,  'PO Created',  po.po_date),
-          dashMs(sPoApproved, 'PO Approved', isPoOpen ? po.approved_at : null),
-          dashMs(sGrnRcv, 'GRN Received'+grnCountSuffix, grnReceived ? activeGRNs[0].grn_date : null),
-          dashMs(sGrnVer, 'GRN Verified'+grnCountSuffix, allVerified && verifiedGRNs.length ? verifiedGRNs[0].grn_date : null),
-        ];
-
-        // Status pill — match PO table styling
-        const poStCls = po.status.toLowerCase().replace(/[\s/]+/g,'-');
-
-        html += '<tr class="child-row">'+
-          '<td class="mono" style="font-size:10px;color:var(--accent);text-decoration:underline;cursor:pointer;" onclick="event.stopPropagation();viewPO(\''+esc(po.po_number)+'\')" title="View PO details">'+esc(po.po_number)+'</td>'+
-          '<td style="font-size:10px;">'+esc(po.vendor_name||'—')+'<br><span class="muted">'+fmtINRSym(po.grand_total)+'</span></td>'+
-          '<td title="'+esc(grnTooltip)+'">'+renderMilestoneRow(poMilestones)+'</td>'+
-          '<td><span class="status '+poStCls+'" style="font-size:10px;">'+esc(po.status)+'</span></td>'+
-        '</tr>';
-      });
-
-      // ── PENDING ITEMS SUB-GROUP ──
-      // Items not yet on any PO — show as a single grouped sub-table at the bottom of the MIR's children
-      if (pendingItems.length) {
-        let itemsTbl = '<div style="padding:6px 4px 8px 4px;">'+
-          '<div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;margin-bottom:4px;">Pending Items — Not on any PO ('+pendingItems.length+')</div>'+
-          '<table style="width:100%;border-collapse:collapse;font-size:10.5px;background:#fafcff;border:1px solid #e3ebf5;">'+
-            '<thead><tr style="background:#eef3fa;">'+
-              '<th style="padding:5px 8px;text-align:left;width:40px;border-bottom:1px solid #d8e2ef;">#</th>'+
-              '<th style="padding:5px 8px;text-align:left;border-bottom:1px solid #d8e2ef;">Material</th>'+
-              '<th style="padding:5px 8px;text-align:left;width:60px;border-bottom:1px solid #d8e2ef;">UOM</th>'+
-              '<th style="padding:5px 8px;text-align:right;width:80px;border-bottom:1px solid #d8e2ef;">Qty</th>'+
-              '<th style="padding:5px 8px;text-align:left;border-bottom:1px solid #d8e2ef;">WBS Code</th>'+
-              '<th style="padding:5px 8px;text-align:left;width:140px;border-bottom:1px solid #d8e2ef;">Status</th>'+
-            '</tr></thead><tbody>';
-        pendingItems.forEach(function(it){
-          const rawSt = it.item_status || 'Pending';
-          const label = rawSt === 'Pending' ? 'Awaiting RFQ'
-                      : rawSt === 'RFQ Raised' ? 'RFQ Raised'
-                      : rawSt;
-          const cls = rawSt === 'RFQ Raised' ? 'active' : 'pending-approval';
-          itemsTbl += '<tr>'+
-            '<td style="padding:4px 8px;border-bottom:1px solid #eef2f8;color:var(--muted);">'+esc(it.sno||'')+'</td>'+
-            '<td style="padding:4px 8px;border-bottom:1px solid #eef2f8;">'+esc(it.material_name||'—')+'</td>'+
-            '<td style="padding:4px 8px;border-bottom:1px solid #eef2f8;">'+esc(it.uom||'')+'</td>'+
-            '<td style="padding:4px 8px;border-bottom:1px solid #eef2f8;text-align:right;" class="mono">'+(it.qty_required!=null?Number(it.qty_required).toLocaleString('en-IN'):'')+'</td>'+
-            '<td style="padding:4px 8px;border-bottom:1px solid #eef2f8;">'+esc(it.wbs_code||'—')+'</td>'+
-            '<td style="padding:4px 8px;border-bottom:1px solid #eef2f8;"><span class="status '+cls+'" style="font-size:9px;">'+esc(label)+'</span></td>'+
-          '</tr>';
-        });
-        itemsTbl += '</tbody></table></div>';
-        html += '<tr class="child-row"><td colspan="4" style="padding:0 12px;">'+itemsTbl+'</td></tr>';
-      }
-    });
-
-    tbody.innerHTML = html || '<tr><td colspan="4" class="center muted" style="padding:20px;">No records match filter.</td></tr>';
-  } catch(e) {
-    console.error('Tracker A error:', e);
-    tbody.innerHTML = '<tr><td colspan="4" class="center warn-text" style="padding:20px;">Error loading tracker: '+esc(e.message)+'</td></tr>';
-  }
-}
-
-function toggleTrkARow(mirNum) {
-  // Accordion behaviour: clicking opens this MIR and closes any other;
-  // clicking the currently-open MIR collapses it.
-  _trkAOpenMir = (_trkAOpenMir === mirNum) ? null : mirNum;
-  loadTrackerA();
-}
-
-let _trkBExpanded = new Set();
-
-async function loadTrackerB() {
-  const tbody = document.getElementById('tracker_b_body');
-  if (!tbody) return;
-  tbody.innerHTML = '<tr><td colspan="4" class="center muted" style="padding:20px;">Loading…</td></tr>';
-  const range = trackerDateRange('trk_b_from', 'trk_b_to');
-  const typeFilter = document.getElementById('trk_b_type') ? document.getElementById('trk_b_type').value : '';
-
-  try {
-    const promises = [];
-    if (!typeFilter || typeFilter === 'purchase') promises.push(loadTrackerBPurchase(range.from));
-    if (!typeFilter || typeFilter === 'ho') promises.push(loadTrackerBHO(range.from));
-    if (!typeFilter || typeFilter === 'wo') promises.push(loadTrackerBWO(range.from));
-    const sections = await Promise.all(promises);
-    const html = sections.join('');
-    tbody.innerHTML = html || '<tr><td colspan="4" class="center muted" style="padding:20px;">No records found.</td></tr>';
-  } catch(e) {
-    tbody.innerHTML = '<tr><td colspan="4" class="center warn-text" style="padding:20px;">Error: '+esc(e.message)+'</td></tr>';
-  }
-}
-
-async function loadTrackerBPurchase(from) {
-  const results = await Promise.all([
-    sb.from('pu_po_bills').select('bill_number,bill_date,po_number,vendor_name,status,net_payable,grn_numbers')
-      .or('bill_date.gte.'+from+',status.not.in.(Paid)').order('bill_date',{ascending:false}).limit(30),
-    sb.from('ho_prr_items').select('bill_number,paid_amount,status,prr_number').eq('bill_type','POB'),
-  ]);
-  const pobs = results[0].data || [];
-  const prrMap = {};
-  (results[1].data||[]).forEach(function(it) {
-    if (!prrMap[it.bill_number]) prrMap[it.bill_number] = {paid:0,status:'',prr:it.prr_number};
-    prrMap[it.bill_number].paid += num(it.paid_amount);
-    prrMap[it.bill_number].status = it.status;
-  });
-
-  let html = '';
-  pobs.forEach(function(b) {
-    const prr = prrMap[b.bill_number] || null;
-    const prrRaised = !!prr;
-    const paid = prr ? prr.paid : 0;
-    const milestones = [
-      dashMs('done','GRN Billed',b.bill_date),
-      dashMs(b.status==='Pending Approval'?'active':b.status==='Rejected'?'rejected':'done','Bill Approved',b.status!=='Pending Approval'&&b.status!=='Rejected'?b.bill_date:null),
-      dashMs(prrRaised?'done':['Unpaid','Partial'].indexOf(b.status)>=0?'active':'pending','PRR Raised',null),
-      dashMs(paid>0?'done':prrRaised?'active':'pending','Payment Received',null),
-    ];
-    const overallSt = paid>=num(b.net_payable)-0.01?'Paid':prrRaised?'PRR Raised':b.status==='Pending Approval'?'Pending Approval':'Unpaid';
-    const stClass = overallSt==='Paid'?'paid':overallSt==='Pending Approval'?'pending-approval':'unpaid';
-    html += '<tr class="parent-row">'+
-      '<td><div class="mono" style="font-size:11px;">'+esc(b.bill_number)+(b.is_cash_purchase?' <span style="font-size:9px;background:#ad6800;color:#fff;padding:1px 4px;border-radius:2px;">CASH</span>':'')+'</div>'+
-        '<div style="font-size:10px;color:var(--muted);">'+esc(b.is_cash_purchase ? 'Direct Purchase' : (b.po_number||'—'))+'</div></td>'+
-      '<td style="font-size:11px;">'+esc(b.vendor_name)+'</td>'+
-      '<td>'+renderMilestoneRow(milestones)+'</td>'+
-      '<td><span class="status '+stClass+'" style="font-size:10px;">'+overallSt+'</span>'+
-        '<div style="font-size:10px;color:var(--muted);margin-top:2px;">'+fmtINRSym(b.net_payable)+'</div></td>'+
-    '</tr>';
-  });
-  return html;
-}
-
-async function loadTrackerBHO(from) {
-  const results = await Promise.all([
-    sb.from('ho_orders').select('ho_number,ho_date,vendor_name,status,total_amount')
-      .or('ho_date.gte.'+from+',status.not.in.(Completed,Cancelled,Short-Closed)').order('ho_date',{ascending:false}).limit(25),
-    sb.from('ho_certifications').select('hoc_number,hoc_date,ho_number,status')
-      .or('hoc_date.gte.'+from+',status.not.in.(Billed,Rejected)'),
-    sb.from('ho_bills').select('bill_number,bill_date,ho_number,hoc_number,status,net_payable')
-      .or('bill_date.gte.'+from+',status.not.in.(Paid,Rejected)'),
-    sb.from('ho_prr_items').select('bill_number,paid_amount,status'),
-  ]);
-  const hos = results[0].data || [];
-  const hocs = results[1].data || [];
-  const hobs = results[2].data || [];
-  const paidMap = {};
-  (results[3].data||[]).forEach(function(it) { paidMap[it.bill_number]=(paidMap[it.bill_number]||0)+num(it.paid_amount); });
-
-  let html = '';
-  hos.forEach(function(ho) {
-    const myHOCs = hocs.filter(function(c){ return c.ho_number===ho.ho_number; });
-    const myHOBs = hobs.filter(function(b){ return b.ho_number===ho.ho_number; });
-    const isExpanded = _trkBExpanded.has(ho.ho_number);
-    const childCount = myHOCs.length;
-    const anyBilled = myHOBs.some(function(b){ return ['Unpaid','Partial','Paid'].indexOf(b.status)>=0; });
-    const anyPaid = myHOBs.some(function(b){ const paid=paidMap[b.bill_number]||0; return paid>=num(b.net_payable)-0.01; });
-    const overallSt = anyPaid?'Payment Received':anyBilled?'Bill Raised':myHOCs.length?'Certified':ho.status==='Pending Approval'?'Pending Approval':'Active';
-    const stClass = anyPaid?'paid':anyBilled?'billed':myHOCs.length?'partial':'open';
-    const milestones = [
-      dashMs(ho.status!=='Pending Approval'&&ho.status!=='Rejected'?'done':'active','HO Approved',ho.ho_date),
-      dashMs(myHOCs.length?'done':['Open','Active'].indexOf(ho.status)>=0?'active':'pending','Certified',myHOCs[0]?myHOCs[0].hoc_date:null),
-      dashMs(anyBilled?'done':myHOCs.length?'active':'pending','Bill Raised',myHOBs[0]?myHOBs[0].bill_date:null),
-      dashMs(anyPaid?'done':anyBilled?'active':'pending','Payment',null),
-    ];
-    html += '<tr class="parent-row" onclick="toggleTrkBRow(\''+esc(ho.ho_number)+'\')">'+
-      '<td><div class="mono" style="font-size:11px;">'+esc(ho.ho_number)+'</div>'+
-        (childCount?'<span class="expand-btn">'+(isExpanded?'▼':'▶')+' '+childCount+' cert'+(childCount!==1?'s':'')+'</span>':'')+
-      '</td>'+
-      '<td style="font-size:11px;">'+esc(ho.vendor_name)+'<br><span class="muted" style="font-size:10px;">'+fmtINRSym(ho.total_amount)+'</span></td>'+
-      '<td>'+renderMilestoneRow(milestones)+'</td>'+
-      '<td><span class="status '+stClass+'" style="font-size:10px;">'+overallSt+'</span></td>'+
-    '</tr>';
-    if (isExpanded) {
-      myHOCs.forEach(function(hoc) {
-        const hob = myHOBs.find(function(b){ return b.hoc_number===hoc.hoc_number; });
-        const paid = hob ? (paidMap[hob.bill_number]||0) : 0;
-        const isFullyPaid = hob && paid >= num(hob.net_payable)-0.01;
-        html += '<tr class="child-row">'+
-          '<td class="mono" style="font-size:10px;">'+esc(hoc.hoc_number)+'</td>'+
-          '<td style="font-size:10px;">'+esc(hoc.status)+'</td>'+
-          '<td colspan="2">'+renderMilestoneRow([
-            dashMs('done','Cert Created',hoc.hoc_date),
-            dashMs(['Unbilled','Billed'].indexOf(hoc.status)>=0?'done':hoc.status==='Rejected'?'rejected':hoc.status==='Pending Approval'?'active':'pending','Cert Approved',null),
-            dashMs(hob?'done':hoc.status==='Unbilled'?'active':'pending','Bill Raised',hob?hob.bill_date:null),
-            dashMs(isFullyPaid?'done':hob&&paid>0?'active':'pending','Payment',null),
-          ])+'</td>'+
-        '</tr>';
-      });
-    }
-  });
-  return html;
-}
-
-async function loadTrackerBWO(from) {
-  const results = await Promise.all([
-    sb.from('wo_orders').select('wo_number,wo_date,vendor_name,status,total_amount')
-      .or('wo_date.gte.'+from+',status.not.in.(Completed,Cancelled,Short-Closed,Terminated)').order('wo_date',{ascending:false}).limit(25),
-    sb.from('wo_certifications').select('woc_number,woc_date,wo_number,status')
-      .or('woc_date.gte.'+from+',status.not.in.(Billed,Rejected)'),
-    sb.from('wo_bills').select('bill_number,bill_date,wo_number,woc_number,status,net_payable')
-      .or('bill_date.gte.'+from+',status.not.in.(Paid,Rejected)'),
-    sb.from('ho_prr_items').select('bill_number,paid_amount,status').eq('bill_type','WOB'),
-  ]);
-  const wos = results[0].data || [];
-  const wocs = results[1].data || [];
-  const wobs = results[2].data || [];
-  const paidMap = {};
-  (results[3].data||[]).forEach(function(it) { paidMap[it.bill_number]=(paidMap[it.bill_number]||0)+num(it.paid_amount); });
-
-  let html = '';
-  wos.forEach(function(wo) {
-    const myWOCs = wocs.filter(function(c){ return c.wo_number===wo.wo_number; });
-    const myWOBs = wobs.filter(function(b){ return b.wo_number===wo.wo_number; });
-    const isExpanded = _trkBExpanded.has(wo.wo_number);
-    const anyBilled = myWOBs.some(function(b){ return ['Unpaid','Partial','Paid'].indexOf(b.status)>=0; });
-    const anyPaid = myWOBs.some(function(b){ const paid=paidMap[b.bill_number]||0; return paid>=num(b.net_payable)-0.01; });
-    const overallSt = anyPaid?'Payment Received':anyBilled?'Bill Raised':myWOCs.length?'Certified':wo.status==='Pending Approval'?'Pending Approval':'Active';
-    const stClass = anyPaid?'paid':anyBilled?'billed':myWOCs.length?'partial':'open';
-    const milestones = [
-      dashMs(wo.status!=='Pending Approval'&&wo.status!=='Rejected'?'done':'active','WO Approved',wo.wo_date),
-      dashMs(myWOCs.length?'done':['Open','Active'].indexOf(wo.status)>=0?'active':'pending','Certified',myWOCs[0]?myWOCs[0].woc_date:null),
-      dashMs(anyBilled?'done':myWOCs.length?'active':'pending','RA Bill',myWOBs[0]?myWOBs[0].bill_date:null),
-      dashMs(anyPaid?'done':anyBilled?'active':'pending','Payment',null),
-    ];
-    html += '<tr class="parent-row" onclick="toggleTrkBRow(\''+esc(wo.wo_number)+'\')">'+
-      '<td><div class="mono" style="font-size:11px;">'+esc(wo.wo_number)+'</div>'+
-        (myWOCs.length?'<span class="expand-btn">'+(isExpanded?'▼':'▶')+' '+myWOCs.length+' cert'+(myWOCs.length!==1?'s':'')+'</span>':'')+
-      '</td>'+
-      '<td style="font-size:11px;">'+esc(wo.vendor_name)+'<br><span class="muted" style="font-size:10px;">'+fmtINRSym(wo.total_amount)+'</span></td>'+
-      '<td>'+renderMilestoneRow(milestones)+'</td>'+
-      '<td><span class="status '+stClass+'" style="font-size:10px;">'+overallSt+'</span></td>'+
-    '</tr>';
-    if (isExpanded) {
-      myWOCs.forEach(function(woc) {
-        const wob = myWOBs.find(function(b){ return b.woc_number===woc.woc_number; });
-        const paid = wob ? (paidMap[wob.bill_number]||0) : 0;
-        const isFullyPaid = wob && paid >= num(wob.net_payable)-0.01;
-        html += '<tr class="child-row">'+
-          '<td class="mono" style="font-size:10px;">'+esc(woc.woc_number)+'</td>'+
-          '<td style="font-size:10px;">'+esc(woc.status)+'</td>'+
-          '<td colspan="2">'+renderMilestoneRow([
-            dashMs('done','Cert Created',woc.woc_date),
-            dashMs(['Unbilled','Billed'].indexOf(woc.status)>=0?'done':woc.status==='Rejected'?'rejected':woc.status==='Pending Approval'?'active':'pending','Cert Approved',null),
-            dashMs(wob?'done':woc.status==='Unbilled'?'active':'pending','RA Bill',wob?wob.bill_date:null),
-            dashMs(isFullyPaid?'done':wob&&paid>0?'active':'pending','Payment',null),
-          ])+'</td>'+
-        '</tr>';
-      });
-    }
-  });
-  return html;
-}
-
-function toggleTrkBRow(id) {
-  if (_trkBExpanded.has(id)) _trkBExpanded.delete(id);
-  else _trkBExpanded.add(id);
-  loadTrackerB();
-}
-
-function switchDashTracker(tab) {
-  document.getElementById('dash-tracker-procurement').style.display = tab==='procurement' ? '' : 'none';
-  document.getElementById('dash-tracker-billing').style.display = tab==='billing' ? '' : 'none';
-  document.getElementById('dtt-procurement').classList.toggle('active', tab==='procurement');
-  document.getElementById('dtt-billing').classList.toggle('active', tab==='billing');
-  if (tab==='billing') loadTrackerB(); else loadTrackerA();
-}
 
 async function loadActivityFeed() {
   const el = document.getElementById('dash-activity-feed');
