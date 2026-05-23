@@ -7828,11 +7828,7 @@ function renderHOBList() {
   tbody.innerHTML = rows.map(b => {
     const st = b['Status'] || 'Unpaid';
     let actionBtns = `<button class="btn btn-ghost btn-sm" onclick="viewHOBById('${esc(b['Bill Number'])}')">View</button>
-      <button class="btn btn-ghost btn-sm" onclick="printHOBById('${esc(b['Bill Number'])}')">Print</button>`;
-    if (perms.canApproveBill && st === 'Pending Approval') {
-      actionBtns += `<button class="btn btn-primary btn-sm" onclick="approveHOB('${esc(b['Bill Number'])}')">Approve</button>
-        <button class="btn btn-danger btn-sm" onclick="promptReject('HOB','${esc(b['Bill Number'])}')">Reject</button>`;
-    }
+      <button class="btn btn-ghost btn-sm" onclick="printHOBById('${esc(b['Bill Number'])}')">🖨</button>`;
     if (perms.canCreateHOB && st === 'Rejected') {
       actionBtns += `<button class="btn btn-warn btn-sm" onclick="reviseHOB('${esc(b['Bill Number'])}')">✎ Revise &amp; Resubmit</button>`;
     }
@@ -8189,48 +8185,492 @@ async function reviseHOB(billNum) {
 }
 
 async function viewHOBById(billNum) {
+  pbShow('Loading…');
   const r = await apiGetHOBDetails(billNum);
+  pbDone();
   if (!r.ok) { toast(r.error,'error'); return; }
-  const h = r.header; const items = r.items || [];
-  openModal(`<h3>${esc(h['Bill Number'])}</h3>
-    <div class="grid-3" style="font-size:13px;margin-bottom:12px;">
-      <div><b>Date:</b> ${fmtDate(h['Bill Date'])}</div>
-      <div><b>HO #:</b> <span class="mono">${esc(h['HO Number'])}</span></div>
-      <div><b>Cert. #:</b> <span class="mono">${esc(h['HOC Number'])}</span></div>
-      <div><b>Vendor:</b> ${esc(h['Vendor Name'])}</div>
-      <div><b>Status:</b> <span class="status ${(h['Status']||'').toLowerCase()}">${esc(h['Status'])}</span></div>
-      <div><b>Net Payable:</b> <span class="mono" style="color:var(--accent);">${fmtINRSym(h['Net Payable'])}</span></div>
+  const h = r.header;
+  const items     = r.items     || [];
+  const extraLines= r.extraLines|| [];
+
+  // ── Fetch vendor details ─────────────────────────────────────────────────
+  const {data:vd} = await sb.from('ho_vendors')
+    .select('vendor_name,address,gstin,pan,contact_person,phone,bank_name,branch,bank_account,ifsc')
+    .eq('vendor_name', h['Vendor Name']).maybeSingle();
+
+  // ── Fetch prior approved bills for same vendor ───────────────────────────
+  const {data:priorBills} = await sb.from('ho_bills')
+    .select('bill_number,ho_number')
+    .eq('vendor_name', h['Vendor Name'])
+    .neq('bill_number', billNum)
+    .in('status',['Unpaid','Paid']);
+  const priorBillNums = (priorBills||[]).map(b=>b.bill_number);
+  const priorHONums   = [...new Set((priorBills||[]).map(b=>b.ho_number).filter(Boolean))];
+  let priorItemsData = [];
+  if (priorBillNums.length) {
+    const {data:pi} = await sb.from('ho_bill_items').select('*').in('bill_number', priorBillNums);
+    priorItemsData = pi||[];
+  }
+
+  // Build prev totals map by description
+  const prevMap = {};
+  priorItemsData.forEach(it => {
+    const k = it.description;
+    if (!prevMap[k]) prevMap[k] = {qty:0, amount:0};
+    prevMap[k].qty    += num(it.this_period_qty);
+    prevMap[k].amount += num(it.amount);
+  });
+
+  const stCls = h['Status']==='Unpaid'||h['Status']==='Paid'?'approved':h['Status']==='Rejected'?'rejected':'pending-approval';
+
+  // ── Previous HOs card ────────────────────────────────────────────────────
+  const allHOs = [...new Set([...(h['HO Number']?[h['HO Number']]:[]),...priorHONums])];
+  const hoCard = allHOs.length > 1
+    ? `<div style="margin-bottom:14px;padding:10px 14px;background:var(--panel-2);border:1px solid var(--border);border-radius:6px;">
+         <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;">Previous Approved Bills — HO Numbers Considered</div>
+         <div style="display:flex;flex-wrap:wrap;gap:6px;">
+           ${allHOs.map(p=>`<span class="mono" style="padding:2px 10px;background:var(--panel);border:1px solid var(--border);border-radius:12px;font-size:12px;">${esc(p)}</span>`).join('')}
+         </div></div>`
+    : '';
+
+  // ── Bill Line Items table ────────────────────────────────────────────────
+  const lineRows = items.map((it,i)=>`<tr>
+    <td style="text-align:center;">${it['S.No']||i+1}</td>
+    <td>${esc(it['Description'])}</td>
+    <td style="text-align:center;">${esc(it['UOM']||'')}</td>
+    <td style="text-align:right;">${fmtINR(it['This Period Qty'])}</td>
+    <td style="text-align:right;">${fmtINR(it['Unit Rate'])}</td>
+    <td style="text-align:right;font-weight:600;">${fmtINR(it['Amount'])}</td>
+  </tr>`).join('');
+
+  // ── Extra lines ──────────────────────────────────────────────────────────
+  const extraRows = extraLines.length ? extraLines.map(el=>`<tr>
+    <td>${esc(el['Description']||'—')}</td>
+    <td><span style="padding:1px 8px;border-radius:10px;font-size:11px;font-weight:600;
+      background:${el['Type']==='Addition'?'#d1fae520':'#fee2e220'};
+      color:${el['Type']==='Addition'?'#059669':'#dc2626'};
+      border:1px solid ${el['Type']==='Addition'?'#6ee7b7':'#fca5a5'};">
+      ${esc(el['Type']||'')}</span></td>
+    <td>${esc(el['Timing']||'')}</td>
+    <td style="text-align:right;font-weight:600;color:${el['Type']==='Addition'?'#059669':'#dc2626'};">
+      ${el['Type']==='Addition'?'+':'−'}${fmtINR(Math.abs(num(el['Amount'])))}</td>
+  </tr>`).join('')
+    : `<tr><td colspan="4" style="text-align:center;color:var(--muted);font-size:12px;">No additional or deduction lines.</td></tr>`;
+
+  // ── Bill Computation ─────────────────────────────────────────────────────
+  const gross   = num(h['Gross Amount']);
+  const extraBefore = extraLines.filter(el=>el['Timing']==='Before GST')
+    .reduce((s,el)=>s+(el['Type']==='Addition'?num(el['Amount']):-num(el['Amount'])),0);
+  const extraAfter  = extraLines.filter(el=>el['Timing']==='After GST')
+    .reduce((s,el)=>s+(el['Type']==='Addition'?num(el['Amount']):-num(el['Amount'])),0);
+  const taxable = gross + extraBefore;
+  const gst     = num(h['GST Amount']);
+  const invoice = num(h['Invoice Value']);
+  const advRec  = num(h['Advance Recovery']);
+  const tds     = num(h['TDS Amount']);
+  const hold    = num(h['Hold Amount']);
+  const net     = num(h['Net Payable']);
+
+  const compRow = (label, val, bold, accent) =>
+    `<tr><td style="padding:5px 10px;font-size:12px;${bold?'font-weight:700;':''}">${label}</td>
+     <td style="padding:5px 10px;text-align:right;font-size:12px;${bold?'font-weight:700;':''}${accent?'color:var(--accent);':''}">${fmtINR(val)}</td></tr>`;
+
+  const beforeLineRows = extraLines.filter(el=>el['Timing']==='Before GST').map(el=>{
+    const signed = el['Type']==='Addition'?num(el['Amount']):-num(el['Amount']);
+    return compRow(`${signed>=0?'Add':'Less'}: ${el['Description']||'—'}`, signed, false, false);
+  }).join('');
+  const afterLineRows = extraLines.filter(el=>el['Timing']==='After GST').map(el=>{
+    const signed = el['Type']==='Addition'?num(el['Amount']):-num(el['Amount']);
+    return compRow(`${signed>=0?'Add':'Less'}: ${el['Description']||'—'}`, signed, false, false);
+  }).join('');
+
+  const computationRows = [
+    compRow('Gross Amount', gross, false, false),
+    beforeLineRows,
+    compRow('Taxable Value', taxable, true, false),
+    ...(gst>0?[compRow('Total GST', gst, false, false)]:[]),
+    afterLineRows,
+    compRow('Invoice Value', invoice, true, false),
+    ...(advRec>0?[compRow('Less: Advance Recovery', -advRec, false, false)]:[]),
+    ...(tds>0?[compRow(`Less: TDS (${h['TDS %']}%)`, -tds, false, false)]:[]),
+    ...(hold>0?[compRow('Less: Hold Amount', -hold, false, false)]:[]),
+    `<tr style="background:var(--accent);"><td style="padding:6px 10px;font-size:13px;font-weight:700;color:#fff;">Net Payable (₹)</td>
+     <td style="padding:6px 10px;text-align:right;font-size:13px;font-weight:700;color:#fff;">${fmtINR(net)}</td></tr>`,
+  ].join('');
+
+  // ── Vendor block ─────────────────────────────────────────────────────────
+  const v = vd||{};
+  const vendorLine = `<strong>${esc(h['Vendor Name'])}</strong>
+    ${v.address?`<br><span style="font-size:11px;">${esc(v.address)}</span>`:''}
+    ${v.gstin?`<br><span style="font-size:11px;"><strong>GSTIN:</strong> ${esc(v.gstin)}</span>`:''}
+    ${v.contact_person||v.phone?`<br><span style="font-size:11px;"><strong>Contact:</strong> ${[v.contact_person,v.phone].filter(Boolean).map(esc).join(' | ')}</span>`:''}
+    ${v.bank_name?`<br><span style="font-size:11px;"><strong>Bank:</strong> ${esc(v.bank_name)}${v.branch?', '+esc(v.branch):''} | A/C: ${esc(v.bank_account||'—')} | IFSC: ${esc(v.ifsc||'—')}</span>`:''}`;
+
+  // ── Action buttons ───────────────────────────────────────────────────────
+  const perms = mergedPerms();
+  const isPending = h['Status'] === 'Pending Approval';
+  const actionBtns = `
+    <button class="btn btn-ghost btn-sm" onclick="printHOBById('${esc(billNum)}')">🖨 Print</button>
+    ${perms.canApproveBill && isPending
+      ? `<button class="btn btn-primary btn-sm" onclick="approveHOB('${esc(billNum)}');closeModal();">✔ Approve</button>
+         <button class="btn btn-danger btn-sm" onclick="closeModal();promptReject('HOB','${esc(billNum)}')">✕ Reject</button>`
+      : ''}
+    <button class="btn btn-ghost" onclick="closeModal()">Close</button>`;
+
+  openModal(`
+    <h3 style="margin-bottom:14px;">HOB — ${esc(h['Bill Number'])}
+      <span class="status ${stCls}" style="margin-left:8px;font-size:12px;">${esc(h['Status'])}</span>
+    </h3>
+
+    <!-- Header summary -->
+    <div class="grid-3" style="margin-bottom:14px;">
+      <div><label class="muted" style="font-size:11px;">HO NUMBER</label><div class="mono">${esc(h['HO Number'])}</div></div>
+      <div><label class="muted" style="font-size:11px;">HOC NUMBER</label><div class="mono">${esc(h['HOC Number'])}</div></div>
+      <div><label class="muted" style="font-size:11px;">BILL DATE</label><div>${fmtDate(h['Bill Date'])}</div></div>
+      <div><label class="muted" style="font-size:11px;">VENDOR</label><div>${esc(h['Vendor Name'])}</div></div>
+      <div><label class="muted" style="font-size:11px;">VENDOR INVOICE</label><div>${esc(h['Vendor Invoice No']||'—')}</div></div>
+      <div><label class="muted" style="font-size:11px;">INVOICE DATE</label><div>${h['Vendor Invoice Date']?fmtDate(h['Vendor Invoice Date']):'—'}</div></div>
+      ${h['Invoice Pay Due']?`<div><label class="muted" style="font-size:11px;">PAYMENT DUE</label><div>${fmtDate(h['Invoice Pay Due'])}</div></div>`:''}
     </div>
-    <div class="table-wrap"><table>
-      <thead><tr><th>#</th><th>Desc.</th><th>UOM</th><th class="num">Qty</th><th class="num">Rate</th><th class="num">Amt</th></tr></thead>
-      <tbody>${items.map((it,i) => `<tr>
-        <td class="center">${i+1}</td><td>${esc(it['Description'])}</td><td class="center">${esc(it['UOM'])}</td>
-        <td class="num mono">${fmtINR(it['This Period Qty'])}</td>
-        <td class="num mono">${fmtINR(it['Unit Rate'])}</td>
-        <td class="num mono">${fmtINR(it['Amount'])}</td>
-      </tr>`).join('')}</tbody>
-    </table></div>
-    <div class="grid-2" style="margin-top:12px;font-size:12px;background:#f0fdf9;padding:12px;border-radius:6px;border:1px solid #99f6e4;">
-      <div><b>Gross Amt:</b> ${fmtINRSym(h['Gross Amount'])}</div>
-      <div><b>GST (${h['GST %']}%):</b> ${fmtINRSym(h['GST Amount'])}</div>
-      <div><b>Invoice Value:</b> ${fmtINRSym(h['Invoice Value'])}</div>
-      <div style="color:var(--warn);"><b>Advance Rec.:</b> ${fmtINRSym(h['Advance Recovery'])}</div>
-      <div style="color:var(--warn);"><b>TDS:</b> ${fmtINRSym(h['TDS Amount'])}</div>
-      <div style="color:var(--warn);"><b>Hold:</b> ${fmtINRSym(h['Hold Amount'])} ${h['Hold Description'] ? '('+h['Hold Description']+')':''}</div>
-      <div style="color:var(--accent);grid-column:1/3;font-size:14px;"><b>Net Payable: ${fmtINRSym(h['Net Payable'])}</b></div>
+
+    <!-- HO numbers card -->
+    ${hoCard}
+
+    <!-- Bill Line Items -->
+    <div style="font-size:12px;font-weight:700;color:var(--accent);margin-bottom:6px;text-transform:uppercase;letter-spacing:.5px;">Bill Line Items</div>
+    <div style="overflow-x:auto;margin-bottom:16px;">
+      <table style="width:100%;border-collapse:collapse;font-size:12px;">
+        <thead><tr style="background:var(--panel-2);">
+          <th style="padding:6px 8px;text-align:center;border-bottom:2px solid var(--border);width:32px;">#</th>
+          <th style="padding:6px 8px;border-bottom:2px solid var(--border);">Description</th>
+          <th style="padding:6px 8px;text-align:center;border-bottom:2px solid var(--border);">UOM</th>
+          <th style="padding:6px 8px;text-align:right;border-bottom:2px solid var(--border);">Qty</th>
+          <th style="padding:6px 8px;text-align:right;border-bottom:2px solid var(--border);">Rate (₹)</th>
+          <th style="padding:6px 8px;text-align:right;border-bottom:2px solid var(--border);">Amount (₹)</th>
+        </tr></thead>
+        <tbody>${lineRows}</tbody>
+        <tfoot><tr style="background:var(--panel-2);">
+          <td colspan="5" style="padding:6px 8px;text-align:right;font-weight:700;font-size:12px;">Gross Amount</td>
+          <td style="padding:6px 8px;text-align:right;font-weight:700;font-size:13px;color:var(--accent);">${fmtINR(gross)}</td>
+        </tr></tfoot>
+      </table>
     </div>
-    <div class="actions-row">
-      <button class="btn btn-secondary" onclick="printHOBById('${esc(billNum)}')">Print</button>
-      <button class="btn btn-ghost" onclick="closeModal()">Close</button>
-    </div>`);
+
+    <!-- Additional / Deduction Lines -->
+    <div style="font-size:12px;font-weight:700;color:var(--accent);margin-bottom:6px;text-transform:uppercase;letter-spacing:.5px;">Additional / Deduction Lines</div>
+    <div style="overflow-x:auto;margin-bottom:16px;">
+      <table style="width:100%;border-collapse:collapse;font-size:12px;">
+        <thead><tr style="background:var(--panel-2);">
+          <th style="padding:6px 8px;border-bottom:2px solid var(--border);">Description</th>
+          <th style="padding:6px 8px;border-bottom:2px solid var(--border);width:110px;">Type</th>
+          <th style="padding:6px 8px;border-bottom:2px solid var(--border);width:100px;">Timing</th>
+          <th style="padding:6px 8px;text-align:right;border-bottom:2px solid var(--border);width:120px;">Amount (₹)</th>
+        </tr></thead>
+        <tbody>${extraRows}</tbody>
+      </table>
+    </div>
+
+    <!-- Bill Computation -->
+    <div style="font-size:12px;font-weight:700;color:var(--accent);margin-bottom:6px;text-transform:uppercase;letter-spacing:.5px;">Bill Computation</div>
+    <div style="display:flex;justify-content:flex-end;margin-bottom:20px;">
+      <table style="width:320px;border-collapse:collapse;border:1px solid var(--border);">
+        <tbody>${computationRows}</tbody>
+      </table>
+    </div>
+
+    <!-- Actions -->
+    <div class="actions-row" style="justify-content:flex-end;gap:8px;">${actionBtns}</div>
+  `, 'large');
 }
 
 async function printHOBById(billNum) {
-  const r = await apiGetHOBDetails(billNum);
-  if (!r.ok) { toast(r.error,'error'); return; }
-  state.printPayload = { kind: 'HOB', data: { ...r.header, items: r.items, extraLines: r.extraLines || [] } };
-  closeModal();
-  setTimeout(() => window.print(), 200);
+  pbShow('Building print…');
+
+  // ── Fetch bill data ───────────────────────────────────────────────────────
+  const [{data:h},{data:billItems},{data:extraLines}] = await Promise.all([
+    sb.from('ho_bills').select('*').eq('bill_number',billNum).single(),
+    sb.from('ho_bill_items').select('*').eq('bill_number',billNum).order('sno'),
+    sb.from('ho_bill_extra_lines').select('*').eq('bill_number',billNum).order('sno'),
+  ]);
+
+  // ── Fetch vendor details ──────────────────────────────────────────────────
+  const {data:vd} = await sb.from('ho_vendors')
+    .select('vendor_name,address,gstin,pan,contact_person,phone,bank_name,branch,bank_account,ifsc')
+    .eq('vendor_name', h.vendor_name).maybeSingle();
+
+  // ── Fetch prior approved bills for same vendor ────────────────────────────
+  const {data:priorBills} = await sb.from('ho_bills')
+    .select('bill_number,ho_number,hold_amount')
+    .eq('vendor_name', h.vendor_name)
+    .neq('bill_number', billNum)
+    .in('status',['Unpaid','Paid']);
+  const priorBillNums = (priorBills||[]).map(b=>b.bill_number);
+  const priorHONums   = [...new Set((priorBills||[]).map(b=>b.ho_number).filter(Boolean))];
+  let priorItems = [], priorExtra = [];
+  if (priorBillNums.length) {
+    const [{data:pi},{data:pe}] = await Promise.all([
+      sb.from('ho_bill_items').select('*').in('bill_number',priorBillNums),
+      sb.from('ho_bill_extra_lines').select('*').in('bill_number',priorBillNums),
+    ]);
+    priorItems = pi||[]; priorExtra = pe||[];
+  }
+  pbDone();
+  if (!h) { toast('Bill not found','error'); return; }
+
+  const fmtI = v => (parseFloat(v)||0).toLocaleString('en-IN',{minimumFractionDigits:2,maximumFractionDigits:2});
+  const n    = v => parseFloat(v)||0;
+
+  // ── Vendor block ──────────────────────────────────────────────────────────
+  const v = vd||{};
+  const vendorBlock = `
+    <div style="font-size:8pt;line-height:1.6;">
+      <div style="font-weight:700;font-size:9.5pt;margin-bottom:2pt;">${esc(h.vendor_name)}</div>
+      ${v.address   ?`<div>${esc(v.address)}</div>`:''}
+      ${v.gstin     ?`<div><strong>GSTIN:</strong> ${esc(v.gstin)}</div>`:''}
+      ${v.pan       ?`<div><strong>PAN:</strong> ${esc(v.pan)}</div>`:''}
+      ${v.contact_person||v.phone?`<div><strong>Contact:</strong> ${[v.contact_person,v.phone].filter(Boolean).map(esc).join(' | ')}</div>`:''}
+      ${v.bank_name ?`<div style="margin-top:3pt;border-top:0.5pt solid #ddd;padding-top:2pt;"><strong>Bank:</strong> ${esc(v.bank_name)}${v.branch?', '+esc(v.branch):''}</div>`:''}
+      ${v.bank_account?`<div><strong>A/C:</strong> ${esc(v.bank_account)}</div>`:''}
+      ${v.ifsc      ?`<div><strong>IFSC:</strong> ${esc(v.ifsc)}</div>`:''}
+    </div>`;
+
+  // ── HO numbers card ───────────────────────────────────────────────────────
+  const allHOs = [...new Set([...(h.ho_number?[h.ho_number]:[]),...priorHONums])];
+  const hoCard = allHOs.length > 1
+    ? `<div class="addr-box"><div class="addr-hdr">HO Numbers Considered (all bills — this vendor)</div>
+       <div class="addr-body">${allHOs.map(p=>`<span style="display:inline-block;margin:1pt 4pt 1pt 0;padding:1pt 6pt;background:#e8ecf2;border-radius:3pt;font-family:monospace;font-size:8pt;">${esc(p)}</span>`).join('')}</div></div>`
+    : '';
+
+  // ── Build prev totals per description ────────────────────────────────────
+  const prevMap = {};
+  priorItems.forEach(it => {
+    const k = it.description;
+    if (!prevMap[k]) prevMap[k] = {qty:0, amount:0};
+    prevMap[k].qty    += n(it.this_period_qty);
+    prevMap[k].amount += n(it.amount);
+  });
+
+  // ── Description table rows ────────────────────────────────────────────────
+  const descRows = (billItems||[]).map((it,i) => {
+    const prev     = prevMap[it.description]||{qty:0,amount:0};
+    const prevQty  = prev.qty,  prevAmt  = prev.amount;
+    const prevRate = prevQty>0 ? prevAmt/prevQty : n(it.unit_rate);
+    const currQty  = n(it.this_period_qty), currRate = n(it.unit_rate), currAmt = n(it.amount);
+    const cumQty   = prevQty + currQty;
+    const cumAmt   = prevAmt + currAmt;
+    const cumRate  = cumQty>0 ? cumAmt/cumQty : currRate;
+    return `<tr>
+      <td class="c" style="border-left:2pt solid #555;">${it.sno||i+1}</td>
+      <td>${esc(it.description||'')}</td>
+      <td class="c">${esc(it.uom||'')}</td>
+      <td class="r prev-col" style="border-left:2.5pt solid #1e3a5f;">${fmtI(prevQty)}</td>
+      <td class="r prev-col">${fmtI(prevRate)}</td>
+      <td class="r prev-col">${fmtI(prevAmt)}</td>
+      <td class="r curr-col" style="border-left:2.5pt solid #1565a0;">${fmtI(currQty)}</td>
+      <td class="r curr-col">${fmtI(currRate)}</td>
+      <td class="r curr-col">${fmtI(currAmt)}</td>
+      <td class="r cum-col"  style="border-left:2.5pt solid #155a38;">${fmtI(cumQty)}</td>
+      <td class="r cum-col">${fmtI(cumRate)}</td>
+      <td class="r cum-col">${fmtI(cumAmt)}</td>
+    </tr>`;
+  }).join('');
+
+  // ── Bill computation totals ───────────────────────────────────────────────
+  const prevGross = priorItems.reduce((s,it)=>s+n(it.amount),0);
+  const prevBeforeLines=[], prevAfterLines=[];
+  priorExtra.forEach(el=>{
+    const signed = el.line_type==='Addition'?n(el.amount):-n(el.amount);
+    if (el.timing==='Before GST') prevBeforeLines.push({desc:el.description||'—',signed});
+    else prevAfterLines.push({desc:el.description||'—',signed});
+  });
+  const prevExtraBefore = prevBeforeLines.reduce((a,l)=>a+l.signed,0);
+  const prevExtraAfter  = prevAfterLines.reduce((a,l)=>a+l.signed,0);
+
+  // Get prior GST: sum from prior bills header (stored gst_amount)
+  const {data:priorBillsFull} = priorBillNums.length
+    ? await sb.from('ho_bills').select('gst_amount,advance_recovery,tds_amount,hold_amount').in('bill_number',priorBillNums)
+    : {data:[]};
+  const prevGSTamt  = (priorBillsFull||[]).reduce((s,b)=>s+n(b.gst_amount),0);
+  const prevAdvRec  = (priorBillsFull||[]).reduce((s,b)=>s+n(b.advance_recovery),0);
+  const prevTDS     = (priorBillsFull||[]).reduce((s,b)=>s+n(b.tds_amount),0);
+  const prevHold    = (priorBillsFull||[]).reduce((s,b)=>s+n(b.hold_amount),0);
+
+  const prevTaxable = prevGross + prevExtraBefore;
+  const prevInvoice = prevTaxable + prevGSTamt + prevExtraAfter;
+  const prevNet     = prevInvoice - prevAdvRec - prevTDS - prevHold;
+
+  const currGross   = n(h.gross_amount);
+  const currBeforeLines=[], currAfterLines=[];
+  (extraLines||[]).forEach(el=>{
+    const signed = el.line_type==='Addition'?n(el.amount):-n(el.amount);
+    if (el.timing==='Before GST') currBeforeLines.push({desc:el.description||'—',signed});
+    else currAfterLines.push({desc:el.description||'—',signed});
+  });
+  const currExtraBefore = currBeforeLines.reduce((a,l)=>a+l.signed,0);
+  const currExtraAfter  = currAfterLines.reduce((a,l)=>a+l.signed,0);
+  const currTaxable = currGross + currExtraBefore;
+  const currGST     = n(h.gst_amount);
+  const currInvoice = n(h.invoice_value);
+  const currAdvRec  = n(h.advance_recovery);
+  const currTDS     = n(h.tds_amount);
+  const currHold    = n(h.hold_amount);
+  const currNet     = n(h.net_payable);
+
+  const cumGross    = prevGross + currGross;
+  const cumTaxable  = prevTaxable + currTaxable;
+  const cumGST      = prevGSTamt + currGST;
+  const cumInvoice  = prevInvoice + currInvoice;
+  const cumAdvRec   = prevAdvRec + currAdvRec;
+  const cumTDS      = prevTDS + currTDS;
+  const cumHold     = prevHold + currHold;
+  const cumNet      = prevNet + currNet;
+
+  // Merge extra line maps
+  const allBeforeMap={}, allAfterMap={};
+  [...prevBeforeLines,...currBeforeLines].forEach(l=>{allBeforeMap[l.desc]=allBeforeMap[l.desc]||{desc:l.desc,prev:0,curr:0};});
+  prevBeforeLines.forEach(l=>{allBeforeMap[l.desc].prev+=l.signed;});
+  currBeforeLines.forEach(l=>{allBeforeMap[l.desc].curr+=l.signed;});
+  [...prevAfterLines,...currAfterLines].forEach(l=>{allAfterMap[l.desc]=allAfterMap[l.desc]||{desc:l.desc,prev:0,curr:0};});
+  prevAfterLines.forEach(l=>{allAfterMap[l.desc].prev+=l.signed;});
+  currAfterLines.forEach(l=>{allAfterMap[l.desc].curr+=l.signed;});
+
+  const compRow3=(label,pv,cv,cumV,bold,grand)=>
+    `<tr${grand?' class="grand"':''}>
+      <td${bold?' style="font-weight:700;"':''}>${label}</td>
+      <td class="r prev-td"${bold?' style="font-weight:700;"':''}>${fmtI(pv)}</td>
+      <td class="r curr-td"${bold?' style="font-weight:700;"':''}>${fmtI(cv)}</td>
+      <td class="r cum-td"${bold?' style="font-weight:700;"':''}>${fmtI(cumV)}</td>
+    </tr>`;
+
+  const compRows = [
+    compRow3('Gross Amount', prevGross, currGross, cumGross, true, false),
+    ...Object.values(allBeforeMap).map(l=>compRow3(`${(l.prev+l.curr)>=0?'Add':'Less'}: ${l.desc}`,l.prev,l.curr,l.prev+l.curr,false,false)),
+    compRow3('Taxable Value', prevTaxable, currTaxable, cumTaxable, true, false),
+    ...(cumGST>0?[compRow3('Total GST', prevGSTamt, currGST, cumGST, false, false)]:[]),
+    ...Object.values(allAfterMap).map(l=>compRow3(`${(l.prev+l.curr)>=0?'Add':'Less'}: ${l.desc}`,l.prev,l.curr,l.prev+l.curr,false,false)),
+    compRow3('Invoice Value', prevInvoice, currInvoice, cumInvoice, true, false),
+    ...(cumAdvRec>0?[compRow3('Less: Advance Recovery', -prevAdvRec, -currAdvRec, -cumAdvRec, false, false)]:[]),
+    ...(cumTDS>0?[compRow3(`Less: TDS (${h.tds_pct||0}%)`, -prevTDS, -currTDS, -cumTDS, false, false)]:[]),
+    ...(cumHold>0?[compRow3('Less: Hold Amount', -prevHold, -currHold, -cumHold, false, false)]:[]),
+    compRow3('NET PAYABLE', prevNet, currNet, cumNet, true, true),
+  ].join('');
+
+  openPrintOverlay(`${printStyles()}
+  <style>
+    .prev-col { background:#eef2f7; color:#111; }
+    .curr-col { background:#dbeafe; color:#0a2a5e; }
+    .cum-col  { background:#dcfce7; color:#0a3d20; }
+    @media screen { .tbl-scroll { overflow:auto; max-height:62vh; border:1pt solid #c8d0da; margin-bottom:10pt; } }
+    @media print  { .tbl-scroll { overflow:visible; max-height:none; border:none; margin-bottom:6pt; } }
+    @media screen { table.items thead { position:sticky; top:0; z-index:10; } }
+    @media print  { table.items thead { position:static; } }
+    table.items { border-collapse:collapse; width:100%; font-size:7.5pt; }
+    table.items th.grp-prev { background:#1e3a5f; color:#fff; text-align:center; padding:3pt 4pt; font-size:8pt; border:1pt solid #fff; }
+    table.items th.grp-curr { background:#1565a0; color:#fff; text-align:center; padding:3pt 4pt; font-size:8pt; border:1pt solid #fff; }
+    table.items th.grp-cum  { background:#155a38; color:#fff; text-align:center; padding:3pt 4pt; font-size:8pt; border:1pt solid #fff; }
+    table.items th.sub-prev { background:#2a4f80; color:#fff; text-align:right; padding:2pt 4pt; font-size:7.5pt; font-weight:600; border:0.5pt solid #3a5f90; }
+    table.items th.sub-curr { background:#1976d2; color:#fff; text-align:right; padding:2pt 4pt; font-size:7.5pt; font-weight:600; border:0.5pt solid #42a5f5; }
+    table.items th.sub-cum  { background:#2e7d32; color:#fff; text-align:right; padding:2pt 4pt; font-size:7.5pt; font-weight:600; border:0.5pt solid #66bb6a; }
+    table.items td          { padding:2pt 4pt; border:0.5pt solid #c8d0da; }
+    table.items tfoot td    { padding:3pt 6pt; font-weight:700; border-top:1.5pt solid #1e3a5f; }
+    .totals { width:100%; border-collapse:collapse; margin-bottom:10pt; break-inside:avoid; }
+    .totals td { padding:3pt 8pt; font-size:8.5pt; border:0.5pt solid #c8d0da; }
+    .totals td:first-child { font-weight:600; background:#f0f5fb; width:200pt; }
+    .totals td.r { text-align:right; }
+    .totals td.prev-td { background:#eef2f7; color:#111; border-left:2.5pt solid #1e3a5f; }
+    .totals td.curr-td { background:#dbeafe; color:#0a2a5e; border-left:2.5pt solid #1565a0; }
+    .totals td.cum-td  { background:#dcfce7; color:#0a3d20; border-left:2.5pt solid #155a38; }
+    .totals tr.grand td             { font-weight:700; font-size:10pt; }
+    .totals tr.grand td:first-child { background:#1e3a5f; color:#fff; }
+    .totals tr.grand td.prev-td     { background:#1e3a5f; color:#fff; border-left:2.5pt solid #fff; }
+    .totals tr.grand td.curr-td     { background:#1565a0; color:#fff; border-left:2.5pt solid #fff; }
+    .totals tr.grand td.cum-td      { background:#155a38; color:#fff; border-left:2.5pt solid #fff; }
+  </style>
+
+  <div class="pd-top">
+    <div><div class="co-name">${CO_NAME}</div><div class="co-detail">${CO_ADDR}<br>GSTIN: ${CO_GSTIN}</div></div>
+    <div><div class="doc-title">HIRE ORDER BILL ABSTRACT</div>
+      <table class="doc-meta">
+        <tr><td>Bill No.</td><td>${esc(billNum)}</td></tr>
+        <tr><td>Date</td><td>${fmtDate(h.bill_date)}</td></tr>
+        <tr><td>HO No.</td><td>${esc(h.ho_number||'—')}</td></tr>
+        <tr><td>HOC No.</td><td>${esc(h.hoc_number||'—')}</td></tr>
+        <tr><td>Vendor Inv.</td><td>${esc(h.vendor_inv_no||'—')}</td></tr>
+        <tr><td>Inv. Date</td><td>${h.vendor_inv_date?fmtDate(h.vendor_inv_date):'—'}</td></tr>
+        <tr><td>Payment Due</td><td>${h.inv_pay_due?fmtDate(h.inv_pay_due):'—'}</td></tr>
+      </table>
+    </div>
+  </div>
+
+  <div class="addr-row">
+    <div class="addr-box" style="flex:1.2;">
+      <div class="addr-hdr">Vendor</div>
+      <div class="addr-body">${vendorBlock}</div>
+    </div>
+    ${hoCard}
+  </div>
+
+  <!-- Description Table -->
+  <style>
+    @media screen { .tbl-scroll { overflow:auto; max-height:62vh; border:1pt solid #c8d0da; margin-bottom:10pt; } }
+    @media print  { .tbl-scroll { overflow:visible; max-height:none; border:none; margin-bottom:6pt; } }
+    @media screen { table.items thead { position:sticky; top:0; z-index:10; } }
+    @media print  { table.items thead { position:static; } }
+  </style>
+  <div class="tbl-scroll">
+  <table class="items">
+    <thead>
+      <tr>
+        <th rowspan="2" style="background:#1e3a5f;color:#fff;width:22pt;vertical-align:middle;text-align:center;border:0.5pt solid #2a4f80;">#</th>
+        <th rowspan="2" style="background:#1e3a5f;color:#fff;vertical-align:middle;border:0.5pt solid #2a4f80;">Description</th>
+        <th rowspan="2" style="background:#1e3a5f;color:#fff;width:30pt;vertical-align:middle;text-align:center;border:0.5pt solid #2a4f80;">UOM</th>
+        <th colspan="3" class="grp-prev" style="border-left:2.5pt solid #fff;">Previous</th>
+        <th colspan="3" class="grp-curr" style="border-left:2.5pt solid #fff;">Current</th>
+        <th colspan="3" class="grp-cum"  style="border-left:2.5pt solid #fff;">Cumulative</th>
+      </tr>
+      <tr>
+        <th class="sub-prev" style="width:48pt;border-left:2.5pt solid #fff;">Qty</th>
+        <th class="sub-prev" style="width:48pt;">Rate</th>
+        <th class="sub-prev" style="width:52pt;">Amount</th>
+        <th class="sub-curr" style="width:48pt;border-left:2.5pt solid #fff;">Qty</th>
+        <th class="sub-curr" style="width:48pt;">Rate</th>
+        <th class="sub-curr" style="width:52pt;">Amount</th>
+        <th class="sub-cum"  style="width:48pt;border-left:2.5pt solid #fff;">Qty</th>
+        <th class="sub-cum"  style="width:48pt;">Rate</th>
+        <th class="sub-cum"  style="width:52pt;">Amount</th>
+      </tr>
+    </thead>
+    <tbody>${descRows}</tbody>
+    <tfoot>
+      <tr>
+        <td colspan="3" style="background:#e8ecf2;border-left:2pt solid #555;">Gross Amount</td>
+        <td class="r prev-col" colspan="2" style="border-left:2.5pt solid #1e3a5f;background:#eef2f7;"></td>
+        <td class="r prev-col" style="font-weight:700;">${fmtI(prevGross)}</td>
+        <td class="r curr-col" colspan="2" style="border-left:2.5pt solid #1565a0;background:#dbeafe;"></td>
+        <td class="r curr-col" style="font-weight:700;">${fmtI(currGross)}</td>
+        <td class="r cum-col"  colspan="2" style="border-left:2.5pt solid #155a38;background:#dcfce7;"></td>
+        <td class="r cum-col"  style="font-weight:700;">${fmtI(cumGross)}</td>
+      </tr>
+    </tfoot>
+  </table>
+  </div>
+
+  <!-- Bill Computation Table -->
+  <div style="margin-top:10pt;font-size:9pt;font-weight:700;color:#1e3a5f;margin-bottom:4pt;letter-spacing:.3pt;">BILL COMPUTATION</div>
+  <table class="totals">
+    <thead><tr>
+      <th style="padding:4pt 8pt;background:#1e3a5f;color:#fff;font-size:8.5pt;border:0.5pt solid #2a4f80;text-align:left;">Description</th>
+      <th style="padding:4pt 8pt;background:#1e3a5f;color:#fff;font-size:8.5pt;border-left:2.5pt solid #fff;text-align:right;width:110pt;">Previous (₹)</th>
+      <th style="padding:4pt 8pt;background:#1565a0;color:#fff;font-size:8.5pt;border-left:2.5pt solid #fff;text-align:right;width:110pt;">Current (₹)</th>
+      <th style="padding:4pt 8pt;background:#155a38;color:#fff;font-size:8.5pt;border-left:2.5pt solid #fff;text-align:right;width:110pt;">Cumulative (₹)</th>
+    </tr></thead>
+    <tbody>${compRows}</tbody>
+  </table>
+
+  <div class="footer-row">
+    ${h.remarks?`<div class="footer-box"><div class="footer-hdr">Remarks</div>${esc(h.remarks)}</div>`:'<div></div>'}
+    <div style="text-align:right;"><div class="sign-box">Verified By<br>${CO_NAME}</div></div>
+  </div>`);
 }
 
 // ============================================================
@@ -15231,7 +15671,7 @@ async function viewPOB(billNum) {
   pbShow('Loading bill…');
   const [{data:h},{data:items},{data:extraLines},{data:prevBills}] = await Promise.all([
     sb.from('pu_po_bills').select('*').eq('bill_number',billNum).single(),
-    sb.from('pu_po_bill_items').select('*').eq('bill_number',billNum).order('sno'),
+    sb.from('pu_po_bill_items').select('*').eq('bill_number',billNum).eq('row_type','material').order('sno'),
     sb.from('pu_po_bill_items').select('*').eq('bill_number',billNum).eq('row_type','extra').order('sno'),
     sb.from('pu_po_bills').select('bill_number,po_number,status').neq('bill_number',billNum).neq('status','Rejected').neq('status','Pending Approval'),
   ]);
@@ -15640,7 +16080,6 @@ async function printPOB(billNum) {
 
     /* ── Description table header ── */
     table.items { border-collapse:collapse; width:100%; font-size:7.5pt; }
-    table.items thead { position:sticky; top:0; z-index:10; }
     table.items th.grp-prev { background:#1e3a5f; color:#fff; text-align:center; padding:3pt 4pt; font-size:8pt; border:1pt solid #fff; }
     table.items th.grp-curr { background:#1565a0; color:#fff; text-align:center; padding:3pt 4pt; font-size:8pt; border:1pt solid #fff; }
     table.items th.grp-cum  { background:#155a38; color:#fff; text-align:center; padding:3pt 4pt; font-size:8pt; border:1pt solid #fff; }
@@ -15676,6 +16115,7 @@ async function printPOB(billNum) {
         <tr><td>Vendor Inv.</td><td>${esc(h.vendor_inv_no||'—')}</td></tr>
         <tr><td>Inv. Date</td><td>${h.vendor_inv_date?fmtDate(h.vendor_inv_date):'—'}</td></tr>
         <tr><td>GRNs</td><td style="font-size:7.5pt;">${esc(h.grn_numbers||'—')}</td></tr>
+        <tr><td>Payment Due</td><td>${h.inv_pay_due?fmtDate(h.inv_pay_due):'—'}</td></tr>
       </table>
     </div>
   </div>
@@ -15689,6 +16129,13 @@ async function printPOB(billNum) {
   </div>
 
   <!-- Description Table -->
+  <style>
+    @media screen { .tbl-scroll { overflow:auto; max-height:62vh; border:1pt solid #c8d0da; margin-bottom:10pt; } }
+    @media print  { .tbl-scroll { overflow:visible; max-height:none; border:none; margin-bottom:6pt; } }
+    @media screen { table.items thead { position:sticky; top:0; z-index:10; } }
+    @media print  { table.items thead { position:static; } }
+  </style>
+  <div class="tbl-scroll">
   <table class="items">
     <thead>
       <tr>
@@ -15724,6 +16171,7 @@ async function printPOB(billNum) {
       </tr>
     </tfoot>
   </table>
+  </div>
 
   <!-- Bill Computation Table -->
   <div style="margin-top:10pt;font-size:9pt;font-weight:700;color:#1e3a5f;margin-bottom:4pt;letter-spacing:.3pt;">BILL COMPUTATION</div>
