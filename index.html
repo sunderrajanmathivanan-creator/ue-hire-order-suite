@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Penguin-Procurement Suite v61 — Urban Excellence LLP · Poetry of Earth</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <style>
 /* ============================================================
    Penguin-Procurement Suite — Screen Styles (Light / Soft Blue-Grey)
@@ -1972,13 +1973,31 @@ input[type="number"] {
   <!-- ACTIVITIES -->
   <div id="master-activities" class="hidden">
     <div class="card">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:16px;">
         <div>
           <h3 style="margin:0;border:none;padding:0;">Activity Master</h3>
           <div class="section-sub">Grouped by Activity Group → Sub-head → Activity</div>
         </div>
-        <button class="btn btn-primary btn-sm" id="amAddGroupBtn" onclick="amAddGroup()" style="display:none;">+ Activity Group</button>
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+          <div style="position:relative;">
+            <input id="amSearchInput" type="text" placeholder="Search activities…" autocomplete="off"
+              oninput="amApplySearch()"
+              style="padding:7px 30px 7px 10px;border:1px solid var(--border);border-radius:4px;font-size:12px;background:var(--input-bg);color:var(--text);width:220px;">
+            <span id="amSearchClear" onclick="amClearSearch()" title="Clear search"
+              style="position:absolute;right:8px;top:50%;transform:translateY(-50%);cursor:pointer;color:var(--muted);font-size:14px;display:none;">✕</span>
+          </div>
+          <button class="btn btn-ghost btn-sm" onclick="amExpandAll()">Expand All</button>
+          <button class="btn btn-ghost btn-sm" onclick="amCollapseAll()">Collapse All</button>
+          <button class="btn btn-ghost btn-sm" style="border-color:#16a34a;color:#16a34a;" onclick="amExportExcel()" title="Download all activities as Excel for bulk editing">⬇ Export Excel</button>
+          <label class="btn btn-ghost btn-sm" style="border-color:#2563eb;color:#2563eb;cursor:pointer;margin-right:0;" title="Upload edited Excel to update Activity Group and Sub-group">
+            ⬆ Import Excel
+            <input type="file" id="amImportFileInput" accept=".xlsx,.xls" style="display:none;" onchange="amImportExcel(this)">
+          </label>
+          <button class="btn btn-primary btn-sm" id="amAddGroupBtn" onclick="amAddGroup()" style="display:none;">+ Activity Group</button>
+        </div>
       </div>
+      <!-- Import status card -->
+      <div id="amImportStatus" style="display:none;background:#f0fdf4;border:1px solid #86efac;border-radius:6px;padding:12px 16px;margin-bottom:14px;font-size:13px;"></div>
       <div id="am_tree_wrap">
         <div class="center muted" style="padding:24px;">Loading…</div>
       </div>
@@ -1988,13 +2007,31 @@ input[type="number"] {
   <!-- BOQ ITEMS -->
   <div id="master-materials" class="hidden">
     <div class="card">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:16px;">
         <div>
           <h3 style="margin:0;border:none;padding:0;">Material Master</h3>
           <div class="section-sub">Grouped by Material Group → Sub-head → Material</div>
         </div>
-        <button class="btn btn-primary btn-sm" id="mmAddGroupBtn" onclick="mmAddGroup()" style="display:none;">+ Material Group</button>
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+          <div style="position:relative;">
+            <input id="mmSearchInput" type="text" placeholder="Search materials…" autocomplete="off"
+              oninput="mmApplySearch()"
+              style="padding:7px 30px 7px 10px;border:1px solid var(--border);border-radius:4px;font-size:12px;background:var(--input-bg);color:var(--text);width:220px;">
+            <span id="mmSearchClear" onclick="mmClearSearch()" title="Clear search"
+              style="position:absolute;right:8px;top:50%;transform:translateY(-50%);cursor:pointer;color:var(--muted);font-size:14px;display:none;">✕</span>
+          </div>
+          <button class="btn btn-ghost btn-sm" onclick="mmExpandAll()">Expand All</button>
+          <button class="btn btn-ghost btn-sm" onclick="mmCollapseAll()">Collapse All</button>
+          <button class="btn btn-ghost btn-sm" style="border-color:#16a34a;color:#16a34a;" onclick="mmExportExcel()" title="Download all materials as Excel for bulk editing">⬇ Export Excel</button>
+          <label class="btn btn-ghost btn-sm" style="border-color:#2563eb;color:#2563eb;cursor:pointer;margin-right:0;" title="Upload edited Excel to update Material Group and Sub-head">
+            ⬆ Import Excel
+            <input type="file" id="mmImportFileInput" accept=".xlsx,.xls" style="display:none;" onchange="mmImportExcel(this)">
+          </label>
+          <button class="btn btn-primary btn-sm" id="mmAddGroupBtn" onclick="mmAddGroup()" style="display:none;">+ Material Group</button>
+        </div>
       </div>
+      <!-- Import status card — shown during/after import -->
+      <div id="mmImportStatus" style="display:none;background:#f0fdf4;border:1px solid #86efac;border-radius:6px;padding:12px 16px;margin-bottom:14px;font-size:13px;"></div>
       <div id="mm_tree_wrap">
         <div class="center muted" style="padding:24px;">Loading…</div>
       </div>
@@ -2499,6 +2536,7 @@ input[type="number"] {
       <div>
         <button class="btn btn-primary" id="btn_newGRN" onclick="newGRN()">+ New GRN</button>
         <button class="btn btn-warning" id="btn_newCashGRN" onclick="newCashGRN()" style="background:#ad6800;color:#fff;border-color:#ad6800;">💵 Direct Purchase</button>
+        <button class="btn btn-ghost" style="border-color:#2563eb;color:#2563eb;" onclick="openGRNMatSearch()">🔍 Search Material</button>
         <button class="btn btn-ghost" onclick="loadGRNList()">↻ Refresh</button>
       </div>
     </div>
@@ -3717,7 +3755,7 @@ function mapVendor(r) {
 function mapActivity(r) {
   return {
     'Activity Code': r.activity_code, 'Activity Description': r.activity_description,
-    'UOM': r.uom, 'Default Rate': r.default_rate, 'Cost Head': r.costhead, 'Cost Subhead': r.cost_subhead
+    'UOM': r.uom, 'Default Rate': r.default_rate, 'Cost Head': r.activity_group, 'Cost Subhead': r.activity_sub_group
   };
 }
 function mapBOQ(r) {
@@ -5502,7 +5540,7 @@ async function apiSaveMaster(type, row) {
     const { data: last } = await sb.from('ho_activities').select('activity_code').order('activity_code', { ascending: false }).limit(1);
     const nextNum = last && last.length ? (parseInt(last[0].activity_code.replace('ACT',''))||0) + 1 : 1;
     const code = 'ACT' + String(nextNum).padStart(3,'0');
-    return dbInsert('ho_activities', { activity_code: code, activity_description: row.desc, uom: row.uom, default_rate: row.rate||0, costhead: row.costhead||null, cost_subhead: row.cost_subhead||null, created_by: state.userId }, ['masters']);
+    return dbInsert('ho_activities', { activity_code: code, activity_description: row.desc, uom: row.uom, default_rate: row.rate||0, activity_group: row.activity_group||null, activity_sub_group: row.activity_sub_group||null, created_by: state.userId }, ['masters']);
   }
   if (type === 'boq') {
     const { data: last } = await sb.from('ho_boq_items').select('boq_code').order('boq_code', { ascending: false }).limit(1);
@@ -6251,7 +6289,7 @@ async function saveMaster(type) {
     const descKey = _normKey(desc);
     const actDup = (state.masters.activities||[]).find(a => _normKey(a['Activity Description']) === descKey && a['Activity Code'] !== isEdit);
     if (actDup) { toast('Activity "' + desc + '" already exists (Code: ' + actDup['Activity Code'] + ')','error'); return; }
-    row = { desc, uom, rate: num(document.getElementById('ma_rate').value), costhead: document.getElementById('ma_costhead').value, cost_subhead: document.getElementById('ma_costsubhead').value };
+    row = { desc, uom, rate: num(document.getElementById('ma_rate').value), activity_group: document.getElementById('ma_costhead').value, activity_sub_group: document.getElementById('ma_costsubhead').value };
   } else if (type === 'boq') {
     const name  = document.getElementById('mb_name').value.trim();
     const level = num(document.getElementById('mb_level').value) || 2;
@@ -6466,8 +6504,8 @@ async function updateActivity(code) {
       activity_description: desc,
       uom,
       default_rate: parseFloat(document.getElementById('ae_rate')?.value)||0,
-      costhead:     document.getElementById('ae_costhead')?.value?.trim()||null,
-      cost_subhead: document.getElementById('ae_costsubhead')?.value?.trim()||null,
+      activity_group:     document.getElementById('ae_costhead')?.value?.trim()||null,
+      activity_sub_group: document.getElementById('ae_costsubhead')?.value?.trim()||null,
       updated_at: new Date().toISOString(),
     }).eq('activity_code', code);
     if (error) throw new Error(error.message);
@@ -11152,6 +11190,224 @@ function switchPUTab(tab) {
 // ============================================================
 // ACTIVITY MASTER — TREE RENDER & INLINE ADD
 // ============================================================
+// ============================================================
+// ACTIVITY MASTER — EXCEL EXPORT / IMPORT
+// Export: downloads all activities as .xlsx
+// Import: reads edited .xlsx, updates activity_group + activity_sub_group
+//         (and optionally uom, default_rate) via batched Supabase UPDATEs
+//         keyed on activity_code
+// ============================================================
+
+function amExportExcel() {
+  const acts = state.masters.activities || [];
+  if (!acts.length) { toast('No activities loaded — refresh and try again', 'warn'); return; }
+
+  const headers = [
+    'activity_code',       // A — key, do not edit
+    'activity_description',// B — reference / editable
+    'uom',                 // C
+    'activity_group',      // D — primary edit target (maps to 'Cost Head')
+    'activity_sub_group',  // E — primary edit target (maps to 'Cost Subhead')
+    'default_rate',        // F
+  ];
+
+  const rows = acts
+    .slice()
+    .sort((a, b) => (a['Activity Description']||'').localeCompare(b['Activity Description']||''))
+    .map(a => ({
+      activity_code:        a['Activity Code']        || '',
+      activity_description: a['Activity Description'] || '',
+      uom:                  a['UOM']                  || '',
+      activity_group:       a['Cost Head']            || '',
+      activity_sub_group:   a['Cost Subhead']         || '',
+      default_rate:         a['Default Rate']         != null ? a['Default Rate'] : '',
+    }));
+
+  const ws = XLSX.utils.json_to_sheet(rows, { header: headers });
+
+  ws['!cols'] = [
+    { wch: 10 }, // activity_code
+    { wch: 45 }, // activity_description
+    { wch: 10 }, // uom
+    { wch: 28 }, // activity_group
+    { wch: 28 }, // activity_sub_group
+    { wch: 12 }, // default_rate
+  ];
+  ws['!freeze'] = { xSplit: 0, ySplit: 1 };
+
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Activity Master');
+
+  const instrData = [
+    ['INSTRUCTIONS FOR BULK EDIT'],
+    [''],
+    ['1. DO NOT change column headers or activity_code (Column A) — used as the update key.'],
+    ['2. Fill in / correct activity_group (Col D) and activity_sub_group (Col E) for each row.'],
+    ['3. You may also edit uom and default_rate.'],
+    ['4. Leave default_rate blank (not 0) if not applicable.'],
+    ['5. Save the file and use "Import Excel" in the Activity Master screen to upload.'],
+    ['6. Only rows where activity_code matches an existing record will be updated.'],
+    [''],
+    ['COLUMN REFERENCE'],
+    ['A  activity_code         — DO NOT EDIT — update key'],
+    ['B  activity_description  — editable'],
+    ['C  uom                   — editable'],
+    ['D  activity_group        — ★ primary edit column (shown as "Activity Group" in tree)'],
+    ['E  activity_sub_group    — ★ primary edit column (shown as "Sub-head" in tree)'],
+    ['F  default_rate          — numeric, leave blank if not applicable'],
+  ];
+  const wsInstr = XLSX.utils.aoa_to_sheet(instrData);
+  wsInstr['!cols'] = [{ wch: 80 }];
+  XLSX.utils.book_append_sheet(wb, wsInstr, 'Instructions');
+
+  XLSX.writeFile(wb, 'ActivityMaster_BulkEdit_' + new Date().toISOString().slice(0,10) + '.xlsx');
+  toast('Excel downloaded — edit activity_group and activity_sub_group, then Import Excel', 'success');
+}
+
+async function amImportExcel(inputEl) {
+  const file = inputEl.files[0];
+  inputEl.value = '';
+  if (!file) return;
+
+  if (!hasRole('Admin') && !hasRole('Planning/ QS')) {
+    toast('Only Admin or Planning/QS can import activities', 'error'); return;
+  }
+
+  const statusEl = document.getElementById('amImportStatus');
+  const showStatus = (html, ok) => {
+    if (!statusEl) return;
+    statusEl.style.display = '';
+    statusEl.style.background = ok ? '#f0fdf4' : '#fff7ed';
+    statusEl.style.borderColor = ok ? '#86efac' : '#fdba74';
+    statusEl.innerHTML = html;
+  };
+
+  showStatus('<span style="color:var(--muted);">⏳ Reading file…</span>', true);
+
+  let rows;
+  try {
+    const buf = await file.arrayBuffer();
+    const wb  = XLSX.read(buf, { type: 'array' });
+    const ws  = wb.Sheets[wb.SheetNames[0]];
+    rows = XLSX.utils.sheet_to_json(ws, { defval: '' });
+  } catch(e) {
+    showStatus('❌ Could not read file: ' + e.message, false); return;
+  }
+
+  if (!rows.length) { showStatus('❌ No data rows found in the file.', false); return; }
+
+  const sampleKeys = Object.keys(rows[0]);
+  if (!sampleKeys.includes('activity_code')) {
+    showStatus('❌ Missing required column <strong>activity_code</strong>. Make sure you are importing the exported file without renaming headers.', false);
+    return;
+  }
+
+  const editableCols = ['activity_description', 'uom', 'activity_group', 'activity_sub_group', 'default_rate'];
+  const presentCols  = editableCols.filter(c => sampleKeys.includes(c));
+
+  showStatus(`⏳ Validating ${rows.length} rows…`, true);
+
+  const codeSet = new Set((state.masters.activities||[]).map(a => a['Activity Code']));
+  const updates = [], skipped = [];
+
+  rows.forEach((r, idx) => {
+    const code = (r.activity_code || '').toString().trim();
+    if (!code) { skipped.push('Row ' + (idx + 2) + ': blank activity_code'); return; }
+    if (!codeSet.has(code)) { skipped.push(code + ': not found in master'); return; }
+
+    const payload = {};
+    presentCols.forEach(col => {
+      let val = r[col];
+      if (val === '' || val === undefined || val === null) {
+        payload[col] = null;
+      } else if (col === 'default_rate') {
+        const n = parseFloat(val);
+        payload[col] = isNaN(n) ? null : n;
+      } else {
+        payload[col] = String(val).trim() || null;
+      }
+    });
+    payload.updated_at = new Date().toISOString();
+    updates.push({ code, payload });
+  });
+
+  if (!updates.length) {
+    showStatus('⚠ No valid rows to update. Check that activity_code values match existing records.', false);
+    return;
+  }
+
+  pbShow(`Updating ${updates.length} activities…`);
+  showStatus(`⏳ Sending ${updates.length} updates to database…`, true);
+
+  const BATCH = 50;
+  let done = 0, errors = [];
+  try {
+    for (let i = 0; i < updates.length; i += BATCH) {
+      const chunk = updates.slice(i, i + BATCH);
+      await Promise.all(chunk.map(async ({ code, payload }) => {
+        const { error } = await sb.from('ho_activities')
+          .update(payload)
+          .eq('activity_code', code);
+        if (error) errors.push(code + ': ' + error.message);
+        else done++;
+      }));
+    }
+  } finally { pbDone(); }
+
+  _cacheBust('masters'); state.mastersCached = false;
+  await apiLoadMasters();
+  renderActivityTree();
+
+  const skipHtml = skipped.length
+    ? `<br><br><strong>Skipped (${skipped.length}):</strong><br><span style="font-size:11px;color:var(--muted);">${skipped.slice(0,10).map(s=>'• '+s).join('<br>')}${skipped.length>10?'<br>…and '+(skipped.length-10)+' more':''}</span>`
+    : '';
+  const errHtml = errors.length
+    ? `<br><br><strong style="color:var(--danger);">Errors (${errors.length}):</strong><br><span style="font-size:11px;color:var(--danger);">${errors.slice(0,5).map(e=>'• '+e).join('<br>')}${errors.length>5?'<br>…and '+(errors.length-5)+' more':''}</span>`
+    : '';
+
+  showStatus(
+    `✅ <strong>${done} activities updated successfully</strong> from ${rows.length} rows in file.${skipHtml}${errHtml}`,
+    errors.length === 0
+  );
+
+  if (done > 0) flashSuccess(done + ' activities updated — tree refreshed');
+}
+
+let _amSearchTerm = '';
+
+function amApplySearch() {
+  const inp = document.getElementById('amSearchInput');
+  _amSearchTerm = (inp?.value||'').trim().toLowerCase();
+  const clr = document.getElementById('amSearchClear');
+  if (clr) clr.style.display = _amSearchTerm ? '' : 'none';
+  renderActivityTree();
+}
+
+function amClearSearch() {
+  const inp = document.getElementById('amSearchInput');
+  if (inp) inp.value = '';
+  _amSearchTerm = '';
+  const clr = document.getElementById('amSearchClear');
+  if (clr) clr.style.display = 'none';
+  renderActivityTree();
+}
+
+function amExpandAll() {
+  document.querySelectorAll('#am_tree_wrap [id$="_ch"]').forEach(el => {
+    el.style.display = '';
+    const p = el.previousElementSibling;
+    if (p) { const c = p.querySelector('span:first-child'); if (c) c.textContent = '▾'; }
+  });
+}
+
+function amCollapseAll() {
+  document.querySelectorAll('#am_tree_wrap [id$="_ch"]').forEach(el => {
+    el.style.display = 'none';
+    const p = el.previousElementSibling;
+    if (p) { const c = p.querySelector('span:first-child'); if (c) c.textContent = '▸'; }
+  });
+}
+
 function renderActivityTree() {
   const wrap = document.getElementById('am_tree_wrap');
   if (!wrap) return;
@@ -11161,13 +11417,15 @@ function renderActivityTree() {
   if (btn) btn.style.display = canAdd ? '' : 'none';
 
   const acts = state.masters.activities || [];
-  // Only show activities that have both costhead and cost_subhead assigned
   const grouped = acts.filter(a => a['Cost Head'] && a['Cost Subhead']);
 
   if (!grouped.length && !canAdd) {
     wrap.innerHTML = '<div class="center muted" style="padding:24px;">No activities defined.</div>';
     return;
   }
+
+  const q = _amSearchTerm;
+  const searching = q.length > 0;
 
   // Build tree: group → sub-head → [activities]
   const tree = {};
@@ -11180,37 +11438,37 @@ function renderActivityTree() {
   });
 
   let html = '<div style="font-size:13px;">';
+  let anyGroupShown = false;
+
   Object.keys(tree).sort().forEach(grp => {
     const grpId = 'amg_' + btoa(encodeURIComponent(grp)).replace(/[^a-z0-9]/gi,'');
-    const totalActs = Object.values(tree[grp]).reduce((s,a)=>s+a.length,0);
-    html += `
-    <div style="margin-bottom:12px;">
-      <div style="display:flex;align-items:center;gap:8px;padding:8px 10px;background:#dde6f0;border-radius:6px;cursor:pointer;" onclick="amToggle('${grpId}_ch')">
-        <span style="font-size:15px;">▾</span>
-        <span style="font-weight:700;color:#1e3a5f;font-size:14px;">📁 ${esc(grp)}</span>
-        <span class="badge-count">${totalActs} activit${totalActs!==1?'ies':'y'}</span>
-        <span style="flex:1;"></span>
-        ${canAdd ? `<button class="btn btn-primary btn-sm" onclick="event.stopPropagation();amAddSub('${esc(grp)}','${grpId}')">+ Sub-head</button>` : ''}
-      </div>
-      <div id="${grpId}_ch" style="margin-left:24px;margin-top:4px;">
-        <div id="${grpId}_inline"></div>`;
+
+    // Filter subheads and items
+    let grpHtml = '';
+    let grpMatchCount = 0;
 
     Object.keys(tree[grp]).sort().forEach(sub => {
       const subId = 'ams_' + btoa(encodeURIComponent(grp+'|'+sub)).replace(/[^a-z0-9]/gi,'');
       const items = tree[grp][sub];
-      html += `
-        <div style="margin-bottom:8px;margin-top:6px;">
-          <div style="display:flex;align-items:center;gap:8px;padding:6px 10px;background:#eef1f6;border-left:3px solid var(--accent);border-radius:4px;cursor:pointer;" onclick="amToggle('${subId}_ch')">
-            <span style="font-size:13px;">▾</span>
-            <span style="font-weight:600;color:var(--accent);">📂 ${esc(sub)}</span>
-            <span style="flex:1;"></span>
-            ${canAdd ? `<button class="btn btn-primary btn-sm" onclick="event.stopPropagation();amAddActivity('${esc(grp)}','${esc(sub)}','${subId}')">+ Activity</button>` : ''}
-          </div>
-          <div id="${subId}_ch" style="margin-left:22px;margin-top:4px;">
-            <div id="${subId}_inline"></div>`;
 
-      items.sort((a,b) => (a['Activity Description']||'').localeCompare(b['Activity Description']||'')).forEach(a => {
-        html += `
+      const filtered = searching
+        ? items.filter(a =>
+            (a['Activity Description']||'').toLowerCase().includes(q) ||
+            (a['Activity Code']||'').toLowerCase().includes(q) ||
+            sub.toLowerCase().includes(q) ||
+            grp.toLowerCase().includes(q)
+          )
+        : items;
+
+      if (!filtered.length) return;
+      grpMatchCount += filtered.length;
+
+      const subOpen = searching ? 'display:""' : 'display:none';
+      const subArrow = searching ? '▾' : '▸';
+
+      let itemsHtml = '';
+      filtered.sort((a,b) => (a['Activity Description']||'').localeCompare(b['Activity Description']||'')).forEach(a => {
+        itemsHtml += `
             <div style="display:flex;align-items:center;gap:8px;padding:4px 10px;border-bottom:1px solid #f1f5f9;" id="amact_${esc(a['Activity Code'])}">
               <span style="font-family:monospace;font-size:11px;font-weight:700;color:var(--accent);min-width:60px;">${esc(a['Activity Code'])}</span>
               <span id="amact_lbl_${esc(a['Activity Code'])}">${esc(a['Activity Description'])}</span>
@@ -11222,11 +11480,47 @@ function renderActivityTree() {
             </div>`;
       });
 
-      html += `</div></div>`;  // close subId_ch + sub div
+      grpHtml += `
+        <div style="margin-bottom:8px;margin-top:6px;">
+          <div style="display:flex;align-items:center;gap:8px;padding:6px 10px;background:#eef1f6;border-left:3px solid var(--accent);border-radius:4px;cursor:pointer;" onclick="amToggle('${subId}_ch')">
+            <span style="font-size:13px;">${subArrow}</span>
+            <span style="font-weight:600;color:var(--accent);">📂 ${esc(sub)}</span>
+            <span style="flex:1;"></span>
+            ${canAdd ? `<button class="btn btn-primary btn-sm" onclick="event.stopPropagation();amAddActivity('${esc(grp)}','${esc(sub)}','${subId}')">+ Activity</button>` : ''}
+          </div>
+          <div id="${subId}_ch" style="${searching?'':'display:none;'}margin-left:22px;margin-top:4px;">
+            <div id="${subId}_inline"></div>
+            ${itemsHtml}
+          </div>
+        </div>`;
     });
 
-    html += `</div></div>`;  // close grpId_ch + grp div
+    if (!grpMatchCount && searching) return; // hide whole group if no matches
+    anyGroupShown = true;
+
+    const totalActs = Object.values(tree[grp]).reduce((s,a)=>s+a.length,0);
+    const grpOpen = searching;
+    const grpArrow = searching ? '▾' : '▸';
+
+    html += `
+    <div style="margin-bottom:12px;">
+      <div style="display:flex;align-items:center;gap:8px;padding:8px 10px;background:#dde6f0;border-radius:6px;cursor:pointer;" onclick="amToggle('${grpId}_ch')">
+        <span style="font-size:15px;">${grpArrow}</span>
+        <span style="font-weight:700;color:#1e3a5f;font-size:14px;">📁 ${esc(grp)}</span>
+        <span class="badge-count">${totalActs} activit${totalActs!==1?'ies':'y'}</span>
+        <span style="flex:1;"></span>
+        ${canAdd ? `<button class="btn btn-primary btn-sm" onclick="event.stopPropagation();amAddSub('${esc(grp)}','${grpId}')">+ Sub-head</button>` : ''}
+      </div>
+      <div id="${grpId}_ch" style="${grpOpen?'':'display:none;'}margin-left:24px;margin-top:4px;">
+        <div id="${grpId}_inline"></div>
+        ${grpHtml}
+      </div>
+    </div>`;
   });
+
+  if (!anyGroupShown && searching) {
+    html += `<div class="center muted" style="padding:24px;">No activities match "<strong>${esc(q)}</strong>".</div>`;
+  }
 
   html += '</div>';
   wrap.innerHTML = html;
@@ -11362,7 +11656,7 @@ async function amSaveActivity(grp, sub) {
     const code = 'ACT' + String(nextNum).padStart(3,'0');
     const { error } = await sb.from('ho_activities').insert({
       activity_code: code, activity_description: desc, uom, default_rate: rate,
-      costhead: grp, cost_subhead: sub, created_by: state.userId
+      activity_group: grp, activity_sub_group: sub, created_by: state.userId
     });
     if (error) throw new Error(error.message);
     flashSuccess('Activity '+code+' added');
@@ -11376,6 +11670,245 @@ async function amSaveActivity(grp, sub) {
 // ============================================================
 // MATERIAL MASTER — TREE RENDER & INLINE ADD
 // ============================================================
+// ============================================================
+// MATERIAL MASTER — EXCEL EXPORT / IMPORT
+// Export: downloads all active materials as .xlsx
+// Import: reads edited .xlsx, updates material_group + sub_head
+//         (and optionally uom, hsn_code, specification, estimated_rate)
+//         via batched Supabase UPDATEs keyed on material_code
+// ============================================================
+
+function mmExportExcel() {
+  const mats = (puState.materials || []);
+  if (!mats.length) { toast('No materials loaded — refresh and try again', 'warn'); return; }
+
+  // Build rows — ordered for easy editing
+  const headers = [
+    'material_code',      // A — key, do not edit
+    'material_name',      // B — read-only reference
+    'uom',                // C
+    'material_group',     // D — primary edit target
+    'sub_head',           // E — primary edit target
+    'hsn_code',           // F
+    'specification',      // G
+    'estimated_rate',     // H
+  ];
+
+  const rows = mats
+    .slice()
+    .sort((a, b) => (a.material_name || '').localeCompare(b.material_name || ''))
+    .map(m => ({
+      material_code:   m.material_code   || '',
+      material_name:   m.material_name   || '',
+      uom:             m.uom             || '',
+      material_group:  m.material_group  || '',
+      sub_head:        m.sub_head        || '',
+      hsn_code:        m.hsn_code        || '',
+      specification:   m.specification   || '',
+      estimated_rate:  m.estimated_rate  != null ? m.estimated_rate : '',
+    }));
+
+  const ws = XLSX.utils.json_to_sheet(rows, { header: headers });
+
+  // Column widths
+  ws['!cols'] = [
+    { wch: 10 }, // material_code
+    { wch: 40 }, // material_name
+    { wch: 8  }, // uom
+    { wch: 28 }, // material_group
+    { wch: 28 }, // sub_head
+    { wch: 12 }, // hsn_code
+    { wch: 35 }, // specification
+    { wch: 14 }, // estimated_rate
+  ];
+
+  // Freeze top row and colour header row
+  ws['!freeze'] = { xSplit: 0, ySplit: 1 };
+
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Material Master');
+
+  // Instructions sheet
+  const instrData = [
+    ['INSTRUCTIONS FOR BULK EDIT'],
+    [''],
+    ['1. DO NOT change column headers or material_code (Column A) — these are keys used for update.'],
+    ['2. Fill in / correct material_group (Col D) and sub_head (Col E) for each row.'],
+    ['3. You may also edit uom, hsn_code, specification, estimated_rate.'],
+    ['4. Leave estimated_rate blank (not 0) if not applicable.'],
+    ['5. Save the file and use "Import Excel" button in the Material Master screen to upload.'],
+    ['6. Only rows where material_code matches an existing record will be updated.'],
+    ['7. Rows with blank material_code are ignored.'],
+    [''],
+    ['COLUMN REFERENCE'],
+    ['A  material_code     — DO NOT EDIT — used as update key'],
+    ['B  material_name     — reference only, changes here are applied'],
+    ['C  uom               — unit of measure'],
+    ['D  material_group    — ★ primary edit column'],
+    ['E  sub_head          — ★ primary edit column'],
+    ['F  hsn_code          — optional'],
+    ['G  specification     — optional'],
+    ['H  estimated_rate    — numeric, leave blank if unknown'],
+  ];
+  const wsInstr = XLSX.utils.aoa_to_sheet(instrData);
+  wsInstr['!cols'] = [{ wch: 80 }];
+  XLSX.utils.book_append_sheet(wb, wsInstr, 'Instructions');
+
+  XLSX.writeFile(wb, 'MaterialMaster_BulkEdit_' + new Date().toISOString().slice(0,10) + '.xlsx');
+  toast('Excel downloaded — edit material_group and sub_head, then Import Excel', 'success');
+}
+
+async function mmImportExcel(inputEl) {
+  const file = inputEl.files[0];
+  inputEl.value = ''; // reset so same file can be re-imported if needed
+  if (!file) return;
+
+  if (!hasRole('Admin') && !hasRole('Planning/ QS')) {
+    toast('Only Admin or Planning/QS can import materials', 'error'); return;
+  }
+
+  const statusEl = document.getElementById('mmImportStatus');
+  const showStatus = (html, ok) => {
+    if (!statusEl) return;
+    statusEl.style.display = '';
+    statusEl.style.background = ok ? '#f0fdf4' : '#fff7ed';
+    statusEl.style.borderColor = ok ? '#86efac' : '#fdba74';
+    statusEl.innerHTML = html;
+  };
+
+  showStatus('<span style="color:var(--muted);">⏳ Reading file…</span>', true);
+
+  let rows;
+  try {
+    const buf = await file.arrayBuffer();
+    const wb  = XLSX.read(buf, { type: 'array' });
+    const ws  = wb.Sheets[wb.SheetNames[0]]; // always use first sheet
+    rows = XLSX.utils.sheet_to_json(ws, { defval: '' });
+  } catch(e) {
+    showStatus('❌ Could not read file: ' + e.message, false); return;
+  }
+
+  if (!rows.length) { showStatus('❌ No data rows found in the file.', false); return; }
+
+  // Validate expected columns
+  const requiredCols = ['material_code'];
+  const sampleKeys = Object.keys(rows[0]);
+  const missing = requiredCols.filter(c => !sampleKeys.includes(c));
+  if (missing.length) {
+    showStatus('❌ Missing required column(s): <strong>' + missing.join(', ') + '</strong>. Make sure you are importing the exported file without renaming headers.', false);
+    return;
+  }
+
+  // Editable columns — material_code is the key, never updated
+  const editableCols = ['material_name', 'uom', 'material_group', 'sub_head', 'hsn_code', 'specification', 'estimated_rate'];
+  const presentCols  = editableCols.filter(c => sampleKeys.includes(c));
+
+  showStatus(`⏳ Validating ${rows.length} rows…`, true);
+
+  const updates   = [];
+  const skipped   = [];
+  const codeSet   = new Set((puState.materials || []).map(m => m.material_code));
+
+  rows.forEach((r, idx) => {
+    const code = (r.material_code || '').toString().trim();
+    if (!code) { skipped.push('Row ' + (idx + 2) + ': blank material_code'); return; }
+    if (!codeSet.has(code)) { skipped.push(code + ': not found in master'); return; }
+
+    const payload = {};
+    presentCols.forEach(col => {
+      let val = r[col];
+      if (val === '' || val === undefined || val === null) {
+        payload[col] = null;
+      } else if (col === 'estimated_rate') {
+        const n = parseFloat(val);
+        payload[col] = isNaN(n) ? null : n;
+      } else {
+        payload[col] = String(val).trim() || null;
+      }
+    });
+    payload.updated_by      = state.userId;
+    payload.updated_by_name = state.userName;
+    payload.updated_at      = new Date().toISOString();
+    updates.push({ code, payload });
+  });
+
+  if (!updates.length) {
+    showStatus('⚠ No valid rows to update. Check that material_code values match existing records.', false);
+    return;
+  }
+
+  pbShow(`Updating ${updates.length} materials…`);
+  showStatus(`⏳ Sending ${updates.length} updates to database…`, true);
+
+  // Batch in groups of 50 to avoid request overload
+  const BATCH = 50;
+  let done = 0, errors = [];
+  try {
+    for (let i = 0; i < updates.length; i += BATCH) {
+      const chunk = updates.slice(i, i + BATCH);
+      await Promise.all(chunk.map(async ({ code, payload }) => {
+        const { error } = await sb.from('pu_material_master')
+          .update(payload)
+          .eq('material_code', code);
+        if (error) errors.push(code + ': ' + error.message);
+        else done++;
+      }));
+    }
+  } finally { pbDone(); }
+
+  await apiLoadMaterials();
+  renderMaterialTree();
+
+  const skipHtml = skipped.length
+    ? `<br><br><strong>Skipped (${skipped.length}):</strong><br><span style="font-size:11px;color:var(--muted);">${skipped.slice(0,10).map(s=>'• '+s).join('<br>')}${skipped.length>10?'<br>…and '+(skipped.length-10)+' more':''}</span>`
+    : '';
+  const errHtml = errors.length
+    ? `<br><br><strong style="color:var(--danger);">Errors (${errors.length}):</strong><br><span style="font-size:11px;color:var(--danger);">${errors.slice(0,5).map(e=>'• '+e).join('<br>')}${errors.length>5?'<br>…and '+(errors.length-5)+' more':''}</span>`
+    : '';
+
+  showStatus(
+    `✅ <strong>${done} materials updated successfully</strong> from ${rows.length} rows in file.${skipHtml}${errHtml}`,
+    errors.length === 0
+  );
+
+  if (done > 0) flashSuccess(done + ' materials updated — tree refreshed');
+}
+
+let _mmSearchTerm = '';
+
+function mmApplySearch() {
+  const inp = document.getElementById('mmSearchInput');
+  _mmSearchTerm = (inp?.value||'').trim().toLowerCase();
+  const clr = document.getElementById('mmSearchClear');
+  if (clr) clr.style.display = _mmSearchTerm ? '' : 'none';
+  renderMaterialTree();
+}
+
+function mmClearSearch() {
+  const inp = document.getElementById('mmSearchInput');
+  if (inp) inp.value = '';
+  _mmSearchTerm = '';
+  const clr = document.getElementById('mmSearchClear');
+  if (clr) clr.style.display = 'none';
+  renderMaterialTree();
+}
+
+function mmExpandAll() {
+  document.querySelectorAll('#mm_tree_wrap [id$="_ch"]').forEach(el => {
+    el.style.display = '';
+    const p = el.previousElementSibling;
+    if (p) { const c = p.querySelector('span:first-child'); if (c) c.textContent = '▾'; }
+  });
+}
+
+function mmCollapseAll() {
+  document.querySelectorAll('#mm_tree_wrap [id$="_ch"]').forEach(el => {
+    el.style.display = 'none';
+    const p = el.previousElementSibling;
+    if (p) { const c = p.querySelector('span:first-child'); if (c) c.textContent = '▸'; }
+  });
+}
+
 function renderMaterialTree() {
   const wrap = document.getElementById('mm_tree_wrap');
   if (!wrap) return;
@@ -11384,56 +11917,58 @@ function renderMaterialTree() {
   const btn = document.getElementById('mmAddGroupBtn');
   if (btn) btn.style.display = canAdd ? '' : 'none';
 
-  // Only show materials that have both costhead and cost_subhead
-  const mats = (puState.materials||[]).filter(m => m.costhead && m.cost_subhead);
+  const mats = (puState.materials||[]).filter(m => m.material_group && m.sub_head);
 
   if (!mats.length && !canAdd) {
     wrap.innerHTML = '<div class="center muted" style="padding:24px;">No materials defined.</div>';
     return;
   }
 
+  const q = _mmSearchTerm;
+  const searching = q.length > 0;
+
   // Build tree: group → sub-head → [materials]
   const tree = {};
   mats.forEach(m => {
-    const g = m.costhead;
-    const s = m.cost_subhead;
+    const g = m.material_group;
+    const s = m.sub_head;
     if (!tree[g]) tree[g] = {};
     if (!tree[g][s]) tree[g][s] = [];
     tree[g][s].push(m);
   });
 
   let html = '<div style="font-size:13px;">';
+  let anyGroupShown = false;
+
   Object.keys(tree).sort().forEach(grp => {
     const grpId = 'mmg_' + btoa(encodeURIComponent(grp)).replace(/[^a-z0-9]/gi,'');
-    const totalMats = Object.values(tree[grp]).reduce((s,a)=>s+a.length,0);
-    html += `
-    <div style="margin-bottom:12px;">
-      <div style="display:flex;align-items:center;gap:8px;padding:8px 10px;background:#dde6f0;border-radius:6px;cursor:pointer;" onclick="mmToggle('${grpId}_ch')">
-        <span style="font-size:15px;">▾</span>
-        <span style="font-weight:700;color:#1e3a5f;font-size:14px;">📁 ${esc(grp)}</span>
-        <span class="badge-count">${totalMats} material${totalMats!==1?'s':''}</span>
-        <span style="flex:1;"></span>
-        ${canAdd ? `<button class="btn btn-primary btn-sm" onclick="event.stopPropagation();mmAddSub('${esc(grp)}','${grpId}')">+ Sub-head</button>` : ''}
-      </div>
-      <div id="${grpId}_ch" style="margin-left:24px;margin-top:4px;">
-        <div id="${grpId}_inline"></div>`;
+
+    let grpHtml = '';
+    let grpMatchCount = 0;
 
     Object.keys(tree[grp]).sort().forEach(sub => {
       const subId = 'mms_' + btoa(encodeURIComponent(grp+'|'+sub)).replace(/[^a-z0-9]/gi,'');
       const items = tree[grp][sub];
-      html += `
-        <div style="margin-bottom:8px;margin-top:6px;">
-          <div style="display:flex;align-items:center;gap:8px;padding:6px 10px;background:#eef1f6;border-left:3px solid var(--accent);border-radius:4px;cursor:pointer;" onclick="mmToggle('${subId}_ch')">
-            <span style="font-size:13px;">▾</span>
-            <span style="font-weight:600;color:var(--accent);">📂 ${esc(sub)}</span>
-            <span style="flex:1;"></span>
-            ${canAdd ? `<button class="btn btn-primary btn-sm" onclick="event.stopPropagation();mmAddMaterial('${esc(grp)}','${esc(sub)}','${subId}')">+ Material</button>` : ''}
-          </div>
-          <div id="${subId}_ch" style="margin-left:22px;margin-top:4px;">
-            <div id="${subId}_inline"></div>`;
 
-      items.sort((a,b)=>(a.material_name||'').localeCompare(b.material_name||'')).forEach(m => {
-        html += `
+      const filtered = searching
+        ? items.filter(m =>
+            (m.material_name||'').toLowerCase().includes(q) ||
+            (m.material_code||'').toLowerCase().includes(q) ||
+            (m.uom||'').toLowerCase().includes(q) ||
+            (m.specification||'').toLowerCase().includes(q) ||
+            sub.toLowerCase().includes(q) ||
+            grp.toLowerCase().includes(q)
+          )
+        : items;
+
+      if (!filtered.length) return;
+      grpMatchCount += filtered.length;
+
+      const subArrow = searching ? '▾' : '▸';
+
+      let itemsHtml = '';
+      filtered.sort((a,b)=>(a.material_name||'').localeCompare(b.material_name||'')).forEach(m => {
+        itemsHtml += `
             <div style="display:flex;align-items:center;gap:8px;padding:5px 10px;border-bottom:1px solid #f1f5f9;" id="mmmat_${esc(m.material_code)}">
               <span style="font-family:monospace;font-size:11px;font-weight:700;color:var(--accent);min-width:60px;">${esc(m.material_code)}</span>
               <span style="flex:1;">${esc(m.material_name)}</span>
@@ -11447,11 +11982,46 @@ function renderMaterialTree() {
             </div>`;
       });
 
-      html += `</div></div>`;  // close subId_ch + sub div
+      grpHtml += `
+        <div style="margin-bottom:8px;margin-top:6px;">
+          <div style="display:flex;align-items:center;gap:8px;padding:6px 10px;background:#eef1f6;border-left:3px solid var(--accent);border-radius:4px;cursor:pointer;" onclick="mmToggle('${subId}_ch')">
+            <span style="font-size:13px;">${subArrow}</span>
+            <span style="font-weight:600;color:var(--accent);">📂 ${esc(sub)}</span>
+            <span style="flex:1;"></span>
+            ${canAdd ? `<button class="btn btn-primary btn-sm" onclick="event.stopPropagation();mmAddMaterial('${esc(grp)}','${esc(sub)}','${subId}')">+ Material</button>` : ''}
+          </div>
+          <div id="${subId}_ch" style="${searching?'':'display:none;'}margin-left:22px;margin-top:4px;">
+            <div id="${subId}_inline"></div>
+            ${itemsHtml}
+          </div>
+        </div>`;
     });
 
-    html += `</div></div>`;  // close grpId_ch + grp div
+    if (!grpMatchCount && searching) return;
+    anyGroupShown = true;
+
+    const totalMats = Object.values(tree[grp]).reduce((s,a)=>s+a.length,0);
+    const grpArrow = searching ? '▾' : '▸';
+
+    html += `
+    <div style="margin-bottom:12px;">
+      <div style="display:flex;align-items:center;gap:8px;padding:8px 10px;background:#dde6f0;border-radius:6px;cursor:pointer;" onclick="mmToggle('${grpId}_ch')">
+        <span style="font-size:15px;">${grpArrow}</span>
+        <span style="font-weight:700;color:#1e3a5f;font-size:14px;">📁 ${esc(grp)}</span>
+        <span class="badge-count">${totalMats} material${totalMats!==1?'s':''}</span>
+        <span style="flex:1;"></span>
+        ${canAdd ? `<button class="btn btn-primary btn-sm" onclick="event.stopPropagation();mmAddSub('${esc(grp)}','${grpId}')">+ Sub-head</button>` : ''}
+      </div>
+      <div id="${grpId}_ch" style="${searching?'':'display:none;'}margin-left:24px;margin-top:4px;">
+        <div id="${grpId}_inline"></div>
+        ${grpHtml}
+      </div>
+    </div>`;
   });
+
+  if (!anyGroupShown && searching) {
+    html += `<div class="center muted" style="padding:24px;">No materials match "<strong>${esc(q)}</strong>".</div>`;
+  }
 
   html += '</div>';
   wrap.innerHTML = html;
@@ -11487,7 +12057,7 @@ async function mmSaveNewGroup() {
   const inp = document.getElementById('mm_newgrp_input');
   const val = (inp?.value||'').trim();
   if (!val) { toast('Enter a group name','error'); return; }
-  const exists = (puState.materials||[]).some(m => (m.costhead||'').toLowerCase()===val.toLowerCase());
+  const exists = (puState.materials||[]).some(m => (m.material_group||'').toLowerCase()===val.toLowerCase());
   if (exists) { toast('Group already exists','error'); return; }
   const alreadyInCH = _chData.some(r => r.costhead.toLowerCase()===val.toLowerCase());
   if (!alreadyInCH) {
@@ -11519,7 +12089,7 @@ function mmAddSub(grp, grpId) {
 async function mmSaveNewSub(inp, grp) {
   const val = (inp?.value||'').trim();
   if (!val) { toast('Enter a sub-head name','error'); return; }
-  const dup = (puState.materials||[]).some(m => (m.costhead||'').toLowerCase()===grp.toLowerCase() && (m.cost_subhead||'').toLowerCase()===val.toLowerCase());
+  const dup = (puState.materials||[]).some(m => (m.material_group||'').toLowerCase()===grp.toLowerCase() && (m.sub_head||'').toLowerCase()===val.toLowerCase());
   if (dup) { toast('Sub-head already exists in this group','error'); return; }
   const already = _chData.some(r => r.costhead.toLowerCase()===grp.toLowerCase() && (r.cost_subhead||'').toLowerCase()===val.toLowerCase());
   if (!already) {
@@ -11590,7 +12160,7 @@ async function mmSaveMaterial(grp, sub) {
     const { error } = await sb.from('pu_material_master').insert({
       material_code: code, material_name: name, uom,
       hsn_code: hsn, specification: spec, estimated_rate: estRate,
-      costhead: grp, cost_subhead: sub,
+      material_group: grp, sub_head: sub,
       created_by: state.userId, created_by_name: state.userName,
     });
     if (error) throw new Error(error.message);
@@ -11719,7 +12289,7 @@ function renderCostHeadTree() {
     const safeHead = head.replace(/'/g, "\\'");
     const headId = 'chh_' + head.replace(/[^a-z0-9]/gi,'_');
     const subs = tree[head];
-    const matCount = (puState.materials||[]).filter(m => m.costhead === head).length;
+    const matCount = (puState.materials||[]).filter(m => m.material_group === head).length;
     const actCount = (state.masters?.activities||[]).filter(a => a['Cost Head'] === head).length;
     html += '<div style="margin-bottom:12px;">';
     html += '<div style="display:flex;align-items:center;gap:8px;padding:8px 10px;background:var(--panel-2);border-left:4px solid var(--accent);border-radius:6px;cursor:pointer;" onclick="chToggle(\''+headId+'_children\')">';
@@ -11913,7 +12483,7 @@ async function chRenameHead(head) {
 
 async function chDeleteHead(head) {
   if (!hasRole('Admin')) return;
-  const matUsed = (puState.materials||[]).filter(m => m.costhead === head).length;
+  const matUsed = (puState.materials||[]).filter(m => m.material_group === head).length;
   const actUsed = (state.masters?.activities||[]).filter(a => a['Cost Head'] === head).length;
   if (matUsed + actUsed > 0) {
     toast('Cannot delete -- "'+head+'" is used by '+matUsed+' material(s) and '+actUsed+' activity/activities','error'); return;
@@ -11931,7 +12501,7 @@ async function chDeleteHead(head) {
 
 async function chDeleteSub(id, head, sub) {
   if (!hasRole('Admin')) return;
-  const matUsed = (puState.materials||[]).filter(m => m.costhead === head && m.cost_subhead === sub).length;
+  const matUsed = (puState.materials||[]).filter(m => m.material_group === head && m.sub_head === sub).length;
   const actUsed = (state.masters?.activities||[]).filter(a => a['Cost Head'] === head && a['Cost Subhead'] === sub).length;
   if (matUsed + actUsed > 0) {
     toast('Cannot delete -- "'+sub+'" is used by '+matUsed+' material(s) and '+actUsed+' activity/activities','error'); return;
@@ -12525,14 +13095,14 @@ function materialTypeahead(inputId, resultsId) {
   if (!q || !res) return;
   const tokens = _fuzzyTokens(q);
   const matches = puState.materials.filter(m => {
-    const hay = ((m.material_name||'')+'|'+(m.costhead||'')+'|'+(m.cost_subhead||'')+'|'+(m.uom||'')).toLowerCase();
+    const hay = ((m.material_name||'')+'|'+(m.material_group||'')+'|'+(m.sub_head||'')+'|'+(m.uom||'')).toLowerCase();
     return _fuzzyMatch(hay, tokens);
   }).slice(0, 15);
   if (!matches.length) { res.classList.remove('show'); res.style.display='none'; return; }
   res.innerHTML = matches.map(m =>
     `<div class="typeahead-item" onmousedown="event.preventDefault();selectMaterialItem('${inputId}','${resultsId}','${esc(m.material_name).replace(/'/g,"\\'")}','${esc(m.uom).replace(/'/g,"\\'")}','${esc(m.material_code).replace(/'/g,"\\'")}')">
       <strong>${esc(m.material_name)}</strong>
-      <div class="muted">${esc(m.costhead||'')}${m.cost_subhead?' · '+esc(m.cost_subhead):''} · ${esc(m.uom)}</div>
+      <div class="muted">${esc(m.material_group||'')}${m.sub_head?' · '+esc(m.sub_head):''} · ${esc(m.uom)}</div>
     </div>`
   ).join('');
   _anchorDropdown(inp, res);
@@ -15293,6 +15863,223 @@ async function downloadGRNList() {
   } finally { pbDone(); }
 }
 
+// =====================================================================
+// GRN — SEARCH BY MATERIAL
+// Opens a modal with a fuzzy-search typeahead for materials.
+// On selection, queries pu_grn_items + pu_grn and renders a full
+// GRN table filtered to that material.
+// =====================================================================
+
+let _grnMatSearchData = { items: [], grns: {}, matName: '', matUOM: '' };
+
+function openGRNMatSearch() {
+  if (!(puState.materials||[]).length) {
+    toast('Material master not loaded yet — please wait a moment and try again', 'warn'); return;
+  }
+  openModal(`
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:18px;">
+      <span style="font-size:20px;">🔍</span>
+      <div>
+        <h3 style="margin:0;border:none;padding:0;color:var(--accent);">Search Material in GRNs</h3>
+        <div style="font-size:12px;color:var(--muted);margin-top:2px;">Find all GRNs that received a specific material</div>
+      </div>
+    </div>
+
+    <div style="display:flex;gap:10px;align-items:flex-start;margin-bottom:16px;">
+      <div style="position:relative;flex:1;" class="typeahead">
+        <input id="grnMatSrchInput" type="text" autocomplete="off"
+          placeholder="Type material name or code…"
+          oninput="grnMatSearchTypeahead()"
+          onkeydown="if(event.key==='Escape'){document.getElementById('grnMatSrchRes').classList.remove('show');}"
+          style="width:100%;padding:10px 12px;border:1px solid var(--accent);border-radius:6px;font-size:13px;background:var(--input-bg);color:var(--text);">
+        <div class="typeahead-results" id="grnMatSrchRes" style="position:absolute;top:100%;left:0;right:0;z-index:9999;max-height:260px;overflow-y:auto;"></div>
+      </div>
+      <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--muted);white-space:nowrap;padding-top:10px;cursor:pointer;">
+        <input type="checkbox" id="grnMatSrchIncRej" onchange="renderGRNMatResults()"> Include Rejected
+      </label>
+    </div>
+
+    <div id="grnMatSrchBody">
+      <div class="center muted" style="padding:32px;font-size:13px;">Select a material above to see its GRN history.</div>
+    </div>
+  `, 'large');
+
+  // Auto-focus search input after modal renders
+  setTimeout(() => document.getElementById('grnMatSrchInput')?.focus(), 80);
+}
+
+function grnMatSearchTypeahead() {
+  const inp = document.getElementById('grnMatSrchInput');
+  const q   = (inp?.value || '').toLowerCase().trim();
+  const res = document.getElementById('grnMatSrchRes');
+  if (!res) return;
+  if (!q) { res.classList.remove('show'); return; }
+
+  const tokens = _fuzzyTokens(q);
+  const matches = (puState.materials || []).filter(m => {
+    const hay = ((m.material_name||'')+'|'+(m.material_code||'')+'|'+(m.material_group||'')+'|'+(m.sub_head||'')+'|'+(m.uom||'')).toLowerCase();
+    return _fuzzyMatch(hay, tokens);
+  }).slice(0, 18);
+
+  if (!matches.length) { res.classList.remove('show'); res.style.display = 'none'; return; }
+
+  res.innerHTML = matches.map(m => `
+    <div class="typeahead-item"
+      onmousedown="event.preventDefault();grnMatSearchSelect('${esc(m.material_name).replace(/'/g,"\\'")}','${esc(m.uom||'').replace(/'/g,"\\'")}','${esc(m.material_code||'').replace(/'/g,"\\'")}')">
+      <strong>${esc(m.material_name)}</strong>
+      <div class="muted">${esc(m.material_code||'')} · ${esc(m.material_group||'')}${m.sub_head?' › '+esc(m.sub_head):''} · ${esc(m.uom||'')}</div>
+    </div>`).join('');
+
+  _anchorDropdown(inp, res);
+}
+
+async function grnMatSearchSelect(name, uom, code) {
+  // Populate input and close dropdown
+  const inp = document.getElementById('grnMatSrchInput');
+  if (inp) inp.value = name;
+  const res = document.getElementById('grnMatSrchRes');
+  if (res) { res.classList.remove('show'); res.style.display = 'none'; }
+
+  const body = document.getElementById('grnMatSrchBody');
+  if (body) body.innerHTML = '<div class="center muted" style="padding:32px;">⏳ Searching…</div>';
+
+  try {
+    // 1. Fetch all grn_items rows for this material name
+    const { data: items, error: iErr } = await sb
+      .from('pu_grn_items')
+      .select('grn_number,sno,uom,po_qty,prev_received_qty,this_grn_qty,total_received_qty,balance_qty,unit_rate,base_amount,remarks')
+      .eq('material_name', name)
+      .order('grn_number', { ascending: false });
+    if (iErr) throw new Error(iErr.message);
+
+    if (!items || !items.length) {
+      body.innerHTML = `<div class="center muted" style="padding:32px;">No GRN receipts found for <strong>${esc(name)}</strong>.</div>`;
+      return;
+    }
+
+    // 2. Fetch all matching GRN headers in one query
+    const grnNums = [...new Set(items.map(i => i.grn_number))];
+    const { data: grnHeaders, error: gErr } = await sb
+      .from('pu_grn')
+      .select('grn_number,grn_date,po_number,vendor_name,vehicle_challan,invoice_no,received_by,verified_by,status,is_cash_purchase,cash_purchase_ref')
+      .in('grn_number', grnNums)
+      .order('grn_date', { ascending: false });
+    if (gErr) throw new Error(gErr.message);
+
+    // 3. Index grn headers by grn_number
+    const grnMap = {};
+    (grnHeaders || []).forEach(g => { grnMap[g.grn_number] = g; });
+
+    // 4. Store and render
+    _grnMatSearchData = { items, grns: grnMap, matName: name, matUOM: uom };
+    renderGRNMatResults();
+
+  } catch(e) {
+    const body2 = document.getElementById('grnMatSrchBody');
+    if (body2) body2.innerHTML = `<div class="center" style="padding:24px;color:var(--danger);">Error: ${esc(e.message)}</div>`;
+  }
+}
+
+function renderGRNMatResults() {
+  const body = document.getElementById('grnMatSrchBody');
+  if (!body) return;
+  const { items, grns, matName, matUOM } = _grnMatSearchData;
+  if (!items || !items.length) return;
+
+  const inclRej = document.getElementById('grnMatSrchIncRej')?.checked;
+
+  // Build merged rows: one per item row, enriched with GRN header
+  let rows = items.map(it => ({ ...it, _grn: grns[it.grn_number] || {} }));
+  if (!inclRej) rows = rows.filter(r => r._grn.status !== 'Rejected');
+
+  if (!rows.length) {
+    body.innerHTML = `<div class="center muted" style="padding:24px;">No results${!inclRej?' (all GRNs are Rejected — enable "Include Rejected" to show them)':''}.</div>`;
+    return;
+  }
+
+  // Summary stats (exclude Rejected always for totals)
+  const activeRows = rows.filter(r => r._grn.status !== 'Rejected');
+  const totalQty   = activeRows.reduce((s, r) => s + num(r.this_grn_qty), 0);
+  const totalVal   = activeRows.reduce((s, r) => s + num(r.base_amount), 0);
+  const uniqueGRNs = new Set(rows.map(r => r.grn_number)).size;
+  const activeGRNs = new Set(activeRows.map(r => r.grn_number)).size;
+
+  // Status badge helper (reuse existing CSS classes)
+  const stBadge = st => {
+    const cls = (st||'').toLowerCase().replace(/\s/g,'-');
+    return `<span class="status ${cls}">${esc(st||'—')}</span>`;
+  };
+
+  const tableRows = rows.map(r => {
+    const g = r._grn;
+    const st = g.status || '—';
+    const isRej = st === 'Rejected';
+    const poDisplay = g.is_cash_purchase
+      ? `<span class="muted" style="font-style:italic;">${esc(g.cash_purchase_ref||'Direct Purchase')}</span>`
+      : `<span class="mono">${esc(g.po_number||'—')}</span>`;
+    const cashBadge = g.is_cash_purchase
+      ? ' <span style="font-size:10px;background:#ad6800;color:#fff;padding:1px 5px;border-radius:3px;font-weight:600;">DIRECT</span>'
+      : '';
+    const overRmk = r.remarks && r.remarks.includes('⚠ Over-receipt')
+      ? `<span title="${esc(r.remarks)}" style="color:#92400e;font-size:10px;font-weight:600;cursor:help;"> ⚠</span>`
+      : '';
+    const balQty = num(r.balance_qty);
+    const balStyle = balQty < 0 ? 'color:var(--danger);font-weight:600;' : '';
+    return `<tr style="${isRej?'opacity:0.55;':''}">
+      <td class="mono" style="white-space:nowrap;">${esc(r.grn_number)}${cashBadge}</td>
+      <td style="white-space:nowrap;">${fmtDate(g.grn_date)}</td>
+      <td>${poDisplay}</td>
+      <td style="max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${esc(g.vendor_name||'')}">${esc(g.vendor_name||'—')}</td>
+      <td style="white-space:nowrap;">${esc(g.vehicle_challan||'—')} / ${esc(g.invoice_no||'—')}</td>
+      <td style="white-space:nowrap;">${esc(g.received_by||'—')}</td>
+      <td style="white-space:nowrap;">${esc(g.verified_by||'—')}</td>
+      <td>${stBadge(st)}</td>
+      <td class="num">${fmtINR(r.po_qty)}</td>
+      <td class="num">${fmtINR(r.prev_received_qty)}</td>
+      <td class="num" style="font-weight:600;color:var(--accent);">${fmtINR(r.this_grn_qty)}</td>
+      <td class="num" style="${balStyle}">${fmtINR(balQty)}</td>
+      <td class="num">${fmtINR(r.unit_rate)}</td>
+      <td class="num">${fmtINR(r.base_amount)}</td>
+      <td style="font-size:11px;max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${esc(r.remarks||'')}">${esc(r.remarks||'—')}${overRmk}</td>
+      <td><button class="btn btn-ghost btn-sm" onclick="closeModal();viewGRN('${esc(r.grn_number)}')">View</button></td>
+    </tr>`;
+  }).join('');
+
+  body.innerHTML = `
+    <!-- Summary bar -->
+    <div style="display:flex;gap:20px;flex-wrap:wrap;align-items:center;background:#f0fdf4;border:1px solid #86efac;border-radius:6px;padding:10px 16px;margin-bottom:14px;font-size:12px;">
+      <div><span style="color:var(--muted);">Material</span><br><strong style="font-size:13px;">${esc(matName)}</strong> <span style="color:var(--muted);">(${esc(matUOM)})</span></div>
+      <div style="width:1px;background:var(--border);align-self:stretch;"></div>
+      <div><span style="color:var(--muted);">GRNs Found</span><br><strong>${uniqueGRNs}</strong>${uniqueGRNs!==activeGRNs?` <span style="color:var(--muted);font-size:11px;">(${activeGRNs} active)</span>`:''}
+      </div>
+      <div><span style="color:var(--muted);">Total Qty Received</span><br><strong>${fmtINR(totalQty)} ${esc(matUOM)}</strong></div>
+      <div><span style="color:var(--muted);">Total Value</span><br><strong style="color:var(--accent);">₹${fmtINR(totalVal)}</strong></div>
+      <div style="margin-left:auto;font-size:11px;color:var(--muted);">Totals exclude Rejected GRNs</div>
+    </div>
+
+    <!-- Results table -->
+    <div class="table-wrap" style="max-height:52vh;overflow-y:auto;">
+      <table>
+        <thead>
+          <tr>
+            <th>GRN No.</th><th>Date</th><th>PO / Ref</th><th>Vendor</th>
+            <th>Challan / Invoice</th><th>Received By</th><th>Verified By</th><th>Status</th>
+            <th class="num">PO Qty</th><th class="num">Prev Recd</th>
+            <th class="num">This GRN</th><th class="num">Balance</th>
+            <th class="num">Rate (₹)</th><th class="num">Amount (₹)</th>
+            <th>Remarks</th><th></th>
+          </tr>
+        </thead>
+        <tbody>${tableRows}</tbody>
+      </table>
+    </div>
+    <div style="font-size:11px;color:var(--muted);margin-top:8px;">
+      Showing ${rows.length} receipt line${rows.length!==1?'s':''} across ${uniqueGRNs} GRN${uniqueGRNs!==1?'s':''}.
+      ⚠ badge = over-receipt flag (hover for details). Click <strong>View</strong> to open full GRN.
+    </div>`;
+}
+
+
 async function newGRN() {
   if(!hasPerm('canCreateGRN')){toast('Only Store Executive can create GRN','error');return;}
   document.getElementById('cashGrnForm').style.display='none';  // hide sibling
@@ -15620,7 +16407,7 @@ function cgrnMatTypeahead(i) {
     list = mats.slice(0, 12);
   } else {
     list = mats.filter(m => {
-      const hay = ((m.material_name||'')+'|'+(m.costhead||'')+'|'+(m.cost_subhead||'')+'|'+(m.uom||'')).toLowerCase();
+      const hay = ((m.material_name||'')+'|'+(m.material_group||'')+'|'+(m.sub_head||'')+'|'+(m.uom||'')).toLowerCase();
       return _fuzzyMatch(hay, tokens);
     }).slice(0, 15);
   }
@@ -15633,7 +16420,7 @@ function cgrnMatTypeahead(i) {
       const code = esc(m.material_code).replace(/'/g,"\\'");
       return `<div class="typeahead-item" onmousedown="event.preventDefault();cgrnPickMat(${i},'${code}','${name}','${uom}')">
         <strong>${esc(m.material_name)}</strong>
-        <div class="muted">${esc(m.material_code)} · ${esc(m.uom||'—')}${m.costhead ? ' · ' + esc(m.costhead) : ''}</div>
+        <div class="muted">${esc(m.material_code)} · ${esc(m.uom||'—')}${m.material_group ? ' · ' + esc(m.material_group) : ''}</div>
       </div>`;
     }).join('');
   }
@@ -16963,7 +17750,7 @@ function misMaterialTypeahead(i) {
   const CAP = 20;
   const all = data.filter(m => {
     if (!q) return true;
-    const hay = ((m.material_name||'')+'|'+(m.costhead||'')+'|'+(m.cost_subhead||'')+'|'+(m.uom||'')+'|'+(m.material_code||'')).toLowerCase();
+    const hay = ((m.material_name||'')+'|'+(m.material_group||'')+'|'+(m.sub_head||'')+'|'+(m.uom||'')+'|'+(m.material_code||'')).toLowerCase();
     return _fuzzyMatch(hay, tokens);
   });
   const matches = all.slice(0, CAP);
@@ -16982,7 +17769,7 @@ function misMaterialTypeahead(i) {
     return `<div class="typeahead-item"
       onmousedown="event.preventDefault();selectMISMaterial(${i},'${esc(m.material_name).replace(/'/g,"\\'")}','${esc(m.uom||'').replace(/'/g,"\\'")}',${bal},${rate})">
       <strong>${esc(m.material_name)}</strong>
-      <div class="muted" style="font-size:10px;">${esc(m.costhead||'')}${m.cost_subhead?' · '+esc(m.cost_subhead):''} · ${esc(m.uom||'')} · ${balBadge}</div>
+      <div class="muted" style="font-size:10px;">${esc(m.material_group||'')}${m.sub_head?' · '+esc(m.sub_head):''} · ${esc(m.uom||'')} · ${balBadge}</div>
     </div>`;
   }).join('');
   _anchorDropdown(inp, res);
