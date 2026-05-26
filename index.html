@@ -2522,6 +2522,12 @@ input[type="number"] {
       <!-- GRN Items (loaded from PO) -->
       <div style="margin-top:16px;">
         <h3 style="font-size:13px;margin-bottom:8px;color:var(--text);">Materials Received</h3>
+        <!-- Over-receipt warning card — shown dynamically by recalcGRNRow() -->
+        <div id="grnOverReceiptWarn" style="display:none;background:#fffbeb;border:1px solid #f59e0b;border-radius:6px;padding:10px 14px;margin-bottom:10px;">
+          <div style="font-weight:600;color:#92400e;font-size:12px;margin-bottom:4px;">⚠ Over-Receipt Warning</div>
+          <div id="grnOverReceiptList" style="font-size:12px;color:#78350f;line-height:1.7;"></div>
+          <div style="font-size:11px;color:#92400e;margin-top:6px;">These items exceed PO balance. The excess will be flagged in GRN item remarks and visible during POB creation.</div>
+        </div>
         <div class="table-wrap">
           <table>
             <thead><tr>
@@ -2699,12 +2705,17 @@ input[type="number"] {
         <!-- Bill Line Items -->
         <div style="margin-top:16px;">
           <h3 style="font-size:13px;margin-bottom:8px;color:var(--text);">Bill Line Items <small style="color:var(--muted);font-weight:400;">(from selected GRNs)</small></h3>
+          <!-- Over-receipt flag — shown when any GRN item has an over-receipt remark -->
+          <div id="pobOverReceiptWarn" style="display:none;background:#fffbeb;border:1px solid #f59e0b;border-radius:6px;padding:10px 14px;margin-bottom:10px;">
+            <div style="font-weight:600;color:#92400e;font-size:12px;margin-bottom:4px;">⚠ Over-Receipt Items Detected</div>
+            <div id="pobOverReceiptList" style="font-size:12px;color:#78350f;line-height:1.7;"></div>
+            <div style="font-size:11px;color:#92400e;margin-top:6px;">Review flagged items before submitting bill. Highlighted rows were received in excess of PO balance.</div>
+          </div>
           <div class="table-wrap">
             <table>
               <thead><tr>
                 <th>#</th><th>GRN</th><th>Material</th><th>UOM</th>
-                <th class="num">Qty</th><th class="num">Rate</th><th class="num">Base Amt</th>
-  
+                <th class="num">Qty</th><th class="num">Rate</th><th class="num">Base Amt</th><th>Flag</th>
               </tr></thead>
               <tbody id="pob_itemsBody"></tbody>
             </table>
@@ -15321,18 +15332,22 @@ async function onGRNPOChange() {
   document.getElementById('grnItemsBody').innerHTML=(poItems||[]).map((it,i)=>{
     const prev=prevMap[it.material_name]||0;
     const balance=Math.max(0,num(it.qty)-prev);
-    return `<tr>
+    const exhausted=balance<=0;
+    return `<tr id="grnRow_${i}">
       <td>${it.sno}</td><td>${esc(it.material_name)}</td><td>${esc(it.uom)}</td>
       <td class="num">${fmtINR(it.qty)}</td>
       <td class="num">${fmtINR(prev)}</td>
-      <td class="num" style="color:${balance<=0?'var(--danger)':'inherit'};font-weight:600;">${fmtINR(balance)}</td>
-      <td><input type="number" id="grnRecv_${i}" class="num" style="width:90px;" step="0.001"
-        min="0" max="${balance}" placeholder="0"
-        data-mat="${esc(it.material_name)}" data-uom="${esc(it.uom)}"
-        data-matcode="${esc(it.material_code||'')}"
-        data-poqty="${num(it.qty)}" data-prev="${prev}" data-balance="${balance}"
-        data-rate="${num(it.unit_rate)}" data-sno="${it.sno}"
-        oninput="recalcGRNRow(${i})" ${balance<=0?'disabled':''}></td>
+      <td class="num" style="color:${exhausted?'var(--danger)':'inherit'};font-weight:600;">${fmtINR(balance)}</td>
+      <td>
+        <input type="number" id="grnRecv_${i}" class="num" style="width:90px;" step="0.001"
+          min="0" placeholder="0"
+          data-mat="${esc(it.material_name)}" data-uom="${esc(it.uom)}"
+          data-matcode="${esc(it.material_code||'')}"
+          data-poqty="${num(it.qty)}" data-prev="${prev}" data-balance="${balance}"
+          data-rate="${num(it.unit_rate)}" data-sno="${it.sno}"
+          oninput="recalcGRNRow(${i})" ${exhausted?'disabled title="PO balance fully received — cannot enter quantity"':''}>
+        <div id="grnOverWarn_${i}" style="display:none;font-size:10px;color:#92400e;font-weight:600;margin-top:2px;white-space:nowrap;"></div>
+      </td>
       <td class="num">${fmtINR(it.unit_rate)}</td>
       <td class="num" id="grnAmt_${i}">—</td>
       <td><input id="grnRmk_${i}" style="width:100px;" placeholder="Remarks"></td>
@@ -15344,9 +15359,42 @@ function recalcGRNRow(i) {
   const inp=document.getElementById('grnRecv_'+i);
   if(!inp) return;
   const bal=parseFloat(inp.dataset.balance)||0;
-  if((parseFloat(inp.value)||0)>bal) inp.value=bal;
-  const amt=(parseFloat(inp.value)||0)*(parseFloat(inp.dataset.rate)||0);
+  const qty=parseFloat(inp.value)||0;
+  const uom=inp.dataset.uom||'';
+  const amt=qty*(parseFloat(inp.dataset.rate)||0);
   const amtEl=document.getElementById('grnAmt_'+i); if(amtEl) amtEl.textContent=fmtINR(amt);
+  // Row-level over-receipt warning
+  const row=document.getElementById('grnRow_'+i);
+  const warnEl=document.getElementById('grnOverWarn_'+i);
+  if(qty>bal && bal>0){
+    if(row) row.style.background='#fffbeb';
+    if(warnEl){ warnEl.style.display=''; warnEl.textContent='⚠ Excess: +'+(qty-bal).toFixed(3)+' '+uom; }
+  } else {
+    if(row) row.style.background='';
+    if(warnEl){ warnEl.style.display='none'; warnEl.textContent=''; }
+  }
+  // Rebuild summary warning card
+  const warnCard=document.getElementById('grnOverReceiptWarn');
+  const warnList=document.getElementById('grnOverReceiptList');
+  if(!warnCard||!warnList) return;
+  const lines=[];
+  document.querySelectorAll('#grnItemsBody tr').forEach((_,j)=>{
+    const inp2=document.getElementById('grnRecv_'+j); if(!inp2) return;
+    const b=parseFloat(inp2.dataset.balance)||0;
+    const q=parseFloat(inp2.value)||0;
+    if(q>b && b>0){
+      const mat=inp2.dataset.mat||('Item '+(j+1));
+      const u=inp2.dataset.uom||'';
+      lines.push(`<strong>${esc(mat)}</strong>: received ${q.toFixed(3)} vs balance ${b.toFixed(3)} ${u} (<span style="color:#dc2626;">+${(q-b).toFixed(3)} ${u} excess</span>)`);
+    }
+  });
+  if(lines.length){
+    warnCard.style.display='';
+    warnList.innerHTML=lines.join('<br>');
+  } else {
+    warnCard.style.display='none';
+    warnList.innerHTML='';
+  }
 }
 
 async function saveGRN() {
@@ -15366,16 +15414,25 @@ async function saveGRN() {
     if(!inp) return;
     const qty=parseFloat(inp.value)||0;
     if(qty<=0) return;
+    const bal=parseFloat(inp.dataset.balance)||0;
+    const uom=inp.dataset.uom||'';
+    let remarks=document.getElementById('grnRmk_'+i)?.value||null;
+    // Auto-append over-receipt flag if qty exceeds PO balance
+    if(qty>bal && bal>0){
+      const excess=(qty-bal).toFixed(3);
+      const overNote=`⚠ Over-receipt: GRN qty ${qty} exceeds PO balance ${bal} by ${excess} ${uom}`;
+      remarks=remarks?`${remarks} | ${overNote}`:overNote;
+    }
     entries.push({
-      sno:entries.length+1, material_code:inp.dataset.matcode||null, material_name:inp.dataset.mat, uom:inp.dataset.uom,
+      sno:entries.length+1, material_code:inp.dataset.matcode||null, material_name:inp.dataset.mat, uom,
       po_qty:parseFloat(inp.dataset.poqty)||0,
       prev_received_qty:parseFloat(inp.dataset.prev)||0,
       this_grn_qty:qty,
       total_received_qty:(parseFloat(inp.dataset.prev)||0)+qty,
-      balance_qty:Math.max(0,(parseFloat(inp.dataset.balance)||0)-qty),
+      balance_qty:(parseFloat(inp.dataset.balance)||0)-qty,
       unit_rate:parseFloat(inp.dataset.rate)||0,
       base_amount:qty*(parseFloat(inp.dataset.rate)||0),
-      remarks:document.getElementById('grnRmk_'+i)?.value||null,
+      remarks,
     });
   });
   if(!entries.length){toast('Enter quantity for at least one item','error');return;}
@@ -15415,6 +15472,8 @@ async function saveGRN() {
 function closeGRNForm() {
   document.getElementById('grnForm').style.display='none';
   document.getElementById('grnListCard').style.display='block';
+  const wc=document.getElementById('grnOverReceiptWarn'); if(wc) wc.style.display='none';
+  const wl=document.getElementById('grnOverReceiptList'); if(wl) wl.innerHTML='';
 }
 
 // =====================================================================
@@ -15968,20 +16027,40 @@ async function onPOBGRNSelect() {
     it._total_amt= num(it.base_amount) + it._cgst_amt + it._sgst_amt + it._igst_amt;
   });
   let grossAmt=0;
+  const pobOverLines=[];
   document.getElementById('pob_itemsBody').innerHTML=_pobLineItems.map((it,i)=>{
     grossAmt+=num(it.base_amount);
     const gstDetail = isPerLine
       ? `<span style="font-size:10px;color:var(--muted);">${it._cgst_pct>0?'C:'+it._cgst_pct+'% ':''}${it._sgst_pct>0?'S:'+it._sgst_pct+'% ':''}${it._igst_pct>0?'I:'+it._igst_pct+'%':''}</span>`
       : '';
-    return `<tr>
+    const isOver=it.remarks&&it.remarks.includes('⚠ Over-receipt');
+    if(isOver) pobOverLines.push(`<strong>${esc(it.grn_number)}</strong> — ${esc(it.material_name)}: ${esc(it.remarks)}`);
+    const rowBg=isOver?'background:#fffbeb;':'';
+    const flagCell=isOver
+      ?`<td title="${esc(it.remarks)}" style="color:#92400e;font-size:11px;font-weight:600;white-space:nowrap;cursor:help;">⚠ Over-receipt</td>`
+      :`<td></td>`;
+    return `<tr style="${rowBg}">
       <td>${i+1}</td><td class="mono" style="font-size:11px;">${esc(it.grn_number)}</td>
       <td>${esc(it.material_name)}</td><td>${esc(it.uom)}</td>
       <td class="num">${fmtINR(it.this_grn_qty)}</td>
       <td class="num">${fmtINR(it.unit_rate)}</td>
       <td class="num">${fmtINR(it.base_amount)}</td>
       <td class="num" style="color:var(--muted);font-size:12px;">${fmtINR(it._total_amt)}${gstDetail}</td>
+      ${flagCell}
     </tr>`;
-  }).join('')||'<tr><td colspan="8" class="center muted">No items</td></tr>';
+  }).join('')||'<tr><td colspan="9" class="center muted">No items</td></tr>';
+  // Show / hide over-receipt warning card on POB form
+  const pobWarnCard=document.getElementById('pobOverReceiptWarn');
+  const pobWarnList=document.getElementById('pobOverReceiptList');
+  if(pobWarnCard&&pobWarnList){
+    if(pobOverLines.length){
+      pobWarnCard.style.display='';
+      pobWarnList.innerHTML=pobOverLines.join('<br>');
+    } else {
+      pobWarnCard.style.display='none';
+      pobWarnList.innerHTML='';
+    }
+  }
   document.getElementById('pob_s_gross').textContent=fmtINR(grossAmt);
   recalcPOBTotals();
 }
@@ -16189,6 +16268,8 @@ function closePOBForm() {
   document.getElementById('pobForm').style.display='none';
   document.getElementById('pobListCard').style.display='block';
   _pobSelectedGRNs=[]; _pobLineItems=[]; _pobGSTInfo={};
+  const wc=document.getElementById('pobOverReceiptWarn'); if(wc) wc.style.display='none';
+  const wl=document.getElementById('pobOverReceiptList'); if(wl) wl.innerHTML='';
 }
 
 
