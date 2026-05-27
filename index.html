@@ -2542,7 +2542,7 @@ input[type="number"] {
     </div>
     <!-- GRN Form -->
     <div id="grnForm" class="card" style="display:none;">
-      <h3>New Goods Receipt Note</h3>
+      <h3 id="grn_formTitle">New Goods Receipt Note</h3>
       <div class="grid-4">
         <div class="field"><label>GRN Number</label><input id="grn_number" readonly style="opacity:.6;"></div>
         <div class="field"><label class="req">GRN Date</label><input type="date" id="grn_date"></div>
@@ -2654,6 +2654,7 @@ input[type="number"] {
           <div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:5px;"><span style="font-size:11px;font-weight:500;padding:2px 8px;border-radius:20px;background:#fef3c7;color:#92400e;white-space:nowrap;min-width:120px;text-align:center;flex-shrink:0;">Partially Billed</span><span style="font-size:11px;color:var(--text-muted);line-height:1.4;">Partially included in a bill</span></div>
           <div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:5px;"><span style="font-size:11px;font-weight:500;padding:2px 8px;border-radius:20px;background:#ede9fe;color:#4c1d95;white-space:nowrap;min-width:120px;text-align:center;flex-shrink:0;">Billed</span><span style="font-size:11px;color:var(--text-muted);line-height:1.4;">Fully billed</span></div>
           <div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:5px;"><span style="font-size:11px;font-weight:500;padding:2px 8px;border-radius:20px;background:#fee2e2;color:#991b1b;white-space:nowrap;min-width:120px;text-align:center;flex-shrink:0;">Rejected</span><span style="font-size:11px;color:var(--text-muted);line-height:1.4;">Rejected by approver; cannot proceed</span></div>
+          <div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:5px;"><span style="font-size:11px;font-weight:500;padding:2px 8px;border-radius:20px;background:#fff7ed;color:#92400e;white-space:nowrap;min-width:120px;text-align:center;flex-shrink:0;">Needs Correction</span><span style="font-size:11px;color:var(--text-muted);line-height:1.4;">Returned by Site Manager for correction; Store Executive can revise and resubmit</span></div>
         </div>
       </div>
       <div style="display:flex;gap:8px;margin-bottom:10px;align-items:center;">
@@ -2679,7 +2680,7 @@ input[type="number"] {
               <td style="padding:4px 6px;"><input id="grnF_vendor" placeholder="Filter&#8230;" oninput="renderGRNList()" style="width:100%;padding:4px 6px;font-size:11px;background:var(--bg);color:var(--text);border:1px solid var(--border);border-radius:4px;"></td>
               <td style="padding:4px 6px;"><input id="grnF_challan" placeholder="Filter&#8230;" oninput="renderGRNList()" style="width:100%;padding:4px 6px;font-size:11px;background:var(--bg);color:var(--text);border:1px solid var(--border);border-radius:4px;"></td>
               <td style="padding:4px 6px;"></td><td style="padding:4px 6px;"></td>
-              <td style="padding:4px 6px;"><select id="grnF_status" onchange="renderGRNList()" style="width:100%;padding:4px 5px;font-size:11px;background:var(--bg);color:var(--text);border:1px solid var(--border);border-radius:4px;"><option value="">All</option><option>Pending Verification</option><option>Verified</option><option>Partially Billed</option><option>Billed</option><option>Rejected</option></select></td>
+              <td style="padding:4px 6px;"><select id="grnF_status" onchange="renderGRNList()" style="width:100%;padding:4px 5px;font-size:11px;background:var(--bg);color:var(--text);border:1px solid var(--border);border-radius:4px;"><option value="">All</option><option>Pending Verification</option><option>Verified</option><option>Partially Billed</option><option>Billed</option><option>Rejected</option><option value="Rejected - Correction">Returned for Correction</option></select></td>
               <td style="padding:4px 6px;text-align:center;"><button onclick="clearColFilters('grnF_number','grnF_vendor','grnF_po','grnF_challan','grnF_dateFrom','grnF_dateTo','grnF_status','renderGRNList')" title="Clear" style="font-size:10px;padding:3px 8px;background:var(--input-bg);color:var(--text-muted);border:1px solid var(--border);border-radius:4px;cursor:pointer;">&#10005; Clear</button></td>
             </tr>
           </thead>
@@ -15744,7 +15745,9 @@ function renderGRNList() {
     let acts=`<button class="btn btn-ghost btn-sm" onclick="viewGRN('${esc(g.grn_number)}')">View</button>`;
     if(perms.canApproveGRN && st==='Pending Verification')
       acts+=` <button class="btn btn-primary btn-sm" onclick="verifyGRN('${esc(g.grn_number)}')">Verify</button>
-              <button class="btn btn-danger btn-sm" onclick="rejectDoc('GRN','${esc(g.grn_number)}')">Reject</button>`;
+              <button class="btn btn-warn btn-sm" onclick="promptRejectGRN('${esc(g.grn_number)}')">↩ Return</button>`;
+    if(perms.canCreateGRN && st==='Rejected - Correction')
+      acts+=` <button class="btn btn-warn btn-sm" onclick="reviseGRN('${esc(g.grn_number)}')">✎ Revise</button>`;
     const cashBadge = g.is_cash_purchase
       ? ' <span style="font-size:10px;background:#ad6800;color:#fff;padding:1px 6px;border-radius:3px;font-weight:600;vertical-align:middle;">DIRECT</span>'
       : '';
@@ -15756,7 +15759,7 @@ function renderGRNList() {
       <td>${poDisplay}</td><td>${esc(g.vendor_name)}</td>
       <td>${esc(g.vehicle_challan||'—')} / ${esc(g.invoice_no||'—')}</td>
       <td>${esc(g.received_by||'—')}</td><td>${esc(g.verified_by||'—')}</td>
-      <td><span class="status ${stCls}">${st}</span></td><td>${acts}</td></tr>`;
+      <td><span class="status ${stCls}">${st === 'Rejected - Correction' ? 'Needs Correction' : st}</span></td><td>${acts}</td></tr>`;
   }).join('')||'<tr><td colspan="9" class="center muted">No GRNs.</td></tr>';
   setTimeout(() => { const t=document.getElementById('grn_listBody')?.closest('table'); if(t) makeSortable(t); }, 50);
 }
@@ -16085,6 +16088,12 @@ async function newGRN() {
   document.getElementById('cashGrnForm').style.display='none';  // hide sibling
   document.getElementById('grnForm').style.display='block';
   document.getElementById('grnListCard').style.display='none';
+  // Clear any revision state from a previous revise session
+  delete document.getElementById('grnForm').dataset.revisingGRN;
+  const existingNote = document.getElementById('grnRevisionNote');
+  if (existingNote) existingNote.remove();
+  const titleEl = document.getElementById('grn_formTitle');
+  if (titleEl) titleEl.textContent = 'New Goods Receipt Note';
   document.getElementById('grn_date').value=today();
   document.getElementById('grn_receivedBy').value=state.userName;
   document.getElementById('grn_number').value='GRN/'+currentFY()+'/—— (auto)';
@@ -16223,6 +16232,50 @@ async function saveGRN() {
     });
   });
   if(!entries.length){toast('Enter quantity for at least one item','error');return;}
+
+  // ── REVISE MODE: resubmitting a Rejected-Correction GRN ──────────────────
+  const revisingGRN = document.getElementById('grnForm').dataset.revisingGRN || '';
+  if (revisingGRN) {
+    pbShow('Saving revised GRN…');
+    try {
+      const vendor = document.getElementById('grn_vendor').value;
+      const {error:he} = await sb.from('pu_grn').update({
+        grn_date: date, vendor_name: vendor,
+        vehicle_challan: challan, invoice_no: invNo, invoice_date: invDate||null,
+        remarks: document.getElementById('grn_remarks').value||null,
+        status: 'Pending Verification', rejection_reason: null,
+        updated_at: new Date().toISOString(),
+      }).eq('grn_number', revisingGRN);
+      if (he) throw new Error(he.message);
+      // Replace line items
+      await sb.from('pu_grn_items').delete().eq('grn_number', revisingGRN);
+      const {error:ie} = await sb.from('pu_grn_items').insert(
+        entries.map(e=>({...e, grn_number: revisingGRN})));
+      if (ie) throw new Error(ie.message);
+      // Recalculate PO status from all active GRNs (excluding all rejected variants)
+      const {data:activeGRNs} = await sb.from('pu_grn').select('grn_number')
+        .eq('po_number',poNum).not('status','in','("Rejected","Rejected - Correction")');
+      const activeNums = (activeGRNs||[]).map(g=>g.grn_number);
+      let totalRecvd = 0;
+      if (activeNums.length) {
+        const {data:gItems} = await sb.from('pu_grn_items')
+          .select('this_grn_qty').in('grn_number',activeNums);
+        totalRecvd = (gItems||[]).reduce((s,r)=>s+num(r.this_grn_qty),0);
+      }
+      const {data:allPoItems2} = await sb.from('pu_po_items').select('qty').eq('po_number',poNum);
+      const poTotalQty2 = (allPoItems2||[]).reduce((s,r)=>s+num(r.qty),0);
+      const newPoSt = totalRecvd<=0 ? 'Open'
+                    : totalRecvd>=poTotalQty2-0.005 ? 'Fully Received'
+                    : 'Partial Receipt';
+      await sb.from('pu_po_orders').update({status:newPoSt}).eq('po_number',poNum);
+      flashSuccess('GRN '+revisingGRN+' revised — pending Site Manager verification');
+      closeGRNForm(); loadGRNList(); loadPOList();
+    } catch(e) { toast('Error: '+e.message,'error'); }
+    finally { pbDone(); }
+    return;
+  }
+  // ── END REVISE MODE ───────────────────────────────────────────────────────
+
   pbShow('Saving GRN…');
   try {
     const grnNumber=await nextPUGRNNumber();
@@ -16237,7 +16290,7 @@ async function saveGRN() {
     if(error) throw new Error(error.message);
     await sb.from('pu_grn_items').insert(entries.map(e=>({...e,grn_number:grnNumber})));
     // Update PO status
-    const {data:allGRNs}=await sb.from('pu_grn').select('grn_number').eq('po_number',poNum).neq('status','Rejected');
+    const {data:allGRNs}=await sb.from('pu_grn').select('grn_number').eq('po_number',poNum).not('status','in','("Rejected","Rejected - Correction")');
     const allNums=(allGRNs||[]).map(g=>g.grn_number);
     let totalRecvd=entries.reduce((s,e)=>s+e.this_grn_qty,0);
     if(allNums.length>1){
@@ -16614,6 +16667,13 @@ async function viewGRN(grnNum) {
   const createCashBillBtn = canCreateCashBillFromGRN
     ? `<button class="btn btn-warning" style="background:#ad6800;color:#fff;border-color:#ad6800;" onclick="closeModal();newCashPOBFromGRN('${esc(grnNum)}','${esc(h?.vendor_name||'')}')">💵 Create Direct Bill</button>`
     : '';
+  // Correction banner for Rejected-Correction GRNs
+  const corrBanner = (h?.status === 'Rejected - Correction') ? `
+    <div style="margin-bottom:10px;padding:10px;background:#fffbeb;border:1px solid #fde68a;border-radius:6px;">
+      <div style="font-size:11px;font-weight:700;color:#92400e;text-transform:uppercase;margin-bottom:4px;">Returned for Correction</div>
+      ${h.rejection_reason?`<div style="font-size:12px;color:#1f2937;"><strong>Site Manager Note:</strong> ${esc(h.rejection_reason)}</div>`:''}
+      ${hasPerm('canCreateGRN')?`<button class="btn btn-warn btn-sm" style="margin-top:8px;" onclick="closeModal();reviseGRN('${esc(grnNum)}')">✎ Revise &amp; Resubmit</button>`:''}
+    </div>` : '';
 
   openModal(`<h3>GRN — ${esc(grnNum)}${cashBadge}</h3>
     <div class="grid-3" style="margin-bottom:10px;">
@@ -16624,12 +16684,142 @@ async function viewGRN(grnNum) {
       <div><label class="muted" style="font-size:11px;">INVOICE</label><div>${esc(h?.invoice_no||'—')} / ${h?.invoice_date?fmtDate(h.invoice_date):'—'}</div></div>
       <div><label class="muted" style="font-size:11px;">STATUS</label><div>${esc(h?.status||'')}</div></div>
     </div>
+    ${corrBanner}
     ${itemTable}
     <div class="actions-row">
       ${createPOBBtn}
       ${createCashBillBtn}
       <button class="btn btn-ghost" onclick="closeModal()">Close</button>
     </div>`);
+}
+
+// ============================================================
+// GRN REJECTION (Return for Correction) + REVISION
+// ============================================================
+
+function promptRejectGRN(grnNum) {
+  if (!hasPerm('canApproveGRN')) { toast('Only Site Manager can return GRNs for correction', 'error'); return; }
+  openModal(`<h3 style="color:var(--warn);">Return for Correction — ${esc(grnNum)}</h3>
+    <p style="color:var(--muted);font-size:13px;margin-bottom:14px;">The GRN will be returned to Store Executive for correction and resubmission. The PO status will be rolled back accordingly.</p>
+    <div class="field" style="margin-bottom:16px;">
+      <label class="req">What needs to be corrected</label>
+      <textarea id="grnRejectReason" rows="3"
+        placeholder="Describe the discrepancy or what needs to be fixed…"
+        style="width:100%;padding:9px;border:1px solid var(--border);border-radius:4px;font-family:inherit;font-size:13px;resize:vertical;"></textarea>
+    </div>
+    <div class="actions-row">
+      <button class="btn btn-warn" onclick="confirmRejectGRN('${esc(grnNum)}')">↩ Confirm Return for Correction</button>
+      <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+    </div>`);
+  setTimeout(() => document.getElementById('grnRejectReason')?.focus(), 100);
+}
+
+async function confirmRejectGRN(grnNum) {
+  const reason = (document.getElementById('grnRejectReason')?.value || '').trim();
+  if (!reason) { toast('Enter the correction reason', 'error'); return; }
+  closeModal();
+  const {error} = await sb.from('pu_grn').update({
+    status: 'Rejected - Correction', rejection_reason: reason
+  }).eq('grn_number', grnNum);
+  if (error) { toast(error.message, 'error'); return; }
+
+  // ── Rollback parent PO status — this GRN is now excluded from active quantities ──
+  // MIR items stay at PO Raised (verifyGRN sets them to Received; rejection happens
+  // at Pending Verification stage so verify was never called) — no MIR rollback needed.
+  const {data:grnH} = await sb.from('pu_grn')
+    .select('po_number,is_cash_purchase').eq('grn_number',grnNum).maybeSingle();
+  if (grnH?.po_number && !grnH?.is_cash_purchase) {
+    const poNum = grnH.po_number;
+    const {data:activeGRNs} = await sb.from('pu_grn').select('grn_number')
+      .eq('po_number',poNum).not('status','in','("Rejected","Rejected - Correction")');
+    const activeNums = (activeGRNs||[]).map(g=>g.grn_number);
+    let totalRecvd = 0;
+    if (activeNums.length) {
+      const {data:grnItems} = await sb.from('pu_grn_items')
+        .select('this_grn_qty').in('grn_number',activeNums);
+      totalRecvd = (grnItems||[]).reduce((s,r)=>s+num(r.this_grn_qty),0);
+    }
+    const {data:poItems} = await sb.from('pu_po_items').select('qty').eq('po_number',poNum);
+    const poTotalQty = (poItems||[]).reduce((s,r)=>s+num(r.qty),0);
+    const newPOStatus = totalRecvd <= 0              ? 'Open'
+                      : totalRecvd >= poTotalQty-0.005 ? 'Fully Received'
+                      :                                  'Partial Receipt';
+    const {error:poErr} = await sb.from('pu_po_orders').update({status:newPOStatus}).eq('po_number',poNum);
+    if (poErr) console.warn('GRN correction: PO rollback failed:', poErr.message);
+    else toast('PO '+poNum+' rolled back to "'+newPOStatus+'"','info',3500);
+  }
+
+  flashSuccess('GRN '+grnNum+' returned for correction');
+  loadGRNList();
+}
+
+async function reviseGRN(grnNum) {
+  if (!hasPerm('canCreateGRN')) { toast('Not permitted to revise GRNs', 'error'); return; }
+  pbShow('Loading GRN for revision…');
+  const [{data:h},{data:items}] = await Promise.all([
+    sb.from('pu_grn').select('*').eq('grn_number',grnNum).single(),
+    sb.from('pu_grn_items').select('*').eq('grn_number',grnNum).order('sno'),
+  ]);
+  pbDone();
+  if (!h) { toast('GRN not found', 'error'); return; }
+  if (h.status !== 'Rejected - Correction') {
+    toast('Only GRNs returned for correction can be revised', 'error'); return;
+  }
+
+  // Open the GRN form (newGRN resets revision state and loads open POs)
+  await newGRN();
+
+  // Mark revision mode — saveGRN checks this flag
+  document.getElementById('grnForm').dataset.revisingGRN = grnNum;
+  const titleEl = document.getElementById('grn_formTitle');
+  if (titleEl) titleEl.textContent = 'Revise GRN — ' + grnNum;
+
+  // Show Site Manager correction note at top of form
+  if (h.rejection_reason) {
+    const notice = document.createElement('div');
+    notice.id = 'grnRevisionNote';
+    notice.style.cssText = 'margin:0 0 12px;padding:10px 14px;background:#fffbeb;border:1px solid #fde68a;border-radius:6px;font-size:13px;color:#92400e;';
+    notice.innerHTML = `<strong>Site Manager Note:</strong> ${esc(h.rejection_reason)}`;
+    const formCard = document.getElementById('grnForm');
+    const firstGrid = formCard.querySelector('.grid-4');
+    if (firstGrid) formCard.insertBefore(notice, firstGrid);
+  }
+
+  // Pre-fill header
+  document.getElementById('grn_number').value   = grnNum;
+  document.getElementById('grn_date').value     = h.grn_date || today();
+  document.getElementById('grn_challan').value  = h.vehicle_challan || '';
+  document.getElementById('grn_invoiceNo').value= h.invoice_no || '';
+  const invDateEl = document.getElementById('grn_invoiceDate');
+  if (invDateEl) invDateEl.value = h.invoice_date || '';
+  document.getElementById('grn_remarks').value  = h.remarks || '';
+
+  // Set PO in dropdown (PO is now Open/Partial Receipt after rollback) and load items
+  const poSel = document.getElementById('grn_poSelect');
+  if (poSel && h.po_number) {
+    poSel.value = h.po_number;
+    await onGRNPOChange();
+  }
+
+  // Pre-fill quantities and item-level remarks from the original GRN
+  const qtyMap = {}, rmkMap = {};
+  (items||[]).forEach(it => {
+    qtyMap[it.material_name] = it.this_grn_qty;
+    rmkMap[it.material_name] = it.remarks || '';
+  });
+  document.querySelectorAll('#grnItemsBody tr').forEach((_, i) => {
+    const inp = document.getElementById('grnRecv_' + i);
+    if (!inp) return;
+    const mat = inp.dataset.mat;
+    if (qtyMap[mat] !== undefined && !inp.disabled) {
+      inp.value = qtyMap[mat];
+      inp.dispatchEvent(new Event('input'));  // triggers recalcGRNRow
+    }
+    const rmkEl = document.getElementById('grnRmk_' + i);
+    if (rmkEl && rmkMap[mat]) rmkEl.value = rmkMap[mat];
+  });
+
+  toast('Revising ' + grnNum + ' — correct the details and resubmit', 'info', 5000);
 }
 
 // ============================================================
@@ -18171,6 +18361,21 @@ async function showMaterialGRNHistory(materialName) {
     finalItems = fuzzy || [];
   }
 
+  // Step 3: filter out items belonging to Rejected / Rejected-Correction GRNs
+  if (finalItems.length > 0) {
+    const allGRNNums = [...new Set(finalItems.map(i => i.grn_number))];
+    const {data:grnStatuses} = await sb
+      .from('pu_grn')
+      .select('grn_number, status')
+      .in('grn_number', allGRNNums);
+    const rejectedNums = new Set(
+      (grnStatuses||[])
+        .filter(g => g.status === 'Rejected' || g.status === 'Rejected - Correction')
+        .map(g => g.grn_number)
+    );
+    finalItems = finalItems.filter(i => !rejectedNums.has(i.grn_number));
+  }
+
   if(finalItems.length === 0){
     openModal(`<h3>&#128230; GRN History &mdash; ${esc(materialName)}</h3>
       <p style="color:var(--muted);margin-top:8px;">No GRN line-item entries found for this material.</p>
@@ -19605,6 +19810,8 @@ const DASH_CARD_DEFS = {
     // ── Approval queue ──────────────────────────────────────────────────────────
     { id:'se_grn',    label:'Open POs for GRN',  sub:'Receipts to record',         cls:'warn',   nav:function(){navDash('purchase','grn','');},
       query: function(){return sb.from('pu_po_orders').select('po_number',{count:'exact',head:true}).in('status',['Open','Partial Receipt']);} },
+    { id:'se_grn_corr',label:'GRNs for Correction',sub:'Returned for revision',    cls:'urgent', nav:function(){navDash('purchase','grn','Rejected - Correction');},
+      query: function(){return sb.from('pu_grn').select('grn_number',{count:'exact',head:true}).eq('status','Rejected - Correction');} },
     { id:'se_mis',    label:'MIS Pending',       sub:'Issues awaiting approval',   cls:'info',   nav:function(){navDash('purchase','mis','Pending Approval');},
       query: function(){return sb.from('pu_mis').select('mis_number',{count:'exact',head:true}).eq('status','Pending Approval');} },
   ],
