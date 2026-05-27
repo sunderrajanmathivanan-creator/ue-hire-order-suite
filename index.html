@@ -2216,20 +2216,21 @@ input[type="number"] {
           <span style="font-size:12px;font-weight:600;color:var(--text-muted);letter-spacing:.03em;">STATUS REFERENCE</span>
           <span id="mirLegendChevron" style="font-size:13px;color:var(--text-muted);transition:transform .2s;">▶</span>
         </div>
-        <div id="mirLegendBody" style="display:none;padding:12px 14px 14px;">
+          <div id="mirLegendBody" style="display:none;padding:12px 14px 14px;">
           <div style="display:grid;grid-template-columns:1fr 1px 1fr;gap:0;">
             <!-- Header statuses -->
             <div style="padding-right:14px;">
               <div style="font-size:10px;font-weight:600;letter-spacing:.05em;color:var(--text-muted);margin-bottom:8px;">MIR HEADER STATUS</div>
               <div style="display:flex;flex-direction:column;gap:5px;">
-                <div style="display:flex;align-items:flex-start;gap:8px;"><span style="font-size:11px;font-weight:500;padding:2px 8px;border-radius:20px;background:#fef9c3;color:#854d0e;white-space:nowrap;min-width:110px;text-align:center;flex-shrink:0;">Pending Approval</span><span style="font-size:11px;color:var(--text-muted);line-height:1.4;">Newly raised, awaiting Admin / PM sign-off</span></div>
-                <div style="display:flex;align-items:flex-start;gap:8px;"><span style="font-size:11px;font-weight:500;padding:2px 8px;border-radius:20px;background:#dcfce7;color:#166534;white-space:nowrap;min-width:110px;text-align:center;flex-shrink:0;">Approved</span><span style="font-size:11px;color:var(--text-muted);line-height:1.4;">Approved; items pending RFQ assignment</span></div>
-                <div style="display:flex;align-items:flex-start;gap:8px;"><span style="font-size:11px;font-weight:500;padding:2px 8px;border-radius:20px;background:#fee2e2;color:#991b1b;white-space:nowrap;min-width:110px;text-align:center;flex-shrink:0;">Rejected</span><span style="font-size:11px;color:var(--text-muted);line-height:1.4;">Rejected by approver; cannot proceed</span></div>
-                <div style="display:flex;align-items:flex-start;gap:8px;"><span style="font-size:11px;font-weight:500;padding:2px 8px;border-radius:20px;background:#fef3c7;color:#92400e;white-space:nowrap;min-width:110px;text-align:center;flex-shrink:0;">Partial RFQ</span><span style="font-size:11px;color:var(--text-muted);line-height:1.4;">Some items assigned to RFQ / PO, rest still pending</span></div>
-                <div style="display:flex;align-items:flex-start;gap:8px;"><span style="font-size:11px;font-weight:500;padding:2px 8px;border-radius:20px;background:#dbeafe;color:#1e40af;white-space:nowrap;min-width:110px;text-align:center;flex-shrink:0;">RFQ Raised</span><span style="font-size:11px;color:var(--text-muted);line-height:1.4;">All items have an active RFQ with vendors</span></div>
-                <div style="display:flex;align-items:flex-start;gap:8px;"><span style="font-size:11px;font-weight:500;padding:2px 8px;border-radius:20px;background:#ede9fe;color:#4c1d95;white-space:nowrap;min-width:110px;text-align:center;flex-shrink:0;">PO Raised</span><span style="font-size:11px;color:var(--text-muted);line-height:1.4;">All items covered under a Purchase Order</span></div>
-                <div style="display:flex;align-items:flex-start;gap:8px;"><span style="font-size:11px;font-weight:500;padding:2px 8px;border-radius:20px;background:#d1fae5;color:#065f46;white-space:nowrap;min-width:110px;text-align:center;flex-shrink:0;">Closed</span><span style="font-size:11px;color:var(--text-muted);line-height:1.4;">All items fully received via GRN</span></div>
-                <div style="display:flex;align-items:flex-start;gap:8px;"><span style="font-size:11px;font-weight:500;padding:2px 8px;border-radius:20px;background:#f3f4f6;color:#374151;white-space:nowrap;min-width:110px;text-align:center;flex-shrink:0;">Cancelled</span><span style="font-size:11px;color:var(--text-muted);line-height:1.4;">All POs cancelled; no active items remain</span></div>
+                <div style="display:flex;align-items:flex-start;gap:8px;"><span style="font-size:11px;font-weight:500;padding:2px 8px;border-radius:20px;background:#fef9c3;color:#854d0e;white-space:nowrap;min-width:130px;text-align:center;flex-shrink:0;">Pending Approval</span><span style="font-size:11px;color:var(--text-muted);line-height:1.4;">Newly raised, awaiting Admin / PM sign-off</span></div>
+                <div style="display:flex;align-items:flex-start;gap:8px;"><span style="font-size:11px;font-weight:500;padding:2px 8px;border-radius:20px;background:#dcfce7;color:#166534;white-space:nowrap;min-width:130px;text-align:center;flex-shrink:0;">Approved</span><span style="font-size:11px;color:var(--text-muted);line-height:1.4;">Approved; all items pending RFQ / PO</span></div>
+                <div style="display:flex;align-items:flex-start;gap:8px;"><span style="font-size:11px;font-weight:500;padding:2px 8px;border-radius:20px;background:#fee2e2;color:#991b1b;white-space:nowrap;min-width:130px;text-align:center;flex-shrink:0;">Rejected</span><span style="font-size:11px;color:var(--text-muted);line-height:1.4;">Rejected by approver; cannot proceed</span></div>
+                <div style="display:flex;align-items:flex-start;gap:8px;"><span style="font-size:11px;font-weight:500;padding:2px 8px;border-radius:20px;background:#fef3c7;color:#92400e;white-space:nowrap;min-width:130px;text-align:center;flex-shrink:0;">Partial RFQ</span><span style="font-size:11px;color:var(--text-muted);line-height:1.4;">Some items in RFQ, rest still pending</span></div>
+                <div style="display:flex;align-items:flex-start;gap:8px;"><span style="font-size:11px;font-weight:500;padding:2px 8px;border-radius:20px;background:#dbeafe;color:#1e40af;white-space:nowrap;min-width:130px;text-align:center;flex-shrink:0;">RFQ Raised</span><span style="font-size:11px;color:var(--text-muted);line-height:1.4;">All items have active RFQ with vendors</span></div>
+                <div style="display:flex;align-items:flex-start;gap:8px;"><span style="font-size:11px;font-weight:500;padding:2px 8px;border-radius:20px;background:#f3e8ff;color:#6b21a8;white-space:nowrap;min-width:130px;text-align:center;flex-shrink:0;">Partial PO</span><span style="font-size:11px;color:var(--text-muted);line-height:1.4;">Some items have approved PO, rest still open</span></div>
+                <div style="display:flex;align-items:flex-start;gap:8px;"><span style="font-size:11px;font-weight:500;padding:2px 8px;border-radius:20px;background:#ede9fe;color:#4c1d95;white-space:nowrap;min-width:130px;text-align:center;flex-shrink:0;">PO Issued</span><span style="font-size:11px;color:var(--text-muted);line-height:1.4;">All items covered by approved POs</span></div>
+                <div style="display:flex;align-items:flex-start;gap:8px;"><span style="font-size:11px;font-weight:500;padding:2px 8px;border-radius:20px;background:#d1fae5;color:#065f46;white-space:nowrap;min-width:130px;text-align:center;flex-shrink:0;">Closed</span><span style="font-size:11px;color:var(--text-muted);line-height:1.4;">All items fully received via GRN</span></div>
+                <div style="display:flex;align-items:flex-start;gap:8px;"><span style="font-size:11px;font-weight:500;padding:2px 8px;border-radius:20px;background:#f3f4f6;color:#374151;white-space:nowrap;min-width:130px;text-align:center;flex-shrink:0;">Cancelled</span><span style="font-size:11px;color:var(--text-muted);line-height:1.4;">All POs cancelled; no active items remain</span></div>
               </div>
             </div>
             <!-- Divider -->
@@ -2238,11 +2239,18 @@ input[type="number"] {
             <div style="padding-left:14px;">
               <div style="font-size:10px;font-weight:600;letter-spacing:.05em;color:var(--text-muted);margin-bottom:8px;">MIR ITEM STATUS</div>
               <div style="display:flex;flex-direction:column;gap:5px;">
-                <div style="display:flex;align-items:flex-start;gap:8px;"><span style="font-size:11px;font-weight:500;padding:2px 8px;border-radius:20px;background:#f3f4f6;color:#374151;white-space:nowrap;min-width:90px;text-align:center;flex-shrink:0;">Pending</span><span style="font-size:11px;color:var(--text-muted);line-height:1.4;">Item approved by MIR; RFQ not yet raised</span></div>
-                <div style="display:flex;align-items:flex-start;gap:8px;"><span style="font-size:11px;font-weight:500;padding:2px 8px;border-radius:20px;background:#dbeafe;color:#1e40af;white-space:nowrap;min-width:90px;text-align:center;flex-shrink:0;">RFQ Raised</span><span style="font-size:11px;color:var(--text-muted);line-height:1.4;">Item assigned to an RFQ for vendor quotation</span></div>
-                <div style="display:flex;align-items:flex-start;gap:8px;"><span style="font-size:11px;font-weight:500;padding:2px 8px;border-radius:20px;background:#ede9fe;color:#4c1d95;white-space:nowrap;min-width:90px;text-align:center;flex-shrink:0;">PO Raised</span><span style="font-size:11px;color:var(--text-muted);line-height:1.4;">PO issued to vendor covering this item</span></div>
-                <div style="display:flex;align-items:flex-start;gap:8px;"><span style="font-size:11px;font-weight:500;padding:2px 8px;border-radius:20px;background:#d1fae5;color:#065f46;white-space:nowrap;min-width:90px;text-align:center;flex-shrink:0;">Received</span><span style="font-size:11px;color:var(--text-muted);line-height:1.4;">Material received at site; GRN verified</span></div>
-                <div style="display:flex;align-items:flex-start;gap:8px;"><span style="font-size:11px;font-weight:500;padding:2px 8px;border-radius:20px;background:#bbf7d0;color:#065f46;white-space:nowrap;min-width:90px;text-align:center;flex-shrink:0;">Closed</span><span style="font-size:11px;color:var(--text-muted);line-height:1.4;">Item fully received and closed</span></div>
+                <div style="display:flex;align-items:flex-start;gap:8px;"><span style="font-size:11px;font-weight:500;padding:2px 8px;border-radius:20px;background:#f3f4f6;color:#374151;white-space:nowrap;min-width:120px;text-align:center;flex-shrink:0;">Pending</span><span style="font-size:11px;color:var(--text-muted);line-height:1.4;">Item approved; not yet in any RFQ or PO</span></div>
+                <div style="display:flex;align-items:flex-start;gap:8px;"><span style="font-size:11px;font-weight:500;padding:2px 8px;border-radius:20px;background:#fef3c7;color:#92400e;white-space:nowrap;min-width:120px;text-align:center;flex-shrink:0;">Partial RFQ</span><span style="font-size:11px;color:var(--text-muted);line-height:1.4;">Part of qty assigned to RFQ; balance open</span></div>
+                <div style="display:flex;align-items:flex-start;gap:8px;"><span style="font-size:11px;font-weight:500;padding:2px 8px;border-radius:20px;background:#dbeafe;color:#1e40af;white-space:nowrap;min-width:120px;text-align:center;flex-shrink:0;">RFQ Raised</span><span style="font-size:11px;color:var(--text-muted);line-height:1.4;">Full qty assigned to RFQ(s)</span></div>
+                <div style="display:flex;align-items:flex-start;gap:8px;"><span style="font-size:11px;font-weight:500;padding:2px 8px;border-radius:20px;background:#e0e7ff;color:#3730a3;white-space:nowrap;min-width:120px;text-align:center;flex-shrink:0;">Partial PO Issued</span><span style="font-size:11px;color:var(--text-muted);line-height:1.4;">Part of qty covered by approved PO; balance open</span></div>
+                <div style="display:flex;align-items:flex-start;gap:8px;"><span style="font-size:11px;font-weight:500;padding:2px 8px;border-radius:20px;background:#ede9fe;color:#4c1d95;white-space:nowrap;min-width:120px;text-align:center;flex-shrink:0;">PO Issued</span><span style="font-size:11px;color:var(--text-muted);line-height:1.4;">Full qty covered by approved PO(s)</span></div>
+                <div style="display:flex;align-items:flex-start;gap:8px;"><span style="font-size:11px;font-weight:500;padding:2px 8px;border-radius:20px;background:#bbf7d0;color:#065f46;white-space:nowrap;min-width:120px;text-align:center;flex-shrink:0;">Partial Received</span><span style="font-size:11px;color:var(--text-muted);line-height:1.4;">Part of qty received via GRN; balance pending</span></div>
+                <div style="display:flex;align-items:flex-start;gap:8px;"><span style="font-size:11px;font-weight:500;padding:2px 8px;border-radius:20px;background:#d1fae5;color:#065f46;white-space:nowrap;min-width:120px;text-align:center;flex-shrink:0;">Received</span><span style="font-size:11px;color:var(--text-muted);line-height:1.4;">Full qty received at site and GRN verified</span></div>
+                <div style="display:flex;align-items:flex-start;gap:8px;"><span style="font-size:11px;font-weight:500;padding:2px 8px;border-radius:20px;background:#a7f3d0;color:#065f46;white-space:nowrap;min-width:120px;text-align:center;flex-shrink:0;">Closed</span><span style="font-size:11px;color:var(--text-muted);line-height:1.4;">Item fully received and MIR closed</span></div>
+              </div>
+              <div style="margin-top:10px;padding:8px 10px;background:#fef9c3;border-radius:6px;border:1px solid #fde68a;">
+                <div style="font-size:10px;font-weight:700;color:#92400e;margin-bottom:3px;">⚠ SC QTY AVAILABLE</div>
+                <div style="font-size:11px;color:var(--text-muted);line-height:1.4;">Shown on MIR list when any item has qty released back from a Short-Closed PO — available for re-procurement</div>
               </div>
             </div>
           </div>
@@ -2279,7 +2287,8 @@ input[type="number"] {
                   <option value="Rejected">Rejected</option>
                   <option value="Partial RFQ">Partial RFQ</option>
                   <option value="RFQ Raised">RFQ Raised</option>
-                  <option value="PO Raised">PO Raised</option>
+                  <option value="Partial PO">Partial PO</option>
+                  <option value="PO Issued">PO Issued</option>
                   <option value="Closed">Closed</option>
                   <option value="Cancelled">Cancelled</option>
                 </select>
@@ -13127,18 +13136,19 @@ function selectMaterialItem(inputId, resultsId, name, uom, matCode) {
 let _mirItemC = 0;
 
 async function loadMIRList() {
-  // Fire both queries in parallel — no sequential wait
   const [mirRes, itemsRes] = await Promise.all([
     sb.from('pu_mir').select('*').order('created_at', { ascending: false }),
     sb.from('pu_mir_items').select(
-      'mir_number,sno,material_name,uom,qty_required,item_status,rfq_number,po_number,specification'
+      'mir_number,sno,material_name,uom,qty_required,qty_rfq,qty_covered,qty_received,qty_short_closed,item_status,rfq_number,po_number,specification'
     ).order('sno')
   ]);
   puState.mirList = mirRes.data || [];
   puState.mirItemsMap = {};
+  puState.mirSCSet = new Set();
   (itemsRes.data || []).forEach(it => {
     if (!puState.mirItemsMap[it.mir_number]) puState.mirItemsMap[it.mir_number] = [];
     puState.mirItemsMap[it.mir_number].push(it);
+    if ((it.qty_short_closed||0) > 0) puState.mirSCSet.add(it.mir_number);
   });
   renderMIRList();
 }
@@ -13200,6 +13210,7 @@ function renderMIRList() {
   document.getElementById('mir_listBody').innerHTML = rows.map(m => {
     const st = m.status||'Pending Approval';
     const stCls = st.toLowerCase().replace(/[\s/()]+/g,'-');
+    const hasSC = puState.mirSCSet?.has(m.mir_number);
     let acts = `<button class="btn btn-ghost btn-sm" onclick="viewMIR('${esc(m.mir_number)}')">View</button>`;
     if (perms.canApproveMIR && st==='Pending Approval') {
       acts += ` <button class="btn btn-primary btn-sm" onclick="approveMIR('${esc(m.mir_number)}')">Approve</button>
@@ -13211,7 +13222,10 @@ function renderMIRList() {
       <td>${m.required_by_date?fmtDate(m.required_by_date):'—'}</td>
       <td>${esc(m.purpose||'—')}</td><td>${esc(m.location_name||'—')}</td>
       <td>${esc(m.raised_by||'—')}</td>
-      <td><span class="status ${stCls}">${st}</span></td>
+      <td>
+        <span class="status ${stCls}">${st}</span>
+        ${hasSC?`<span style="display:inline-block;margin-top:3px;padding:1px 7px;background:#fef3c7;color:#92400e;border:1px solid #fde68a;border-radius:10px;font-size:10px;font-weight:700;">⚠ SC Qty Available</span>`:''}
+      </td>
       <td>${acts}</td></tr>`;
   }).join('')||'<tr><td colspan="8" class="center muted">No MIRs found.</td></tr>';
   setTimeout(() => { const t=document.getElementById('mir_listBody')?.closest('table'); if(t) makeSortable(t); }, 50);
@@ -13311,9 +13325,11 @@ async function approveMIR(mirNum) {
 
 async function viewMIR(mirNum) {
   pbShow('Loading…');
-  const [{data:h},{data:items}] = await Promise.all([
+  const [{data:h},{data:items},{data:rfqLinks},{data:poLinks}] = await Promise.all([
     sb.from('pu_mir').select('*').eq('mir_number',mirNum).single(),
     sb.from('pu_mir_items').select('*').eq('mir_number',mirNum).order('sno'),
+    sb.from('pu_mir_item_rfq_links').select('sno,rfq_number,qty_assigned').eq('mir_number',mirNum),
+    sb.from('pu_mir_item_po_links').select('sno,po_number,qty_linked,qty_received,qty_short_closed,is_short_closed').eq('mir_number',mirNum),
   ]);
   pbDone();
   if (!h) { toast('MIR not found','error'); return; }
@@ -13321,146 +13337,295 @@ async function viewMIR(mirNum) {
   const perms = mergedPerms();
   const mirSt = h.status||'Pending Approval';
   const canAct = perms.canCreateRFQ &&
-    (mirSt==='Approved'||mirSt==='Partial RFQ'||mirSt==='RFQ Raised');
+    ['Approved','Partial RFQ','RFQ Raised','Partial PO','PO Issued'].includes(mirSt);
 
   const statusColor = {
-    'Pending':    '#64748b',
-    'RFQ Raised': '#d97706',
-    'PO Raised':  '#2563eb',
-    'Received':   '#16a34a',
-    'Closed':     '#16a34a',
+    'Pending':           '#64748b',
+    'Partial RFQ':       '#b45309',
+    'RFQ Raised':        '#d97706',
+    'Partial PO Issued': '#1d4ed8',
+    'PO Issued':         '#7c3aed',
+    'Partial Received':  '#15803d',
+    'Received':          '#16a34a',
+    'Closed':            '#16a34a',
   };
 
-  const total   = (items||[]).length;
-  const pending = (items||[]).filter(it=>(it.item_status||'Pending')==='Pending').length;
-  const rfqDone = (items||[]).filter(it=>it.item_status==='RFQ Raised').length;
-  const poDone  = (items||[]).filter(it=>it.item_status==='PO Raised'||it.item_status==='Received').length;
+  // Build per-sno link maps
+  const rfqLinksBySno = {};
+  (rfqLinks||[]).forEach(l => {
+    if (!rfqLinksBySno[l.sno]) rfqLinksBySno[l.sno] = [];
+    rfqLinksBySno[l.sno].push(l);
+  });
+  const poLinksBySno = {};
+  (poLinks||[]).forEach(l => {
+    if (!poLinksBySno[l.sno]) poLinksBySno[l.sno] = [];
+    poLinksBySno[l.sno].push(l);
+  });
+
+  const total    = (items||[]).length;
+  const pending  = (items||[]).filter(it=>(it.item_status||'Pending')==='Pending').length;
+  const rfqCount = (items||[]).filter(it=>['RFQ Raised','Partial RFQ'].includes(it.item_status)).length;
+  const poCount  = (items||[]).filter(it=>['PO Issued','Partial PO Issued'].includes(it.item_status)).length;
+  const recCount = (items||[]).filter(it=>['Received','Partial Received'].includes(it.item_status)).length;
+  const hasSC    = (items||[]).some(it=>(it.qty_short_closed||0)>0);
 
   const itemRows = (items||[]).map(it => {
-    const ist = it.item_status||'Pending';
-    const sc  = statusColor[ist]||'#64748b';
-    const isPending = ist === 'Pending';
-    const chkCell = canAct && isPending
+    const ist     = it.item_status||'Pending';
+    const sc      = statusColor[ist]||'#64748b';
+    const qtyReq  = it.qty_required||0;
+    const qtyCov  = it.qty_covered||0;
+    const qtyRfq  = it.qty_rfq||0;
+    const qtySC   = it.qty_short_closed||0;
+    const balance = Math.max(0, qtyReq - qtyCov);
+    const balStyle= balance===0 ? 'color:#15803d;font-weight:600;' : balance<qtyReq ? 'color:#b45309;font-weight:600;' : 'color:#64748b;';
+
+    const isActionable = balance > 0 && !['Received','Closed'].includes(ist);
+    const chkCell = canAct && isActionable
       ? `<td style="width:32px;"><input type="checkbox" class="mir_item_chk"
            value="${it.sno}"
            data-mat="${esc(it.material_name)}"
            data-uom="${esc(it.uom)}"
-           data-qty="${it.qty_required}"
+           data-qty-required="${qtyReq}"
+           data-qty-rfq="${qtyRfq}"
+           data-qty-covered="${qtyCov}"
            data-spec="${esc(it.specification||'')}"
            style="width:16px;height:16px;cursor:pointer;" checked></td>`
       : `<td style="width:32px;"></td>`;
+
+    const rfqRefs = (rfqLinksBySno[it.sno]||[]);
+    const rfqCell = rfqRefs.length
+      ? rfqRefs.map(l=>`<div><span class="mono" style="color:#d97706;">${esc(l.rfq_number)}</span><span style="color:var(--muted);font-size:10px;"> (${fmtINR(l.qty_assigned)})</span></div>`).join('')
+      : (it.rfq_number?`<span class="mono" style="color:#d97706;">${esc(it.rfq_number)}</span>`:'—');
+
+    const poRefs = (poLinksBySno[it.sno]||[]);
+    const poCell = poRefs.length
+      ? poRefs.map(l=>{
+          const scTag = l.is_short_closed
+            ? `<span style="margin-left:4px;padding:1px 5px;background:#fef3c7;color:#92400e;border-radius:3px;font-size:10px;font-weight:700;">SC:${fmtINR(l.qty_short_closed)}</span>` : '';
+          const recTag = (l.qty_received||0)>0
+            ? `<span style="margin-left:4px;font-size:10px;color:#15803d;">✓${fmtINR(l.qty_received)}</span>` : '';
+          return `<div><span class="mono" style="color:#7c3aed;">${esc(l.po_number)}</span><span style="color:var(--muted);font-size:10px;"> (${fmtINR(l.qty_linked)})</span>${recTag}${scTag}</div>`;
+        }).join('')
+      : (it.po_number?`<span class="mono" style="color:#7c3aed;">${esc(it.po_number)}</span>`:'—');
+
+    const scNote = qtySC > 0
+      ? `<div style="font-size:10px;margin-top:3px;padding:2px 6px;background:#fef3c7;border-radius:3px;color:#92400e;font-weight:600;">
+           ⚠ ${fmtINR(qtySC)} ${esc(it.uom)} short-closed — available for re-procurement</div>` : '';
+
     return `<tr>
       ${chkCell}
       <td>${it.sno}</td>
-      <td>${esc(it.material_name)}</td>
+      <td>${esc(it.material_name)}${scNote}</td>
       <td>${esc(it.uom)}</td>
-      <td class="num">${it.qty_required}</td>
+      <td class="num">${fmtINR(qtyReq)}</td>
+      <td class="num" style="color:#7c3aed;">${fmtINR(qtyCov)}</td>
+      <td class="num" style="${balStyle}">${balance===0?'✓ Full':fmtINR(balance)}</td>
       <td style="font-size:11px;">${esc(it.specification||'—')}</td>
       <td><span style="padding:2px 8px;border-radius:10px;font-size:11px;font-weight:600;
            background:${sc}20;color:${sc};border:1px solid ${sc}40;">${ist}</span></td>
-      <td style="font-size:11px;">${it.rfq_number
-        ? `<span class="mono" style="color:#d97706;">${esc(it.rfq_number)}</span>`
-        : '—'}</td>
-      <td style="font-size:11px;">${it.po_number
-        ? `<span class="mono" style="color:#2563eb;">${esc(it.po_number)}</span>`
-        : '—'}</td>
+      <td style="font-size:11px;">${rfqCell}</td>
+      <td style="font-size:11px;">${poCell}</td>
     </tr>`;
   }).join('');
 
-  const selectAllRow = canAct && pending > 0 ? `
+  const selectAllRow = canAct ? `
     <tr style="background:#f8fafc;">
       <td><input type="checkbox" id="mir_selectAll" checked
         onchange="document.querySelectorAll('.mir_item_chk').forEach(c=>c.checked=this.checked)"
         style="width:16px;height:16px;cursor:pointer;"></td>
-      <td colspan="8" style="font-size:11px;color:var(--muted);padding:6px 8px;">
-        Select / Deselect All Pending Items
-      </td>
+      <td colspan="9" style="font-size:11px;color:var(--muted);padding:6px 8px;">Select / Deselect All Actionable Items</td>
     </tr>` : '';
 
-  const actionBtns = canAct && pending > 0 ? `
+  const actionBtns = canAct ? `
     <div style="margin-top:12px;padding:10px 14px;background:#f0f5fb;border-radius:6px;
          border:1px solid #dde6f0;display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
       <span style="font-size:12px;color:#1e3a5f;font-weight:600;">With selected items:</span>
-      <button class="btn btn-secondary btn-sm"
-        onclick="mirActionFromView('${esc(mirNum)}','rfq')">Raise RFQ</button>
-      <button class="btn btn-ghost btn-sm"
-        onclick="mirActionFromView('${esc(mirNum)}','po')">Direct PO</button>
+      <button class="btn btn-secondary btn-sm" onclick="mirActionFromView('${esc(mirNum)}','rfq')">Raise RFQ</button>
+      <button class="btn btn-ghost btn-sm" onclick="mirActionFromView('${esc(mirNum)}','po')">Direct PO</button>
     </div>` : '';
 
   openModal(`
     <h3 style="margin-bottom:4px;">MIR — ${esc(h.mir_number)}
-      <span class="status ${mirSt.toLowerCase().replace(/\s/g,'-')}"
-        style="margin-left:8px;font-size:12px;">${mirSt}</span>
+      <span class="status ${mirSt.toLowerCase().replace(/[\s/()]+/g,'-')}" style="margin-left:8px;font-size:12px;">${mirSt}</span>
+      ${hasSC?`<span style="margin-left:6px;padding:2px 8px;background:#fef3c7;color:#92400e;border:1px solid #fde68a;border-radius:10px;font-size:11px;font-weight:700;">⚠ SC Qty Available</span>`:''}
     </h3>
     <div style="font-size:11px;color:var(--muted);margin-bottom:10px;">
-      ${fmtDate(h.mir_date)}
-      ${h.purpose?' &nbsp;|&nbsp; '+esc(h.purpose):''}
+      ${fmtDate(h.mir_date)}${h.purpose?' &nbsp;|&nbsp; '+esc(h.purpose):''}
       &nbsp;|&nbsp; Raised by: <strong>${esc(h.raised_by||'—')}</strong>
       ${h.location_name?' &nbsp;|&nbsp; '+esc(h.location_name):''}
     </div>
-    <div style="display:flex;gap:10px;margin-bottom:12px;flex-wrap:wrap;">
-      <div style="padding:5px 12px;border-radius:6px;background:#f1f5f9;font-size:12px;">
-        Total: <strong>${total}</strong>
-      </div>
-      <div style="padding:5px 12px;border-radius:6px;background:#fef3c7;font-size:12px;color:#92400e;">
-        Pending: <strong>${pending}</strong>
-      </div>
-      <div style="padding:5px 12px;border-radius:6px;background:#fff7ed;font-size:12px;color:#d97706;">
-        RFQ Raised: <strong>${rfqDone}</strong>
-      </div>
-      <div style="padding:5px 12px;border-radius:6px;background:#eff6ff;font-size:12px;color:#2563eb;">
-        PO Raised: <strong>${poDone}</strong>
-      </div>
+    <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;">
+      <div style="padding:4px 10px;border-radius:6px;background:#f1f5f9;font-size:11px;">Total: <strong>${total}</strong></div>
+      <div style="padding:4px 10px;border-radius:6px;background:#f3f4f6;font-size:11px;color:#64748b;">Pending: <strong>${pending}</strong></div>
+      <div style="padding:4px 10px;border-radius:6px;background:#fff7ed;font-size:11px;color:#d97706;">RFQ: <strong>${rfqCount}</strong></div>
+      <div style="padding:4px 10px;border-radius:6px;background:#ede9fe;font-size:11px;color:#7c3aed;">PO Issued: <strong>${poCount}</strong></div>
+      <div style="padding:4px 10px;border-radius:6px;background:#dcfce7;font-size:11px;color:#15803d;">Received: <strong>${recCount}</strong></div>
     </div>
-    <div class="table-wrap">
-      <table>
-        <thead><tr>
-          <th style="width:32px;"></th>
-          <th>#</th><th>Material</th><th>UOM</th><th class="num">Qty</th>
-          <th>Spec</th><th>Status</th><th>RFQ Ref</th><th>PO Ref</th>
-        </tr></thead>
-        <tbody>
-          ${selectAllRow}
-          ${itemRows}
-        </tbody>
-      </table>
-    </div>
-    ${h.remarks ? `<div style="margin-top:8px;font-size:11px;color:var(--muted);">
-      Remarks: ${esc(h.remarks)}</div>` : ''}
+    <div class="table-wrap"><table>
+      <thead><tr>
+        <th style="width:32px;"></th>
+        <th>#</th><th>Material</th><th>UOM</th>
+        <th class="num">Req Qty</th>
+        <th class="num" style="color:#7c3aed;">Covered</th>
+        <th class="num">Balance</th>
+        <th>Spec</th><th>Status</th><th>RFQ Ref</th><th>PO Ref</th>
+      </tr>
+      ${selectAllRow}
+      </thead>
+      <tbody>${itemRows}</tbody>
+    </table></div>
+    ${h.remarks?`<div style="margin-top:8px;font-size:11px;color:var(--muted);">Remarks: ${esc(h.remarks)}</div>`:''}
     ${actionBtns}
-    <div class="actions-row">
+    <div class="actions-row" style="margin-top:14px;">
       <button class="btn btn-ghost" onclick="closeModal()">Close</button>
-    </div>
-  `, 'large');
+    </div>`, 'large');
 }
 
 // Called when Raise RFQ or Direct PO is clicked from inside viewMIR popup
 function mirActionFromView(mirNum, action) {
   const selected = [...document.querySelectorAll('.mir_item_chk:checked')];
-  if (!selected.length) {
-    toast('Select at least one pending item first','error');
-    return;
-  }
+  if (!selected.length) { toast('Select at least one item first','error'); return; }
   closeModal();
-  if (action === 'rfq') {
-    _mirSelectedItems = selected.map(c => ({
-      sno: c.value, mat: c.dataset.mat, uom: c.dataset.uom,
-      qty: c.dataset.qty, spec: c.dataset.spec
-    }));
-    _mirSelectedMirNum = mirNum;
-    confirmMIRItemSelection(mirNum, selected);
+  _mirQtyConfirmModal(mirNum, action, selected);
+}
+
+let _mirQtyConfirmItems = [];
+let _mirQtyConfirmMirNum = '';
+let _mirQtyConfirmAction = '';
+
+function _mirQtyConfirmModal(mirNum, action, selectedEls) {
+  _mirQtyConfirmMirNum = mirNum;
+  _mirQtyConfirmAction = action;
+  const isRFQ = action === 'rfq';
+  _mirQtyConfirmItems = selectedEls.map(c => ({
+    sno:         c.value,
+    mat:         c.dataset.mat,
+    uom:         c.dataset.uom,
+    qtyRequired: parseFloat(c.dataset.qtyRequired)||0,
+    qtyRfq:      parseFloat(c.dataset.qtyRfq)||0,
+    qtyCovered:  parseFloat(c.dataset.qtyCovered)||0,
+    spec:        c.dataset.spec||''
+  }));
+  const rows = _mirQtyConfirmItems.map((it,i) => {
+    const assigned = isRFQ ? it.qtyRfq : it.qtyCovered;
+    const balance  = Math.max(0, it.qtyRequired - assigned);
+    return `<tr>
+      <td style="font-size:12px;">${esc(it.mat)}</td>
+      <td style="font-size:12px;">${esc(it.uom)}</td>
+      <td class="num" style="font-size:12px;">${fmtINR(it.qtyRequired)}</td>
+      <td class="num" style="font-size:12px;color:var(--muted);">${fmtINR(assigned)}</td>
+      <td class="num" style="font-size:12px;font-weight:600;color:#b45309;">${fmtINR(balance)}</td>
+      <td><input type="number" id="mirQtyConf_${i}" value="${balance}"
+          min="0.001" max="${balance}" step="0.001"
+          style="width:85px;padding:3px 6px;border:1px solid var(--border);border-radius:4px;text-align:right;font-size:12px;"></td>
+    </tr>`;
+  }).join('');
+
+  openModal(`
+    <h3 style="margin-bottom:6px;">${isRFQ?'Raise RFQ':'Direct PO'} — Confirm Quantities</h3>
+    <p style="font-size:12px;color:var(--muted);margin-bottom:12px;">
+      Adjust qty if you want partial assignment. Balance = remaining unassigned.
+    </p>
+    <div class="table-wrap"><table>
+      <thead><tr>
+        <th>Material</th><th>UOM</th>
+        <th class="num">Required</th>
+        <th class="num">${isRFQ?'In RFQ':'Covered'}</th>
+        <th class="num">Balance</th>
+        <th class="num">Qty for this ${isRFQ?'RFQ':'PO'}</th>
+      </tr></thead>
+      <tbody>${rows}</tbody>
+    </table></div>
+    <div class="actions-row" style="margin-top:14px;">
+      <button class="btn btn-primary" onclick="_mirQtyConfirmProceed()">Proceed →</button>
+      <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+    </div>`);
+}
+
+function _mirQtyConfirmProceed() {
+  const confirmedItems = _mirQtyConfirmItems.map((it,i) => {
+    const qty = parseFloat(document.getElementById('mirQtyConf_'+i)?.value)||0;
+    return {...it, qty};
+  }).filter(it => it.qty > 0);
+  if (!confirmedItems.length) { toast('Enter qty for at least one item','error'); return; }
+  closeModal();
+  if (_mirQtyConfirmAction === 'rfq') {
+    confirmMIRItemSelection(_mirQtyConfirmMirNum, confirmedItems);
   } else {
-    _mirSelectedItems = selected.map(c => ({
-      sno: c.value, mat: c.dataset.mat, uom: c.dataset.uom,
-      qty: c.dataset.qty, spec: c.dataset.spec
-    }));
-    _mirSelectedMirNum = mirNum;
-    directPOFromSelection(mirNum, selected);
+    directPOFromSelection(_mirQtyConfirmMirNum, confirmedItems);
   }
 }
 
 let _mirSelectedItems = [];
 let _mirSelectedMirNum = '';
+
+// ── MIR Item Status Engine ────────────────────────────────────────────────
+function _computeItemStatus(qtyRequired, qtyRfq, qtyCovered, qtyReceived) {
+  const req = qtyRequired||0, rfq = qtyRfq||0, cov = qtyCovered||0, rec = qtyReceived||0;
+  if (req <= 0) return 'Pending';
+  if (rec >= req) return 'Received';
+  if (rec > 0)   return 'Partial Received';
+  if (cov >= req) return 'PO Issued';
+  if (cov > 0)   return 'Partial PO Issued';
+  if (rfq >= req) return 'RFQ Raised';
+  if (rfq > 0)   return 'Partial RFQ';
+  return 'Pending';
+}
+
+function _rollupMIRHeaderFromItems(items) {
+  if (!items || !items.length) return 'Approved';
+  const ss = items.map(it => it.item_status||'Pending');
+  if (ss.every(s => ['Received','Closed'].includes(s)))                                                        return 'Closed';
+  if (ss.every(s => ['PO Issued','Received','Closed'].includes(s)))                                            return 'PO Issued';
+  if (ss.some(s  => ['PO Issued','Partial PO Issued'].includes(s)))                                            return 'Partial PO';
+  if (ss.every(s => ['RFQ Raised','PO Issued','Received','Closed','Partial RFQ','Partial PO Issued','Partial Received'].includes(s))) return 'RFQ Raised';
+  if (ss.some(s  => ['RFQ Raised','Partial RFQ'].includes(s)))                                                 return 'Partial RFQ';
+  return 'Approved';
+}
+
+async function _refreshAllMIRItems(mirNum) {
+  if (!mirNum) return;
+  const [{data:items},{data:rfqLinks},{data:poLinks}] = await Promise.all([
+    sb.from('pu_mir_items').select('sno,qty_required').eq('mir_number',mirNum),
+    sb.from('pu_mir_item_rfq_links').select('sno,qty_assigned').eq('mir_number',mirNum),
+    sb.from('pu_mir_item_po_links').select('sno,po_number,qty_linked,qty_received,qty_short_closed,is_short_closed').eq('mir_number',mirNum),
+  ]);
+  if (!items || !items.length) return;
+
+  // Identify approved POs
+  const allPONums = [...new Set((poLinks||[]).map(l=>l.po_number))];
+  let approvedPOs = new Set();
+  if (allPONums.length) {
+    const {data:poSt} = await sb.from('pu_po_orders').select('po_number,status').in('po_number',allPONums);
+    (poSt||[]).forEach(p => {
+      if (['Open','Partial Receipt','Short-Closed','Closed'].includes(p.status)) approvedPOs.add(p.po_number);
+    });
+  }
+
+  // Aggregate per sno
+  const rfqMap={}, covMap={}, recMap={}, scMap={};
+  (rfqLinks||[]).forEach(l => { rfqMap[l.sno] = (rfqMap[l.sno]||0) + (l.qty_assigned||0); });
+  (poLinks||[]).filter(l=>approvedPOs.has(l.po_number)).forEach(l => {
+    // effective qty: short-closed POs count only what was actually received
+    const effQty = l.is_short_closed ? (l.qty_received||0) : (l.qty_linked||0);
+    covMap[l.sno] = (covMap[l.sno]||0) + effQty;
+    recMap[l.sno] = (recMap[l.sno]||0) + (l.qty_received||0);
+    if (l.is_short_closed) scMap[l.sno] = (scMap[l.sno]||0) + (l.qty_short_closed||0);
+  });
+
+  await Promise.all((items||[]).map(it => {
+    const qty_rfq          = rfqMap[it.sno]||0;
+    const qty_covered      = covMap[it.sno]||0;
+    const qty_received     = recMap[it.sno]||0;
+    const qty_short_closed = scMap[it.sno]||0;
+    const item_status = _computeItemStatus(it.qty_required, qty_rfq, qty_covered, qty_received);
+    return sb.from('pu_mir_items').update({qty_rfq,qty_covered,qty_received,qty_short_closed,item_status})
+      .eq('mir_number',mirNum).eq('sno',it.sno);
+  }));
+
+  const {data:updated} = await sb.from('pu_mir_items').select('item_status').eq('mir_number',mirNum);
+  await sb.from('pu_mir').update({status:_rollupMIRHeaderFromItems(updated||[])}).eq('mir_number',mirNum);
+}
 
 // ============================================================
 // RFQ — REQUEST FOR QUOTE
@@ -14159,10 +14324,9 @@ async function newRFQ() {
   addRFQItem(); window.scrollTo(0,0);
 }
 
-async function directPOFromSelection(mirNum, selectedEls) {
-  const items = selectedEls
-    ? selectedEls.map(c=>({sno:c.value,mat:c.dataset.mat,uom:c.dataset.uom,qty:c.dataset.qty,spec:c.dataset.spec}))
-    : _mirSelectedItems;
+async function directPOFromSelection(mirNum, confirmedItems) {
+  // confirmedItems: [{sno, mat, uom, qty, spec}, ...] from _mirQtyConfirmProceed
+  const items = confirmedItems;
   if (!items.length) { toast('Select at least one item','error'); return; }
   switchPUTab('po');
   await newPO();
@@ -14170,6 +14334,7 @@ async function directPOFromSelection(mirNum, selectedEls) {
   document.getElementById('poForm').dataset.directMirNum  = mirNum;
   document.getElementById('poForm').dataset.directMirSnos = items.map(it=>it.sno).join(',');
   document.getElementById('poForm').dataset.directMirMats = items.map(it=>it.mat).join('|||');
+  document.getElementById('poForm').dataset.directMirQtys = items.map(it=>it.qty).join(',');
   document.getElementById('poForm').dataset.poMirNum      = mirNum;
   const mirRefEl = document.getElementById('po_mirRef');
   if(mirRefEl) mirRefEl.value = mirNum;
@@ -14185,27 +14350,24 @@ async function directPOFromSelection(mirNum, selectedEls) {
   recalcPOTotals();
   const qcEl = document.getElementById('po_qcRef');
   if(qcEl) { qcEl.value = 'Direct from '+mirNum; qcEl.readOnly = false; }
-  toast('PO pre-filled from MIR '+mirNum+' — select preferred vendor and enter rates. Save PO to confirm.','info',5000);
+  toast('PO pre-filled from MIR '+mirNum+' — select vendor and enter rates.','info',5000);
 }
 
 
-async function confirmMIRItemSelection(mirNum, selectedEls) {
-  // selectedEls can be array of checkbox elements or use _mirSelectedItems
-  const items = selectedEls
-    ? selectedEls.map(c=>({sno:c.value,mat:c.dataset.mat,uom:c.dataset.uom,qty:c.dataset.qty,spec:c.dataset.spec}))
-    : _mirSelectedItems;
+async function confirmMIRItemSelection(mirNum, confirmedItems) {
+  // confirmedItems: [{sno, mat, uom, qty, spec}, ...] from _mirQtyConfirmProceed
+  const items = confirmedItems;
   if (!items.length) { toast('Select at least one item','error'); return; }
   switchPUTab('rfq');
-  // Store mirNum and selected items in module-level vars BEFORE newRFQ() resets the form
   _mirSelectedMirNum = mirNum;
   _mirSelectedItems  = items;
   await newRFQ();
-  // After newRFQ() runs, restore the MIR link and dataset
-  document.getElementById('rfq_mirLink').value = mirNum; // works now since dropdown includes Partial RFQ
+  document.getElementById('rfq_mirLink').value = mirNum;
   document.getElementById('rfqItemsBody').innerHTML=''; _rfqItemC=0;
   document.getElementById('rfqForm').dataset.mirNum   = mirNum;
   document.getElementById('rfqForm').dataset.mirSnos  = items.map(it=>it.sno).join(',');
   document.getElementById('rfqForm').dataset.mirMats  = items.map(it=>it.mat).join('|||');
+  document.getElementById('rfqForm').dataset.mirQtys  = items.map(it=>it.qty).join(',');
   items.forEach(it => {
     addRFQItem();
     const i = _rfqItemC-1;
@@ -14275,42 +14437,38 @@ async function saveRFQ() {
     await sb.from('pu_rfq_items').insert(rfqItemPayloads);
 
     if (mirNum) {
-      // Update status of selected MIR items to RFQ Raised
       const mirSnosStr = document.getElementById('rfqForm')?.dataset?.mirSnos||'';
       const mirSnos = mirSnosStr ? mirSnosStr.split(',').map(Number).filter(Boolean) : [];
       if (mirSnos.length) {
-        // Use material_name list as the filter (most reliable cross-DB identifier)
-        const mirMatsStr = document.getElementById('rfqForm')?.dataset?.mirMats||'';
-        const mirMats = mirMatsStr ? mirMatsStr.split('|||').filter(Boolean) : [];
-        if (mirSnos.length) {
-          const { error: updErr } = await sb.from('pu_mir_items').update({
-            item_status: 'RFQ Raised', rfq_number: rfqNumber
-          }).eq('mir_number', mirNum).in('sno', mirSnos);
-          if (updErr) {
-            console.error('MIR item update error (sno):', updErr.message);
-            if (mirMats.length) {
-              await sb.from('pu_mir_items').update({
-                item_status: 'RFQ Raised', rfq_number: rfqNumber
-              }).eq('mir_number', mirNum).in('material_name', mirMats);
-            }
-          }
-        } else if (mirMats.length) {
-          await sb.from('pu_mir_items').update({
-            item_status: 'RFQ Raised', rfq_number: rfqNumber
-          }).eq('mir_number', mirNum).in('material_name', mirMats);
+        // Build mat→qty map from RFQ items (user may have adjusted qtys)
+        const rfqMatQtyMap = {};
+        items.forEach(it => { rfqMatQtyMap[it.material_name] = it.qty_required; });
+
+        // Fetch MIR items for selected SNOs
+        const {data:mirItemRecs} = await sb.from('pu_mir_items')
+          .select('sno,material_name').eq('mir_number',mirNum).in('sno',mirSnos);
+
+        const linkPayloads = (mirItemRecs||[]).map(it => ({
+          mir_number: mirNum, sno: it.sno, material_name: it.material_name,
+          rfq_number: rfqNumber,
+          qty_assigned: rfqMatQtyMap[it.material_name] || 0
+        })).filter(l => l.qty_assigned > 0);
+
+        if (linkPayloads.length) {
+          await sb.from('pu_mir_item_rfq_links').insert(linkPayloads);
         }
+        // Keep legacy rfq_number field in sync for backward compat
+        await sb.from('pu_mir_items').update({rfq_number:rfqNumber})
+          .eq('mir_number',mirNum).in('sno',mirSnos);
+
+        await _refreshAllMIRItems(mirNum);
       }
-      // Check if all items are now processed — update MIR header status
-      const {data:allMirItems} = await sb.from('pu_mir_items').select('item_status').eq('mir_number', mirNum);
-      const allProcessed = (allMirItems||[]).every(it => (it.item_status||'Pending') !== 'Pending');
-      const anyProcessed = (allMirItems||[]).some(it => (it.item_status||'Pending') !== 'Pending');
-      const newMIRStatus = allProcessed ? 'RFQ Raised' : anyProcessed ? 'Partial RFQ' : 'Approved';
-      await sb.from('pu_mir').update({status: newMIRStatus}).eq('mir_number', mirNum);
-      // Clear stored snos
+      // Clear stored metadata
       if (document.getElementById('rfqForm')) {
         delete document.getElementById('rfqForm').dataset.mirSnos;
         delete document.getElementById('rfqForm').dataset.mirNum;
         delete document.getElementById('rfqForm').dataset.mirMats;
+        delete document.getElementById('rfqForm').dataset.mirQtys;
       }
     }
     flashSuccess('RFQ '+rfqNumber+' saved');
@@ -15184,49 +15342,57 @@ async function savePO() {
     const qcRef=document.getElementById('po_qcRef').value;
     if(qcRef && qcRef.startsWith('QC/')) {
       await sb.from('pu_quote_comparison').update({status:'PO Raised'}).eq('qc_number',qcRef);
-      // Trace back: QC → RFQ → MIR items — mark them as PO Raised
+      // Trace QC → RFQ → MIR and insert po_links (status update deferred to PO approval)
       const {data:qcH} = await sb.from('pu_quote_comparison').select('rfq_number').eq('qc_number',qcRef).single();
       if(qcH?.rfq_number) {
         const {data:rfqH} = await sb.from('pu_rfq').select('mir_number').eq('rfq_number',qcH.rfq_number).single();
         if(rfqH?.mir_number) {
-          await sb.from('pu_mir_items').update({item_status:'PO Raised', po_number:poNumber})
-            .eq('mir_number',rfqH.mir_number).eq('rfq_number',qcH.rfq_number);
-          const {data:allMirItems} = await sb.from('pu_mir_items').select('item_status').eq('mir_number',rfqH.mir_number);
-          const allPO=(allMirItems||[]).every(it=>it.item_status==='PO Raised'||it.item_status==='Received');
-          if(allPO) await sb.from('pu_mir').update({status:'PO Raised'}).eq('mir_number',rfqH.mir_number);
+          const mirNum = rfqH.mir_number;
+          const {data:mirItemRecs} = await sb.from('pu_mir_items')
+            .select('sno,material_name').eq('mir_number',mirNum);
+          const matToSno = {};
+          (mirItemRecs||[]).forEach(it => { matToSno[it.material_name] = it.sno; });
+          const poLinkPayloads = items
+            .filter(it => matToSno[it.material_name])
+            .map(it => ({
+              mir_number:mirNum, sno:matToSno[it.material_name],
+              material_name:it.material_name, po_number:poNumber,
+              qty_linked:it.qty, qty_received:0, qty_short_closed:0, is_short_closed:false
+            }));
+          if(poLinkPayloads.length) await sb.from('pu_mir_item_po_links').insert(poLinkPayloads);
+          // Keep legacy po_number field in sync
+          await sb.from('pu_mir_items').update({po_number:poNumber})
+            .eq('mir_number',mirNum).eq('rfq_number',qcH.rfq_number);
         }
       }
     }
-    // If this PO came from a Direct PO (MIR bypass), update MIR item statuses
+    // Direct PO from MIR — insert po_links; items NOT in PO remain Pending (auto cascade)
     const directMir  = document.getElementById('poForm').dataset.directMirNum;
     const directSnos = document.getElementById('poForm').dataset.directMirSnos;
     if(directMir) {
       const snos = directSnos ? directSnos.split(',').map(Number).filter(Boolean) : [];
-      const directMatsStr = document.getElementById('poForm')?.dataset?.directMirMats||'';
-      const directMats = directMatsStr ? directMatsStr.split('|||').filter(Boolean) : [];
       if(snos.length) {
-        const {error:dmErr} = await sb.from('pu_mir_items').update({item_status:'PO Raised', po_number:poNumber})
-          .eq('mir_number',directMir).in('sno', snos);
-        if(dmErr) {
-          console.error('Direct PO MIR item update (sno) failed:', dmErr.message);
-          if(directMats.length) {
-            await sb.from('pu_mir_items').update({item_status:'PO Raised', po_number:poNumber})
-              .eq('mir_number',directMir).in('material_name', directMats);
-          }
-        }
-      } else if(directMats.length) {
-        await sb.from('pu_mir_items').update({item_status:'PO Raised', po_number:poNumber})
-          .eq('mir_number',directMir).in('material_name', directMats);
+        const {data:mirItemRecs} = await sb.from('pu_mir_items')
+          .select('sno,material_name').eq('mir_number',directMir).in('sno',snos);
+        const matToSno = {};
+        (mirItemRecs||[]).forEach(it => { matToSno[it.material_name] = it.sno; });
+        // Match PO items to MIR items by material_name; use actual PO item qty as qty_linked
+        const poLinkPayloads = items
+          .filter(it => matToSno[it.material_name])
+          .map(it => ({
+            mir_number:directMir, sno:matToSno[it.material_name],
+            material_name:it.material_name, po_number:poNumber,
+            qty_linked:it.qty, qty_received:0, qty_short_closed:0, is_short_closed:false
+          }));
+        if(poLinkPayloads.length) await sb.from('pu_mir_item_po_links').insert(poLinkPayloads);
+        // Keep legacy po_number field in sync for items included in this PO
+        await sb.from('pu_mir_items').update({po_number:poNumber})
+          .eq('mir_number',directMir).in('sno',snos);
       }
-      // Check if all MIR items are now PO Raised
-      const {data:allMirItems} = await sb.from('pu_mir_items').select('item_status').eq('mir_number',directMir);
-      const allPO = (allMirItems||[]).every(it=>it.item_status==='PO Raised'||it.item_status==='Received');
-      const anyPO = (allMirItems||[]).some(it=>it.item_status==='PO Raised'||it.item_status==='Received');
-      const newSt  = allPO ? 'PO Raised' : anyPO ? 'Partial RFQ' : 'Approved';
-      await sb.from('pu_mir').update({status:newSt}).eq('mir_number',directMir);
       delete document.getElementById('poForm').dataset.directMirNum;
       delete document.getElementById('poForm').dataset.directMirSnos;
       delete document.getElementById('poForm').dataset.directMirMats;
+      delete document.getElementById('poForm').dataset.directMirQtys;
       delete document.getElementById('poForm').dataset.poMirNum;
     }
     flashSuccess('PO '+poNumber+' submitted for PM approval');
@@ -15237,9 +15403,23 @@ async function savePO() {
 
 async function approvePO(poNum) {
   if(!hasPerm('canApprovePO')){toast('Only PM can approve POs','error');return;}
+  pbShow('Approving PO…');
+  // Fetch PO header BEFORE approval to get MIR ref
+  const {data:poHdr} = await sb.from('pu_po_orders').select('mir_number,qc_number').eq('po_number',poNum).single();
   await sb.from('pu_po_orders').update({
     status:'Open', approved_by:state.userName, approved_by_id:state.userId, approved_at:new Date().toISOString()
   }).eq('po_number',poNum);
+  // Resolve MIR and refresh item statuses (po_links for this PO now count toward qty_covered)
+  let mirNum = poHdr?.mir_number || null;
+  if (!mirNum && poHdr?.qc_number) {
+    const {data:qcH} = await sb.from('pu_quote_comparison').select('rfq_number').eq('qc_number',poHdr.qc_number).maybeSingle();
+    if (qcH?.rfq_number) {
+      const {data:rfqH} = await sb.from('pu_rfq').select('mir_number').eq('rfq_number',qcH.rfq_number).maybeSingle();
+      mirNum = rfqH?.mir_number || null;
+    }
+  }
+  if (mirNum) await _refreshAllMIRItems(mirNum);
+  pbDone();
   flashSuccess('PO '+poNum+' Approved'); loadPOList();
 }
 
@@ -15384,6 +15564,15 @@ async function viewPO(poNum) {
   pbDone();
   if(!h){toast('PO not found','error');return;}
 
+  // Fetch vendor master details for address / contact
+  let vd = null;
+  if (h.vendor_name) {
+    const {data:vdRow} = await sb.from('ho_vendors')
+      .select('address,gstin,contact_person,phone')
+      .eq('vendor_name', h.vendor_name).maybeSingle();
+    vd = vdRow;
+  }
+
   // Build received-qty map per material, summing across all non-rejected GRNs
   // Also collect per-GRN breakdown (qty, GRN no, date) for footnote
   const activeGRNs = (grnsForPO||[]).filter(g => g.status !== 'Rejected');
@@ -15482,8 +15671,15 @@ async function viewPO(poNum) {
   openModal(`<h3>PO — ${esc(h.po_number)}</h3>
     ${approvalBanner}
     ${closureBanner}
-    <div class="grid-3" style="margin-bottom:10px;">
-      <div><label class="muted" style="font-size:11px;">VENDOR</label><div><strong>${esc(h.vendor_name)}</strong></div></div>
+    <div style="margin-bottom:10px;display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;">
+      <div style="grid-column:1/2;">
+        <label class="muted" style="font-size:11px;">VENDOR</label>
+        <div><strong>${esc(h.vendor_name)}</strong></div>
+        ${vd&&vd.address?`<div style="font-size:11px;color:var(--muted);margin-top:2px;white-space:pre-line;">${esc(vd.address)}</div>`:''}
+        ${vd&&vd.gstin?`<div style="font-size:11px;color:var(--muted);margin-top:2px;">GSTIN: <span class="mono">${esc(vd.gstin)}</span></div>`:''}
+        ${vd&&vd.contact_person?`<div style="font-size:11px;color:var(--muted);margin-top:2px;">👤 ${esc(vd.contact_person)}</div>`:''}
+        ${vd&&vd.phone?`<div style="font-size:11px;color:var(--muted);margin-top:1px;">📞 ${esc(vd.phone)}</div>`:''}
+      </div>
       <div><label class="muted" style="font-size:11px;">DATE</label><div>${fmtDate(h.po_date)}</div></div>
       <div><label class="muted" style="font-size:11px;">STATUS</label><div>${esc(h.status)}</div></div>
       <div><label class="muted" style="font-size:11px;">GST MODE</label><div>${h.gst_mode==='per_line'?'Per-Line':'Overall'}</div></div>
@@ -15541,51 +15737,73 @@ async function printPO(poNum) {
 // ── Shared helper: recompute MIR header status & item statuses after PO termination ──
 // Called after a PO is Cancelled or Short-Closed. Walks the MIR's POs and items,
 // flips MIR.status to 'Cancelled' if every PO is Cancelled and no other procurement is active.
-// For Cancel: resets covered MIR items from 'PO Raised' back to 'Approved' so they can be re-procured.
-// For Short-Close: leaves MIR items as-is (PO did receive material — items are effectively partially fulfilled).
+// For Cancel: delete po_links → qty_covered drops → items cascade back to available state.
+// For Short-Close: mark po_links as SC, set qty_short_closed = balance unreceived qty.
 async function _rollupMIRAfterPOTermination(mirNum, terminatedPONum, action /* 'cancel' | 'short-close' */) {
   if (!mirNum) return;
-  // 1. Reset items if cancelled — only items tied to this specific PO
+
   if (action === 'cancel') {
-    // Reset items that were marked PO Raised under this PO back to 'Pending' so they can be re-procured.
-    // ('Approved' is a MIR-header status, not a valid item_status — items use Pending/RFQ Raised/PO Raised/Received/Rejected.)
-    // Use po_number match; fallback handles direct-PO items where po_number was stamped on the item.
-    await sb.from('pu_mir_items')
-      .update({ item_status: 'Pending', po_number: null, rfq_number: null })
-      .eq('mir_number', mirNum)
-      .eq('po_number', terminatedPONum)
-      .eq('item_status', 'PO Raised');
+    // Remove po_links for this PO (no-op for legacy POs, safe either way)
+    await sb.from('pu_mir_item_po_links').delete().eq('po_number',terminatedPONum).eq('mir_number',mirNum);
+    // Clear legacy po_number field AND reset qty_covered so _refreshAllMIRItems shows correct state
+    await sb.from('pu_mir_items').update({po_number:null, qty_covered:0})
+      .eq('mir_number',mirNum).eq('po_number',terminatedPONum);
   }
-  // 2. Recompute MIR header status from scratch based on remaining state
-  const [{data:allPOs}, {data:allItems}] = await Promise.all([
-    sb.from('pu_po_orders').select('po_number,status').eq('mir_number', mirNum),
-    sb.from('pu_mir_items').select('item_status').eq('mir_number', mirNum),
-  ]);
-  // If no POs at all under this MIR (e.g. the only PO was just cancelled and items reset), don't override —
-  // the recomputed item-level status below will set it correctly.
-  const pos = allPOs || [];
-  const items = allItems || [];
-  if (!items.length) return;
-  // Terminal-cancelled MIR: every PO is Cancelled AND no item is in active procurement
-  const allPOsCancelled = pos.length > 0 && pos.every(p => p.status === 'Cancelled');
-  const anyItemActive = items.some(it => ['RFQ Raised','PO Raised','Received'].includes(it.item_status));
-  if (allPOsCancelled && !anyItemActive) {
-    await sb.from('pu_mir').update({ status: 'Cancelled' }).eq('mir_number', mirNum);
-    return;
+
+  if (action === 'short-close') {
+    // Get GRNs for this PO to determine actual received qty per material
+    const {data:grns} = await sb.from('pu_grn')
+      .select('grn_number').eq('po_number',terminatedPONum).neq('status','Rejected');
+    const receivedByMat = {};
+    if ((grns||[]).length) {
+      const {data:grnItems} = await sb.from('pu_grn_items')
+        .select('material_name,this_grn_qty').in('grn_number',(grns||[]).map(g=>g.grn_number));
+      (grnItems||[]).forEach(it => {
+        receivedByMat[it.material_name] = (receivedByMat[it.material_name]||0) + (it.this_grn_qty||0);
+      });
+    }
+
+    // Check if po_links exist for this PO (they won't for legacy POs approved before schema migration)
+    const {data:existingLinks} = await sb.from('pu_mir_item_po_links')
+      .select('id,material_name,qty_linked').eq('po_number',terminatedPONum).eq('mir_number',mirNum);
+
+    if (!(existingLinks||[]).length) {
+      // Legacy PO — bootstrap po_links from pu_po_items
+      const [{data:poItems},{data:mirItemRecs}] = await Promise.all([
+        sb.from('pu_po_items').select('material_name,qty').eq('po_number',terminatedPONum),
+        sb.from('pu_mir_items').select('sno,material_name').eq('mir_number',mirNum),
+      ]);
+      const matToSno = {};
+      (mirItemRecs||[]).forEach(it => { matToSno[it.material_name] = it.sno; });
+      const bootstrapLinks = (poItems||[])
+        .filter(it => matToSno[it.material_name])
+        .map(it => {
+          const rec = receivedByMat[it.material_name]||0;
+          const sc  = Math.max(0, (it.qty||0) - rec);
+          return {
+            mir_number: mirNum, sno: matToSno[it.material_name],
+            material_name: it.material_name, po_number: terminatedPONum,
+            qty_linked: it.qty||0, qty_received: rec,
+            qty_short_closed: sc, is_short_closed: true
+          };
+        });
+      if (bootstrapLinks.length) {
+        await sb.from('pu_mir_item_po_links').insert(bootstrapLinks);
+      }
+    } else {
+      // Links exist — update with actual received qty and SC flag
+      await Promise.all((existingLinks||[]).map(l => {
+        const rec = receivedByMat[l.material_name]||0;
+        const sc  = Math.max(0, (l.qty_linked||0) - rec);
+        return sb.from('pu_mir_item_po_links').update({
+          qty_received:rec, qty_short_closed:sc, is_short_closed:true
+        }).eq('id',l.id);
+      }));
+    }
   }
-  // Otherwise recompute from item statuses (mirror of the existing rollup pattern at lines 9342, 10433)
-  const allReceived = items.every(it => it.item_status === 'Received' || it.item_status === 'Closed');
-  const allPORaised = items.every(it => ['PO Raised','Received','Closed'].includes(it.item_status));
-  const anyPORaised = items.some(it => ['PO Raised','Received'].includes(it.item_status));
-  const allRFQ      = items.every(it => ['RFQ Raised','PO Raised','Received','Closed'].includes(it.item_status));
-  const anyRFQ      = items.some(it => it.item_status === 'RFQ Raised');
-  const newSt = allReceived ? 'Closed'
-              : allPORaised ? 'PO Raised'
-              : anyPORaised ? 'Partial RFQ'
-              : allRFQ      ? 'RFQ Raised'
-              : anyRFQ      ? 'Partial RFQ'
-              : 'Approved';
-  await sb.from('pu_mir').update({ status: newSt }).eq('mir_number', mirNum);
+
+  // Recompute all item statuses and MIR header from the updated links
+  await _refreshAllMIRItems(mirNum);
 }
 
 // ── PO Cancel / Short-Close (PM + Admin only) ──
@@ -16605,22 +16823,39 @@ async function verifyGRN(grnNum) {
     status:'Verified', verified_by:state.userName, verified_by_id:state.userId
   }).eq('grn_number',grnNum);
 
-  // Trace GRN → PO → MIR and update MIR item statuses to Received
+  // Trace GRN → PO → MIR: update po_link received qtys and recompute item statuses
   try {
     const {data:grn}=await sb.from('pu_grn').select('po_number').eq('grn_number',grnNum).single();
     if(grn?.po_number) {
-      const {data:po}=await sb.from('pu_po_orders').select('mir_number').eq('po_number',grn.po_number).single();
-      if(po?.mir_number) {
-        // Update all MIR items that have this PO number to Received
-        await sb.from('pu_mir_items').update({item_status:'Received'})
-          .eq('mir_number',po.mir_number).eq('po_number',grn.po_number);
-        // Check if all items on the MIR are now Received → close the MIR
-        const {data:allItems}=await sb.from('pu_mir_items').select('item_status').eq('mir_number',po.mir_number);
-        const allReceived=(allItems||[]).length>0 &&
-          (allItems||[]).every(it=>it.item_status==='Received'||it.item_status==='Closed');
-        if(allReceived) {
-          await sb.from('pu_mir').update({status:'Closed'}).eq('mir_number',po.mir_number);
+      const {data:po}=await sb.from('pu_po_orders').select('mir_number,qc_number').eq('po_number',grn.po_number).single();
+      let mirNum = po?.mir_number || null;
+      if (!mirNum && po?.qc_number) {
+        const {data:qcH}=await sb.from('pu_quote_comparison').select('rfq_number').eq('qc_number',po.qc_number).maybeSingle();
+        if(qcH?.rfq_number){
+          const {data:rfqH}=await sb.from('pu_rfq').select('mir_number').eq('rfq_number',qcH.rfq_number).maybeSingle();
+          mirNum=rfqH?.mir_number||null;
         }
+      }
+      if(mirNum) {
+        // Sum all verified GRN items for this PO by material
+        const {data:verifiedGRNs}=await sb.from('pu_grn').select('grn_number').eq('po_number',grn.po_number).neq('status','Rejected');
+        const receivedByMat={};
+        if((verifiedGRNs||[]).length){
+          const {data:grnItems}=await sb.from('pu_grn_items')
+            .select('material_name,this_grn_qty').in('grn_number',(verifiedGRNs||[]).map(g=>g.grn_number));
+          (grnItems||[]).forEach(it=>{
+            receivedByMat[it.material_name]=(receivedByMat[it.material_name]||0)+(it.this_grn_qty||0);
+          });
+        }
+        // Update po_links for this PO with cumulative received qty per material
+        const {data:poLinks}=await sb.from('pu_mir_item_po_links')
+          .select('id,material_name').eq('po_number',grn.po_number).eq('mir_number',mirNum);
+        if((poLinks||[]).length){
+          await Promise.all((poLinks||[]).map(l=>
+            sb.from('pu_mir_item_po_links').update({qty_received:receivedByMat[l.material_name]||0}).eq('id',l.id)
+          ));
+        }
+        await _refreshAllMIRItems(mirNum);
       }
     }
   } catch(e){ console.error('MIR Received update error:',e.message); }
@@ -18505,11 +18740,15 @@ async function confirmRejectDoc(docType, docNum) {
   const {error}=await sb.from(tableMap[docType]).update({status:'Rejected',rejection_reason:reason}).eq(colMap[docType],docNum);
   if(error){ toast(error.message,'error'); return; }
 
-  // ── MIR rejection: cascade item_status to Rejected ──────────────────────────
+  // ── MIR rejection: cascade item_status to Pending, clear all links ──────────
   if (docType === 'MIR') {
-    const {error: itemErr} = await sb.from('pu_mir_items')
-      .update({item_status:'Pending', rfq_number:null, po_number:null}).eq('mir_number',docNum);
-    if (itemErr) console.warn('MIR item-status cascade failed:', itemErr.message);
+    await sb.from('pu_mir_items')
+      .update({item_status:'Pending', rfq_number:null, po_number:null,
+               qty_rfq:0, qty_covered:0, qty_received:0, qty_short_closed:0})
+      .eq('mir_number',docNum);
+    // Clear link tables so items are fully available for re-procurement after correction
+    await sb.from('pu_mir_item_rfq_links').delete().eq('mir_number',docNum);
+    await sb.from('pu_mir_item_po_links').delete().eq('mir_number',docNum);
   }
 
   // ── QC rejection: reopen the parent RFQ ──────────────────────────────────────
@@ -18560,55 +18799,24 @@ async function confirmRejectDoc(docType, docNum) {
         if (qcReopenErr) console.warn('PO cascade: QC reopen failed:', qcReopenErr.message);
         else toast('QC '+qcRef+' restored to Approved — create a new PO from it','info',4000);
 
-        // Reset MIR items that were marked PO Raised under this PO back to RFQ Raised
+        // Reset MIR items: delete po_links for this PO, then let _refreshAllMIRItems recompute
         if (mirNum) {
-          const {error:itemErr} = await sb.from('pu_mir_items')
-            .update({item_status:'RFQ Raised', po_number:null})
-            .eq('mir_number',mirNum).eq('po_number',docNum).eq('item_status','PO Raised');
-          if (itemErr) console.warn('PO cascade: MIR item reset failed:', itemErr.message);
+          await sb.from('pu_mir_item_po_links').delete().eq('po_number',docNum).eq('mir_number',mirNum);
+          await sb.from('pu_mir_items').update({po_number:null})
+            .eq('mir_number',mirNum).eq('po_number',docNum);
+          await _refreshAllMIRItems(mirNum);
         }
       } else {
-        // Path B — Direct PO: reset MIR items fully to Pending for re-procurement
+        // Path B — Direct PO: same — delete po_links, items cascade back to Pending
         if (mirNum) {
-          const {error:itemErr} = await sb.from('pu_mir_items')
-            .update({item_status:'Pending', po_number:null, rfq_number:null})
-            .eq('mir_number',mirNum).eq('po_number',docNum).eq('item_status','PO Raised');
-          if (itemErr) console.warn('PO cascade: MIR item reset (direct) failed:', itemErr.message);
+          await sb.from('pu_mir_item_po_links').delete().eq('po_number',docNum).eq('mir_number',mirNum);
+          await sb.from('pu_mir_items').update({po_number:null})
+            .eq('mir_number',mirNum).eq('po_number',docNum);
+          await _refreshAllMIRItems(mirNum);
         }
       }
 
-      // Recompute MIR header status from updated item states
-      if (mirNum) {
-        const [{data:allPOs},{data:allItems}] = await Promise.all([
-          sb.from('pu_po_orders').select('po_number,status').eq('mir_number',mirNum),
-          sb.from('pu_mir_items').select('item_status').eq('mir_number',mirNum),
-        ]);
-        const pos   = allPOs  || [];
-        const items = allItems|| [];
-        if (items.length) {
-          // If every non-rejected PO is now Rejected/Cancelled and no item is active → revert MIR to Approved
-          const allPOsDead = pos.length>0 && pos.every(p=>['Rejected','Cancelled'].includes(p.status));
-          const anyItemActive = items.some(it=>['RFQ Raised','PO Raised','Received'].includes(it.item_status));
-          let newMIRSt;
-          if (allPOsDead && !anyItemActive) {
-            newMIRSt = 'Approved';
-          } else {
-            const allReceived = items.every(it=>['Received','Closed'].includes(it.item_status));
-            const allPORaised = items.every(it=>['PO Raised','Received','Closed'].includes(it.item_status));
-            const anyPORaised = items.some( it=>['PO Raised','Received'].includes(it.item_status));
-            const allRFQ      = items.every(it=>['RFQ Raised','PO Raised','Received','Closed'].includes(it.item_status));
-            const anyRFQ      = items.some( it=>it.item_status==='RFQ Raised');
-            newMIRSt = allReceived ? 'Closed'
-                     : allPORaised ? 'PO Raised'
-                     : anyPORaised ? 'Partial RFQ'
-                     : allRFQ      ? 'RFQ Raised'
-                     : anyRFQ      ? 'Partial RFQ'
-                     : 'Approved';
-          }
-          const {error:mirStErr} = await sb.from('pu_mir').update({status:newMIRSt}).eq('mir_number',mirNum);
-          if (mirStErr) console.warn('PO cascade: MIR header recompute failed:', mirStErr.message);
-        }
-      }
+      // MIR header recomputed inside _refreshAllMIRItems above
     }
   }
 
