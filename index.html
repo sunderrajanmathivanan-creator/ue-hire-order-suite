@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Penguin-Procurement Suite v61 — Urban Excellence LLP · Poetry of Earth</title>
+<title>Penguin-Procurement Suite v73 — Urban Excellence LLP · Poetry of Earth</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <style>
@@ -123,6 +123,7 @@ td input, td select { padding: 5px 6px; background: var(--input-bg); color: var(
 .status.paid { background: #ccfbf1; color: #065f46; border: 1px solid #5eead4; }
 .status.unpaid { background: #fef3c7; color: #92400e; border: 1px solid #fcd34d; }
 .status.partial { background: #e0f2fe; color: #075985; border: 1px solid #7dd3fc; }
+.status.partial-received { background: #dcfce7; color: #15803d; border: 1px solid #86efac; }
 
 /* Summary bar */
 .summary-bar { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; margin: 16px 0; }
@@ -2219,16 +2220,15 @@ input[type="number"] {
           <div id="mirLegendBody" style="display:none;padding:12px 14px 14px;">
           <div style="display:grid;grid-template-columns:1fr 1px 1fr;gap:0;">
             <!-- Header statuses -->
-            <div style="padding-right:14px;">
+              <div style="padding-right:14px;">
               <div style="font-size:10px;font-weight:600;letter-spacing:.05em;color:var(--text-muted);margin-bottom:8px;">MIR HEADER STATUS</div>
               <div style="display:flex;flex-direction:column;gap:5px;">
-                <div style="display:flex;align-items:flex-start;gap:8px;"><span style="font-size:11px;font-weight:500;padding:2px 8px;border-radius:20px;background:#fef9c3;color:#854d0e;white-space:nowrap;min-width:130px;text-align:center;flex-shrink:0;">Pending Approval</span><span style="font-size:11px;color:var(--text-muted);line-height:1.4;">Newly raised, awaiting Admin / PM sign-off</span></div>
-                <div style="display:flex;align-items:flex-start;gap:8px;"><span style="font-size:11px;font-weight:500;padding:2px 8px;border-radius:20px;background:#dcfce7;color:#166534;white-space:nowrap;min-width:130px;text-align:center;flex-shrink:0;">Approved</span><span style="font-size:11px;color:var(--text-muted);line-height:1.4;">Approved; all items pending RFQ / PO</span></div>
+                <div style="display:flex;align-items:flex-start;gap:8px;"><span style="font-size:11px;font-weight:500;padding:2px 8px;border-radius:20px;background:#fef9c3;color:#854d0e;white-space:nowrap;min-width:130px;text-align:center;flex-shrink:0;">Pending Approval</span><span style="font-size:11px;color:var(--text-muted);line-height:1.4;">Newly raised, awaiting PM sign-off</span></div>
                 <div style="display:flex;align-items:flex-start;gap:8px;"><span style="font-size:11px;font-weight:500;padding:2px 8px;border-radius:20px;background:#fee2e2;color:#991b1b;white-space:nowrap;min-width:130px;text-align:center;flex-shrink:0;">Rejected</span><span style="font-size:11px;color:var(--text-muted);line-height:1.4;">Rejected by approver; cannot proceed</span></div>
-                <div style="display:flex;align-items:flex-start;gap:8px;"><span style="font-size:11px;font-weight:500;padding:2px 8px;border-radius:20px;background:#fef3c7;color:#92400e;white-space:nowrap;min-width:130px;text-align:center;flex-shrink:0;">Partial RFQ</span><span style="font-size:11px;color:var(--text-muted);line-height:1.4;">Some items in RFQ, rest still pending</span></div>
-                <div style="display:flex;align-items:flex-start;gap:8px;"><span style="font-size:11px;font-weight:500;padding:2px 8px;border-radius:20px;background:#dbeafe;color:#1e40af;white-space:nowrap;min-width:130px;text-align:center;flex-shrink:0;">RFQ Raised</span><span style="font-size:11px;color:var(--text-muted);line-height:1.4;">All items have active RFQ with vendors</span></div>
-                <div style="display:flex;align-items:flex-start;gap:8px;"><span style="font-size:11px;font-weight:500;padding:2px 8px;border-radius:20px;background:#f3e8ff;color:#6b21a8;white-space:nowrap;min-width:130px;text-align:center;flex-shrink:0;">Partial PO</span><span style="font-size:11px;color:var(--text-muted);line-height:1.4;">Some items have approved PO, rest still open</span></div>
-                <div style="display:flex;align-items:flex-start;gap:8px;"><span style="font-size:11px;font-weight:500;padding:2px 8px;border-radius:20px;background:#ede9fe;color:#4c1d95;white-space:nowrap;min-width:130px;text-align:center;flex-shrink:0;">PO Issued</span><span style="font-size:11px;color:var(--text-muted);line-height:1.4;">All items covered by approved POs</span></div>
+                <div style="display:flex;align-items:flex-start;gap:8px;"><span style="font-size:11px;font-weight:500;padding:2px 8px;border-radius:20px;background:#f1f5f9;color:#475569;white-space:nowrap;min-width:130px;text-align:center;flex-shrink:0;">PO Pending</span><span style="font-size:11px;color:var(--text-muted);line-height:1.4;">Approved; all items awaiting PO — no PO raised yet</span></div>
+                <div style="display:flex;align-items:flex-start;gap:8px;"><span style="font-size:11px;font-weight:500;padding:2px 8px;border-radius:20px;background:#f3e8ff;color:#6b21a8;white-space:nowrap;min-width:130px;text-align:center;flex-shrink:0;">Partial PO</span><span style="font-size:11px;color:var(--text-muted);line-height:1.4;">Some items have PO raised; rest still pending</span></div>
+                <div style="display:flex;align-items:flex-start;gap:8px;"><span style="font-size:11px;font-weight:500;padding:2px 8px;border-radius:20px;background:#ede9fe;color:#4c1d95;white-space:nowrap;min-width:130px;text-align:center;flex-shrink:0;">PO Issued</span><span style="font-size:11px;color:var(--text-muted);line-height:1.4;">All items have approved PO; awaiting GRN</span></div>
+                <div style="display:flex;align-items:flex-start;gap:8px;"><span style="font-size:11px;font-weight:500;padding:2px 8px;border-radius:20px;background:#bbf7d0;color:#065f46;white-space:nowrap;min-width:130px;text-align:center;flex-shrink:0;">Partial Received</span><span style="font-size:11px;color:var(--text-muted);line-height:1.4;">Some items received via GRN; others still pending</span></div>
                 <div style="display:flex;align-items:flex-start;gap:8px;"><span style="font-size:11px;font-weight:500;padding:2px 8px;border-radius:20px;background:#d1fae5;color:#065f46;white-space:nowrap;min-width:130px;text-align:center;flex-shrink:0;">Closed</span><span style="font-size:11px;color:var(--text-muted);line-height:1.4;">All items fully received via GRN</span></div>
                 <div style="display:flex;align-items:flex-start;gap:8px;"><span style="font-size:11px;font-weight:500;padding:2px 8px;border-radius:20px;background:#f3f4f6;color:#374151;white-space:nowrap;min-width:130px;text-align:center;flex-shrink:0;">Cancelled</span><span style="font-size:11px;color:var(--text-muted);line-height:1.4;">All POs cancelled; no active items remain</span></div>
               </div>
@@ -2239,18 +2239,17 @@ input[type="number"] {
             <div style="padding-left:14px;">
               <div style="font-size:10px;font-weight:600;letter-spacing:.05em;color:var(--text-muted);margin-bottom:8px;">MIR ITEM STATUS</div>
               <div style="display:flex;flex-direction:column;gap:5px;">
-                <div style="display:flex;align-items:flex-start;gap:8px;"><span style="font-size:11px;font-weight:500;padding:2px 8px;border-radius:20px;background:#f3f4f6;color:#374151;white-space:nowrap;min-width:120px;text-align:center;flex-shrink:0;">Pending</span><span style="font-size:11px;color:var(--text-muted);line-height:1.4;">Item approved; not yet in any RFQ or PO</span></div>
-                <div style="display:flex;align-items:flex-start;gap:8px;"><span style="font-size:11px;font-weight:500;padding:2px 8px;border-radius:20px;background:#fef3c7;color:#92400e;white-space:nowrap;min-width:120px;text-align:center;flex-shrink:0;">Partial RFQ</span><span style="font-size:11px;color:var(--text-muted);line-height:1.4;">Part of qty assigned to RFQ; balance open</span></div>
-                <div style="display:flex;align-items:flex-start;gap:8px;"><span style="font-size:11px;font-weight:500;padding:2px 8px;border-radius:20px;background:#dbeafe;color:#1e40af;white-space:nowrap;min-width:120px;text-align:center;flex-shrink:0;">RFQ Raised</span><span style="font-size:11px;color:var(--text-muted);line-height:1.4;">Full qty assigned to RFQ(s)</span></div>
-                <div style="display:flex;align-items:flex-start;gap:8px;"><span style="font-size:11px;font-weight:500;padding:2px 8px;border-radius:20px;background:#e0e7ff;color:#3730a3;white-space:nowrap;min-width:120px;text-align:center;flex-shrink:0;">Partial PO Issued</span><span style="font-size:11px;color:var(--text-muted);line-height:1.4;">Part of qty covered by approved PO; balance open</span></div>
-                <div style="display:flex;align-items:flex-start;gap:8px;"><span style="font-size:11px;font-weight:500;padding:2px 8px;border-radius:20px;background:#ede9fe;color:#4c1d95;white-space:nowrap;min-width:120px;text-align:center;flex-shrink:0;">PO Issued</span><span style="font-size:11px;color:var(--text-muted);line-height:1.4;">Full qty covered by approved PO(s)</span></div>
-                <div style="display:flex;align-items:flex-start;gap:8px;"><span style="font-size:11px;font-weight:500;padding:2px 8px;border-radius:20px;background:#bbf7d0;color:#065f46;white-space:nowrap;min-width:120px;text-align:center;flex-shrink:0;">Partial Received</span><span style="font-size:11px;color:var(--text-muted);line-height:1.4;">Part of qty received via GRN; balance pending</span></div>
-                <div style="display:flex;align-items:flex-start;gap:8px;"><span style="font-size:11px;font-weight:500;padding:2px 8px;border-radius:20px;background:#d1fae5;color:#065f46;white-space:nowrap;min-width:120px;text-align:center;flex-shrink:0;">Received</span><span style="font-size:11px;color:var(--text-muted);line-height:1.4;">Full qty received at site and GRN verified</span></div>
-                <div style="display:flex;align-items:flex-start;gap:8px;"><span style="font-size:11px;font-weight:500;padding:2px 8px;border-radius:20px;background:#a7f3d0;color:#065f46;white-space:nowrap;min-width:120px;text-align:center;flex-shrink:0;">Closed</span><span style="font-size:11px;color:var(--text-muted);line-height:1.4;">Item fully received and MIR closed</span></div>
+                <div style="display:flex;align-items:flex-start;gap:8px;"><span style="font-size:11px;font-weight:500;padding:2px 8px;border-radius:20px;background:#f1f5f9;color:#475569;white-space:nowrap;min-width:120px;text-align:center;flex-shrink:0;">PO Pending</span><span style="font-size:11px;color:var(--text-muted);line-height:1.4;">No PO raised yet for this item</span></div>
+                <div style="display:flex;align-items:flex-start;gap:8px;"><span style="font-size:11px;font-weight:500;padding:2px 8px;border-radius:20px;background:#e0e7ff;color:#3730a3;white-space:nowrap;min-width:120px;text-align:center;flex-shrink:0;">Partial PO Issued</span><span style="font-size:11px;color:var(--text-muted);line-height:1.4;">PO qty &lt; required qty; balance still open</span></div>
+                <div style="display:flex;align-items:flex-start;gap:8px;"><span style="font-size:11px;font-weight:500;padding:2px 8px;border-radius:20px;background:#ede9fe;color:#4c1d95;white-space:nowrap;min-width:120px;text-align:center;flex-shrink:0;">PO Issued</span><span style="font-size:11px;color:var(--text-muted);line-height:1.4;">Full qty covered by PO(s); awaiting GRN receipt</span></div>
+                <div style="display:flex;align-items:flex-start;gap:8px;"><span style="font-size:11px;font-weight:500;padding:2px 8px;border-radius:20px;background:#bbf7d0;color:#065f46;white-space:nowrap;min-width:120px;text-align:center;flex-shrink:0;">Partial Received</span><span style="font-size:11px;color:var(--text-muted);line-height:1.4;">GRN qty &lt; required qty; balance still pending</span></div>
+                <div style="display:flex;align-items:flex-start;gap:8px;"><span style="font-size:11px;font-weight:500;padding:2px 8px;border-radius:20px;background:#d1fae5;color:#065f46;white-space:nowrap;min-width:120px;text-align:center;flex-shrink:0;">Received</span><span style="font-size:11px;color:var(--text-muted);line-height:1.4;">GRN qty &ge; required qty; fully received at site</span></div>
+                <div style="display:flex;align-items:flex-start;gap:8px;"><span style="font-size:11px;font-weight:500;padding:2px 8px;border-radius:20px;background:#a7f3d0;color:#065f46;white-space:nowrap;min-width:120px;text-align:center;flex-shrink:0;">Closed</span><span style="font-size:11px;color:var(--text-muted);line-height:1.4;">Fully received and MIR closed</span></div>
               </div>
-              <div style="margin-top:10px;padding:8px 10px;background:#fef9c3;border-radius:6px;border:1px solid #fde68a;">
-                <div style="font-size:10px;font-weight:700;color:#92400e;margin-bottom:3px;">⚠ SC QTY AVAILABLE</div>
-                <div style="font-size:11px;color:var(--text-muted);line-height:1.4;">Shown on MIR list when any item has qty released back from a Short-Closed PO — available for re-procurement</div>
+
+              <div style="margin-top:10px;padding:8px 10px;background:#f0fdf4;border-radius:6px;border:1px solid #bbf7d0;">
+                <div style="font-size:10px;font-weight:700;color:#15803d;margin-bottom:3px;">Qty Available</div>
+                <div style="font-size:11px;color:var(--text-muted);line-height:1.4;">Shown when any item has uncovered balance qty — procurement action still needed</div>
               </div>
             </div>
           </div>
@@ -2264,7 +2263,7 @@ input[type="number"] {
           <thead>
             <tr>
               <th>MIR Number</th><th>Date</th><th>Required By</th><th>Purpose</th>
-              <th>Location</th><th>Raised By</th><th>Status</th><th>Actions</th>
+              <th>PO Numbers</th><th>Raised By</th><th>Status</th><th>Actions</th>
             </tr>
             <!-- Column filter row -->
             <tr id="mirColFilterRow" style="background:var(--input-bg);">
@@ -2277,20 +2276,20 @@ input[type="number"] {
                 </div>
               </td>
               <td style="padding:4px 6px;"><input id="mirF_purpose" placeholder="Filter…" oninput="renderMIRList()" style="width:100%;padding:4px 6px;font-size:11px;background:var(--bg);color:var(--text);border:1px solid var(--border);border-radius:4px;"></td>
-              <td style="padding:4px 6px;"><input id="mirF_location" placeholder="Filter…" oninput="renderMIRList()" style="width:100%;padding:4px 6px;font-size:11px;background:var(--bg);color:var(--text);border:1px solid var(--border);border-radius:4px;"></td>
+              <td style="padding:4px 6px;"><input id="mirF_po" placeholder="Filter by PO…" oninput="renderMIRList()" style="width:100%;padding:4px 6px;font-size:11px;background:var(--bg);color:var(--text);border:1px solid var(--border);border-radius:4px;"></td>
               <td style="padding:4px 6px;"><input id="mirF_raisedBy" placeholder="Filter…" oninput="renderMIRList()" style="width:100%;padding:4px 6px;font-size:11px;background:var(--bg);color:var(--text);border:1px solid var(--border);border-radius:4px;"></td>
               <td style="padding:4px 6px;">
                 <select id="mirF_status" onchange="renderMIRList()" style="width:100%;padding:4px 5px;font-size:11px;background:var(--bg);color:var(--text);border:1px solid var(--border);border-radius:4px;">
                   <option value="">All</option>
                   <option value="Pending Approval">Pending Approval</option>
-                  <option value="Approved">Approved</option>
                   <option value="Rejected">Rejected</option>
-                  <option value="Partial RFQ">Partial RFQ</option>
-                  <option value="RFQ Raised">RFQ Raised</option>
+                  <option value="PO Pending">PO Pending</option>
                   <option value="Partial PO">Partial PO</option>
                   <option value="PO Issued">PO Issued</option>
+                  <option value="Partial Received">Partial Received</option>
                   <option value="Closed">Closed</option>
                   <option value="Cancelled">Cancelled</option>
+                  <option value="__qty_available__">Qty Available only</option>
                 </select>
               </td>
               <td style="padding:4px 6px;text-align:center;">
@@ -3061,7 +3060,7 @@ input[type="number"] {
               <td style="padding:4px 6px;"><input id="misF_issuedTo" placeholder="Filter&#8230;" oninput="renderMISList()" style="width:100%;padding:4px 6px;font-size:11px;background:var(--bg);color:var(--text);border:1px solid var(--border);border-radius:4px;"></td>
               <td style="padding:4px 6px;"><input id="misF_issuedBy" placeholder="Filter&#8230;" oninput="renderMISList()" style="width:100%;padding:4px 6px;font-size:11px;background:var(--bg);color:var(--text);border:1px solid var(--border);border-radius:4px;"></td>
               <td style="padding:4px 6px;"></td>
-              <td style="padding:4px 6px;"><select id="misF_status" onchange="renderMISList()" style="width:100%;padding:4px 5px;font-size:11px;background:var(--bg);color:var(--text);border:1px solid var(--border);border-radius:4px;"><option value="">All</option><option>Pending Approval</option><option>Approved</option><option>Rejected</option></select></td>
+              <td style="padding:4px 6px;"><select id="misF_status" onchange="renderMISList()" style="width:100%;padding:4px 5px;font-size:11px;background:var(--bg);color:var(--text);border:1px solid var(--border);border-radius:4px;"><option value="">All</option><option>Pending Approval</option><option value="Rejected - Correction">Needs Correction</option><option>Approved</option><option>Rejected</option></select></td>
               <td style="padding:4px 6px;text-align:center;"><button onclick="clearColFilters('misF_number','misF_issuedTo','misF_issuedBy','misF_dateFrom','misF_dateTo','misF_status','renderMISList')" title="Clear" style="font-size:10px;padding:3px 8px;background:var(--input-bg);color:var(--text-muted);border:1px solid var(--border);border-radius:4px;cursor:pointer;">&#10005; Clear</button></td>
             </tr>
           </thead>
@@ -11929,7 +11928,7 @@ function renderMaterialTree() {
 
   const mats = (puState.materials||[]).filter(m => m.material_group && m.sub_head);
 
-  if (!mats.length && !canAdd) {
+  if (!mats.length && !canAdd && !_chData.some(r => r.cost_subhead)) {
     wrap.innerHTML = '<div class="center muted" style="padding:24px;">No materials defined.</div>';
     return;
   }
@@ -11937,11 +11936,21 @@ function renderMaterialTree() {
   const q = _mmSearchTerm;
   const searching = q.length > 0;
 
-  // Build tree: group → sub-head → [materials]
-  const tree = {};
+  // Build tree scaffold from BOTH _chData (group+subhead definitions) AND existing materials.
+  // This ensures newly created groups/subheads show up even before any material is added.
+  const tree = {};  // tree[group][subhead] = [materials...]
+
+  // Seed from _chData first so empty groups/subheads are visible
+  (_chData||[]).forEach(r => {
+    if (!r.costhead) return;
+    const g = r.costhead, s = r.cost_subhead;
+    if (!tree[g]) tree[g] = {};
+    if (s && !tree[g][s]) tree[g][s] = [];
+  });
+
+  // Overlay materials
   mats.forEach(m => {
-    const g = m.material_group;
-    const s = m.sub_head;
+    const g = m.material_group, s = m.sub_head;
     if (!tree[g]) tree[g] = {};
     if (!tree[g][s]) tree[g][s] = [];
     tree[g][s].push(m);
@@ -11971,7 +11980,8 @@ function renderMaterialTree() {
           )
         : items;
 
-      if (!filtered.length) return;
+      // Show empty subheads for users who can add — they need the + Material button
+      if (!filtered.length && (!canAdd || searching)) return;
       grpMatchCount += filtered.length;
 
       const subArrow = searching ? '▾' : '▸';
@@ -12008,6 +12018,8 @@ function renderMaterialTree() {
     });
 
     if (!grpMatchCount && searching) return;
+    // Always show groups that have subheads defined, even if no materials yet
+    if (!grpMatchCount && !canAdd && !Object.keys(tree[grp]).length) return;
     anyGroupShown = true;
 
     const totalMats = Object.values(tree[grp]).reduce((s,a)=>s+a.length,0);
@@ -12067,15 +12079,17 @@ async function mmSaveNewGroup() {
   const inp = document.getElementById('mm_newgrp_input');
   const val = (inp?.value||'').trim();
   if (!val) { toast('Enter a group name','error'); return; }
-  const exists = (puState.materials||[]).some(m => (m.material_group||'').toLowerCase()===val.toLowerCase());
-  if (exists) { toast('Group already exists','error'); return; }
-  const alreadyInCH = _chData.some(r => r.costhead.toLowerCase()===val.toLowerCase());
-  if (!alreadyInCH) {
-    await sb.from('pu_cost_heads').insert({ costhead: val, cost_subhead: null, is_active: true, created_by: state.userId, created_at: new Date().toISOString() });
-    await apiLoadCostHeads();
-  }
-  toast('Material Group "'+val+'" ready — add a Sub-head to start adding materials','success');
+  const existsInMats = (puState.materials||[]).some(m => (m.material_group||'').toLowerCase()===val.toLowerCase());
+  const existsInCH   = _chData.some(r => !r.cost_subhead && r.costhead.toLowerCase()===val.toLowerCase());
+  if (existsInMats || existsInCH) { toast('Group already exists','error'); return; }
+  pbShow('Saving…');
+  const { error } = await sb.from('pu_cost_heads').insert({ costhead: val, cost_subhead: null, is_active: true, created_by: state.userId, created_at: new Date().toISOString() });
+  pbDone();
+  if (error) { toast('Error: '+error.message,'error'); return; }
+  await apiLoadCostHeads();
   document.getElementById('mm_newgrp_wrap')?.remove();
+  renderMaterialTree();
+  toast('Material Group "'+val+'" created — click + Sub-head to continue','success');
 }
 
 function mmAddSub(grp, grpId) {
@@ -12109,8 +12123,9 @@ async function mmSaveNewSub(inp, grp) {
     if (error) { toast('Error: '+error.message,'error'); return; }
     await apiLoadCostHeads();
   }
-  toast('Sub-head "'+val+'" added — click + Material to add entries','success');
   inp.closest?.('.tree-inline-wrap')?.remove();
+  renderMaterialTree();
+  toast('Sub-head "'+val+'" created — click + Material to add entries','success');
 }
 
 function mmAddMaterial(grp, sub, subId) {
@@ -13136,20 +13151,92 @@ function selectMaterialItem(inputId, resultsId, name, uom, matCode) {
 let _mirItemC = 0;
 
 async function loadMIRList() {
+  // v73: fetch mir_items with procurement_line_id + lock state,
+  // then join po_items (with short_closed_qty) + grn_items for live quantities
   const [mirRes, itemsRes] = await Promise.all([
     sb.from('pu_mir').select('*').order('created_at', { ascending: false }),
     sb.from('pu_mir_items').select(
-      'mir_number,sno,material_name,uom,qty_required,qty_rfq,qty_covered,qty_received,qty_short_closed,item_status,rfq_number,po_number,specification'
+      'mir_number,sno,material_name,uom,qty_required,rfq_number,po_number,specification,procurement_line_id,is_locked,locked_qty,locked_by,locked_at'
     ).order('sno')
   ]);
   puState.mirList = mirRes.data || [];
-  puState.mirItemsMap = {};
-  puState.mirSCSet = new Set();
+  puState.mirItemsMap    = {};
+  puState.mirSCSet       = new Set();
+  puState.mirItemStatusSummary = {};
+  puState.mirBalanceSet  = new Set();
+  puState.mirPOMap       = {};
+
+  const allPlIds = (itemsRes.data||[])
+    .map(it => it.procurement_line_id).filter(Boolean);
+
+  // Keyed by procurement_line_id
+  const poQtyMap  = {};  // -> raw SUM(qty)
+  const scQtyMap  = {};  // -> SUM(short_closed_qty)
+  const grnQtyMap = {};  // -> SUM(this_grn_qty) verified only
+
+  if (allPlIds.length) {
+    const [poItemsRes, grnItemsRes, grnHdrRes] = await Promise.all([
+      sb.from('pu_po_items')
+        .select('procurement_line_id,qty,short_closed_qty')
+        .in('procurement_line_id', allPlIds),
+      sb.from('pu_grn_items')
+        .select('procurement_line_id,this_grn_qty,grn_number')
+        .in('procurement_line_id', allPlIds),
+      sb.from('pu_grn')
+        .select('grn_number,status')
+        .in('status', ['Verified','Partially Billed','Billed']),
+    ]);
+    const validGRNs = new Set((grnHdrRes.data||[]).map(g => g.grn_number));
+    (poItemsRes.data||[]).forEach(r => {
+      if (!r.procurement_line_id) return;
+      poQtyMap[r.procurement_line_id] = (poQtyMap[r.procurement_line_id]||0) + (r.qty||0);
+      scQtyMap[r.procurement_line_id] = (scQtyMap[r.procurement_line_id]||0) + (r.short_closed_qty||0);
+    });
+    (grnItemsRes.data||[]).forEach(r => {
+      if (r.procurement_line_id && validGRNs.has(r.grn_number))
+        grnQtyMap[r.procurement_line_id] = (grnQtyMap[r.procurement_line_id]||0) + (r.this_grn_qty||0);
+    });
+  }
+
   (itemsRes.data || []).forEach(it => {
+    const plid          = it.procurement_line_id;
+    const poQty         = plid ? (poQtyMap[plid]||0) : 0;
+    const scQty         = plid ? (scQtyMap[plid]||0) : 0;
+    const effPoQty      = Math.max(0, poQty - scQty);   // active PO coverage
+    const grnQty        = plid ? (grnQtyMap[plid]||0) : 0;
+    const qtyReq        = it.qty_required||0;
+
+    it._poQty    = poQty;
+    it._scQty    = scQty;
+    it._effPoQty = effPoQty;
+    it._grnQty   = grnQty;
+    it._ist      = _computeItemStatusV73(qtyReq, effPoQty, grnQty);
+
     if (!puState.mirItemsMap[it.mir_number]) puState.mirItemsMap[it.mir_number] = [];
     puState.mirItemsMap[it.mir_number].push(it);
-    if ((it.qty_short_closed||0) > 0) puState.mirSCSet.add(it.mir_number);
+
+    if (!puState.mirItemStatusSummary[it.mir_number]) puState.mirItemStatusSummary[it.mir_number] = {};
+    puState.mirItemStatusSummary[it.mir_number][it._ist] =
+      (puState.mirItemStatusSummary[it.mir_number][it._ist]||0) + 1;
+
+    // Qty Available: line has uncovered balance AND is not locked
+    // (effective PO < qty_required means balance exists and no active PO covers it)
+    if (effPoQty < qtyReq && !it.is_locked)
+      puState.mirBalanceSet.add(it.mir_number);
+
+    if (it.po_number) {
+      if (!puState.mirPOMap[it.mir_number]) puState.mirPOMap[it.mir_number] = new Set();
+      puState.mirPOMap[it.mir_number].add(it.po_number);
+    }
   });
+
+  // Compute live header status for each MIR and write to puState.mirList
+  puState.mirList.forEach(m => {
+    const items = puState.mirItemsMap[m.mir_number] || [];
+    if (['Pending Approval','Rejected'].includes(m.status)) return; // preserve only pre-approval states
+    m._liveStatus = _rollupMIRHeaderV73(items);
+  });
+
   renderMIRList();
 }
 
@@ -13183,7 +13270,7 @@ function toggleMIRLegend() {
 }
 
 function clearMIRColFilters() {
-  ['mirF_number','mirF_purpose','mirF_location','mirF_raisedBy','mirF_dateFrom','mirF_dateTo'].forEach(id => {
+  ['mirF_number','mirF_purpose','mirF_po','mirF_raisedBy','mirF_dateFrom','mirF_dateTo'].forEach(id => {
     const el = document.getElementById(id); if (el) el.value = '';
   });
   const sel = document.getElementById('mirF_status'); if (sel) sel.value = '';
@@ -13193,7 +13280,7 @@ function clearMIRColFilters() {
 function renderMIRList() {
   const fNum    = gvl('mirF_number');
   const fPurp   = gvl('mirF_purpose');
-  const fLoc    = gvl('mirF_location');
+  const fPO     = gvl('mirF_po');
   const fRaised = gvl('mirF_raisedBy');
   const fStCol  = gv('mirF_status');
   const fDateFrom = gv('mirF_dateFrom');
@@ -13201,30 +13288,70 @@ function renderMIRList() {
   let rows = puState.mirList;
   if (fNum)     rows = rows.filter(m => (m.mir_number||'').toLowerCase().includes(fNum));
   if (fPurp)    rows = rows.filter(m => (m.purpose||'').toLowerCase().includes(fPurp));
-  if (fLoc)     rows = rows.filter(m => (m.location_name||'').toLowerCase().includes(fLoc));
+  if (fPO)      rows = rows.filter(m => {
+    const pos = puState.mirPOMap?.[m.mir_number];
+    return pos && [...pos].some(p => p.toLowerCase().includes(fPO));
+  });
   if (fRaised)  rows = rows.filter(m => (m.raised_by||'').toLowerCase().includes(fRaised));
-  if (fStCol)   rows = rows.filter(m => (m.status||'Pending Approval') === fStCol);
+  // v73: filter and sort use the same live status logic as display
+  // _mirLiveSt: Pending Approval and Rejected use DB value; all others use _liveStatus
+  const _mirLiveSt = m => (['Pending Approval','Rejected'].includes(m.status||''))
+    ? (m.status||'Pending Approval')
+    : (m._liveStatus || 'PO Pending');
+
+  if (fStCol === '__qty_available__') {
+    rows = rows.filter(m => puState.mirBalanceSet?.has(m.mir_number));
+  } else if (fStCol) {
+    rows = rows.filter(m => _mirLiveSt(m) === fStCol);
+  }
   if (fDateFrom) rows = rows.filter(m => m.mir_date && m.mir_date >= fDateFrom);
   if (fDateTo)   rows = rows.filter(m => m.mir_date && m.mir_date <= fDateTo);
+  rows = _applyTableSort('mir_listBody', rows, [
+    m=>m.mir_number||'', m=>m.mir_date||'', m=>m.required_by_date||'',
+    m=>m.purpose||'',
+    m=>[...(puState.mirPOMap?.[m.mir_number]||[])].join(','),
+    m=>m.raised_by||'', m=>_mirLiveSt(m),
+  ]);
   const perms = mergedPerms();
+  // v73 status display — item pills use new status set (no RFQ statuses)
+  const _istMeta = [
+    { key:'PO Pending',        bg:'#f1f5f9', col:'#64748b' },
+    { key:'Partial PO Issued', bg:'#eff6ff', col:'#1d4ed8' },
+    { key:'PO Issued',         bg:'#ede9fe', col:'#7c3aed' },
+    { key:'Partial Received',  bg:'#dcfce7', col:'#15803d' },
+    { key:'Received',          bg:'#d1fae5', col:'#065f46' },
+    { key:'Closed',            bg:'#d1fae5', col:'#065f46' },
+  ];
   document.getElementById('mir_listBody').innerHTML = rows.map(m => {
-    const st = m.status||'Pending Approval';
+    const st = _mirLiveSt(m);  // v73: uses shared helper defined above
     const stCls = st.toLowerCase().replace(/[\s/()]+/g,'-');
-    const hasSC = puState.mirSCSet?.has(m.mir_number);
+    const summary = puState.mirItemStatusSummary?.[m.mir_number] || {};
+    const hasBalance = puState.mirBalanceSet?.has(m.mir_number);
+    // PO numbers for this MIR
+    const poNums = puState.mirPOMap?.[m.mir_number] ? [...puState.mirPOMap[m.mir_number]] : [];
+    const poCell = poNums.length
+      ? poNums.map(p => `<span class="mono" style="display:inline-block;font-size:10px;color:#7c3aed;background:#f5f3ff;padding:1px 5px;border-radius:4px;margin:1px 2px 1px 0;">${esc(p)}</span>`).join('')
+      : '<span style="color:var(--muted);">—</span>';
+    // Build item count summary pills — only show statuses that have ≥1 item
+    const summaryPills = _istMeta
+      .filter(s => summary[s.key] > 0)
+      .map(s => `<span style="display:inline-block;padding:1px 6px;background:${s.bg};color:${s.col};border-radius:8px;font-size:10px;font-weight:600;white-space:nowrap;">${s.key}: ${summary[s.key]}</span>`)
+      .join(' ');
     let acts = `<button class="btn btn-ghost btn-sm" onclick="viewMIR('${esc(m.mir_number)}')">View</button>`;
     if (perms.canApproveMIR && st==='Pending Approval') {
       acts += ` <button class="btn btn-primary btn-sm" onclick="approveMIR('${esc(m.mir_number)}')">Approve</button>
                <button class="btn btn-danger btn-sm" onclick="rejectDoc('MIR','${esc(m.mir_number)}')">Reject</button>`;
     }
-    // Raise RFQ and Direct PO moved inside viewMIR popup
     return `<tr>
       <td class="mono">${esc(m.mir_number)}</td><td>${fmtDate(m.mir_date)}</td>
       <td>${m.required_by_date?fmtDate(m.required_by_date):'—'}</td>
-      <td>${esc(m.purpose||'—')}</td><td>${esc(m.location_name||'—')}</td>
+      <td>${esc(m.purpose||'—')}</td>
+      <td style="max-width:180px;">${poCell}</td>
       <td>${esc(m.raised_by||'—')}</td>
       <td>
         <span class="status ${stCls}">${st}</span>
-        ${hasSC?`<span style="display:inline-block;margin-top:3px;padding:1px 7px;background:#fef3c7;color:#92400e;border:1px solid #fde68a;border-radius:10px;font-size:10px;font-weight:700;">⚠ SC Qty Available</span>`:''}
+        ${summaryPills ? `<div style="margin-top:4px;display:flex;flex-wrap:wrap;gap:3px;">${summaryPills}</div>` : ''}
+        ${hasBalance ? `<span style="display:inline-block;margin-top:3px;padding:1px 7px;background:#f0fdf4;color:#15803d;border:1px solid #bbf7d0;border-radius:10px;font-size:10px;font-weight:700;">Qty Available</span>` : ''}
       </td>
       <td>${acts}</td></tr>`;
   }).join('')||'<tr><td colspan="8" class="center muted">No MIRs found.</td></tr>';
@@ -13304,8 +13431,13 @@ async function saveMIR() {
     });
     if (error) throw new Error(error.message);
     await sb.from('pu_mir_items').insert(items.map((it,idx)=>({
-      ...it, mir_number: mirNumber, item_status: 'Pending', rfq_number: null, po_number: null,
-
+      ...it,
+      mir_number:          mirNumber,
+      item_status:         'Pending',
+      rfq_number:          null,
+      po_number:           null,
+      procurement_line_id: crypto.randomUUID(),  // v73: origin UUID for this MIR line
+      procurement_source:  'mir',
     })));
     flashSuccess('MIR ' + mirNumber + ' submitted for PM approval');
     closeMIRForm(); loadMIRList();
@@ -13325,24 +13457,55 @@ async function approveMIR(mirNum) {
 
 async function viewMIR(mirNum) {
   pbShow('Loading…');
-  const [{data:h},{data:items},{data:rfqLinks},{data:poLinks}] = await Promise.all([
+  // v73: fetch items with procurement_line_id + lock state
+  const [{data:h},{data:items}] = await Promise.all([
     sb.from('pu_mir').select('*').eq('mir_number',mirNum).single(),
-    sb.from('pu_mir_items').select('*').eq('mir_number',mirNum).order('sno'),
-    sb.from('pu_mir_item_rfq_links').select('sno,rfq_number,qty_assigned').eq('mir_number',mirNum),
-    sb.from('pu_mir_item_po_links').select('sno,po_number,qty_linked,qty_received,qty_short_closed,is_short_closed').eq('mir_number',mirNum),
+    sb.from('pu_mir_items')
+      .select('sno,material_name,uom,qty_required,rfq_number,po_number,specification,procurement_line_id,is_locked,locked_qty,locked_by,locked_at')
+      .eq('mir_number',mirNum).order('sno'),
   ]);
   pbDone();
   if (!h) { toast('MIR not found','error'); return; }
 
-  const perms = mergedPerms();
-  const mirSt = h.status||'Pending Approval';
-  const canAct = perms.canCreateRFQ &&
-    ['Approved','Partial RFQ','RFQ Raised','Partial PO','PO Issued'].includes(mirSt);
+  const plids = (items||[]).map(it=>it.procurement_line_id).filter(Boolean);
+  const poQtyMap = {}, scQtyMap = {}, grnQtyMap = {}, poNumMap = {};
+
+  if (plids.length) {
+    const [poItemsRes, grnItemsRes, grnHdrRes] = await Promise.all([
+      sb.from('pu_po_items')
+        .select('procurement_line_id,qty,short_closed_qty,po_number')
+        .in('procurement_line_id', plids),
+      sb.from('pu_grn_items')
+        .select('procurement_line_id,this_grn_qty,grn_number')
+        .in('procurement_line_id', plids),
+      sb.from('pu_grn')
+        .select('grn_number,status')
+        .in('status',['Verified','Partially Billed','Billed']),
+    ]);
+    const validGRNs = new Set((grnHdrRes.data||[]).map(g=>g.grn_number));
+    (poItemsRes.data||[]).forEach(r => {
+      if (!r.procurement_line_id) return;
+      poQtyMap[r.procurement_line_id] = (poQtyMap[r.procurement_line_id]||0) + (r.qty||0);
+      scQtyMap[r.procurement_line_id] = (scQtyMap[r.procurement_line_id]||0) + (r.short_closed_qty||0);
+      if (r.po_number) {
+        if (!poNumMap[r.procurement_line_id]) poNumMap[r.procurement_line_id] = new Set();
+        poNumMap[r.procurement_line_id].add(r.po_number);
+      }
+    });
+    (grnItemsRes.data||[]).forEach(r => {
+      if (r.procurement_line_id && validGRNs.has(r.grn_number))
+        grnQtyMap[r.procurement_line_id] = (grnQtyMap[r.procurement_line_id]||0) + (r.this_grn_qty||0);
+    });
+  }
+
+  const perms   = mergedPerms();
+  const isAdmin = hasRole('Admin');
+  const mirSt   = h.status||'Pending Approval';
+  const canAct  = perms.canCreateRFQ &&
+    ['Approved','PO Pending','Partial PO','PO Issued','Partial Received','Partial PO Issued'].includes(mirSt);
 
   const statusColor = {
-    'Pending':           '#64748b',
-    'Partial RFQ':       '#b45309',
-    'RFQ Raised':        '#d97706',
+    'PO Pending':        '#64748b',
     'Partial PO Issued': '#1d4ed8',
     'PO Issued':         '#7c3aed',
     'Partial Received':  '#15803d',
@@ -13350,80 +13513,95 @@ async function viewMIR(mirNum) {
     'Closed':            '#16a34a',
   };
 
-  // Build per-sno link maps
-  const rfqLinksBySno = {};
-  (rfqLinks||[]).forEach(l => {
-    if (!rfqLinksBySno[l.sno]) rfqLinksBySno[l.sno] = [];
-    rfqLinksBySno[l.sno].push(l);
-  });
-  const poLinksBySno = {};
-  (poLinks||[]).forEach(l => {
-    if (!poLinksBySno[l.sno]) poLinksBySno[l.sno] = [];
-    poLinksBySno[l.sno].push(l);
-  });
+  const total = (items||[]).length;
+  let pendCount=0, poPartCount=0, poCount=0, recPartCount=0, recCount=0;
 
-  const total    = (items||[]).length;
-  const pending  = (items||[]).filter(it=>(it.item_status||'Pending')==='Pending').length;
-  const rfqCount = (items||[]).filter(it=>['RFQ Raised','Partial RFQ'].includes(it.item_status)).length;
-  const poCount  = (items||[]).filter(it=>['PO Issued','Partial PO Issued'].includes(it.item_status)).length;
-  const recCount = (items||[]).filter(it=>['Received','Partial Received'].includes(it.item_status)).length;
-  const hasSC    = (items||[]).some(it=>(it.qty_short_closed||0)>0);
+  // Qty Available: any unlocked line where effectivePoQty < qty_required
+  const hasBalance = (items||[]).some(it => {
+    const plid     = it.procurement_line_id;
+    const effPoQty = Math.max(0, (plid?(poQtyMap[plid]||0):0) - (plid?(scQtyMap[plid]||0):0));
+    return effPoQty < (it.qty_required||0) && !it.is_locked;
+  });
 
   const itemRows = (items||[]).map(it => {
-    const ist     = it.item_status||'Pending';
-    const sc      = statusColor[ist]||'#64748b';
-    const qtyReq  = it.qty_required||0;
-    const qtyCov  = it.qty_covered||0;
-    const qtyRfq  = it.qty_rfq||0;
-    const qtySC   = it.qty_short_closed||0;
-    const balance = Math.max(0, qtyReq - qtyCov);
-    const balStyle= balance===0 ? 'color:#15803d;font-weight:600;' : balance<qtyReq ? 'color:#b45309;font-weight:600;' : 'color:#64748b;';
+    const plid      = it.procurement_line_id;
+    const poQty     = plid ? (poQtyMap[plid]||0)  : 0;
+    const scQty     = plid ? (scQtyMap[plid]||0)  : 0;
+    const effPoQty  = Math.max(0, poQty - scQty);
+    const grnQty    = plid ? (grnQtyMap[plid]||0) : 0;
+    const qtyReq    = it.qty_required||0;
+    const ist       = _computeItemStatusV73(qtyReq, effPoQty, grnQty);
+    const stCol     = statusColor[ist]||'#64748b';
 
-    const isActionable = balance > 0 && !['Received','Closed'].includes(ist);
+    // Tally summary badges
+    if      (ist==='PO Pending')                    pendCount++;
+    else if (ist==='Partial PO Issued')             poPartCount++;
+    else if (ist==='PO Issued')                     poCount++;
+    else if (ist==='Partial Received')              recPartCount++;
+    else if (['Received','Closed'].includes(ist))   recCount++;
+
+    // Balance = qty_required - effectivePoQty (uncovered by any active PO)
+    const balance  = Math.max(0, qtyReq - effPoQty);
+    const balStyle = balance===0
+      ? 'color:#15803d;font-weight:600;'
+      : effPoQty>0 ? 'color:#b45309;font-weight:600;' : 'color:#64748b;';
+
+    // Locked line: checkbox disabled, show lock pill + audit info
+    const locked   = !!it.is_locked;
+    const lockInfo = locked
+      ? `<span style="margin-left:5px;padding:1px 7px;background:#fef3c7;color:#92400e;border:1px solid #fcd34d;border-radius:10px;font-size:10px;font-weight:700;">
+           🔒 Locked${it.locked_qty!=null?' ('+fmtINR(it.locked_qty)+' '+esc(it.uom)+')':''}</span>
+         <div style="font-size:9px;color:var(--muted);margin-top:2px;">${it.locked_by?'by '+esc(it.locked_by):''} ${it.locked_at?'on '+fmtDate(it.locked_at):''}</div>`
+      : '';
+
+    // Lock / Unlock button — Admin only, visible when MIR is active
+    const lockable   = !locked && effPoQty < qtyReq && !['Received','Closed'].includes(ist);
+    const unlockable = locked;
+    const lockBtn    = isAdmin && lockable
+      ? `<button class="btn btn-warn btn-sm" style="padding:2px 7px;font-size:10px;"
+           onclick="lockMIRItem('${esc(mirNum)}',${it.sno},${balance},'${esc(it.material_name)}')">🔒 Lock</button>`
+      : '';
+    const unlockBtn  = isAdmin && unlockable
+      ? `<button class="btn btn-ghost btn-sm" style="padding:2px 7px;font-size:10px;"
+           onclick="unlockMIRItem('${esc(mirNum)}',${it.sno},'${esc(it.material_name)}')">🔓 Unlock</button>`
+      : '';
+
+    // Checkbox: disabled if locked OR not actionable
+    const isActionable = !locked && balance > 0 && !['Received','Closed'].includes(ist);
     const chkCell = canAct && isActionable
       ? `<td style="width:32px;"><input type="checkbox" class="mir_item_chk"
            value="${it.sno}"
            data-mat="${esc(it.material_name)}"
            data-uom="${esc(it.uom)}"
            data-qty-required="${qtyReq}"
-           data-qty-rfq="${qtyRfq}"
-           data-qty-covered="${qtyCov}"
+           data-qty-rfq="0"
+           data-qty-covered="${effPoQty}"
            data-spec="${esc(it.specification||'')}"
            style="width:16px;height:16px;cursor:pointer;" checked></td>`
-      : `<td style="width:32px;"></td>`;
+      : `<td style="width:32px;">${locked?'<span title="Locked" style="color:#92400e;font-size:14px;">🔒</span>':''}</td>`;
 
-    const rfqRefs = (rfqLinksBySno[it.sno]||[]);
-    const rfqCell = rfqRefs.length
-      ? rfqRefs.map(l=>`<div><span class="mono" style="color:#d97706;">${esc(l.rfq_number)}</span><span style="color:var(--muted);font-size:10px;"> (${fmtINR(l.qty_assigned)})</span></div>`).join('')
-      : (it.rfq_number?`<span class="mono" style="color:#d97706;">${esc(it.rfq_number)}</span>`:'—');
+    const poNums = plid ? [...(poNumMap[plid]||new Set())] : (it.po_number ? [it.po_number] : []);
+    const poCell = poNums.length
+      ? poNums.map(p=>`<span class="mono" style="color:#7c3aed;font-size:11px;">${esc(p)}</span>`).join('<br>')
+      : '—';
 
-    const poRefs = (poLinksBySno[it.sno]||[]);
-    const poCell = poRefs.length
-      ? poRefs.map(l=>{
-          const scTag = l.is_short_closed
-            ? `<span style="margin-left:4px;padding:1px 5px;background:#fef3c7;color:#92400e;border-radius:3px;font-size:10px;font-weight:700;">SC:${fmtINR(l.qty_short_closed)}</span>` : '';
-          const recTag = (l.qty_received||0)>0
-            ? `<span style="margin-left:4px;font-size:10px;color:#15803d;">✓${fmtINR(l.qty_received)}</span>` : '';
-          return `<div><span class="mono" style="color:#7c3aed;">${esc(l.po_number)}</span><span style="color:var(--muted);font-size:10px;"> (${fmtINR(l.qty_linked)})</span>${recTag}${scTag}</div>`;
-        }).join('')
-      : (it.po_number?`<span class="mono" style="color:#7c3aed;">${esc(it.po_number)}</span>`:'—');
-
-    const scNote = qtySC > 0
-      ? `<div style="font-size:10px;margin-top:3px;padding:2px 6px;background:#fef3c7;border-radius:3px;color:#92400e;font-weight:600;">
-           ⚠ ${fmtINR(qtySC)} ${esc(it.uom)} short-closed — available for re-procurement</div>` : '';
-
-    return `<tr>
+    return `<tr style="${locked?'background:#fffbeb;':''}" >
       ${chkCell}
       <td>${it.sno}</td>
-      <td>${esc(it.material_name)}${scNote}</td>
+      <td>${esc(it.material_name)}</td>
       <td>${esc(it.uom)}</td>
       <td class="num">${fmtINR(qtyReq)}</td>
-      <td class="num" style="color:#7c3aed;">${fmtINR(qtyCov)}</td>
+      <td class="num" style="color:#7c3aed;">${fmtINR(poQty)}</td>
+      <td class="num" style="color:#dc2626;">${scQty>0?fmtINR(scQty):'—'}</td>
+      <td class="num" style="color:#0369a1;">${fmtINR(grnQty)}</td>
       <td class="num" style="${balStyle}">${balance===0?'✓ Full':fmtINR(balance)}</td>
       <td style="font-size:11px;">${esc(it.specification||'—')}</td>
-      <td><span style="padding:2px 8px;border-radius:10px;font-size:11px;font-weight:600;
-           background:${sc}20;color:${sc};border:1px solid ${sc}40;">${ist}</span></td>
-      <td style="font-size:11px;">${rfqCell}</td>
+      <td>
+        <span style="padding:2px 8px;border-radius:10px;font-size:11px;font-weight:600;
+             background:${stCol}20;color:${stCol};border:1px solid ${stCol}40;">${ist}</span>
+        ${lockInfo}
+        <div style="margin-top:3px;">${lockBtn}${unlockBtn}</div>
+      </td>
       <td style="font-size:11px;">${poCell}</td>
     </tr>`;
   }).join('');
@@ -13433,8 +13611,17 @@ async function viewMIR(mirNum) {
       <td><input type="checkbox" id="mir_selectAll" checked
         onchange="document.querySelectorAll('.mir_item_chk').forEach(c=>c.checked=this.checked)"
         style="width:16px;height:16px;cursor:pointer;"></td>
-      <td colspan="9" style="font-size:11px;color:var(--muted);padding:6px 8px;">Select / Deselect All Actionable Items</td>
+      <td colspan="10" style="font-size:11px;color:var(--muted);padding:6px 8px;">Select / Deselect All Actionable Items</td>
     </tr>` : '';
+
+  // Live header status
+  const liveHdrStatus = (['Pending Approval','Rejected'].includes(mirSt))
+    ? mirSt
+    : _rollupMIRHeaderV73((items||[]).map(it => {
+        const plid     = it.procurement_line_id;
+        const effPoQty = Math.max(0, (plid?(poQtyMap[plid]||0):0) - (plid?(scQtyMap[plid]||0):0));
+        return { _ist: _computeItemStatusV73(it.qty_required||0, effPoQty, plid?(grnQtyMap[plid]||0):0) };
+      }));
 
   const actionBtns = canAct ? `
     <div style="margin-top:12px;padding:10px 14px;background:#f0f5fb;border-radius:6px;
@@ -13446,35 +13633,36 @@ async function viewMIR(mirNum) {
 
   openModal(`
     <h3 style="margin-bottom:4px;">MIR — ${esc(h.mir_number)}
-      <span class="status ${mirSt.toLowerCase().replace(/[\s/()]+/g,'-')}" style="margin-left:8px;font-size:12px;">${mirSt}</span>
-      ${hasSC?`<span style="margin-left:6px;padding:2px 8px;background:#fef3c7;color:#92400e;border:1px solid #fde68a;border-radius:10px;font-size:11px;font-weight:700;">⚠ SC Qty Available</span>`:''}
+      <span class="status ${liveHdrStatus.toLowerCase().replace(/[\s/()]+/g,'-')}" style="margin-left:8px;font-size:12px;">${liveHdrStatus}</span>
+      ${hasBalance?'<span style="margin-left:6px;padding:2px 8px;background:#f0fdf4;color:#15803d;border:1px solid #bbf7d0;border-radius:10px;font-size:11px;font-weight:700;">Qty Available</span>':''}
     </h3>
     <div style="font-size:11px;color:var(--muted);margin-bottom:10px;">
       ${fmtDate(h.mir_date)}${h.purpose?' &nbsp;|&nbsp; '+esc(h.purpose):''}
-      &nbsp;|&nbsp; Raised by: <strong>${esc(h.raised_by||'—')}</strong>
+      &nbsp;|&nbsp; Raised by: <strong>${esc(h.raised_by||'\u2014')}</strong>
       ${h.location_name?' &nbsp;|&nbsp; '+esc(h.location_name):''}
     </div>
     <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;">
       <div style="padding:4px 10px;border-radius:6px;background:#f1f5f9;font-size:11px;">Total: <strong>${total}</strong></div>
-      <div style="padding:4px 10px;border-radius:6px;background:#f3f4f6;font-size:11px;color:#64748b;">Pending: <strong>${pending}</strong></div>
-      <div style="padding:4px 10px;border-radius:6px;background:#fff7ed;font-size:11px;color:#d97706;">RFQ: <strong>${rfqCount}</strong></div>
-      <div style="padding:4px 10px;border-radius:6px;background:#ede9fe;font-size:11px;color:#7c3aed;">PO Issued: <strong>${poCount}</strong></div>
-      <div style="padding:4px 10px;border-radius:6px;background:#dcfce7;font-size:11px;color:#15803d;">Received: <strong>${recCount}</strong></div>
+      ${pendCount>0?'<div style="padding:4px 10px;border-radius:6px;background:#f3f4f6;font-size:11px;color:#64748b;">PO Pending: <strong>'+pendCount+'</strong></div>':''}
+      ${(poPartCount+poCount)>0?'<div style="padding:4px 10px;border-radius:6px;background:#ede9fe;font-size:11px;color:#7c3aed;">PO Issued: <strong>'+(poPartCount+poCount)+'</strong></div>':''}
+      ${(recPartCount+recCount)>0?'<div style="padding:4px 10px;border-radius:6px;background:#dcfce7;font-size:11px;color:#15803d;">Received: <strong>'+(recPartCount+recCount)+'</strong></div>':''}
     </div>
     <div class="table-wrap"><table>
       <thead><tr>
         <th style="width:32px;"></th>
         <th>#</th><th>Material</th><th>UOM</th>
         <th class="num">Req Qty</th>
-        <th class="num" style="color:#7c3aed;">Covered</th>
+        <th class="num" style="color:#7c3aed;">PO Issued Qty</th>
+        <th class="num" style="color:#dc2626;">SC Qty</th>
+        <th class="num" style="color:#0369a1;">GRN Qty</th>
         <th class="num">Balance</th>
-        <th>Spec</th><th>Status</th><th>RFQ Ref</th><th>PO Ref</th>
+        <th>Spec</th><th>Status / Lock</th><th>PO Ref</th>
       </tr>
       ${selectAllRow}
       </thead>
       <tbody>${itemRows}</tbody>
     </table></div>
-    ${h.remarks?`<div style="margin-top:8px;font-size:11px;color:var(--muted);">Remarks: ${esc(h.remarks)}</div>`:''}
+    ${h.remarks?'<div style="margin-top:8px;font-size:11px;color:var(--muted);">Remarks: '+esc(h.remarks)+'</div>':''}
     ${actionBtns}
     <div class="actions-row" style="margin-top:14px;">
       <button class="btn btn-ghost" onclick="closeModal()">Close</button>
@@ -13559,7 +13747,7 @@ function _mirQtyConfirmProceed() {
 let _mirSelectedItems = [];
 let _mirSelectedMirNum = '';
 
-// ── MIR Item Status Engine ────────────────────────────────────────────────
+// ── MIR Item Status Engine (legacy — kept for backward compat) ───────────
 function _computeItemStatus(qtyRequired, qtyRfq, qtyCovered, qtyReceived) {
   const req = qtyRequired||0, rfq = qtyRfq||0, cov = qtyCovered||0, rec = qtyReceived||0;
   if (req <= 0) return 'Pending';
@@ -13572,48 +13760,235 @@ function _computeItemStatus(qtyRequired, qtyRfq, qtyCovered, qtyReceived) {
   return 'Pending';
 }
 
+// ── v73: Line item status — driven by procurement_line_id aggregates ──────
+// poQty  = SUM(qty) from pu_po_items for this procurement_line_id
+// grnQty = SUM(this_grn_qty) from verified pu_grn_items for this procurement_line_id
+// v73: effectivePoQty = po_qty - short_closed_qty
+// Status is based on what is actively covered (not short-closed)
+function _computeItemStatusV73(qtyRequired, effectivePoQty, grnQty) {
+  const req = qtyRequired||0, po = effectivePoQty||0, grn = grnQty||0;
+  if (req <= 0)    return 'Pending';
+  if (grn >= req)  return 'Received';
+  if (grn > 0)     return 'Partial Received';
+  if (po  >= req)  return 'PO Issued';
+  if (po  > 0)     return 'Partial PO Issued';
+  return 'PO Pending';
+}
+
+// ── v73: Header status rollup from live item statuses ────────────────────
+// Header statuses (post-approval):
+//   All Received/Closed          → Closed
+//   Any Received/Partial Received → Partial Received
+//   All PO Issued or better      → PO Issued
+//   Any PO Issued/Partial PO     → Partial PO
+//   All PO Pending               → PO Pending   (your request: was 'Approved')
+function _rollupMIRHeaderV73(items) {
+  if (!items || !items.length) return 'PO Pending';
+  const ss = items.map(it => it._ist || 'PO Pending');
+  if (ss.every(s => ['Received','Closed'].includes(s)))
+    return 'Closed';
+  if (ss.some(s  => ['Received','Partial Received'].includes(s)))
+    return 'Partial Received';
+  if (ss.every(s => ['PO Issued','Received','Closed'].includes(s)))
+    return 'PO Issued';
+  if (ss.some(s  => ['PO Issued','Partial PO Issued'].includes(s)))
+    return 'Partial PO';
+  if (ss.every(s => s === 'PO Pending'))
+    return 'PO Pending';
+  return 'Partial PO';
+}
+
+// ── v73: MIR Line Item Lock / Unlock (Admin only) ────────────────────────
+// lockQty = balance at time of locking (qty_required - effectivePoQty)
+// Lock is a snapshot — does not auto-update if PO SC happens later.
+// Admin must manually unlock to re-open procurement for that line.
+async function lockMIRItem(mirNum, sno, lockQty, matName) {
+  if (!hasRole('Admin')) { toast('Admin only','error'); return; }
+  if (!confirm(`Lock line ${sno} (${matName})?
+
+This will freeze ${fmtINR(lockQty)} units from further PO or RFQ.
+Lock stays even if PO is short-closed — Admin must manually unlock.`)) return;
+  pbShow('Locking…');
+  const { error } = await sb.from('pu_mir_items').update({
+    is_locked:  true,
+    locked_qty: lockQty,
+    locked_by:  state.userName,
+    locked_at:  new Date().toISOString(),
+  }).eq('mir_number', mirNum).eq('sno', sno);
+  pbDone();
+  if (error) { toast('Lock failed: '+error.message,'error'); return; }
+  flashSuccess(`Line ${sno} locked — ${fmtINR(lockQty)} units frozen`);
+  // Refresh list balance set and reopen modal
+  await loadMIRList();
+  viewMIR(mirNum);
+}
+
+async function unlockMIRItem(mirNum, sno, matName) {
+  if (!hasRole('Admin')) { toast('Admin only','error'); return; }
+  if (!confirm(`Unlock line ${sno} (${matName})?
+
+The balance qty will become available for PO or RFQ again.`)) return;
+  pbShow('Unlocking…');
+  const { error } = await sb.from('pu_mir_items').update({
+    is_locked:  false,
+    locked_qty: null,
+    locked_by:  null,
+    locked_at:  null,
+  }).eq('mir_number', mirNum).eq('sno', sno);
+  pbDone();
+  if (error) { toast('Unlock failed: '+error.message,'error'); return; }
+  flashSuccess(`Line ${sno} unlocked — balance qty available for procurement`);
+  await loadMIRList();
+  viewMIR(mirNum);
+}
+
 function _rollupMIRHeaderFromItems(items) {
   if (!items || !items.length) return 'Approved';
   const ss = items.map(it => it.item_status||'Pending');
-  if (ss.every(s => ['Received','Closed'].includes(s)))                                                        return 'Closed';
-  if (ss.every(s => ['PO Issued','Received','Closed'].includes(s)))                                            return 'PO Issued';
-  if (ss.some(s  => ['PO Issued','Partial PO Issued'].includes(s)))                                            return 'Partial PO';
-  if (ss.every(s => ['RFQ Raised','PO Issued','Received','Closed','Partial RFQ','Partial PO Issued','Partial Received'].includes(s))) return 'RFQ Raised';
-  if (ss.some(s  => ['RFQ Raised','Partial RFQ'].includes(s)))                                                 return 'Partial RFQ';
+  if (ss.every(s => ['Received','Closed'].includes(s)))                                                                                          return 'Closed';
+  if (ss.some(s  => ['Received','Partial Received'].includes(s)))                                                                                return 'Partial Received';
+  if (ss.every(s => ['PO Issued','Received','Closed'].includes(s)))                                                                              return 'PO Issued';
+  if (ss.some(s  => ['PO Issued','Partial PO Issued'].includes(s)))                                                                              return 'Partial PO';
+  if (ss.every(s => ['RFQ Raised','PO Issued','Received','Closed','Partial RFQ','Partial PO Issued','Partial Received'].includes(s)))            return 'RFQ Raised';
+  if (ss.some(s  => ['RFQ Raised','Partial RFQ'].includes(s)))                                                                                   return 'Partial RFQ';
   return 'Approved';
 }
 
 async function _refreshAllMIRItems(mirNum) {
   if (!mirNum) return;
   const [{data:items},{data:rfqLinks},{data:poLinks}] = await Promise.all([
-    sb.from('pu_mir_items').select('sno,qty_required').eq('mir_number',mirNum),
+    // Include material_name + po_number so we can handle legacy POs (no po_links row)
+    sb.from('pu_mir_items').select('sno,qty_required,material_name,po_number').eq('mir_number',mirNum),
     sb.from('pu_mir_item_rfq_links').select('sno,qty_assigned').eq('mir_number',mirNum),
     sb.from('pu_mir_item_po_links').select('sno,po_number,qty_linked,qty_received,qty_short_closed,is_short_closed').eq('mir_number',mirNum),
   ]);
   if (!items || !items.length) return;
 
-  // Identify approved POs
-  const allPONums = [...new Set((poLinks||[]).map(l=>l.po_number))];
+  // ── Collect ALL PO numbers: from po_links + legacy po_number on items ──────
+  const poNumsFromLinks  = (poLinks||[]).map(l=>l.po_number).filter(Boolean);
+  // Items that have a legacy po_number but NO po_links record for this sno
+  const snosWithLinks    = new Set((poLinks||[]).map(l=>l.sno));
+  const legacyItemsNoPL  = (items||[]).filter(it => it.po_number && !snosWithLinks.has(it.sno));
+  const legacyPONums     = legacyItemsNoPL.map(it=>it.po_number).filter(Boolean);
+  const allPONums        = [...new Set([...poNumsFromLinks, ...legacyPONums])];
+
+  // ── Identify approved POs ──────────────────────────────────────────────────
   let approvedPOs = new Set();
   if (allPONums.length) {
     const {data:poSt} = await sb.from('pu_po_orders').select('po_number,status').in('po_number',allPONums);
     (poSt||[]).forEach(p => {
-      if (['Open','Partial Receipt','Short-Closed','Closed'].includes(p.status)) approvedPOs.add(p.po_number);
+      if (['Open','Partial Receipt','Fully Received','Short-Closed','Closed'].includes(p.status)) approvedPOs.add(p.po_number);
     });
   }
 
-  // Aggregate per sno
+  // ── Bootstrap: fetch PO line qtys for legacy POs (approved, no po_links) ──
+  // Match is done via po_number on the MIR item — not material_name string match,
+  // which is fragile and breaks when names differ slightly between MIR and PO forms.
+  // Strategy: for each legacy item (has po_number, no po_links row), use qty_required
+  // as qty_linked, and sum all non-rejected GRN items for that PO as qty_received.
+  const legacyApprovedPOs = legacyPONums.filter(n => approvedPOs.has(n));
+  // receivedQtyByPO[po_number] = total received qty across all materials (for single-material items)
+  // receivedQtyByMat[po_number][material_name] = received qty (for multi-material POs)
+  const receivedQtyByMat = {};  // po_number -> material_name -> qty
+  const receivedQtyByPO  = {};  // po_number -> total qty (fallback)
+  if (legacyApprovedPOs.length) {
+    // Fetch verified GRNs for these POs
+    const {data:verGRNs} = await sb.from('pu_grn')
+      .select('grn_number,po_number').in('po_number', legacyApprovedPOs)
+      .not('status','in','("Rejected","Rejected - Correction")');
+    if ((verGRNs||[]).length) {
+      const {data:grnItems} = await sb.from('pu_grn_items')
+        .select('grn_number,material_name,this_grn_qty')
+        .in('grn_number', verGRNs.map(g=>g.grn_number));
+      const grnToPO = {};
+      (verGRNs||[]).forEach(g => { grnToPO[g.grn_number] = g.po_number; });
+      (grnItems||[]).forEach(gi => {
+        const po = grnToPO[gi.grn_number]; if (!po) return;
+        if (!receivedQtyByMat[po]) receivedQtyByMat[po] = {};
+        receivedQtyByMat[po][gi.material_name] = (receivedQtyByMat[po][gi.material_name]||0) + (gi.this_grn_qty||0);
+        receivedQtyByPO[po] = (receivedQtyByPO[po]||0) + (gi.this_grn_qty||0);
+      });
+    }
+    // Build bootstrap links — use qty_required as qty_linked (best proxy without material_name match)
+    // For qty_received: try exact material_name match first, then fall back to PO total if single item
+    const bootstrapLinks = legacyItemsNoPL
+      .filter(it => approvedPOs.has(it.po_number))
+      .map(it => {
+        const matRec = receivedQtyByMat[it.po_number]?.[it.material_name];
+        // Count how many legacy items share this PO (for fallback distribution)
+        const siblingsOnSamePO = legacyItemsNoPL.filter(x => x.po_number === it.po_number).length;
+        // Use exact match if available; if PO has only one MIR item, use total received for that PO
+        const qty_received = matRec != null ? matRec
+          : (siblingsOnSamePO === 1 ? (receivedQtyByPO[it.po_number]||0) : 0);
+        return {
+          mir_number: mirNum, sno: it.sno, material_name: it.material_name,
+          po_number: it.po_number,
+          qty_linked:   it.qty_required,  // best proxy: what the MIR asked for
+          qty_received,
+          qty_short_closed: 0, is_short_closed: false
+        };
+      });
+    if (bootstrapLinks.length) {
+      await sb.from('pu_mir_item_po_links').upsert(bootstrapLinks,
+        {onConflict:'mir_number,sno,po_number', ignoreDuplicates:false});
+      bootstrapLinks.forEach(l => {
+        (poLinks || (poLinks = [])).push(l);
+        snosWithLinks.add(l.sno);
+      });
+    }
+  }
+
+  // ── Also fix any existing po_links that have qty_received: 0 but real GRNs exist ──
+  // This catches rows bootstrapped by an earlier run before the GRN fix.
+  const staleLinks = (poLinks||[]).filter(l =>
+    approvedPOs.has(l.po_number) && (l.qty_received||0) === 0
+  );
+  if (staleLinks.length) {
+    const stalePONums = [...new Set(staleLinks.map(l=>l.po_number))];
+    // Only fetch POs we don't already have GRN data for
+    const missingPOs = stalePONums.filter(n => !receivedQtyByPO[n]);
+    if (missingPOs.length) {
+      const {data:staleGRNs} = await sb.from('pu_grn')
+        .select('grn_number,po_number').in('po_number', missingPOs)
+        .not('status','in','("Rejected","Rejected - Correction")');
+      if ((staleGRNs||[]).length) {
+        const {data:staleItems} = await sb.from('pu_grn_items')
+          .select('grn_number,material_name,this_grn_qty')
+          .in('grn_number', staleGRNs.map(g=>g.grn_number));
+        const stalePOMap = {};
+        (staleGRNs||[]).forEach(g => { stalePOMap[g.grn_number] = g.po_number; });
+        (staleItems||[]).forEach(gi => {
+          const po = stalePOMap[gi.grn_number]; if (!po) return;
+          if (!receivedQtyByMat[po]) receivedQtyByMat[po] = {};
+          receivedQtyByMat[po][gi.material_name] = (receivedQtyByMat[po][gi.material_name]||0) + (gi.this_grn_qty||0);
+          receivedQtyByPO[po] = (receivedQtyByPO[po]||0) + (gi.this_grn_qty||0);
+        });
+      }
+    }
+    // Update stale po_links — try material_name match first, fall back to PO total if single link
+    await Promise.all(staleLinks.filter(l => l.id).map(l => {
+      const matRec = receivedQtyByMat[l.po_number]?.[l.material_name];
+      const siblingsOnSamePO = staleLinks.filter(x => x.po_number === l.po_number).length;
+      const rec = matRec != null ? matRec
+        : (siblingsOnSamePO === 1 ? (receivedQtyByPO[l.po_number]||0) : 0);
+      if (rec <= 0) return Promise.resolve();
+      l.qty_received = rec;
+      return sb.from('pu_mir_item_po_links').update({ qty_received: rec }).eq('id', l.id);
+    }));
+  }
+
+  // ── Aggregate per sno from ALL po_links (new + just-bootstrapped) ──────────
   const rfqMap={}, covMap={}, recMap={}, scMap={};
   (rfqLinks||[]).forEach(l => { rfqMap[l.sno] = (rfqMap[l.sno]||0) + (l.qty_assigned||0); });
   (poLinks||[]).filter(l=>approvedPOs.has(l.po_number)).forEach(l => {
-    // effective qty: short-closed POs count only what was actually received
+    // effective qty: short-closed links count only what was actually received
     const effQty = l.is_short_closed ? (l.qty_received||0) : (l.qty_linked||0);
     covMap[l.sno] = (covMap[l.sno]||0) + effQty;
     recMap[l.sno] = (recMap[l.sno]||0) + (l.qty_received||0);
     if (l.is_short_closed) scMap[l.sno] = (scMap[l.sno]||0) + (l.qty_short_closed||0);
   });
 
-  await Promise.all((items||[]).map(it => {
+  const updateResults = await Promise.all((items||[]).map(it => {
     const qty_rfq          = rfqMap[it.sno]||0;
     const qty_covered      = covMap[it.sno]||0;
     const qty_received     = recMap[it.sno]||0;
@@ -13622,6 +13997,10 @@ async function _refreshAllMIRItems(mirNum) {
     return sb.from('pu_mir_items').update({qty_rfq,qty_covered,qty_received,qty_short_closed,item_status})
       .eq('mir_number',mirNum).eq('sno',it.sno);
   }));
+  // Log any silent DB update failures
+  updateResults.forEach((r,i) => {
+    if (r?.error) console.error(`[_refreshAllMIRItems] item update failed sno=${(items||[])[i]?.sno}:`, r.error);
+  });
 
   const {data:updated} = await sb.from('pu_mir_items').select('item_status').eq('mir_number',mirNum);
   await sb.from('pu_mir').update({status:_rollupMIRHeaderFromItems(updated||[])}).eq('mir_number',mirNum);
@@ -13894,7 +14273,18 @@ async function saveRFQQuote(rfqNum, sno, itemCount) {
       created_by:state.userName, created_by_id:state.userId,
     }).select().single();
     if (qErr||!quote) throw new Error(qErr?.message||'Insert failed');
-    const itemsWithId = items.map(it=>({...it, rfq_quote_id:quote.id}));
+    // v73: carry procurement_line_id from rfq_items into rfq_quote_items
+    const {data:rfqLineIds} = await sb.from('pu_rfq_items')
+      .select('material_name,procurement_line_id,procurement_source')
+      .eq('rfq_number', quote.rfq_number || rfqNum);
+    const rfqLineIdMap = {};
+    (rfqLineIds||[]).forEach(r => { rfqLineIdMap[r.material_name] = r; });
+    const itemsWithId = items.map(it=>({
+      ...it,
+      rfq_quote_id:        quote.id,
+      procurement_line_id: rfqLineIdMap[it.material_name]?.procurement_line_id || null,
+      procurement_source:  rfqLineIdMap[it.material_name]?.procurement_source  || null,
+    }));
     const {error:iErr} = await sb.from('pu_rfq_quote_items').insert(itemsWithId);
     if (iErr) throw new Error(iErr.message);
     flashSuccess(`Quote Q${sno} saved for ${vendorName}`);
@@ -14432,8 +14822,22 @@ async function saveRFQ() {
       remarks:document.getElementById('rfq_remarks').value.trim()||null, status:'Open',
     });
     if(error) throw new Error(error.message);
-    // Save RFQ items with mir_item_sno link
-    const rfqItemPayloads = items.map(it => ({...it, rfq_number: rfqNumber}));
+    // Save RFQ items — carry procurement_line_id from MIR items if linked (v73)
+    let mirLineIdMap = {};  // material_name → procurement_line_id
+    if (mirNum) {
+      const {data:mirLineIds} = await sb.from('pu_mir_items')
+        .select('material_name,procurement_line_id')
+        .eq('mir_number', mirNum);
+      (mirLineIds||[]).forEach(r => {
+        if (r.procurement_line_id) mirLineIdMap[r.material_name] = r.procurement_line_id;
+      });
+    }
+    const rfqItemPayloads = items.map(it => ({
+      ...it,
+      rfq_number:          rfqNumber,
+      procurement_line_id: mirLineIdMap[it.material_name] || crypto.randomUUID(),
+      procurement_source:  mirLineIdMap[it.material_name] ? 'mir' : 'direct_rfq',
+    }));
     await sb.from('pu_rfq_items').insert(rfqItemPayloads);
 
     if (mirNum) {
@@ -14536,7 +14940,13 @@ async function loadQCList() {
 
 function renderQCList() {
   const perms=mergedPerms();
-  document.getElementById('qc_listBody').innerHTML=puState.qcList.map(q=>{
+  let rows = puState.qcList || [];
+  rows = _applyTableSort('qc_listBody', rows, [
+    q=>q.qc_number||'', q=>q.qc_date||'', q=>q.rfq_number||'',
+    q=>q.approved_vendor_name||q.recommended_vendor_name||'',
+    q=>q.prepared_by||'', q=>q.status||'',
+  ]);
+  document.getElementById('qc_listBody').innerHTML=rows.map(q=>{
     const stCls=q.status.toLowerCase().replace(/\s/g,'-');
     let acts=`<button class="btn btn-ghost btn-sm" onclick="viewQC('${esc(q.qc_number)}')">View</button>`;
     if (perms.canApproveQC && q.status === 'Pending Approval') {
@@ -15040,6 +15450,11 @@ function renderPOList() {
   if(fSt)   rows=rows.filter(p=>p.status===fSt);
   if(fFrom) rows=rows.filter(p=>p.po_date&&p.po_date>=fFrom);
   if(fTo)   rows=rows.filter(p=>p.po_date&&p.po_date<=fTo);
+  rows = _applyTableSort('po_listBody', rows, [
+    p=>p.po_number||'', p=>p.po_date||'', p=>p.vendor_name||'',
+    p=>p.qc_number||'', p=>p.mir_number||'',
+    p=>p.basic_value||0, p=>p.grand_total||0, p=>p.status||'',
+  ]);
   document.getElementById('po_listBody').innerHTML=rows.map(p=>{
     const stCls=p.status.toLowerCase().replace(/[\s/]+/g,'-');
     const canRevise = hasPerm('canCreatePO') && p.status === 'Rejected - Correction';
@@ -15338,8 +15753,54 @@ async function savePO() {
       status:'Pending Approval',
     });
     if(error) throw new Error(error.message);
-    await sb.from('pu_po_items').insert(items.map(it=>({...it,po_number:poNumber})));
+
+    // v73: resolve procurement_line_id for each PO item
+    // Path A: QC→RFQ→MIR | Path B: Direct PO from MIR | Path C: Standalone Direct PO
+    const poLineIdMap = {};  // material_name → { procurement_line_id, procurement_source }
     const qcRef=document.getElementById('po_qcRef').value;
+    const directMirN  = document.getElementById('poForm').dataset.directMirNum;
+    const poMirRef    = document.getElementById('poForm').dataset.poMirNum
+                     || document.getElementById('po_mirRef')?.value || null;
+
+    // Path A: QC-driven PO — trace QC → RFQ → rfq_items for UUIDs
+    if (qcRef && qcRef.startsWith('QC/')) {
+      const {data:qcH2} = await sb.from('pu_quote_comparison')
+        .select('rfq_number').eq('qc_number',qcRef).maybeSingle();
+      if (qcH2?.rfq_number) {
+        const {data:rfqMirIds} = await sb.from('pu_rfq_items')
+          .select('material_name,procurement_line_id,procurement_source')
+          .eq('rfq_number', qcH2.rfq_number);
+        (rfqMirIds||[]).forEach(r => {
+          if (r.procurement_line_id) poLineIdMap[r.material_name] = {
+            procurement_line_id: r.procurement_line_id,
+            procurement_source:  r.procurement_source || 'mir',
+          };
+        });
+      }
+    }
+    // Path B: Direct PO from MIR — fetch mir_items UUIDs
+    if (!Object.keys(poLineIdMap).length && (directMirN || poMirRef)) {
+      const mirSrc = directMirN || poMirRef;
+      const {data:mirLineIds2} = await sb.from('pu_mir_items')
+        .select('material_name,procurement_line_id')
+        .eq('mir_number', mirSrc);
+      (mirLineIds2||[]).forEach(r => {
+        if (r.procurement_line_id) poLineIdMap[r.material_name] = {
+          procurement_line_id: r.procurement_line_id,
+          procurement_source:  'mir',
+        };
+      });
+    }
+    // Path C (standalone direct PO): no map entry → fresh UUID generated per item below
+    await sb.from('pu_po_items').insert(items.map(it => {
+      const resolved = poLineIdMap[it.material_name];
+      return {
+        ...it,
+        po_number:           poNumber,
+        procurement_line_id: resolved?.procurement_line_id || crypto.randomUUID(),
+        procurement_source:  resolved?.procurement_source  || 'direct_po',
+      };
+    }));
     if(qcRef && qcRef.startsWith('QC/')) {
       await sb.from('pu_quote_comparison').update({status:'PO Raised'}).eq('qc_number',qcRef);
       // Trace QC → RFQ → MIR and insert po_links (status update deferred to PO approval)
@@ -15409,16 +15870,32 @@ async function approvePO(poNum) {
   await sb.from('pu_po_orders').update({
     status:'Open', approved_by:state.userName, approved_by_id:state.userId, approved_at:new Date().toISOString()
   }).eq('po_number',poNum);
-  // Resolve MIR and refresh item statuses (po_links for this PO now count toward qty_covered)
+
+  // ── Resolve ALL MIRs that need refresh after this PO approval ─────────────
+  const mirNumsToRefresh = new Set();
+
+  // 1. Primary: MIR from PO header
   let mirNum = poHdr?.mir_number || null;
+  if (mirNum) mirNumsToRefresh.add(mirNum);
+
+  // 2. If not on header, trace QC → RFQ → MIR
   if (!mirNum && poHdr?.qc_number) {
     const {data:qcH} = await sb.from('pu_quote_comparison').select('rfq_number').eq('qc_number',poHdr.qc_number).maybeSingle();
     if (qcH?.rfq_number) {
       const {data:rfqH} = await sb.from('pu_rfq').select('mir_number').eq('rfq_number',qcH.rfq_number).maybeSingle();
-      mirNum = rfqH?.mir_number || null;
+      if (rfqH?.mir_number) { mirNum = rfqH.mir_number; mirNumsToRefresh.add(mirNum); }
     }
   }
-  if (mirNum) await _refreshAllMIRItems(mirNum);
+
+  // 3. Fallback: find any MIRs referenced directly in po_links for this PO
+  //    (catches cases where mir_number wasn't stored on the PO header)
+  const {data:linksForPO} = await sb.from('pu_mir_item_po_links')
+    .select('mir_number').eq('po_number',poNum);
+  (linksForPO||[]).forEach(l => { if (l.mir_number) mirNumsToRefresh.add(l.mir_number); });
+
+  // ── Refresh every affected MIR (handles multi-MIR POs and legacy data) ────
+  await Promise.all([...mirNumsToRefresh].map(mn => _refreshAllMIRItems(mn)));
+
   pbDone();
   flashSuccess('PO '+poNum+' Approved'); loadPOList();
 }
@@ -15901,11 +16378,9 @@ async function shortClosePO(poNum) {
 async function confirmShortClosePO(poNum) {
   const reason=(document.getElementById('poActionReason')?.value||'').trim();
   if(!reason){toast('Reason is mandatory','error');return;}
-  // Race-guard: re-check just before update
   const {data:grns}=await sb.from('pu_grn').select('grn_number').eq('po_number',poNum);
   if((grns||[]).length<1){toast('Short Close needs at least one GRN entry','error');closeModal();return;}
   pbShow('Short-closing PO…');
-  // Capture MIR number BEFORE update for rollup
   const {data:poHdr}=await sb.from('pu_po_orders').select('mir_number,qc_number').eq('po_number',poNum).single();
   const {error}=await sb.from('pu_po_orders').update({
     status:'Short-Closed',
@@ -15913,7 +16388,33 @@ async function confirmShortClosePO(poNum) {
     closed_at:new Date().toISOString(), close_reason:reason
   }).eq('po_number',poNum).eq('status','Partial Receipt');
   if(error){pbDone();toast('Update failed: '+error.message,'error');return;}
-  // Resolve MIR number — direct field, or trace via QC → RFQ → MIR
+
+  // v73: write short_closed_qty to pu_po_items for each material on this PO
+  // SC qty per material = po_items.qty - actual received via GRN
+  try {
+    const [{data:poItems},{data:grnData}] = await Promise.all([
+      sb.from('pu_po_items').select('material_name,qty,procurement_line_id').eq('po_number',poNum),
+      sb.from('pu_grn_items').select('material_name,this_grn_qty')
+        .in('grn_number', (grns||[]).map(g=>g.grn_number)),
+    ]);
+    // Sum received qty per material across all GRNs for this PO
+    const receivedByMat = {};
+    (grnData||[]).forEach(r => {
+      receivedByMat[r.material_name] = (receivedByMat[r.material_name]||0) + (r.this_grn_qty||0);
+    });
+    // Update each po_item row with its short_closed_qty
+    await Promise.all((poItems||[]).map(pi => {
+      const received = receivedByMat[pi.material_name]||0;
+      const scQty    = Math.max(0, (pi.qty||0) - received);
+      if (scQty <= 0) return Promise.resolve(); // nothing short-closed for this line
+      return sb.from('pu_po_items')
+        .update({ short_closed_qty: scQty })
+        .eq('po_number', poNum)
+        .eq('material_name', pi.material_name);
+    }));
+  } catch(e) { console.error('SC qty write error:', e.message); }
+
+  // Resolve MIR number and run legacy rollup (keeps pu_mir_item_po_links in sync)
   let mirNum = poHdr?.mir_number || null;
   if (!mirNum && poHdr?.qc_number) {
     const {data:qcH} = await sb.from('pu_quote_comparison').select('rfq_number').eq('qc_number',poHdr.qc_number).maybeSingle();
@@ -15956,6 +16457,11 @@ function renderGRNList() {
   if(fTo)   rows=rows.filter(g=>g.grn_date&&g.grn_date<=fTo);
   if(src==='cash') rows=rows.filter(g=>g.is_cash_purchase);
   else if(src==='po') rows=rows.filter(g=>!g.is_cash_purchase);
+  rows = _applyTableSort('grn_listBody', rows, [
+    g=>g.grn_number||'', g=>g.grn_date||'', g=>g.po_number||'',
+    g=>g.vendor_name||'', g=>g.vehicle_challan||'', g=>g.received_by||'',
+    g=>g.verified_by||'', g=>g.status||'',
+  ]);
   const perms=mergedPerms();
   document.getElementById('grn_listBody').innerHTML=rows.map(g=>{
     const st=g.status||'Pending Verification';
@@ -16467,8 +16973,25 @@ async function saveGRN() {
       if (he) throw new Error(he.message);
       // Replace line items
       await sb.from('pu_grn_items').delete().eq('grn_number', revisingGRN);
+      // v73: carry procurement_line_id from pu_po_items on revise
+      const {data:poLineIdsR} = await sb.from('pu_po_items')
+        .select('material_name,procurement_line_id,procurement_source')
+        .eq('po_number', poNum);
+      const grnLineIdMapR = {};
+      (poLineIdsR||[]).forEach(r => {
+        if (r.procurement_line_id) grnLineIdMapR[r.material_name] = r;
+      });
       const {error:ie} = await sb.from('pu_grn_items').insert(
-        entries.map(e=>({...e, grn_number: revisingGRN})));
+        entries.map(e => {
+          const resolved = grnLineIdMapR[e.material_name];
+          return {
+            ...e,
+            grn_number:          revisingGRN,
+            procurement_line_id: resolved?.procurement_line_id || crypto.randomUUID(),
+            procurement_source:  resolved?.procurement_source  || 'legacy_unmatched',
+          };
+        })
+      );
       if (ie) throw new Error(ie.message);
       // Recalculate PO status from all active GRNs (excluding all rejected variants)
       const {data:activeGRNs} = await sb.from('pu_grn').select('grn_number')
@@ -16506,7 +17029,23 @@ async function saveGRN() {
       status:'Pending Verification',
     });
     if(error) throw new Error(error.message);
-    await sb.from('pu_grn_items').insert(entries.map(e=>({...e,grn_number:grnNumber})));
+    // v73: carry procurement_line_id from pu_po_items via material_name
+    const {data:poLineIds} = await sb.from('pu_po_items')
+      .select('material_name,procurement_line_id,procurement_source')
+      .eq('po_number', poNum);
+    const grnLineIdMap = {};
+    (poLineIds||[]).forEach(r => {
+      if (r.procurement_line_id) grnLineIdMap[r.material_name] = r;
+    });
+    await sb.from('pu_grn_items').insert(entries.map(e => {
+      const resolved = grnLineIdMap[e.material_name];
+      return {
+        ...e,
+        grn_number:          grnNumber,
+        procurement_line_id: resolved?.procurement_line_id || crypto.randomUUID(),
+        procurement_source:  resolved?.procurement_source  || 'legacy_unmatched',
+      };
+    }));
     // Update PO status
     const {data:allGRNs}=await sb.from('pu_grn').select('grn_number').eq('po_number',poNum).not('status','in','("Rejected","Rejected - Correction")');
     const allNums=(allGRNs||[]).map(g=>g.grn_number);
@@ -16801,8 +17340,15 @@ async function saveCashGRN() {
       status: 'Pending Verification',
     });
     if (hErr) throw new Error(hErr.message);
+    // v73: Cash/Direct Purchase — UUID originates here (no PO upstream)
+    const isCashOS = (document.getElementById('cgrn_cashRef')?.value?.trim() === 'Opening Stock');
     const { error: iErr } = await sb.from('pu_grn_items').insert(
-      entries.map(e => ({ ...e, grn_number: grnNumber }))
+      entries.map(e => ({
+        ...e,
+        grn_number:          grnNumber,
+        procurement_line_id: crypto.randomUUID(),
+        procurement_source:  isCashOS ? 'opening_stock' : 'cash_purchase',
+      }))
     );
     if (iErr) throw new Error(iErr.message);
 
@@ -16836,9 +17382,16 @@ async function verifyGRN(grnNum) {
           mirNum=rfqH?.mir_number||null;
         }
       }
+      // Fallback: look up MIR directly from po_links table (covers legacy POs where
+      // mir_number and qc_number were never stored on the PO header)
+      if (!mirNum) {
+        const {data:plRow}=await sb.from('pu_mir_item_po_links')
+          .select('mir_number').eq('po_number',grn.po_number).limit(1).maybeSingle();
+        mirNum = plRow?.mir_number || null;
+      }
       if(mirNum) {
-        // Sum all verified GRN items for this PO by material
-        const {data:verifiedGRNs}=await sb.from('pu_grn').select('grn_number').eq('po_number',grn.po_number).neq('status','Rejected');
+        // Sum all active GRN items for this PO by material (exclude rejected variants)
+        const {data:verifiedGRNs}=await sb.from('pu_grn').select('grn_number').eq('po_number',grn.po_number).not('status','in','("Rejected","Rejected - Correction")');
         const receivedByMat={};
         if((verifiedGRNs||[]).length){
           const {data:grnItems}=await sb.from('pu_grn_items')
@@ -17147,6 +17700,12 @@ function renderPOBList() {
   if(fTo)   rows=rows.filter(b=>b.bill_date&&b.bill_date<=fTo);
   if(src==='cash') rows=rows.filter(b=>b.is_cash_purchase);
   else if(src==='po') rows=rows.filter(b=>!b.is_cash_purchase);
+  rows = _applyTableSort('pob_listBody', rows, [
+    b=>b.bill_number||'', b=>b.bill_date||'', b=>b.po_number||'',
+    b=>b.vendor_name||'', b=>b.grn_numbers||'',
+    b=>b.invoice_value||0, b=>b.net_payable||0, b=>b.total_paid||0,
+    b=>b.outstanding||0, b=>b.status||'',
+  ]);
   const perms=mergedPerms();
   document.getElementById('pob_listBody').innerHTML=rows.map(b=>{
     const stCls=b.status.toLowerCase().replace(/\s/g,'-');
@@ -17446,6 +18005,7 @@ async function savePOB() {
 
     // Build all items (material rows + extra lines) for single insert
     const allItems = [];
+    // v73: _pobLineItems came from pu_grn_items select('*') so procurement_line_id is already on each item
     _pobLineItems.forEach((it,i)=>{
       allItems.push({
         bill_number:billNumber, sno:i+1, row_type:'material',
@@ -17455,6 +18015,8 @@ async function savePOB() {
         cgst_pct:it._cgst_pct||0, sgst_pct:it._sgst_pct||0, igst_pct:it._igst_pct||0,
         cgst_amount:it._cgst_amt||0, sgst_amount:it._sgst_amt||0, igst_amount:it._igst_amt||0,
         total_amount:it._total_amt||it.base_amount,
+        procurement_line_id: it.procurement_line_id || null,
+        procurement_source:  it.procurement_source  || null,
       });
     });
     const matCount = allItems.length;
@@ -18045,6 +18607,10 @@ function renderMISList() {
   if(fSt)   rows=rows.filter(m=>m.status===fSt);
   if(fFrom) rows=rows.filter(m=>m.mis_date&&m.mis_date>=fFrom);
   if(fToD)  rows=rows.filter(m=>m.mis_date&&m.mis_date<=fToD);
+  rows = _applyTableSort('mis_listBody', rows, [
+    m=>m.mis_number||'', m=>m.issue_date||'', m=>m.issued_to||'',
+    m=>m.issued_by||'', m=>0, m=>m.status||'',
+  ]);
   const perms=mergedPerms();
   document.getElementById('mis_listBody').innerHTML=rows.map(m=>{
     const its=puState.misLedger.filter(it=>it.mis_number===m.mis_number);
@@ -18053,9 +18619,13 @@ function renderMISList() {
     const cashBadge = hasCash
       ? ' <span style="font-size:10px;background:#ad6800;color:#fff;padding:1px 6px;border-radius:3px;font-weight:600;vertical-align:middle;" title="Contains material with cash-purchase history">DIRECT</span>'
       : '';
-    const stCls=m.status==='Approved'?'approved':m.status==='Rejected'?'rejected':'pending-approval';
+    const stCls=m.status==='Approved'?'approved':m.status==='Rejected'?'rejected':m.status==='Rejected - Correction'?'rejected-correction':'pending-approval';
+    const stLabel=m.status==='Rejected - Correction'?'Needs Correction':(m.status||'Pending Approval');
     // View button only — Approve/Reject moved into the popup
-    const acts=`<button class="btn btn-ghost btn-sm" onclick="viewMIS('${esc(m.mis_number)}')">View</button>`;
+    const acts=`<button class="btn btn-ghost btn-sm" onclick="viewMIS('${esc(m.mis_number)}')">View</button>`
+      + (hasPerm('canCreateMIS') && m.status==='Rejected - Correction'
+          ? ` <button class="btn btn-warn btn-sm" onclick="reviseMIS('${esc(m.mis_number)}')">✎ Revise</button>`
+          : '');
     const rmcBadge = (m.issued_to||'').toLowerCase().includes('rmc plant')
       ? ' <span class="rmc-badge">RMC</span>' : '';
     return `<tr>
@@ -18063,7 +18633,7 @@ function renderMISList() {
       <td>${esc(m.issued_to)}</td>
       <td>${esc(m.issued_by||'—')}</td>
       <td class="num">${fmtINR(totalVal)}</td>
-      <td><span class="status ${stCls}">${m.status||'Pending Approval'}</span></td>
+      <td><span class="status ${stCls}">${stLabel}</span></td>
       <td>${acts}</td></tr>`;
   }).join('')||'<tr><td colspan="8" class="center muted">No material issues.</td></tr>';
   setTimeout(() => { const t=document.getElementById('mis_listBody')?.closest('table'); if(t) makeSortable(t); }, 50);
@@ -18287,7 +18857,12 @@ function recalcMISRow(i) {
 }
 
 function closeMISForm() {
-  document.getElementById('misForm').style.display='none';
+  const formEl = document.getElementById('misForm');
+  formEl.style.display='none';
+  delete formEl.dataset.revisingMIS;
+  document.getElementById('misRevisionNote')?.remove();
+  const titleEl = formEl.querySelector('h3');
+  if (titleEl) titleEl.textContent = 'New Material Issue';
   document.getElementById('misListCard').style.display='block';
 }
 
@@ -18375,28 +18950,83 @@ async function saveMIS() {
   });
   pbShow('Saving MIS…');
   try {
-    // Determine which materials have ever been received via cash GRN.
-    const cashMatSet = new Set();
+    // v73: fetch FIFO GRN layer per material — one call replaces old cashMatSet query
+    // Gives us procurement_line_id AND cash_purchase flag in a single round-trip
+    const fifoLayerMap = {};  // material_name → { procurement_line_id, procurement_source, is_cash }
+    const cashMatSet   = new Set();
     if (matNames.length) {
-      const { data: cashItems } = await sb.from('pu_grn_items')
-        .select('material_name')
-        .eq('is_cash_purchase', true)
-        .in('material_name', matNames);
-      (cashItems||[]).forEach(r => cashMatSet.add(r.material_name));
+      const {data:grnLayers} = await sb.from('pu_grn_items')
+        .select('material_name,grn_number,this_grn_qty,procurement_line_id,procurement_source,is_cash_purchase')
+        .in('material_name', matNames)
+        .order('grn_number', {ascending: true});  // oldest GRN first = FIFO
+      const grnNums2 = [...new Set((grnLayers||[]).map(g=>g.grn_number))];
+      let validGRNSet = new Set(grnNums2);
+      if (grnNums2.length) {
+        const {data:grnSts} = await sb.from('pu_grn')
+          .select('grn_number,status').in('grn_number', grnNums2);
+        validGRNSet = new Set(
+          (grnSts||[])
+            .filter(g => ['Verified','Partially Billed','Billed'].includes(g.status))
+            .map(g => g.grn_number)
+        );
+      }
+      (grnLayers||[])
+        .filter(g => validGRNSet.has(g.grn_number) && g.procurement_line_id)
+        .forEach(g => {
+          if (!fifoLayerMap[g.material_name]) {  // first = oldest = FIFO winner
+            fifoLayerMap[g.material_name] = {
+              procurement_line_id: g.procurement_line_id,
+              procurement_source:  g.procurement_source,
+              is_cash:             !!g.is_cash_purchase,
+            };
+          }
+          if (g.is_cash_purchase) cashMatSet.add(g.material_name);
+        });
     }
-    const misNumber=await nextPUMISNumber();
-    const {error}=await sb.from('pu_mis').insert({
-      mis_number:misNumber, issue_date:date, issued_to:issuedTo,
-      issued_by:state.userName, issued_by_id:state.userId,
-      remarks:document.getElementById('mis_remarks').value||null,
-      status:'Pending Approval',
-    });
-    if(error) throw new Error(error.message);
-    await sb.from('pu_mis_items').insert(items.map((it,idx2)=>({
-      ...it, mis_number:misNumber,
-      is_cash_purchase: cashMatSet.has(it.material_name),
-    })));
-    flashSuccess('MIS '+misNumber+' saved — pending Site Manager approval');
+    const revisingMIS = document.getElementById('misForm')?.dataset?.revisingMIS || '';
+    if (revisingMIS) {
+      // Revision mode — update header and replace items
+      const {error:hErr} = await sb.from('pu_mis').update({
+        issue_date:date, issued_to:issuedTo,
+        issued_by:state.userName, issued_by_id:state.userId,
+        remarks:document.getElementById('mis_remarks').value||null,
+        status:'Pending Approval', rejection_reason:null,
+      }).eq('mis_number', revisingMIS);
+      if (hErr) throw new Error(hErr.message);
+      await sb.from('pu_mis_items').delete().eq('mis_number', revisingMIS);
+      await sb.from('pu_mis_items').insert(items.map(it => {
+        const fifo = fifoLayerMap[it.material_name];
+        return {
+          ...it,
+          mis_number:          revisingMIS,
+          is_cash_purchase:    cashMatSet.has(it.material_name),
+          procurement_line_id: fifo?.procurement_line_id || crypto.randomUUID(),  // v73: FIFO UUID
+          procurement_source:  fifo?.procurement_source  || 'legacy_unmatched',
+        };
+      }));
+      delete document.getElementById('misForm').dataset.revisingMIS;
+      flashSuccess('MIS '+revisingMIS+' revised and resubmitted for approval');
+    } else {
+      const misNumber=await nextPUMISNumber();
+      const {error}=await sb.from('pu_mis').insert({
+        mis_number:misNumber, issue_date:date, issued_to:issuedTo,
+        issued_by:state.userName, issued_by_id:state.userId,
+        remarks:document.getElementById('mis_remarks').value||null,
+        status:'Pending Approval',
+      });
+      if(error) throw new Error(error.message);
+      await sb.from('pu_mis_items').insert(items.map((it,idx2)=>{
+        const fifo = fifoLayerMap[it.material_name];
+        return {
+          ...it,
+          mis_number:          misNumber,
+          is_cash_purchase:    cashMatSet.has(it.material_name),
+          procurement_line_id: fifo?.procurement_line_id || crypto.randomUUID(),  // v73: FIFO UUID
+          procurement_source:  fifo?.procurement_source  || 'legacy_unmatched',
+        };
+      }));
+      flashSuccess('MIS '+misNumber+' saved — pending Site Manager approval');
+    }
     closeMISForm(); loadMISList(); loadStockBalance();
   } catch(e){toast('Error: '+e.message,'error');}
   finally{pbDone();}
@@ -18448,10 +19078,10 @@ async function viewMIS(misNum) {
     ? ' <span style="font-size:9px;background:#ad6800;color:#fff;padding:1px 5px;border-radius:3px;font-weight:600;vertical-align:middle;">DIRECT</span>'
     : '';
 
-  // Rejection reason banner — shown when status is Rejected
-  const rejBanner = h?.status === 'Rejected' && h?.rejection_reason
+  // Rejection reason banner — shown when status is Rejected or Rejected - Correction
+  const rejBanner = (h?.status === 'Rejected' || h?.status === 'Rejected - Correction') && h?.rejection_reason
     ? `<div style="background:#fef2f2;border:1px solid #fca5a5;border-radius:6px;padding:8px 12px;margin-bottom:10px;font-size:12px;">
-        <span style="font-weight:700;color:#991b1b;">Rejected:</span>
+        <span style="font-weight:700;color:#991b1b;">${h.status === 'Rejected - Correction' ? 'Returned for Correction:' : 'Rejected:'}</span>
         <span style="color:#7f1d1d;margin-left:6px;">${esc(h.rejection_reason)}</span>
        </div>`
     : '';
@@ -18478,6 +19108,9 @@ async function viewMIS(misNum) {
         onclick="confirmApproveMIS('${esc(misNum)}')">✓ Approve</button>
       <button class="btn btn-danger" onclick="closeModal();rejectDoc('MIS','${esc(misNum)}')">✕ Reject</button>`;
   }
+  if (hasPerm('canCreateMIS') && h?.status === 'Rejected - Correction') {
+    actionBtns += `<button class="btn btn-warn" onclick="reviseMIS('${esc(misNum)}')">✎ Revise & Resubmit</button>`;
+  }
   actionBtns += `<button class="btn btn-ghost" onclick="closeModal()">Close</button>`;
 
   // Store loaded items for confirmApproveMIS — avoids re-fetch and unsafe inline JSON
@@ -18487,8 +19120,8 @@ async function viewMIS(misNum) {
 
   openModal(`
     <h3 style="margin-bottom:4px;">MIS — ${esc(misNum)}${headerBadge}
-      <span class="status ${h?.status==='Approved'?'approved':h?.status==='Rejected'?'rejected':'pending-approval'}"
-        style="margin-left:8px;font-size:12px;">${h?.status||'Pending Approval'}</span>
+      <span class="status ${h?.status==='Approved'?'approved':h?.status==='Rejected'?'rejected':h?.status==='Rejected - Correction'?'rejected-correction':'pending-approval'}"
+        style="margin-left:8px;font-size:12px;">${h?.status==='Rejected - Correction'?'Needs Correction':(h?.status||'Pending Approval')}</span>
     </h3>
     <div class="grid-3" style="margin-bottom:10px;">
       <div><label class="muted" style="font-size:11px;">DATE</label><div>${fmtDate(h?.issue_date)}</div></div>
@@ -18721,11 +19354,24 @@ async function nextPUMISNumber() {
 async function rejectDoc(docType, docNum) {
   const tableMap={MIR:'pu_mir',QC:'pu_quote_comparison',PO:'pu_po_orders',GRN:'pu_grn',POB:'pu_po_bills',MIS:'pu_mis'};
   const colMap={MIR:'mir_number',QC:'qc_number',PO:'po_number',GRN:'grn_number',POB:'bill_number',MIS:'mis_number'};
+  const misExtra = docType === 'MIS' ? `
+    <div class="field" style="margin-top:8px;">
+      <label style="font-size:12px;font-weight:600;">Action</label>
+      <div style="display:flex;gap:12px;margin-top:4px;">
+        <label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer;">
+          <input type="radio" name="misRejectMode" value="correction" checked> Return for Correction
+        </label>
+        <label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer;">
+          <input type="radio" name="misRejectMode" value="reject"> Reject Permanently
+        </label>
+      </div>
+    </div>` : '';
   openModal(`<h3>Reject ${docType} — ${esc(docNum)}</h3>
-    <div class="field"><label class="req">Rejection Reason</label>
+    <div class="field"><label class="req">Reason</label>
       <textarea id="rejectDocReason" rows="3" style="width:100%;"></textarea></div>
+    ${misExtra}
     <div class="actions-row">
-      <button class="btn btn-danger" onclick="confirmRejectDoc('${docType}','${esc(docNum)}')">Confirm Reject</button>
+      <button class="btn btn-danger" onclick="confirmRejectDoc('${docType}','${esc(docNum)}')">Confirm</button>
       <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
     </div>`);
   setTimeout(()=>document.getElementById('rejectDocReason')?.focus(),100);
@@ -18737,7 +19383,12 @@ async function confirmRejectDoc(docType, docNum) {
   closeModal();
   const tableMap={MIR:'pu_mir',QC:'pu_quote_comparison',PO:'pu_po_orders',GRN:'pu_grn',POB:'pu_po_bills',MIS:'pu_mis'};
   const colMap={MIR:'mir_number',QC:'qc_number',PO:'po_number',GRN:'grn_number',POB:'bill_number',MIS:'mis_number'};
-  const {error}=await sb.from(tableMap[docType]).update({status:'Rejected',rejection_reason:reason}).eq(colMap[docType],docNum);
+  // MIS: check whether Site Manager wants Correction or permanent Reject
+  const misMode = docType === 'MIS'
+    ? (document.querySelector('input[name="misRejectMode"]:checked')?.value || 'correction')
+    : null;
+  const newStatus = (docType === 'MIS' && misMode === 'correction') ? 'Rejected - Correction' : 'Rejected';
+  const {error}=await sb.from(tableMap[docType]).update({status:newStatus,rejection_reason:reason}).eq(colMap[docType],docNum);
   if(error){ toast(error.message,'error'); return; }
 
   // ── MIR rejection: cascade item_status to Pending, clear all links ──────────
@@ -18832,9 +19483,78 @@ async function confirmRejectDoc(docType, docNum) {
     }
   }
 
-  flashSuccess(docType+' '+docNum+' Rejected');
+  const successMsg = (docType === 'MIS' && newStatus === 'Rejected - Correction')
+    ? 'MIS '+docNum+' returned for correction — Store Executive can revise and resubmit'
+    : docType+' '+docNum+' Rejected';
+  flashSuccess(successMsg);
   const reloadMap={MIR:loadMIRList,QC:()=>{loadQCList();loadRFQList();},PO:loadPOList,GRN:loadGRNList,POB:loadPOBList,MIS:loadMISList};
   if(reloadMap[docType]) reloadMap[docType]();
+}
+
+async function reviseMIS(misNum) {
+  if (!hasPerm('canCreateMIS')) { toast('Only Store Executive can revise MIS','error'); return; }
+  pbShow('Loading MIS for revision…');
+  const [{data:h},{data:items}] = await Promise.all([
+    sb.from('pu_mis').select('*').eq('mis_number',misNum).single(),
+    sb.from('pu_mis_items').select('*').eq('mis_number',misNum).order('sno'),
+  ]);
+  pbDone();
+  if (!h) { toast('MIS not found','error'); return; }
+  if (h.status !== 'Rejected - Correction') { toast('Only MIS returned for correction can be revised','error'); return; }
+
+  closeModal();
+  await newMIS(); // resets form, loads stock
+
+  // Mark revision mode — saveMIS checks this flag
+  document.getElementById('misForm').dataset.revisingMIS = misNum;
+  // Update form title
+  const titleEl = document.getElementById('misForm').querySelector('h3');
+  if (titleEl) titleEl.textContent = 'Revise MIS — '+misNum;
+
+  // Show Site Manager correction note
+  if (h.rejection_reason) {
+    const notice = document.createElement('div');
+    notice.id = 'misRevisionNote';
+    notice.style.cssText = 'margin:0 0 12px;padding:10px 14px;background:#fffbeb;border:1px solid #fde68a;border-radius:6px;font-size:13px;color:#92400e;';
+    notice.innerHTML = `<strong>Site Manager Note:</strong> ${esc(h.rejection_reason)}`;
+    const formEl = document.getElementById('misForm');
+    const firstGrid = formEl.querySelector('.grid-4');
+    if (firstGrid) formEl.insertBefore(notice, firstGrid);
+  }
+
+  // Pre-fill header fields
+  document.getElementById('mis_number').value  = misNum;
+  document.getElementById('mis_date').value    = h.issue_date || today();
+  document.getElementById('mis_remarks').value = h.remarks || '';
+
+  // Pre-fill contractor
+  if (h.issued_to) {
+    const issuedToEl = document.getElementById('mis_issuedTo');
+    if (issuedToEl) { issuedToEl.value = h.issued_to; issuedToEl.readOnly = true; }
+    mis_contractor_locked = true;
+    const ccodeEl = document.getElementById('mis_contractorCode');
+    if (ccodeEl) ccodeEl.value = h.contractor_code || '';
+    const clearBtn = document.getElementById('mis_contractorClear');
+    if (clearBtn) clearBtn.style.display = '';
+  }
+
+  // Pre-fill items — clear the auto-added blank row first
+  document.getElementById('misItemsBody').innerHTML = '';
+  _misItemC = 0;
+  for (const it of (items||[])) {
+    await addMISItem();
+    const i = _misItemC - 1;
+    const matEl = document.getElementById('misMat_'+i);
+    const uomEl = document.getElementById('misUom_'+i);
+    const balEl = document.getElementById('misMatBal_'+i);
+    const rateEl = document.getElementById('misMatRate_'+i);
+    const qtyEl  = document.querySelector('#misItem_'+i+' input[type="number"]');
+    if (matEl)  { matEl.value = it.material_name; matEl.readOnly = true; matEl.dataset.matCode = it.material_code||''; }
+    if (uomEl)  uomEl.value = it.uom||'';
+    if (balEl)  balEl.value = it.stock_before||0;
+    if (rateEl) rateEl.value = it.unit_rate||0;
+    if (qtyEl)  { qtyEl.value = it.qty_issued||0; qtyEl.dispatchEvent(new Event('input')); }
+  }
 }
 
 // ============================================================
@@ -18859,34 +19579,102 @@ const _origInitAppForPU = window.initApp;
 // ============================================================
 // SORTABLE TABLES
 // ============================================================
+// ── Persistent sort state ─────────────────────────────────────────────────
+// Keyed by tbody id → { col, dir }
+const _tableSortState = {};
+
+// Apply current sort state to a rows array using a column-value extractor array.
+// colGetters: array of functions (row) => string|number, one per column index.
+function _applyTableSort(tbodyId, rows, colGetters) {
+  const state = _tableSortState[tbodyId];
+  if (!state || !colGetters[state.col]) return rows;
+  const { col, dir } = state;
+  const getter = colGetters[col];
+  const _toSortVal = v => {
+    if (typeof v === 'number') return v;
+    const s = String(v);
+    // ISO date YYYY-MM-DD → numeric YYYYMMDD for correct chronological sort
+    if (/^\d{4}-\d{2}-\d{2}/.test(s)) return parseInt(s.slice(0,10).replace(/-/g,''), 10);
+    const n = parseFloat(s.replace(/[^0-9.]/g,''));
+    return isNaN(n) ? s : n;
+  };
+  return [...rows].sort((a, b) => {
+    const av = getter(a); const bv = getter(b);
+    const an = _toSortVal(av); const bn = _toSortVal(bv);
+    const cmp = (typeof an === 'number' && typeof bn === 'number')
+      ? an - bn
+      : String(av).localeCompare(String(bv), 'en-IN');
+    return dir === 'asc' ? cmp : -cmp;
+  });
+}
+
 function makeSortable(tableOrId) {
   const table = (typeof tableOrId === 'string') ? document.getElementById(tableOrId) : tableOrId;
   if (!table || !table.querySelector) return;
+
+  const tbody = table.querySelector('tbody');
+  const tbodyId = tbody?.id || '';
   const ths = table.querySelectorAll('thead th');
+
+  // Map tbody id → render function so sort re-renders from data, not DOM shuffle
+  const renderFnMap = {
+    'grn_listBody':  () => renderGRNList(),
+    'mir_listBody':  () => renderMIRList(),
+    'po_listBody':   () => typeof renderPOList  === 'function' ? renderPOList()  : null,
+    'qc_listBody':   () => typeof renderQCList  === 'function' ? renderQCList()  : null,
+    'pob_listBody':  () => typeof renderPOBList === 'function' ? renderPOBList() : null,
+    'mis_listBody':  () => typeof renderMISList === 'function' ? renderMISList() : null,
+  };
+  const renderFn = renderFnMap[tbodyId] || null;
+
   ths.forEach((th, col) => {
-    // Guard: skip if listener already attached — prevents stacking on every re-render
+    // Guard: skip if listener already attached
     if (th.dataset.sortable === '1') return;
     th.dataset.sortable = '1';
     th.classList.add('sortable');
     if (!th.dataset.sortDir) th.dataset.sortDir = '';
+
     th.addEventListener('click', () => {
-      const dir = th.dataset.sortDir === 'asc' ? 'desc' : 'asc';
+      const cur = _tableSortState[tbodyId];
+      const dir = (cur && cur.col === col && cur.dir === 'asc') ? 'desc' : 'asc';
+      _tableSortState[tbodyId] = { col, dir };
+      // Update header indicators
       ths.forEach(h => { h.classList.remove('asc','desc'); h.dataset.sortDir = ''; });
       th.dataset.sortDir = dir;
       th.classList.add(dir);
-      const tbody = table.querySelector('tbody');
-      const rows = Array.from(tbody.querySelectorAll('tr'));
-      rows.sort((a, b) => {
-        const av = a.cells[col]?.textContent?.trim() || '';
-        const bv = b.cells[col]?.textContent?.trim() || '';
-        const an = parseFloat(av.replace(/[^0-9.\-]/g,''));
-        const bn = parseFloat(bv.replace(/[^0-9.\-]/g,''));
-        const cmp = (!isNaN(an) && !isNaN(bn)) ? an - bn : av.localeCompare(bv, 'en-IN');
-        return dir === 'asc' ? cmp : -cmp;
-      });
-      rows.forEach(r => tbody.appendChild(r));
+      if (renderFn) {
+        // Re-render from data — sort survives filter changes
+        renderFn();
+      } else {
+        // Fallback: sort DOM rows directly
+        const tbodyEl = table.querySelector('tbody');
+        const rows = Array.from(tbodyEl.querySelectorAll('tr'));
+        rows.sort((a, b) => {
+          const av = a.cells[col]?.textContent?.trim() || '';
+          const bv = b.cells[col]?.textContent?.trim() || '';
+          // ISO date YYYY-MM-DD → YYYYMMDD; DD/MM/YYYY → YYYYMMDD
+          const toNum = s => {
+            if (/^\d{4}-\d{2}-\d{2}/.test(s)) return parseInt(s.slice(0,10).replace(/-/g,''),10);
+            const m = s.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+            if (m) return parseInt(m[3]+m[2]+m[1],10);
+            return parseFloat(s.replace(/[^0-9.]/g,''));
+          };
+          const an = toNum(av), bn = toNum(bv);
+          const cmp = (!isNaN(an) && !isNaN(bn)) ? an - bn : av.localeCompare(bv, 'en-IN');
+          return dir === 'asc' ? cmp : -cmp;
+        });
+        rows.forEach(r => tbodyEl.appendChild(r));
+      }
     });
   });
+
+  // Restore header indicator for existing sort state (data already sorted by renderFn)
+  const state = _tableSortState[tbodyId];
+  if (state && ths[state.col]) {
+    ths.forEach(h => { h.classList.remove('asc','desc'); h.dataset.sortDir=''; });
+    ths[state.col].dataset.sortDir = state.dir;
+    ths[state.col].classList.add(state.dir);
+  }
 }
 
 // Sortable applied inside renderMIRList directly
