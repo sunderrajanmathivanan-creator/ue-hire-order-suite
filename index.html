@@ -2011,7 +2011,7 @@ input[type="number"] {
       <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:16px;">
         <div>
           <h3 style="margin:0;border:none;padding:0;">Material Master</h3>
-          <div class="section-sub">Grouped by Material Group → Sub-head → Material</div>
+          <div class="section-sub">Grouped by Material Group → Sub-head → Material &nbsp;·&nbsp; <span id="mmTotalCount" style="font-weight:600;color:var(--accent);">…</span></div>
         </div>
         <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
           <div style="position:relative;">
@@ -11812,29 +11812,56 @@ async function mmImportExcel(inputEl) {
   const editableCols = ['material_name', 'uom', 'material_group', 'sub_head', 'hsn_code', 'specification', 'estimated_rate'];
   const presentCols  = editableCols.filter(c => sampleKeys.includes(c));
 
+  showStatus(`⏳ Fetching material codes from database…`, true);
+
+  // ── FIX: fetch ALL material codes from DB (active + inactive) so the
+  //         is_active=true cache doesn't cause valid codes to be skipped.
+  let codeSet;
+  try {
+    const { data: allCodes, error: fetchErr } = await sb
+      .from('pu_material_master')
+      .select('material_code');
+    if (fetchErr) throw fetchErr;
+    codeSet = new Set((allCodes || []).map(r => r.material_code));
+  } catch(e) {
+    showStatus('❌ Could not load material codes from database: ' + e.message, false);
+    console.error('mmImportExcel – code fetch failed:', e);
+    return;
+  }
+
   showStatus(`⏳ Validating ${rows.length} rows…`, true);
 
   const updates   = [];
   const skipped   = [];
-  const codeSet   = new Set((puState.materials || []).map(m => m.material_code));
 
   rows.forEach((r, idx) => {
     const code = (r.material_code || '').toString().trim();
     if (!code) { skipped.push('Row ' + (idx + 2) + ': blank material_code'); return; }
-    if (!codeSet.has(code)) { skipped.push(code + ': not found in master'); return; }
+    if (!codeSet.has(code)) { skipped.push(code + ': not found in database'); return; }
 
     const payload = {};
     presentCols.forEach(col => {
       let val = r[col];
-      if (val === '' || val === undefined || val === null) {
-        payload[col] = null;
-      } else if (col === 'estimated_rate') {
-        const n = parseFloat(val);
-        payload[col] = isNaN(n) ? null : n;
+      if (col === 'estimated_rate') {
+        if (val === '' || val === undefined || val === null) {
+          // leave estimated_rate unchanged if blank — don't wipe existing value
+        } else {
+          const n = parseFloat(val);
+          payload[col] = isNaN(n) ? null : n;
+        }
       } else {
-        payload[col] = String(val).trim() || null;
+        if (val !== '' && val !== undefined && val !== null) {
+          payload[col] = String(val).trim() || null;
+        }
+        // blank cell → skip field (don't overwrite existing DB value with null)
       }
     });
+
+    // Only queue if there is at least one field to update
+    if (Object.keys(payload).length === 0) {
+      skipped.push(code + ': no data to update (all cells blank)'); return;
+    }
+
     payload.updated_by      = state.userId;
     payload.updated_by_name = state.userName;
     payload.updated_at      = new Date().toISOString();
@@ -11842,26 +11869,38 @@ async function mmImportExcel(inputEl) {
   });
 
   if (!updates.length) {
-    showStatus('⚠ No valid rows to update. Check that material_code values match existing records.', false);
+    showStatus('⚠ No valid rows to update. Check that material_code values match existing records and cells are not blank.', false);
     return;
   }
 
   pbShow(`Updating ${updates.length} materials…`);
   showStatus(`⏳ Sending ${updates.length} updates to database…`, true);
 
-  // Batch in groups of 50 to avoid request overload
+  // Sequential batches of 50 — await each chunk before next to avoid
+  // flooding Supabase and to surface errors accurately.
   const BATCH = 50;
   let done = 0, errors = [];
   try {
     for (let i = 0; i < updates.length; i += BATCH) {
       const chunk = updates.slice(i, i + BATCH);
-      await Promise.all(chunk.map(async ({ code, payload }) => {
-        const { error } = await sb.from('pu_material_master')
-          .update(payload)
-          .eq('material_code', code);
-        if (error) errors.push(code + ': ' + error.message);
-        else done++;
+      const results = await Promise.all(chunk.map(async ({ code, payload }) => {
+        try {
+          const { error } = await sb.from('pu_material_master')
+            .update(payload)
+            .eq('material_code', code);
+          if (error) {
+            console.error('mmImportExcel – update error for', code, error);
+            return { code, err: error.message };
+          }
+          return { code, err: null };
+        } catch(ex) {
+          console.error('mmImportExcel – exception for', code, ex);
+          return { code, err: ex.message };
+        }
       }));
+      results.forEach(r => r.err ? errors.push(r.code + ': ' + r.err) : done++);
+      // Brief yield between batches
+      await new Promise(res => setTimeout(res, 50));
     }
   } finally { pbDone(); }
 
@@ -11928,6 +11967,16 @@ function renderMaterialTree() {
 
   const mats = (puState.materials||[]).filter(m => m.material_group && m.sub_head);
 
+  // Update total count in header
+  const countEl = document.getElementById('mmTotalCount');
+  if (countEl) {
+    const total   = (puState.materials||[]).length;
+    const visible = mats.length;
+    const hidden  = total - visible;   // ungrouped (no group or no sub_head)
+    countEl.textContent = visible + ' material' + (visible !== 1 ? 's' : '') +
+      (hidden > 0 ? ' (' + hidden + ' ungrouped)' : '');
+  }
+
   if (!mats.length && !canAdd && !_chData.some(r => r.cost_subhead)) {
     wrap.innerHTML = '<div class="center muted" style="padding:24px;">No materials defined.</div>';
     return;
@@ -11961,6 +12010,8 @@ function renderMaterialTree() {
 
   Object.keys(tree).sort().forEach(grp => {
     const grpId = 'mmg_' + btoa(encodeURIComponent(grp)).replace(/[^a-z0-9]/gi,'');
+    // Look up the pu_cost_heads row id for this group (needed for sub delete)
+    const grpChRow = (_chData||[]).find(r => r.costhead === grp && !r.cost_subhead);
 
     let grpHtml = '';
     let grpMatchCount = 0;
@@ -11968,16 +12019,15 @@ function renderMaterialTree() {
     Object.keys(tree[grp]).sort().forEach(sub => {
       const subId = 'mms_' + btoa(encodeURIComponent(grp+'|'+sub)).replace(/[^a-z0-9]/gi,'');
       const items = tree[grp][sub];
+      // Look up pu_cost_heads row for this sub-head
+      const subChRow = (_chData||[]).find(r => r.costhead === grp && r.cost_subhead === sub);
 
       const filtered = searching
-        ? items.filter(m =>
-            (m.material_name||'').toLowerCase().includes(q) ||
-            (m.material_code||'').toLowerCase().includes(q) ||
-            (m.uom||'').toLowerCase().includes(q) ||
-            (m.specification||'').toLowerCase().includes(q) ||
-            sub.toLowerCase().includes(q) ||
-            grp.toLowerCase().includes(q)
-          )
+        ? items.filter(m => {
+            const hay = ((m.material_name||'') + '|' + (m.material_code||'') + '|' +
+                         (m.uom||'') + '|' + (m.specification||'') + '|' + sub + '|' + grp).toLowerCase();
+            return _fuzzyMatch(hay, _fuzzyTokens(q));
+          })
         : items;
 
       // Show empty subheads for users who can add — they need the + Material button
@@ -12002,13 +12052,22 @@ function renderMaterialTree() {
             </div>`;
       });
 
+      // Sub-head row — with delete button for admin (only if no materials assigned)
+      const safeGrpEsc = esc(grp), safeSubEsc = esc(sub);
+      const safeGrpQ = grp.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+      const safeSubQ = sub.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+      const subChId  = subChRow ? subChRow.id : 'null';
+      const subCount = items.length;
+
       grpHtml += `
         <div style="margin-bottom:8px;margin-top:6px;">
           <div style="display:flex;align-items:center;gap:8px;padding:6px 10px;background:#eef1f6;border-left:3px solid var(--accent);border-radius:4px;cursor:pointer;" onclick="mmToggle('${subId}_ch')">
             <span style="font-size:13px;">${subArrow}</span>
-            <span style="font-weight:600;color:var(--accent);">📂 ${esc(sub)}</span>
+            <span style="font-weight:600;color:var(--accent);">📂 ${safeSubEsc}</span>
+            <span class="badge-count" style="font-size:11px;color:var(--muted);">${subCount} material${subCount!==1?'s':''}</span>
             <span style="flex:1;"></span>
-            ${canAdd ? `<button class="btn btn-primary btn-sm" onclick="event.stopPropagation();mmAddMaterial('${esc(grp)}','${esc(sub)}','${subId}')">+ Material</button>` : ''}
+            ${canAdd ? `<button class="btn btn-primary btn-sm" onclick="event.stopPropagation();mmAddMaterial('${safeGrpEsc}','${safeSubEsc}','${subId}')">+ Material</button>` : ''}
+            ${isAdmin ? `<button class="btn btn-ghost btn-sm" style="color:var(--danger);font-size:11px;padding:2px 7px;" title="Delete sub-head" onclick="event.stopPropagation();mmDeleteSub(${subChId},'${safeGrpQ}','${safeSubQ}')">🗑 Delete</button>` : ''}
           </div>
           <div id="${subId}_ch" style="${searching?'':'display:none;'}margin-left:22px;margin-top:4px;">
             <div id="${subId}_inline"></div>
@@ -12024,6 +12083,7 @@ function renderMaterialTree() {
 
     const totalMats = Object.values(tree[grp]).reduce((s,a)=>s+a.length,0);
     const grpArrow = searching ? '▾' : '▸';
+    const safeGrpQ2 = grp.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
 
     html += `
     <div style="margin-bottom:12px;">
@@ -12033,6 +12093,7 @@ function renderMaterialTree() {
         <span class="badge-count">${totalMats} material${totalMats!==1?'s':''}</span>
         <span style="flex:1;"></span>
         ${canAdd ? `<button class="btn btn-primary btn-sm" onclick="event.stopPropagation();mmAddSub('${esc(grp)}','${grpId}')">+ Sub-head</button>` : ''}
+        ${isAdmin ? `<button class="btn btn-ghost btn-sm" style="color:var(--danger);font-size:11px;padding:2px 7px;" title="Delete group" onclick="event.stopPropagation();mmDeleteGroup('${safeGrpQ2}')">🗑 Delete</button>` : ''}
       </div>
       <div id="${grpId}_ch" style="${searching?'':'display:none;'}margin-left:24px;margin-top:4px;">
         <div id="${grpId}_inline"></div>
@@ -12064,11 +12125,16 @@ function mmAddGroup() {
   let ex = document.getElementById('mm_newgrp_wrap'); if (ex) { ex.querySelector('input').focus(); return; }
   const div = document.createElement('div');
   div.id = 'mm_newgrp_wrap';
-  div.style.cssText = 'display:flex;gap:6px;align-items:center;margin-bottom:12px;flex-wrap:wrap;';
+  div.style.cssText = 'display:flex;gap:6px;align-items:center;margin-bottom:12px;flex-wrap:wrap;position:relative;';
   div.innerHTML = '<span style="font-weight:600;color:var(--accent);">New Material Group:</span>' +
+    '<div style="position:relative;display:inline-block;">' +
     '<input id="mm_newgrp_input" placeholder="e.g. Structural Steel, Concrete" autocomplete="off"' +
     ' style="padding:6px 10px;border:1px solid var(--accent);border-radius:4px;font-size:12px;width:280px;background:var(--input-bg);color:var(--text);"' +
-    ' onkeydown="if(event.key===\'Enter\')mmSaveNewGroup();if(event.key===\'Escape\')document.getElementById(\'mm_newgrp_wrap\').remove()">' +
+    ' oninput="mmGroupFuzzy(\'mm_newgrp_input\',\'mm_newgrp_list\')"' +
+    ' onfocus="mmGroupFuzzy(\'mm_newgrp_input\',\'mm_newgrp_list\')"' +
+    ' onkeydown="if(event.key===\'Enter\'){mmSaveNewGroup();return;}if(event.key===\'Escape\'){document.getElementById(\'mm_newgrp_wrap\').remove();return;}if(event.key===\'ArrowDown\'){let f=document.querySelector(\'#mm_newgrp_list div\');if(f)f.focus();event.preventDefault();}">' +
+    '<div id="mm_newgrp_list" class="ch-dropdown" style="display:none;position:absolute;top:100%;left:0;width:280px;z-index:9999;"></div>' +
+    '</div>' +
     '<button class="btn btn-primary btn-sm" onclick="mmSaveNewGroup()">Save</button>' +
     '<button class="btn btn-ghost btn-sm" onclick="document.getElementById(\'mm_newgrp_wrap\').remove()">✕</button>';
   wrap.insertBefore(div, wrap.firstChild);
@@ -12100,11 +12166,18 @@ function mmAddSub(grp, grpId) {
   const wrap = document.createElement('div');
   wrap.className = 'tree-inline-wrap';
   wrap.style.cssText = 'display:flex;gap:6px;align-items:center;margin:6px 0;flex-wrap:wrap;';
+  const safeGrp = grp.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+  const subListId = grpId + '_sublist';
   wrap.innerHTML = `<span style="font-size:12px;color:var(--muted);">New Material Sub-head:</span>
-    <input class="tree-inline-input" placeholder="e.g. TMT Bars, Cement" autocomplete="off"
-      style="padding:6px 10px;border:1px solid var(--accent);border-radius:4px;font-size:12px;width:280px;background:var(--input-bg);color:var(--text);"
-      onkeydown="if(event.key==='Enter')mmSaveNewSub(this,'${esc(grp)}');if(event.key==='Escape')this.closest('.tree-inline-wrap').remove()">
-    <button class="btn btn-primary btn-sm" onclick="mmSaveNewSub(this.previousElementSibling,'${esc(grp)}')">Save</button>
+    <div style="position:relative;display:inline-block;">
+      <input class="tree-inline-input" placeholder="e.g. TMT Bars, Cement" autocomplete="off"
+        style="padding:6px 10px;border:1px solid var(--accent);border-radius:4px;font-size:12px;width:280px;background:var(--input-bg);color:var(--text);"
+        oninput="mmSubFuzzy(this.id,'${subListId}','${safeGrp}')"
+        onfocus="mmSubFuzzy(this.id,'${subListId}','${safeGrp}')"
+        onkeydown="if(event.key==='Enter'){mmSaveNewSub(this,'${safeGrp}');return;}if(event.key==='Escape')this.closest('.tree-inline-wrap').remove();">
+      <div id="${subListId}" class="ch-dropdown" style="display:none;position:absolute;top:100%;left:0;width:280px;z-index:9999;"></div>
+    </div>
+    <button class="btn btn-primary btn-sm" onclick="mmSaveNewSub(this.closest('.tree-inline-wrap').querySelector('input'),'${safeGrp}')">Save</button>
     <button class="btn btn-ghost btn-sm" onclick="this.closest('.tree-inline-wrap').remove()">✕</button>`;
   c.appendChild(wrap);
   wrap.querySelector('input').focus();
@@ -12136,12 +12209,21 @@ function mmAddMaterial(grp, sub, subId) {
   const wrap = document.createElement('div');
   wrap.className = 'tree-inline-wrap';
   wrap.style.cssText = 'padding:10px;background:var(--input-bg);border:1px solid var(--accent);border-radius:6px;margin:6px 0;';
+  const nameListId = subId + '_namelist';
   wrap.innerHTML = `
     <div style="display:grid;grid-template-columns:2fr 1fr 1fr 1fr;gap:8px;margin-bottom:8px;">
-      <div><label style="font-size:11px;color:var(--muted);display:block;margin-bottom:3px;">Material Name *</label>
-        <input id="mm_new_name" placeholder="e.g. OPC Cement 53 Grade" autocomplete="off"
-          style="width:100%;padding:6px 8px;border:1px solid var(--border);border-radius:4px;font-size:12px;background:var(--bg);color:var(--text);"
-          onkeydown="if(event.key==='Escape')this.closest('.tree-inline-wrap').remove()"></div>
+      <div>
+        <label style="font-size:11px;color:var(--muted);display:block;margin-bottom:3px;">Material Name *</label>
+        <div style="position:relative;">
+          <input id="mm_new_name" placeholder="e.g. OPC Cement 53 Grade" autocomplete="off"
+            style="width:100%;padding:6px 8px;border:1px solid var(--border);border-radius:4px;font-size:12px;background:var(--bg);color:var(--text);"
+            oninput="mmNameFuzzy('mm_new_name','${nameListId}')"
+            onfocus="mmNameFuzzy('mm_new_name','${nameListId}')"
+            onblur="setTimeout(()=>{ let l=document.getElementById('${nameListId}'); if(l) l.style.display='none'; },200)"
+            onkeydown="if(event.key==='Escape')this.closest('.tree-inline-wrap').remove()">
+          <div id="${nameListId}" style="display:none;position:absolute;top:100%;left:0;right:0;background:var(--input-bg);border:1px solid var(--accent);border-radius:0 0 4px 4px;z-index:9999;box-shadow:0 4px 12px rgba(0,0,0,0.15);max-height:160px;overflow-y:auto;"></div>
+        </div>
+      </div>
       <div><label style="font-size:11px;color:var(--muted);display:block;margin-bottom:3px;">UOM *</label>
         <input id="mm_new_uom" placeholder="Bags / MT / Nos"
           style="width:100%;padding:6px 8px;border:1px solid var(--border);border-radius:4px;font-size:12px;background:var(--bg);color:var(--text);"></div>
@@ -12196,8 +12278,69 @@ async function mmSaveMaterial(grp, sub) {
   finally { pbDone(); }
 }
 
-// MATERIAL MASTER
-// ============================================================
+// ── Delete Material Group (Admin only) ────────────────────────
+async function mmDeleteGroup(grp) {
+  if (!hasRole('Admin')) { toast('Admin only','error'); return; }
+
+  // Count active materials in this group
+  const matCount = (puState.materials||[]).filter(m => m.material_group === grp).length;
+  if (matCount > 0) {
+    toast(`Cannot delete — "${grp}" has ${matCount} material${matCount!==1?'s':''} assigned. Reassign or delete them first.`, 'error');
+    return;
+  }
+
+  if (!confirm(`Delete group "${grp}" and all its empty sub-heads?\nThis cannot be undone.`)) return;
+
+  pbShow('Deleting group…');
+  try {
+    // Remove all pu_cost_heads rows for this group (both header and sub-heads)
+    const { error } = await sb.from('pu_cost_heads')
+      .update({ is_active: false, updated_at: new Date().toISOString() })
+      .eq('costhead', grp);
+    if (error) throw error;
+    flashSuccess(`Group "${grp}" deleted`);
+    await Promise.all([apiLoadCostHeads(), apiLoadMaterials()]);
+    renderMaterialTree();
+  } catch(e) { toast('Error: ' + e.message, 'error'); }
+  finally { pbDone(); }
+}
+
+// ── Delete Sub-head (Admin only) ──────────────────────────────
+async function mmDeleteSub(chId, grp, sub) {
+  if (!hasRole('Admin')) { toast('Admin only','error'); return; }
+
+  // Count active materials in this sub-head
+  const matCount = (puState.materials||[]).filter(m => m.material_group === grp && m.sub_head === sub).length;
+  if (matCount > 0) {
+    toast(`Cannot delete — "${sub}" has ${matCount} material${matCount!==1?'s':''} assigned. Reassign or delete them first.`, 'error');
+    return;
+  }
+
+  if (!confirm(`Delete sub-head "${sub}" from "${grp}"?\nThis cannot be undone.`)) return;
+
+  pbShow('Deleting sub-head…');
+  try {
+    let error;
+    if (chId && chId !== 'null') {
+      // Delete by pu_cost_heads row id (precise)
+      ({ error } = await sb.from('pu_cost_heads')
+        .update({ is_active: false, updated_at: new Date().toISOString() })
+        .eq('id', chId));
+    } else {
+      // Fallback: match by costhead + cost_subhead
+      ({ error } = await sb.from('pu_cost_heads')
+        .update({ is_active: false, updated_at: new Date().toISOString() })
+        .eq('costhead', grp).eq('cost_subhead', sub));
+    }
+    if (error) throw error;
+    flashSuccess(`Sub-head "${sub}" deleted`);
+    await Promise.all([apiLoadCostHeads(), apiLoadMaterials()]);
+    renderMaterialTree();
+  } catch(e) { toast('Error: ' + e.message, 'error'); }
+  finally { pbDone(); }
+}
+
+
 async function apiLoadMaterials() {
   const { data, error } = await sb.from('pu_material_master')
     .select('*').eq('is_active', true).order('material_name');
@@ -12220,7 +12363,100 @@ async function apiLoadCostHeads() {
   } catch(e) { console.error('apiLoadCostHeads:', e); return { ok: false }; }
 }
 
-// ── Fuzzy-search dropdown helpers (ch-dropdown) ────────────────
+// ── Material Master fuzzy helpers ─────────────────────────────
+// Highlights matched words in a result string (bold the matching chars)
+function _mmHighlight(text, q) {
+  if (!q) return esc(text);
+  // Highlight each token independently
+  let result = esc(text);
+  const tokens = _fuzzyTokens(q);
+  tokens.forEach(t => {
+    const re = new RegExp(t.replace(/[.*+?^${}()|[\]\\]/g,'\\$&'), 'gi');
+    result = result.replace(re, m => '<strong style="color:var(--accent);">'+m+'</strong>');
+  });
+  return result;
+}
+
+// Fuzzy dropdown for Material Group inline input (mmAddGroup)
+function mmGroupFuzzy(inputId, listId) {
+  const inp = document.getElementById(inputId);
+  const list = document.getElementById(listId);
+  if (!inp || !list) return;
+  const q = inp.value.trim();
+  const groups = [...new Set([
+    ...(_chData||[]).map(r => r.costhead).filter(Boolean),
+    ...(puState.materials||[]).map(m => m.material_group).filter(Boolean),
+  ])].sort();
+  let filtered;
+  if (!q) {
+    filtered = groups;
+  } else {
+    const tokens = _fuzzyTokens(q);
+    // Rank: starts-with first, then fuzzy matches
+    const exact   = groups.filter(g => g.toLowerCase().startsWith(q.toLowerCase()));
+    const fuzzy   = groups.filter(g => !g.toLowerCase().startsWith(q.toLowerCase()) && _fuzzyMatch(g.toLowerCase(), tokens));
+    filtered = [...exact, ...fuzzy];
+  }
+  if (!filtered.length) { list.style.display = 'none'; return; }
+  list.innerHTML = filtered.slice(0, 8).map(g => {
+    const safe = g.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+    return `<div style="padding:7px 10px;cursor:pointer;font-size:12px;" onmousedown="event.preventDefault();document.getElementById('${inputId}').value='${safe}';document.getElementById('${listId}').style.display='none';">${_mmHighlight(g, q)}</div>`;
+  }).join('');
+  list.style.display = '';
+}
+
+// Fuzzy dropdown for Sub-head inline input (mmAddSub) — scoped to the current group
+function mmSubFuzzy(inputId, listId, grp) {
+  const inp = document.getElementById(inputId);
+  const list = document.getElementById(listId);
+  if (!inp || !list) return;
+  const q = inp.value.trim();
+  const subs = [...new Set([
+    ...(_chData||[]).filter(r => !grp || r.costhead === grp).map(r => r.cost_subhead).filter(Boolean),
+    ...(puState.materials||[]).filter(m => !grp || m.material_group === grp).map(m => m.sub_head).filter(Boolean),
+  ])].sort();
+  let filtered;
+  if (!q) {
+    filtered = subs;
+  } else {
+    const tokens = _fuzzyTokens(q);
+    const exact  = subs.filter(s => s.toLowerCase().startsWith(q.toLowerCase()));
+    const fuzzy  = subs.filter(s => !s.toLowerCase().startsWith(q.toLowerCase()) && _fuzzyMatch(s.toLowerCase(), tokens));
+    filtered = [...exact, ...fuzzy];
+  }
+  if (!filtered.length) { list.style.display = 'none'; return; }
+  list.innerHTML = filtered.slice(0, 8).map(s => {
+    const safe = s.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+    return `<div style="padding:7px 10px;cursor:pointer;font-size:12px;" onmousedown="event.preventDefault();document.getElementById('${inputId}').value='${safe}';document.getElementById('${listId}').style.display='none';">${_mmHighlight(s, q)}</div>`;
+  }).join('');
+  list.style.display = '';
+}
+
+// Fuzzy "similar material" warning on the Name field — shows up to 3 matches
+function mmNameFuzzy(inputId, listId) {
+  const inp = document.getElementById(inputId);
+  const list = document.getElementById(listId);
+  if (!inp || !list) return;
+  const q = inp.value.trim();
+  if (q.length < 3) { list.style.display = 'none'; return; }
+  const tokens = _fuzzyTokens(q);
+  const matches = (puState.materials||[])
+    .filter(m => _fuzzyMatch((m.material_name||'').toLowerCase(), tokens))
+    .slice(0, 3);
+  if (!matches.length) { list.style.display = 'none'; return; }
+  list.innerHTML =
+    `<div style="padding:5px 10px;font-size:11px;color:var(--muted);background:var(--panel-2);border-bottom:1px solid var(--border);">⚠ Similar materials already exist:</div>` +
+    matches.map(m =>
+      `<div style="padding:6px 10px;cursor:default;font-size:12px;">
+        <span style="font-weight:600;color:var(--accent);">${esc(m.material_code)}</span>
+        &nbsp;${_mmHighlight(m.material_name, q)}
+        <span style="color:var(--muted);font-size:11px;"> · ${esc(m.uom||'')}${m.material_group?' · '+esc(m.material_group):''}</span>
+      </div>`
+    ).join('');
+  list.style.display = '';
+}
+
+
 (function() {
   if (document.getElementById('ch-dropdown-style')) return;
   const s = document.createElement('style');
@@ -12240,13 +12476,19 @@ function chFuzzy(inputId, listId, subInputId, subListId) {
   const inp = document.getElementById(inputId);
   const list = document.getElementById(listId);
   if (!inp || !list) return;
-  const q = inp.value.trim().toLowerCase();
+  const q = inp.value.trim();
   const heads = [...new Set(_chData.map(r => r.costhead))].sort();
-  const filtered = q ? heads.filter(h => h.toLowerCase().includes(q)) : heads;
+  let filtered;
+  if (!q) {
+    filtered = heads;
+  } else {
+    const tokens = _fuzzyTokens(q);
+    filtered = heads.filter(h => _fuzzyMatch(h.toLowerCase(), tokens));
+  }
   if (!filtered.length) { list.style.display = 'none'; return; }
   list.innerHTML = filtered.map(h => {
     const safe = h.replace(/'/g, "\\'");
-    const display = q ? h.replace(new RegExp(q.replace(/[.*+?^${}()|[\]\\]/g,'\\$&'),'gi'), m => '<strong>'+m+'</strong>') : h;
+    const display = _mmHighlight(h, q);
     return '<div onmousedown="chSelectHead(\''+inputId+'\',\''+listId+'\',\''+subInputId+'\',\''+subListId+'\',\''+safe+'\')">'+display+'</div>';
   }).join('');
   list.style.display = '';
@@ -12267,17 +12509,23 @@ function chFuzzySub(subInputId, subListId, parentInputId) {
   const list = document.getElementById(subListId);
   if (!subInp || !list) return;
   const parentVal = parentInp?.value?.trim() || '';
-  const q = subInp.value.trim().toLowerCase();
+  const q = subInp.value.trim();
   const subs = _chData
     .filter(r => !parentVal || r.costhead === parentVal)
     .map(r => r.cost_subhead)
     .filter(Boolean);
   const unique = [...new Set(subs)].sort();
-  const filtered = q ? unique.filter(s => s.toLowerCase().includes(q)) : unique;
+  let filtered;
+  if (!q) {
+    filtered = unique;
+  } else {
+    const tokens = _fuzzyTokens(q);
+    filtered = unique.filter(s => _fuzzyMatch(s.toLowerCase(), tokens));
+  }
   if (!filtered.length) { list.style.display = 'none'; return; }
   list.innerHTML = filtered.map(s => {
     const safe = s.replace(/'/g, "\\'");
-    const display = q ? s.replace(new RegExp(q.replace(/[.*+?^${}()|[\]\\]/g,'\\$&'),'gi'), m => '<strong>'+m+'</strong>') : s;
+    const display = _mmHighlight(s, q);
     return '<div onmousedown="chSelectSub(\''+subInputId+'\',\''+subListId+'\',\''+safe+'\')">'+display+'</div>';
   }).join('');
   list.style.display = '';
