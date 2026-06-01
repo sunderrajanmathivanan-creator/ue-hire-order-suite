@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Penguin-Procurement Suite v73 — Urban Excellence LLP · Poetry of Earth</title>
+<title>Penguin-Procurement Suite v74 — Urban Excellence LLP · Poetry of Earth</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <style>
@@ -13151,20 +13151,73 @@ function selectMaterialItem(inputId, resultsId, name, uom, matCode) {
 let _mirItemC = 0;
 
 async function loadMIRList() {
-  // v73: fetch mir_items with procurement_line_id + lock state,
-  // then join po_items (with short_closed_qty) + grn_items for live quantities
-  const [mirRes, itemsRes] = await Promise.all([
+  // v74: fetch mir_items + po_links + po_orders status in one shot.
+  // mirPOMap is built from pu_mir_item_po_links filtered by approvedPOs —
+  // same source-of-truth the View modal uses, so cancelled POs never appear
+  // in the table PO column.  Legacy fallback: items with po_number but no
+  // po_links row are also included only when the PO is approved.
+  const [mirRes, itemsRes, poLinksRes] = await Promise.all([
     sb.from('pu_mir').select('*').order('created_at', { ascending: false }),
     sb.from('pu_mir_items').select(
       'mir_number,sno,material_name,uom,qty_required,rfq_number,po_number,specification,procurement_line_id,is_locked,locked_qty,locked_by,locked_at'
-    ).order('sno')
+    ).order('sno'),
+    sb.from('pu_mir_item_po_links').select('mir_number,sno,po_number'),
   ]);
   puState.mirList = mirRes.data || [];
-  puState.mirItemsMap    = {};
-  puState.mirSCSet       = new Set();
+  puState.mirItemsMap         = {};
+  puState.mirSCSet            = new Set();
   puState.mirItemStatusSummary = {};
-  puState.mirBalanceSet  = new Set();
-  puState.mirPOMap       = {};
+  puState.mirBalanceSet       = new Set();
+  puState.mirPOMap            = {};
+  puState.mirCancelledPOMap   = {};  // v74: cancelled POs per MIR — shown as struck-through pills
+
+  // ── Identify approved POs (same whitelist as viewMIR) ─────────────────────
+  // Collect every PO number referenced: from po_links + legacy po_number on items
+  const poLinksData   = poLinksRes.data || [];
+  const snosWithLinks = new Set(poLinksData.map(l => l.mir_number + '|' + l.sno));
+  const legacyPONums  = (itemsRes.data||[])
+    .filter(it => it.po_number && !snosWithLinks.has(it.mir_number + '|' + it.sno))
+    .map(it => it.po_number);
+  const allPONums = [...new Set([
+    ...poLinksData.map(l => l.po_number).filter(Boolean),
+    ...legacyPONums,
+  ])];
+  let approvedPOs  = new Set();
+  let cancelledPOs = new Set();
+  if (allPONums.length) {
+    const {data: poSt} = await sb.from('pu_po_orders')
+      .select('po_number,status').in('po_number', allPONums);
+    (poSt||[]).forEach(p => {
+      if (['Open','Partial Receipt','Fully Received','Short-Closed','Closed'].includes(p.status))
+        approvedPOs.add(p.po_number);
+      else if (p.status === 'Cancelled')
+        cancelledPOs.add(p.po_number);
+    });
+  }
+
+  // ── Build mirPOMap from po_links (approved only) + legacy fallback ─────────
+  poLinksData.forEach(l => {
+    if (!l.po_number) return;
+    if (approvedPOs.has(l.po_number)) {
+      if (!puState.mirPOMap[l.mir_number]) puState.mirPOMap[l.mir_number] = new Set();
+      puState.mirPOMap[l.mir_number].add(l.po_number);
+    } else if (cancelledPOs.has(l.po_number)) {
+      if (!puState.mirCancelledPOMap[l.mir_number]) puState.mirCancelledPOMap[l.mir_number] = new Set();
+      puState.mirCancelledPOMap[l.mir_number].add(l.po_number);
+    }
+  });
+  // Legacy: items with po_number but no po_links row
+  (itemsRes.data||[]).forEach(it => {
+    if (!it.po_number) return;
+    if (snosWithLinks.has(it.mir_number + '|' + it.sno)) return; // already covered by po_links
+    if (approvedPOs.has(it.po_number)) {
+      if (!puState.mirPOMap[it.mir_number]) puState.mirPOMap[it.mir_number] = new Set();
+      puState.mirPOMap[it.mir_number].add(it.po_number);
+    } else if (cancelledPOs.has(it.po_number)) {
+      if (!puState.mirCancelledPOMap[it.mir_number]) puState.mirCancelledPOMap[it.mir_number] = new Set();
+      puState.mirCancelledPOMap[it.mir_number].add(it.po_number);
+    }
+  });
 
   const allPlIds = (itemsRes.data||[])
     .map(it => it.procurement_line_id).filter(Boolean);
@@ -13223,11 +13276,6 @@ async function loadMIRList() {
     // (effective PO < qty_required means balance exists and no active PO covers it)
     if (effPoQty < qtyReq && !it.is_locked)
       puState.mirBalanceSet.add(it.mir_number);
-
-    if (it.po_number) {
-      if (!puState.mirPOMap[it.mir_number]) puState.mirPOMap[it.mir_number] = new Set();
-      puState.mirPOMap[it.mir_number].add(it.po_number);
-    }
   });
 
   // Compute live header status for each MIR and write to puState.mirList
@@ -13290,7 +13338,9 @@ function renderMIRList() {
   if (fPurp)    rows = rows.filter(m => (m.purpose||'').toLowerCase().includes(fPurp));
   if (fPO)      rows = rows.filter(m => {
     const pos = puState.mirPOMap?.[m.mir_number];
-    return pos && [...pos].some(p => p.toLowerCase().includes(fPO));
+    const canc = puState.mirCancelledPOMap?.[m.mir_number];
+    return (pos  && [...pos ].some(p => p.toLowerCase().includes(fPO))) ||
+           (canc && [...canc].some(p => p.toLowerCase().includes(fPO)));
   });
   if (fRaised)  rows = rows.filter(m => (m.raised_by||'').toLowerCase().includes(fRaised));
   // v73: filter and sort use the same live status logic as display
@@ -13327,10 +13377,17 @@ function renderMIRList() {
     const stCls = st.toLowerCase().replace(/[\s/()]+/g,'-');
     const summary = puState.mirItemStatusSummary?.[m.mir_number] || {};
     const hasBalance = puState.mirBalanceSet?.has(m.mir_number);
-    // PO numbers for this MIR
-    const poNums = puState.mirPOMap?.[m.mir_number] ? [...puState.mirPOMap[m.mir_number]] : [];
-    const poCell = poNums.length
-      ? poNums.map(p => `<span class="mono" style="display:inline-block;font-size:10px;color:#7c3aed;background:#f5f3ff;padding:1px 5px;border-radius:4px;margin:1px 2px 1px 0;">${esc(p)}</span>`).join('')
+    // PO numbers for this MIR — approved (purple) + cancelled (red, struck-through)
+    const poNums      = puState.mirPOMap?.[m.mir_number]          ? [...puState.mirPOMap[m.mir_number]]          : [];
+    const cancPoNums  = puState.mirCancelledPOMap?.[m.mir_number] ? [...puState.mirCancelledPOMap[m.mir_number]] : [];
+    const approvedPills  = poNums.map(p =>
+      `<span class="mono" style="display:inline-block;font-size:10px;color:#7c3aed;background:#f5f3ff;padding:1px 5px;border-radius:4px;margin:1px 2px 1px 0;">${esc(p)}</span>`
+    );
+    const cancelledPills = cancPoNums.map(p =>
+      `<span class="mono" title="Cancelled PO" style="display:inline-block;font-size:10px;color:#991b1b;background:#fff1f2;border:1px solid #fecaca;text-decoration:line-through;padding:1px 5px;border-radius:4px;margin:1px 2px 1px 0;">${esc(p)}</span>`
+    );
+    const poCell = (approvedPills.length || cancelledPills.length)
+      ? [...approvedPills, ...cancelledPills].join('')
       : '<span style="color:var(--muted);">—</span>';
     // Build item count summary pills — only show statuses that have ≥1 item
     const summaryPills = _istMeta
