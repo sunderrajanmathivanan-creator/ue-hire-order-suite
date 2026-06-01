@@ -13278,6 +13278,11 @@ async function loadMIRList() {
       puState.mirBalanceSet.add(it.mir_number);
   });
 
+  // Qty Available is meaningless for Rejected MIRs — strip them out
+  puState.mirList
+    .filter(m => m.status === 'Rejected')
+    .forEach(m => puState.mirBalanceSet.delete(m.mir_number));
+
   // Compute live header status for each MIR and write to puState.mirList
   puState.mirList.forEach(m => {
     const items = puState.mirItemsMap[m.mir_number] || [];
@@ -13389,11 +13394,13 @@ function renderMIRList() {
     const poCell = (approvedPills.length || cancelledPills.length)
       ? [...approvedPills, ...cancelledPills].join('')
       : '<span style="color:var(--muted);">—</span>';
-    // Build item count summary pills — only show statuses that have ≥1 item
-    const summaryPills = _istMeta
-      .filter(s => summary[s.key] > 0)
-      .map(s => `<span style="display:inline-block;padding:1px 6px;background:${s.bg};color:${s.col};border-radius:8px;font-size:10px;font-weight:600;white-space:nowrap;">${s.key}: ${summary[s.key]}</span>`)
-      .join(' ');
+    // Build item count summary pills — suppressed entirely for Rejected MIRs
+    const summaryPills = st !== 'Rejected'
+      ? _istMeta
+          .filter(s => summary[s.key] > 0)
+          .map(s => `<span style="display:inline-block;padding:1px 6px;background:${s.bg};color:${s.col};border-radius:8px;font-size:10px;font-weight:600;white-space:nowrap;">${s.key}: ${summary[s.key]}</span>`)
+          .join(' ')
+      : '';
     let acts = `<button class="btn btn-ghost btn-sm" onclick="viewMIR('${esc(m.mir_number)}')">View</button>`;
     if (perms.canApproveMIR && st==='Pending Approval') {
       acts += ` <button class="btn btn-primary btn-sm" onclick="approveMIR('${esc(m.mir_number)}')">Approve</button>
@@ -13574,7 +13581,8 @@ async function viewMIR(mirNum) {
   let pendCount=0, poPartCount=0, poCount=0, recPartCount=0, recCount=0;
 
   // Qty Available: any unlocked line where effectivePoQty < qty_required
-  const hasBalance = (items||[]).some(it => {
+  // Not applicable for Rejected MIRs — the MIR is dead, balance is irrelevant
+  const hasBalance = mirSt !== 'Rejected' && (items||[]).some(it => {
     const plid     = it.procurement_line_id;
     const effPoQty = Math.max(0, (plid?(poQtyMap[plid]||0):0) - (plid?(scQtyMap[plid]||0):0));
     return effPoQty < (it.qty_required||0) && !it.is_locked;
@@ -13611,14 +13619,14 @@ async function viewMIR(mirNum) {
          <div style="font-size:9px;color:var(--muted);margin-top:2px;">${it.locked_by?'by '+esc(it.locked_by):''} ${it.locked_at?'on '+fmtDate(it.locked_at):''}</div>`
       : '';
 
-    // Lock / Unlock button — Admin only, visible when MIR is active
+    // Lock / Unlock button — Admin only, visible when MIR is active (not Rejected)
     const lockable   = !locked && effPoQty < qtyReq && !['Received','Closed'].includes(ist);
     const unlockable = locked;
-    const lockBtn    = isAdmin && lockable
+    const lockBtn    = isAdmin && lockable && mirSt !== 'Rejected'
       ? `<button class="btn btn-warn btn-sm" style="padding:2px 7px;font-size:10px;"
            onclick="lockMIRItem('${esc(mirNum)}',${it.sno},${balance},'${esc(it.material_name)}')">🔒 Lock</button>`
       : '';
-    const unlockBtn  = isAdmin && unlockable
+    const unlockBtn  = isAdmin && unlockable && mirSt !== 'Rejected'
       ? `<button class="btn btn-ghost btn-sm" style="padding:2px 7px;font-size:10px;"
            onclick="unlockMIRItem('${esc(mirNum)}',${it.sno},'${esc(it.material_name)}')">🔓 Unlock</button>`
       : '';
@@ -13654,8 +13662,7 @@ async function viewMIR(mirNum) {
       <td class="num" style="${balStyle}">${balance===0?'✓ Full':fmtINR(balance)}</td>
       <td style="font-size:11px;">${esc(it.specification||'—')}</td>
       <td>
-        <span style="padding:2px 8px;border-radius:10px;font-size:11px;font-weight:600;
-             background:${stCol}20;color:${stCol};border:1px solid ${stCol}40;">${ist}</span>
+        ${!(mirSt==='Rejected' && ist==='PO Pending') ? `<span style="padding:2px 8px;border-radius:10px;font-size:11px;font-weight:600;background:${stCol}20;color:${stCol};border:1px solid ${stCol}40;">${ist}</span>` : ''}
         ${lockInfo}
         <div style="margin-top:3px;">${lockBtn}${unlockBtn}</div>
       </td>
@@ -13700,7 +13707,7 @@ async function viewMIR(mirNum) {
     </div>
     <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;">
       <div style="padding:4px 10px;border-radius:6px;background:#f1f5f9;font-size:11px;">Total: <strong>${total}</strong></div>
-      ${pendCount>0?'<div style="padding:4px 10px;border-radius:6px;background:#f3f4f6;font-size:11px;color:#64748b;">PO Pending: <strong>'+pendCount+'</strong></div>':''}
+      ${(pendCount>0 && mirSt!=='Rejected')?'<div style="padding:4px 10px;border-radius:6px;background:#f3f4f6;font-size:11px;color:#64748b;">PO Pending: <strong>'+pendCount+'</strong></div>':''}
       ${(poPartCount+poCount)>0?'<div style="padding:4px 10px;border-radius:6px;background:#ede9fe;font-size:11px;color:#7c3aed;">PO Issued: <strong>'+(poPartCount+poCount)+'</strong></div>':''}
       ${(recPartCount+recCount)>0?'<div style="padding:4px 10px;border-radius:6px;background:#dcfce7;font-size:11px;color:#15803d;">Received: <strong>'+(recPartCount+recCount)+'</strong></div>':''}
     </div>
