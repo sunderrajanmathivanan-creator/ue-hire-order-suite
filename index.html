@@ -3060,7 +3060,7 @@ input[type="number"] {
               <td style="padding:4px 6px;"><input id="misF_issuedTo" placeholder="Filter&#8230;" oninput="renderMISList()" style="width:100%;padding:4px 6px;font-size:11px;background:var(--bg);color:var(--text);border:1px solid var(--border);border-radius:4px;"></td>
               <td style="padding:4px 6px;"><input id="misF_issuedBy" placeholder="Filter&#8230;" oninput="renderMISList()" style="width:100%;padding:4px 6px;font-size:11px;background:var(--bg);color:var(--text);border:1px solid var(--border);border-radius:4px;"></td>
               <td style="padding:4px 6px;"></td>
-              <td style="padding:4px 6px;"><select id="misF_status" onchange="renderMISList()" style="width:100%;padding:4px 5px;font-size:11px;background:var(--bg);color:var(--text);border:1px solid var(--border);border-radius:4px;"><option value="">All</option><option>Pending Approval</option><option value="Rejected - Correction">Needs Correction</option><option>Approved</option><option>Rejected</option></select></td>
+              <td style="padding:4px 6px;"><select id="misF_status" onchange="renderMISList()" style="width:100%;padding:4px 5px;font-size:11px;background:var(--bg);color:var(--text);border:1px solid var(--border);border-radius:4px;"><option value="">All</option><option>Pending Approval</option><option value="Rejected - Correction">Needs Correction</option><option>Approved</option><option>Rejected</option><option>Audit Entry</option></select></td>
               <td style="padding:4px 6px;text-align:center;"><button onclick="clearColFilters('misF_number','misF_issuedTo','misF_issuedBy','misF_dateFrom','misF_dateTo','misF_status','renderMISList')" title="Clear" style="font-size:10px;padding:3px 8px;background:var(--input-bg);color:var(--text-muted);border:1px solid var(--border);border-radius:4px;cursor:pointer;">&#10005; Clear</button></td>
             </tr>
           </thead>
@@ -3097,7 +3097,10 @@ input[type="number"] {
         <div class="section-title">Stock Balance</div>
         <div class="section-sub">Live stock — GRN received minus approved MIS issued. Reserved = pending approval MIS.</div>
       </div>
-      <button class="btn btn-ghost" onclick="loadStockBalance()">↻ Refresh</button>
+      <div style="display:flex;gap:8px;align-items:center;">
+        <button class="btn btn-ghost" onclick="loadStockBalance()">↻ Refresh</button>
+        <button class="btn btn-primary" id="btn_stockAudit" onclick="openStockAuditWizard()" title="Admin only: download current stock, adjust quantities, and post a corrective MIS">⚖ Stock Audit</button>
+      </div>
     </div>
     <div class="summary-bar" id="stock_summary">
       <div class="stat"><div class="lbl">Total Materials</div><div class="val" id="stock_matCount">—</div></div>
@@ -3652,7 +3655,8 @@ const ROLE_PERMS = {
                        canApprovePO: true, canCreateGRN: true, canApproveGRN: true,
                        canCancelPO: true, canShortClosePO: true,
                        canCreatePOB: true, canApprovePOB: true,
-                       canCreateMIS: true, canApproveMIS: true, canManageMasters: true }
+                       canCreateMIS: true, canApproveMIS: true, canManageMasters: true,
+                       canAuditStock: true }
 };
 
 // ── Purchase module state (defined early so initApp can call apiLoadMaterials) ──
@@ -5911,7 +5915,8 @@ function applyRoleUI() {
     // Purchase buttons
     btn_newMIR:'canCreateMIR', btn_newRFQ:'canCreateRFQ', btn_newPO:'canCreatePO',
     btn_newGRN:'canCreateGRN', btn_newCashGRN:'canCreateGRN',
-    btn_newPOB:'canCreatePOB', btn_newCashPOB:'canCreatePOB', btn_newMIS:'canCreateMIS'
+    btn_newPOB:'canCreatePOB', btn_newCashPOB:'canCreatePOB', btn_newMIS:'canCreateMIS',
+    btn_stockAudit:'canAuditStock'
   };
   Object.entries(ids).forEach(([id, perm]) => {
     const el = document.getElementById(id);
@@ -18931,7 +18936,10 @@ function renderMISList() {
     const cashBadge = hasCash
       ? ' <span style="font-size:10px;background:#ad6800;color:#fff;padding:1px 6px;border-radius:3px;font-weight:600;vertical-align:middle;" title="Contains material with cash-purchase history">DIRECT</span>'
       : '';
-    const stCls=m.status==='Approved'?'approved':m.status==='Rejected'?'rejected':m.status==='Rejected - Correction'?'rejected-correction':'pending-approval';
+    const auditBadge = m.status === 'Audit Entry'
+      ? ' <span style="font-size:10px;background:#6d28d9;color:#fff;padding:1px 6px;border-radius:3px;font-weight:600;vertical-align:middle;" title="Stock audit corrective entry">AUDIT</span>'
+      : '';
+    const stCls=m.status==='Approved'?'approved':m.status==='Rejected'?'rejected':m.status==='Rejected - Correction'?'rejected-correction':m.status==='Audit Entry'?'approved':'pending-approval';
     const stLabel=m.status==='Rejected - Correction'?'Needs Correction':(m.status||'Pending Approval');
     // View button only — Approve/Reject moved into the popup
     const acts=`<button class="btn btn-ghost btn-sm" onclick="viewMIS('${esc(m.mis_number)}')">View</button>`
@@ -18941,7 +18949,7 @@ function renderMISList() {
     const rmcBadge = (m.issued_to||'').toLowerCase().includes('rmc plant')
       ? ' <span class="rmc-badge">RMC</span>' : '';
     return `<tr>
-      <td class="mono">${esc(m.mis_number)}${cashBadge}${rmcBadge}</td><td>${fmtDate(m.issue_date)}</td>
+      <td class="mono">${esc(m.mis_number)}${cashBadge}${rmcBadge}${auditBadge}</td><td>${fmtDate(m.issue_date)}</td>
       <td>${esc(m.issued_to)}</td>
       <td>${esc(m.issued_by||'—')}</td>
       <td class="num">${fmtINR(totalVal)}</td>
@@ -19379,12 +19387,16 @@ async function viewMIS(misNum) {
   pbDone();
   const perms = mergedPerms();
   const isPending = h?.status === 'Pending Approval';
+  const isAuditEntry = h?.status === 'Audit Entry';
   const canApprove = perms.canApproveMIS && isPending;
   const total=(items||[]).reduce((s,it)=>s+num(it.amount),0);
   const anyCash = (items||[]).some(it=>it.is_cash_purchase);
 
   const headerBadge = anyCash
     ? ' <span style="font-size:11px;background:#ad6800;color:#fff;padding:2px 8px;border-radius:3px;font-weight:600;vertical-align:middle;">DIRECT</span>'
+    : '';
+  const auditHeaderBadge = isAuditEntry
+    ? ' <span style="font-size:11px;background:#6d28d9;color:#fff;padding:2px 8px;border-radius:3px;font-weight:600;vertical-align:middle;" title="Stock Audit corrective entry — auto-approved">AUDIT</span>'
     : '';
   const lineBadge = (it) => it.is_cash_purchase
     ? ' <span style="font-size:9px;background:#ad6800;color:#fff;padding:1px 5px;border-radius:3px;font-weight:600;vertical-align:middle;">DIRECT</span>'
@@ -19414,16 +19426,24 @@ async function viewMIS(misNum) {
 
   // Action buttons
   let actionBtns = '';
-  if (canApprove) {
+  if (!isAuditEntry && canApprove) {
     actionBtns = `
       <button class="btn btn-primary"
         onclick="confirmApproveMIS('${esc(misNum)}')">✓ Approve</button>
       <button class="btn btn-danger" onclick="closeModal();rejectDoc('MIS','${esc(misNum)}')">✕ Reject</button>`;
   }
-  if (hasPerm('canCreateMIS') && h?.status === 'Rejected - Correction') {
+  if (!isAuditEntry && hasPerm('canCreateMIS') && h?.status === 'Rejected - Correction') {
     actionBtns += `<button class="btn btn-warn" onclick="reviseMIS('${esc(misNum)}')">✎ Revise & Resubmit</button>`;
   }
   actionBtns += `<button class="btn btn-ghost" onclick="closeModal()">Close</button>`;
+
+  // Audit Entry info banner
+  const auditBanner = isAuditEntry
+    ? `<div style="background:#f5f3ff;border:1px solid #c4b5fd;border-radius:6px;padding:8px 12px;margin-bottom:10px;font-size:12px;">
+        <span style="font-weight:700;color:#5b21b6;">⚖ Stock Audit Corrective Entry</span>
+        <span style="color:#6d28d9;margin-left:8px;">Auto-approved by system. Positive quantities = surplus; negative = shortage.</span>
+       </div>`
+    : '';
 
   // Store loaded items for confirmApproveMIS — avoids re-fetch and unsafe inline JSON
   window._misApprovalItems = (items||[]).map(it=>({
@@ -19431,23 +19451,24 @@ async function viewMIS(misNum) {
   }));
 
   openModal(`
-    <h3 style="margin-bottom:4px;">MIS — ${esc(misNum)}${headerBadge}
-      <span class="status ${h?.status==='Approved'?'approved':h?.status==='Rejected'?'rejected':h?.status==='Rejected - Correction'?'rejected-correction':'pending-approval'}"
+    <h3 style="margin-bottom:4px;">MIS — ${esc(misNum)}${headerBadge}${auditHeaderBadge}
+      <span class="status ${h?.status==='Approved'?'approved':h?.status==='Rejected'?'rejected':h?.status==='Rejected - Correction'?'rejected-correction':h?.status==='Audit Entry'?'approved':'pending-approval'}"
         style="margin-left:8px;font-size:12px;">${h?.status==='Rejected - Correction'?'Needs Correction':(h?.status||'Pending Approval')}</span>
     </h3>
     <div class="grid-3" style="margin-bottom:10px;">
       <div><label class="muted" style="font-size:11px;">DATE</label><div>${fmtDate(h?.issue_date)}</div></div>
-      <div><label class="muted" style="font-size:11px;">ISSUED TO</label><div>${esc(h?.issued_to||'')}</div></div>
+      <div><label class="muted" style="font-size:11px;">${isAuditEntry ? 'AUDITED BY' : 'ISSUED TO'}</label><div>${esc(h?.issued_to||'')}</div></div>
       <div><label class="muted" style="font-size:11px;">LOCATION</label><div>${esc(h?.location_name||'—')}</div></div>
       <div><label class="muted" style="font-size:11px;">ISSUED BY</label><div>${esc(h?.issued_by||'')}</div></div>
       ${h?.remarks?`<div style="grid-column:span 2;"><label class="muted" style="font-size:11px;">REMARKS</label><div style="font-size:12px;">${esc(h.remarks)}</div></div>`:''}
     </div>
     ${rejBanner}
+    ${auditBanner}
     <div class="table-wrap">
       <table>
         <thead><tr>
           <th>#</th><th>Material</th><th>UOM</th>
-          <th class="num">Stock Before</th><th class="num">Qty Issued</th>
+          <th class="num">Stock Before</th><th class="num">${isAuditEntry ? 'Qty Adjustment (±)' : 'Qty Issued'}</th>
           <th class="num">Rate</th><th class="num">Amount</th>
         </tr></thead>
         <tbody>
@@ -19461,6 +19482,318 @@ async function viewMIS(misNum) {
     </div>
     <div class="actions-row" style="margin-top:12px;">${actionBtns}</div>
   `, 'large');
+}
+
+// ============================================================
+// STOCK AUDIT (Admin only)
+// ============================================================
+// Flow:
+//   Step 1 — Capture audit metadata (date, person, reference, remarks)
+//   Step 2 — Download current stock as CSV
+//   Step 3 — Upload corrected CSV; preview diff
+//   Step 4 — Confirm → post single MIS with status = 'Audit Entry'
+//             and write a row to pu_stock_audit_log
+// ============================================================
+
+async function openStockAuditWizard() {
+  if (!hasPerm('canAuditStock')) { toast('Admin access only — stock audit is restricted', 'error'); return; }
+
+  // Make sure stock is fresh
+  if (!puState.stockBalance || puState.stockBalance.length === 0) {
+    pbShow('Loading stock…');
+    const { data, error } = await sb.from('pu_stock_balance').select('*').order('material_name');
+    pbDone();
+    if (error) { toast('Could not load stock: ' + error.message, 'error'); return; }
+    puState.stockBalance = data || [];
+  }
+
+  openModal(`
+    <h3 style="margin-bottom:4px;">⚖ Stock Audit
+      <span style="font-size:11px;background:#6d28d9;color:#fff;padding:2px 8px;border-radius:3px;font-weight:600;vertical-align:middle;margin-left:8px;">ADMIN</span>
+    </h3>
+    <p style="color:var(--text-muted);font-size:12px;margin-bottom:16px;">
+      Download current stock as a CSV, fill in the <strong>audited_qty</strong> column, and re-upload to post a corrective Audit Entry MIS.
+    </p>
+
+    <!-- Step 1: Audit Metadata -->
+    <div style="background:var(--input-bg);border:1px solid var(--border);border-radius:8px;padding:14px;margin-bottom:14px;">
+      <div style="font-weight:600;font-size:12px;color:var(--text-muted);margin-bottom:10px;text-transform:uppercase;letter-spacing:.05em;">Step 1 — Audit Details</div>
+      <div class="grid-2" style="gap:10px;">
+        <div class="field">
+          <label class="req" style="font-size:11px;">Audit Date</label>
+          <input type="date" id="audit_date" value="${today()}" style="width:100%;padding:7px;background:var(--bg);color:var(--text);border:1px solid var(--border);border-radius:4px;">
+        </div>
+        <div class="field">
+          <label class="req" style="font-size:11px;">Audited By</label>
+          <input type="text" id="audit_person" value="${esc(state.userName||'')}" placeholder="Name of person conducting audit" style="width:100%;padding:7px;background:var(--bg);color:var(--text);border:1px solid var(--border);border-radius:4px;">
+        </div>
+        <div class="field">
+          <label style="font-size:11px;">Audit Reference No.</label>
+          <input type="text" id="audit_ref" placeholder="e.g. AUDIT/2026-27/01 (optional)" style="width:100%;padding:7px;background:var(--bg);color:var(--text);border:1px solid var(--border);border-radius:4px;">
+        </div>
+        <div class="field">
+          <label style="font-size:11px;">Remarks</label>
+          <input type="text" id="audit_remarks" placeholder="Optional — reason or notes" style="width:100%;padding:7px;background:var(--bg);color:var(--text);border:1px solid var(--border);border-radius:4px;">
+        </div>
+      </div>
+    </div>
+
+    <!-- Step 2: Download -->
+    <div style="background:var(--input-bg);border:1px solid var(--border);border-radius:8px;padding:14px;margin-bottom:14px;">
+      <div style="font-weight:600;font-size:12px;color:var(--text-muted);margin-bottom:10px;text-transform:uppercase;letter-spacing:.05em;">Step 2 — Download Current Stock</div>
+      <p style="font-size:12px;color:var(--text-muted);margin-bottom:10px;">
+        Download the sheet, fill in the <code style="background:var(--bg);padding:1px 5px;border-radius:3px;">audited_qty</code> column for every material you physically counted.
+        Leave it blank or same as <code style="background:var(--bg);padding:1px 5px;border-radius:3px;">balance_qty</code> if no adjustment needed.
+      </p>
+      <button class="btn btn-ghost" onclick="downloadStockAuditTemplate()">⬇ Download Stock Template (CSV)</button>
+    </div>
+
+    <!-- Step 3: Upload -->
+    <div style="background:var(--input-bg);border:1px solid var(--border);border-radius:8px;padding:14px;margin-bottom:14px;">
+      <div style="font-weight:600;font-size:12px;color:var(--text-muted);margin-bottom:10px;text-transform:uppercase;letter-spacing:.05em;">Step 3 — Upload Audited CSV</div>
+      <p style="font-size:12px;color:var(--text-muted);margin-bottom:10px;">
+        Only rows where <code style="background:var(--bg);padding:1px 5px;border-radius:3px;">audited_qty</code> differs from <code style="background:var(--bg);padding:1px 5px;border-radius:3px;">balance_qty</code> will be processed.
+      </p>
+      <input type="file" id="audit_upload_file" accept=".csv" onchange="previewStockAuditUpload(this)" style="font-size:13px;">
+      <div id="audit_preview" style="margin-top:12px;"></div>
+    </div>
+
+    <div class="actions-row" style="margin-top:4px;">
+      <button class="btn btn-primary" id="btn_postAudit" onclick="confirmPostStockAudit()" disabled style="opacity:.5;cursor:not-allowed;">✓ Post Audit Entry</button>
+      <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+    </div>
+  `, 'xlarge');
+}
+
+function downloadStockAuditTemplate() {
+  const rows = puState.stockBalance || [];
+  if (!rows.length) { toast('No stock data to download', 'warn'); return; }
+  const headers = ['material_name', 'uom', 'balance_qty', 'latest_rate', 'audited_qty', 'remarks'];
+  const csvLines = [headers.join(',')];
+  rows.forEach(s => {
+    const bal = parseFloat(s.balance_qty || 0).toFixed(3);
+    const rate = parseFloat(s.latest_rate || 0).toFixed(2);
+    const name = '"' + (s.material_name || '').replace(/"/g, '""') + '"';
+    const uom  = '"' + (s.uom || '').replace(/"/g, '""') + '"';
+    csvLines.push([name, uom, bal, rate, '', ''].join(','));
+  });
+  const blob = new Blob([csvLines.join('\r\n')], { type: 'text/csv' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `StockAudit_PoE_${today()}.csv`;
+  a.click();
+  URL.revokeObjectURL(a.href);
+  toast('Stock template downloaded — fill audited_qty column and re-upload', 'info', 5000);
+}
+
+// Stores parsed diff rows from CSV preview for use at confirm step
+window._auditDiffRows = [];
+
+function previewStockAuditUpload(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    const text = e.target.result;
+    const lines = text.split(/\r?\n/).filter(l => l.trim());
+    if (lines.length < 2) { document.getElementById('audit_preview').innerHTML = '<p style="color:var(--danger);">CSV appears empty.</p>'; return; }
+
+    // Parse header
+    const parseCSVLine = (line) => {
+      const result = []; let cur = ''; let inQ = false;
+      for (let i = 0; i < line.length; i++) {
+        const c = line[i];
+        if (c === '"') { if (inQ && line[i+1] === '"') { cur += '"'; i++; } else inQ = !inQ; }
+        else if (c === ',' && !inQ) { result.push(cur.trim()); cur = ''; }
+        else cur += c;
+      }
+      result.push(cur.trim());
+      return result;
+    };
+
+    const headers = parseCSVLine(lines[0]).map(h => h.toLowerCase().trim());
+    const iName   = headers.indexOf('material_name');
+    const iAudit  = headers.indexOf('audited_qty');
+    const iRmk    = headers.indexOf('remarks');
+    if (iName === -1 || iAudit === -1) {
+      document.getElementById('audit_preview').innerHTML = '<p style="color:var(--danger);">CSV must have <strong>material_name</strong> and <strong>audited_qty</strong> columns.</p>';
+      return;
+    }
+
+    // Build stock lookup from current state
+    const stockMap = {};
+    (puState.stockBalance || []).forEach(s => { stockMap[s.material_name.toLowerCase().trim()] = s; });
+
+    const diff = [];
+    for (let i = 1; i < lines.length; i++) {
+      const cols = parseCSVLine(lines[i]);
+      const name = (cols[iName] || '').trim();
+      const auditedStr = (cols[iAudit] || '').trim();
+      if (!name || auditedStr === '') continue; // skip blank audited_qty
+      const auditedQty = parseFloat(auditedStr);
+      if (isNaN(auditedQty) || auditedQty < 0) continue;
+      const stockRow = stockMap[name.toLowerCase().trim()];
+      if (!stockRow) continue;
+      const balQty = parseFloat(stockRow.balance_qty || 0);
+      const delta = auditedQty - balQty;
+      if (Math.abs(delta) < 0.0001) continue; // no change — skip
+      diff.push({
+        material_name: stockRow.material_name, // use master-cased name
+        uom: stockRow.uom || '',
+        balance_qty: balQty,
+        audited_qty: auditedQty,
+        delta: delta,
+        unit_rate: parseFloat(stockRow.latest_rate || 0),
+        remarks: iRmk >= 0 ? (cols[iRmk] || '').trim() : '',
+      });
+    }
+
+    window._auditDiffRows = diff;
+
+    if (!diff.length) {
+      document.getElementById('audit_preview').innerHTML = `
+        <div style="background:#f0fdf4;border:1px solid #86efac;border-radius:6px;padding:10px;font-size:12px;color:#166534;">
+          ✓ No differences found — all audited quantities match current stock. No adjustment needed.
+        </div>`;
+      _auditSetPostBtn(false);
+      return;
+    }
+
+    // Build preview table
+    const rows = diff.map(r => {
+      const sign  = r.delta > 0 ? '+' : '';
+      const color = r.delta > 0 ? 'var(--accent)' : 'var(--danger)';
+      const type  = r.delta > 0 ? 'Surplus' : 'Shortage';
+      return `<tr>
+        <td>${esc(r.material_name)}</td>
+        <td>${esc(r.uom)}</td>
+        <td class="num">${fmtINR(r.balance_qty)}</td>
+        <td class="num">${fmtINR(r.audited_qty)}</td>
+        <td class="num" style="font-weight:700;color:${color};">${sign}${fmtINR(r.delta)}</td>
+        <td style="color:${color};font-size:11px;font-weight:600;">${type}</td>
+        <td class="num">${fmtINR(r.unit_rate)}</td>
+        <td class="num" style="font-weight:600;">${fmtINRSym(Math.abs(r.delta) * r.unit_rate)}</td>
+      </tr>`;
+    }).join('');
+
+    const totalImpact = diff.reduce((s, r) => s + Math.abs(r.delta) * r.unit_rate, 0);
+
+    document.getElementById('audit_preview').innerHTML = `
+      <div style="font-weight:600;font-size:12px;margin-bottom:8px;color:var(--text);">
+        📋 ${diff.length} item${diff.length > 1 ? 's' : ''} with differences — total impact: <span style="color:var(--accent);">${fmtINRSym(totalImpact)}</span>
+      </div>
+      <div class="table-wrap" style="max-height:280px;overflow-y:auto;">
+        <table style="font-size:12px;">
+          <thead><tr>
+            <th>Material</th><th>UOM</th>
+            <th class="num">Current Bal.</th><th class="num">Audited Qty</th>
+            <th class="num">Δ Diff</th><th>Type</th>
+            <th class="num">Rate ₹</th><th class="num">Value Impact</th>
+          </tr></thead>
+          <tbody>${rows}</tbody>
+        </table>
+      </div>
+      <div style="font-size:11px;color:var(--text-muted);margin-top:8px;">
+        ℹ Surplus items (positive Δ) will post a positive quantity adjustment. Shortage items (negative Δ) will reduce stock.
+        Both types are posted in a single Audit Entry MIS and are auto-approved.
+      </div>`;
+    _auditSetPostBtn(true);
+  };
+  reader.readAsText(file);
+}
+
+function _auditSetPostBtn(enabled) {
+  const btn = document.getElementById('btn_postAudit');
+  if (!btn) return;
+  btn.disabled = !enabled;
+  btn.style.opacity = enabled ? '1' : '.5';
+  btn.style.cursor  = enabled ? 'pointer' : 'not-allowed';
+}
+
+async function confirmPostStockAudit() {
+  if (!hasPerm('canAuditStock')) { toast('Admin access only', 'error'); return; }
+  const diff = window._auditDiffRows || [];
+  if (!diff.length) { toast('No adjustments to post', 'warn'); return; }
+
+  const auditDate   = (document.getElementById('audit_date')?.value || '').trim();
+  const auditPerson = (document.getElementById('audit_person')?.value || '').trim();
+  const auditRef    = (document.getElementById('audit_ref')?.value || '').trim();
+  const auditRmks   = (document.getElementById('audit_remarks')?.value || '').trim();
+
+  if (!auditDate)   { toast('Audit date is required', 'error'); document.getElementById('audit_date')?.focus(); return; }
+  if (!auditPerson) { toast('Audited by (person name) is required', 'error'); document.getElementById('audit_person')?.focus(); return; }
+
+  pbShow('Posting audit entry…');
+  try {
+    // 1. Generate MIS number
+    const misNumber = await nextPUMISNumber();
+
+    // 2. Build MIS header — status = 'Audit Entry' (auto-approved, no workflow)
+    const { error: hErr } = await sb.from('pu_mis').insert({
+      mis_number:   misNumber,
+      issue_date:   auditDate,
+      issued_to:    auditPerson,
+      issued_by:    state.userName,
+      issued_by_id: state.userId,
+      remarks:      [auditRef, auditRmks].filter(Boolean).join(' | ') || 'Stock Audit Corrective Entry',
+      status:       'Audit Entry',
+    });
+    if (hErr) throw new Error('MIS header: ' + hErr.message);
+
+    // 3. Build MIS items — each diff row becomes one line
+    const misItems = diff.map((r, idx) => ({
+      sno:              idx + 1,
+      mis_number:       misNumber,
+      material_name:    r.material_name,
+      uom:              r.uom,
+      qty_issued:       r.delta,          // positive = surplus (stock increase), negative = shortage
+      stock_before:     r.balance_qty,
+      stock_after:      r.audited_qty,
+      unit_rate:        r.unit_rate,
+      amount:           r.delta * r.unit_rate,
+      is_cash_purchase: false,
+      procurement_line_id: crypto.randomUUID(),
+      procurement_source:  'audit_adjustment',
+      wbs_code:         null,
+      wbs_activity:     null,
+      cost_subhead:     null,
+    }));
+    const { error: iErr } = await sb.from('pu_mis_items').insert(misItems);
+    if (iErr) throw new Error('MIS items: ' + iErr.message);
+
+    // 4. Write to pu_stock_audit_log
+    const { error: aErr } = await sb.from('pu_stock_audit_log').insert({
+      mis_number:    misNumber,
+      audit_date:    auditDate,
+      audited_by:    auditPerson,
+      audited_by_id: state.userId,
+      audit_ref:     auditRef   || null,
+      remarks:       auditRmks  || null,
+      item_count:    diff.length,
+      total_surplus_items:  diff.filter(r => r.delta > 0).length,
+      total_shortage_items: diff.filter(r => r.delta < 0).length,
+      snapshot_json: JSON.stringify(diff.map(r => ({
+        material_name: r.material_name, uom: r.uom,
+        balance_qty: r.balance_qty, audited_qty: r.audited_qty,
+        delta: r.delta, unit_rate: r.unit_rate,
+      }))),
+      posted_by:    state.userName,
+      posted_by_id: state.userId,
+      posted_at:    new Date().toISOString(),
+    });
+    if (aErr) {
+      // Audit log failure is non-fatal — MIS is already posted; warn only
+      console.warn('Audit log write failed (non-fatal):', aErr.message);
+      toast('MIS posted but audit log write failed: ' + aErr.message, 'warn', 6000);
+    }
+
+    closeModal();
+    window._auditDiffRows = [];
+    flashSuccess(`Audit Entry ${misNumber} posted — ${diff.length} material(s) adjusted`);
+    await loadMISList();
+    await loadStockBalance();
+  } catch(e) { toast('Error posting audit: ' + e.message, 'error', 6000); }
+  finally { pbDone(); }
 }
 
 // ============================================================
