@@ -3034,6 +3034,22 @@ input[type="number"] {
       </div>
     </div>
     <!-- MIS List -->
+    <!-- MIS Material Lookup — fuzzy dropdown → popup modal -->
+    <div class="card" style="margin-bottom:8px;padding:10px 16px;">
+      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+        <label style="font-size:12px;font-weight:600;color:var(--text-muted);white-space:nowrap;">🔍 Material MIS History:</label>
+        <div style="position:relative;flex:1;min-width:200px;max-width:400px;">
+          <input id="misMatSearch" autocomplete="off" placeholder="Type material name or code…"
+            oninput="misLookupTypeahead()"
+            style="width:100%;padding:6px 10px;font-size:12px;background:var(--input-bg);color:var(--text);border:1px solid var(--border);border-radius:4px;">
+          <div class="typeahead-results" id="misMatResults"></div>
+        </div>
+        <button id="misMatClearBtn" class="btn btn-ghost btn-sm" style="display:none;"
+          onclick="clearMISLookup()">✕ Clear</button>
+        <span id="misMatHint" style="font-size:11px;color:var(--muted);"></span>
+      </div>
+    </div>
+
     <div id="misListCard" class="card">
       <div id="misLegendCard" style="border:1px solid var(--border);border-radius:6px;margin-bottom:14px;overflow:hidden;">
         <div onclick="toggleLegend('misLegend')" style="display:flex;align-items:center;justify-content:space-between;padding:8px 14px;cursor:pointer;background:var(--input-bg);user-select:none;">
@@ -3108,19 +3124,18 @@ input[type="number"] {
       <div class="stat"><div class="lbl">Low Stock Items</div><div class="val" id="stock_lowCount" style="color:var(--warn);">—</div></div>
     </div>
     <div class="card">
-      <div class="row" style="margin-bottom:12px;">
-        <input id="stockSearch" placeholder="Search material…" style="padding:7px;background:var(--input-bg);color:var(--text);border:1px solid var(--border);border-radius:4px;width:240px;" oninput="renderStockBalance()">
-        <select id="stockCatFilter" style="padding:7px;background:var(--input-bg);color:var(--text);border:1px solid var(--border);border-radius:4px;" onchange="renderStockBalance()">
-          <option value="">All Categories</option>
-          <option value="Civil">Civil</option><option value="MEP">MEP</option>
-          <option value="Finishing">Finishing</option><option value="Consumable">Consumable</option>
-          <option value="Equipment">Equipment</option>
-        </select>
+      <div class="row" style="margin-bottom:12px;gap:8px;flex-wrap:wrap;align-items:center;">
+        <input id="stockSearch" placeholder="Search material or code…" style="padding:7px;background:var(--input-bg);color:var(--text);border:1px solid var(--border);border-radius:4px;width:240px;" oninput="renderStockBalance()">
+        <label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer;user-select:none;">
+          <input type="checkbox" id="stockLowOnly" onchange="renderStockBalance()" style="width:14px;height:14px;cursor:pointer;">
+          <span style="color:var(--warn);font-weight:600;">Low / Zero stock only</span>
+        </label>
+        <button class="btn btn-ghost btn-sm" onclick="document.getElementById('stockSearch').value='';document.getElementById('stockLowOnly').checked=false;renderStockBalance();">✕ Clear</button>
       </div>
       <div class="table-wrap">
         <table>
           <thead><tr>
-            <th>Material</th><th>Category</th><th>UOM</th>
+            <th>Material</th><th>Code</th><th>UOM</th>
             <th class="num">Total Received</th><th class="num">Approved Issued</th>
             <th class="num">Reserved (Pending)</th>
             <th class="num">Available Balance</th><th class="num">Smart Rate (₹)</th>
@@ -3182,6 +3197,7 @@ input[type="number"] {
         <div style="display:flex;gap:8px;flex-wrap:wrap;">
           <span id="osValidCount" style="font-size:12px;padding:4px 10px;background:#d1fae5;color:#065f46;border-radius:12px;font-weight:600;"></span>
           <span id="osErrorCount" style="font-size:12px;padding:4px 10px;background:#fee2e2;color:#991b1b;border-radius:12px;font-weight:600;display:none;"></span>
+          <span id="osUnmatchedCount" style="font-size:12px;padding:4px 10px;background:#fef3c7;color:#92400e;border-radius:12px;font-weight:600;display:none;"></span>
         </div>
       </div>
       <div id="osGRNMeta" style="font-size:12px;color:var(--muted);margin-bottom:10px;"></div>
@@ -3189,7 +3205,8 @@ input[type="number"] {
         <table id="osPreviewTable">
           <thead><tr>
             <th>#</th>
-            <th>Material Description</th>
+            <th>Material Description (from file)</th>
+            <th>Material Master Match</th>
             <th>UOM</th>
             <th>Opening Date</th>
             <th class="num">Qty</th>
@@ -3880,7 +3897,6 @@ let _osParsedRows = [];   // holds validated rows after file parse
 function downloadOSTemplate() {
   if (!hasRole('Admin')) { toast('Admin access only', 'error'); return; }
 
-  // Build CSV template that Excel will open cleanly
   const headers = ['Material Description','UOM','Opening Date (DD-MM-YYYY)','Quantity','Basic Rate (Rs)','Category','Remarks'];
   const sampleRows = [
     ['PPC Cement 50kg','Bags','01-04-2025','55','292.37','Civil','Opening balance as on 1st April 2025'],
@@ -3888,24 +3904,19 @@ function downloadOSTemplate() {
     ['Safety Helmet Yellow','Nos','01-04-2025','23','78.00','Consumable',''],
   ];
 
-  // Use SheetJS if available, else fallback to CSV blob
   if (typeof XLSX !== 'undefined') {
     const wsData = [headers, ...sampleRows];
     const ws = XLSX.utils.aoa_to_sheet(wsData);
-    // Column widths
     ws['!cols'] = [40,10,22,10,16,16,40].map(w => ({ wch: w }));
-    // Freeze header row
     ws['!freeze'] = { xSplit: 0, ySplit: 1 };
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, 'Opening Stock');
     XLSX.writeFile(wb, 'UE_Opening_Stock_Template.xlsx');
   } else {
-    // Fallback: load SheetJS on-demand then retry
     const s = document.createElement('script');
     s.src = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
     s.onload = () => downloadOSTemplate();
     s.onerror = () => {
-      // Last resort — plain CSV
       const csvRows = [headers, ...sampleRows].map(r => r.map(c => `"${c}"`).join(',')).join('\n');
       const blob = new Blob([csvRows], { type: 'text/csv' });
       const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
@@ -3947,7 +3958,6 @@ function onOSFileSelected(input) {
     s.onerror = () => toast('Could not load Excel reader library', 'error');
     document.head.appendChild(s);
   }
-  // Reset input so same file can be re-selected
   input.value = '';
 }
 
@@ -3955,14 +3965,12 @@ function onOSFileSelected(input) {
 function parseOSRows(raw) {
   if (!raw || raw.length < 2) { toast('Template appears empty — check your file', 'error'); return; }
 
-  // Find header row (first row containing "Material Description")
   let headerIdx = raw.findIndex(r =>
     r.some(c => String(c).toLowerCase().includes('material description'))
   );
-  if (headerIdx < 0) headerIdx = 0;   // default to first row
+  if (headerIdx < 0) headerIdx = 0;
 
   const dataRows = raw.slice(headerIdx + 1).filter(r => r.some(c => String(c).trim() !== ''));
-
   const VALID_CATS = ['Civil','MEP','Finishing','Consumable','Equipment','Other'];
 
   _osParsedRows = dataRows.map((r, i) => {
@@ -3974,7 +3982,6 @@ function parseOSRows(raw) {
     const category = String(r[5] || '').trim() || 'Civil';
     const remarks  = String(r[6] || '').trim();
 
-    // Parse date — accept DD-MM-YYYY, YYYY-MM-DD, or JS Date object
     let openDate = '';
     if (rawDate instanceof Date) {
       openDate = rawDate.toISOString().split('T')[0];
@@ -3986,7 +3993,7 @@ function parseOSRows(raw) {
       } else if (/^\d{4}-\d{2}-\d{2}$/.test(ds)) {
         openDate = ds;
       } else if (ds === '') {
-        openDate = '2025-04-01';   // default to 1-Apr-25
+        openDate = '2025-04-01';
       } else {
         openDate = '';
       }
@@ -4003,43 +4010,231 @@ function parseOSRows(raw) {
 
     return {
       sno: i + 1,
-      material_name: desc,
+      file_desc: desc,           // original text from Excel — shown read-only
+      material_name: desc,       // will be replaced with master name once matched
+      material_code: null,       // set by _osMatchMaterials or user selection
       uom, open_date: openDate, qty, rate,
       category: catNorm, remarks,
       value: qty * rate,
       errors,
       valid: errors.length === 0,
+      // match state: 'exact' | 'fuzzy' | 'none' | 'confirmed'
+      matchState: 'none',
+      matchCandidates: [],       // [{material_code, material_name, uom, score}]
     };
+  });
+
+  _osMatchMaterials();   // run matching pass, then render
+}
+
+// ── Material Master Matching ───────────────────────────────
+// matchState values:
+//   'exact'     — description matched exactly (case-insensitive) → auto-confirmed, code locked
+//   'fuzzy'     — top fuzzy candidate pre-selected, user can change or confirm
+//   'none'      — no match found, user must pick from full dropdown
+//   'confirmed' — user has explicitly chosen a master item (from fuzzy or none state)
+function _osMatchMaterials() {
+  const mats = puState.materials || [];
+  if (!mats.length) {
+    toast('Material master not loaded — refresh and try again', 'error');
+    return;
+  }
+
+  _osParsedRows.forEach(row => {
+    if (!row.valid) return;   // skip data-error rows; they can't be uploaded anyway
+
+    const descNorm = _normKey(row.file_desc);
+    const tokens   = _fuzzyTokens(row.file_desc);
+
+    // Score every material master item against this row's description
+    const scored = mats.map(m => {
+      const mNorm = _normKey(m.material_name || '');
+      let score = 0;
+
+      // Tier 1: exact normalised match → score 100
+      if (mNorm === descNorm) { score = 100; }
+      // Tier 2: full fuzzy match (all tokens satisfied) → score by token coverage
+      else if (_fuzzyMatch(mNorm, tokens)) {
+        // Bonus for matching UOM too
+        const uomMatch = _normKey(m.uom || '') === _normKey(row.uom || '');
+        score = 60 + (uomMatch ? 20 : 0);
+        // Boost if haystack length is close to query length (avoids "Steel Rod 8mm" matching "Steel Rod 8mm TMT Bars")
+        const lenRatio = Math.min(mNorm.length, descNorm.length) / Math.max(mNorm.length, descNorm.length);
+        score += Math.round(lenRatio * 15);
+      }
+
+      return score > 0 ? { material_code: m.material_code, material_name: m.material_name, uom: m.uom, score } : null;
+    }).filter(Boolean).sort((a, b) => b.score - a.score);
+
+    row.matchCandidates = scored.slice(0, 8);   // keep top 8 for dropdown
+
+    if (!scored.length) {
+      row.matchState    = 'none';
+      row.material_code = null;
+      row.material_name = row.file_desc;
+    } else if (scored[0].score === 100) {
+      // Exact match — auto-confirm, no user action needed
+      row.matchState    = 'exact';
+      row.material_code = scored[0].material_code;
+      row.material_name = scored[0].material_name;
+    } else {
+      // Fuzzy — pre-select best candidate but require explicit user confirmation
+      row.matchState    = 'fuzzy';
+      row.material_code = null;   // NOT confirmed yet
+      row.material_name = row.file_desc;
+    }
   });
 
   renderOSPreview();
 }
 
+// ── User selects a master item from a row's dropdown ───────
+function osSetMatch(sno, code) {
+  const row = _osParsedRows.find(r => r.sno === sno);
+  if (!row) return;
+  if (!code) {
+    // User cleared the selection
+    row.matchState    = row.matchCandidates.length ? 'fuzzy' : 'none';
+    row.material_code = null;
+    row.material_name = row.file_desc;
+  } else {
+    const mat = (puState.materials || []).find(m => m.material_code === code);
+    if (!mat) return;
+    row.matchState    = 'confirmed';
+    row.material_code = mat.material_code;
+    row.material_name = mat.material_name;
+  }
+  _osUpdateMatchStatus();
+}
+
+// ── Recompute pills and upload-button state (no full re-render) ──
+function _osUpdateMatchStatus() {
+  const validRows   = _osParsedRows.filter(r => r.valid);
+  const matched     = validRows.filter(r => r.material_code !== null);
+  const unmatched   = validRows.filter(r => r.material_code === null);
+
+  // Update unmatched pill
+  const unmEl = document.getElementById('osUnmatchedCount');
+  if (unmatched.length) {
+    unmEl.textContent = `⚠ ${unmatched.length} unmatched — select from master`;
+    unmEl.style.display = '';
+  } else {
+    unmEl.style.display = 'none';
+  }
+
+  // Update GRN meta
+  const totalValue = matched.reduce((s, r) => s + r.value, 0);
+  document.getElementById('osGRNMeta').innerHTML =
+    `Will create <strong>1 GRN</strong> tagged <em>"Opening Stock"</em> with <strong>${matched.length} matched items</strong> ` +
+    `| Total Value: <strong>₹${totalValue.toLocaleString('en-IN', {minimumFractionDigits:2, maximumFractionDigits:2})}</strong>` +
+    (unmatched.length
+      ? ` | <span style="color:var(--error);font-weight:600;">${unmatched.length} rows unmatched — resolve before upload</span>`
+      : ` | <span style="color:#059669;font-weight:600;">All rows matched ✓</span>`);
+
+  // Upload button: only enabled when every valid row has a confirmed material_code
+  document.getElementById('osUploadBtn').disabled = (matched.length === 0 || unmatched.length > 0);
+
+  // Refresh match cell for each row (cheaper than full tbody re-render)
+  _osParsedRows.forEach(r => {
+    const cell = document.getElementById(`os_match_cell_${r.sno}`);
+    if (cell) cell.innerHTML = _osMatchCellHtml(r);
+  });
+}
+
+// ── Build the HTML for a single row's Match cell ───────────
+function _osMatchCellHtml(r) {
+  if (!r.valid) return '<span style="color:var(--muted);font-size:11px;">—</span>';
+
+  if (r.matchState === 'exact') {
+    // Locked — exact match, no dropdown
+    return `<span style="color:#059669;font-weight:600;font-size:12px;">✓ ${esc(r.material_code)}</span>
+            <div style="font-size:11px;color:var(--muted);">${esc(r.material_name)}</div>`;
+  }
+
+  // Build the <select> — either fuzzy (pre-selected candidate at top) or none (blank prompt)
+  const mats = (puState.materials || []).sort((a,b) => (a.material_name||'').localeCompare(b.material_name||''));
+
+  // Group: top candidates first (from matchCandidates), then full sorted list (deduped)
+  const topCodes  = new Set(r.matchCandidates.map(c => c.material_code));
+  const topOptions = r.matchCandidates.map(c =>
+    `<option value="${esc(c.material_code)}">${esc(c.material_code)} — ${esc(c.material_name)} (${esc(c.uom||'')})</option>`
+  ).join('');
+  const sepOption  = r.matchCandidates.length
+    ? `<option disabled>── All materials ──</option>`
+    : '';
+  const allOptions = mats.filter(m => !topCodes.has(m.material_code)).map(m =>
+    `<option value="${esc(m.material_code)}">${esc(m.material_code)} — ${esc(m.material_name)} (${esc(m.uom||'')})</option>`
+  ).join('');
+
+  const selectedCode = (r.matchState === 'confirmed') ? r.material_code : '';
+  const promptOpt = `<option value="" ${!selectedCode ? 'selected' : ''}>— Select from master —</option>`;
+
+  const selectHtml = `<select
+    style="font-size:11px;padding:3px 6px;border:1px solid ${r.material_code ? 'var(--success,#059669)' : 'var(--error,#dc2626)'};border-radius:4px;background:var(--input-bg);color:var(--text);max-width:220px;"
+    onchange="osSetMatch(${r.sno}, this.value)">
+    ${promptOpt}
+    ${topOptions}
+    ${sepOption}
+    ${allOptions}
+  </select>`;
+
+  let stateLabel = '';
+  if (r.matchState === 'fuzzy') {
+    stateLabel = `<div style="font-size:10px;color:#b45309;margin-bottom:3px;">⚠ Fuzzy candidates — confirm match:</div>`;
+  } else if (r.matchState === 'none') {
+    stateLabel = `<div style="font-size:10px;color:#dc2626;margin-bottom:3px;">✗ No match found — select manually:</div>`;
+  } else if (r.matchState === 'confirmed') {
+    stateLabel = `<div style="font-size:10px;color:#059669;margin-bottom:3px;">✓ Matched: ${esc(r.material_code)}</div>`;
+  }
+
+  return stateLabel + selectHtml;
+}
+
 // ── Render Preview Table ───────────────────────────────────
 function renderOSPreview() {
-  const valid   = _osParsedRows.filter(r => r.valid);
-  const invalid = _osParsedRows.filter(r => !r.valid);
+  const validRows   = _osParsedRows.filter(r => r.valid);
+  const invalidRows = _osParsedRows.filter(r => !r.valid);
+  const matched     = validRows.filter(r => r.material_code !== null);
+  const unmatched   = validRows.filter(r => r.material_code === null);
 
-  document.getElementById('osValidCount').textContent  = `✓ ${valid.length} valid rows`;
+  // Pill counts
+  document.getElementById('osValidCount').textContent = `✓ ${validRows.length} valid rows`;
   const errEl = document.getElementById('osErrorCount');
-  if (invalid.length) {
-    errEl.textContent = `⚠ ${invalid.length} rows with errors`;
+  if (invalidRows.length) {
+    errEl.textContent = `⚠ ${invalidRows.length} data errors`;
     errEl.style.display = '';
   } else {
     errEl.style.display = 'none';
   }
+  const unmEl = document.getElementById('osUnmatchedCount');
+  if (unmatched.length) {
+    unmEl.textContent = `⚠ ${unmatched.length} unmatched`;
+    unmEl.style.display = '';
+  } else {
+    unmEl.style.display = 'none';
+  }
 
-  const totalValue = valid.reduce((s, r) => s + r.value, 0);
+  // GRN meta line
+  const totalValue = matched.reduce((s, r) => s + r.value, 0);
   document.getElementById('osGRNMeta').innerHTML =
-    `Will create <strong>1 GRN</strong> tagged <em>"Opening Stock"</em> with <strong>${valid.length} line items</strong> ` +
+    `Will create <strong>1 GRN</strong> tagged <em>"Opening Stock"</em> with <strong>${matched.length} matched items</strong> ` +
     `| Total Value: <strong>₹${totalValue.toLocaleString('en-IN', {minimumFractionDigits:2, maximumFractionDigits:2})}</strong>` +
-    (invalid.length ? ` | <span style="color:var(--error);">${invalid.length} rows will be skipped</span>` : '');
+    (unmatched.length
+      ? ` | <span style="color:var(--error);font-weight:600;">${unmatched.length} rows need matching — resolve to enable upload</span>`
+      : validRows.length
+        ? ` | <span style="color:#059669;font-weight:600;">All rows matched ✓</span>`
+        : '');
 
+  // Table body
   const tbody = document.getElementById('osPreviewBody');
-  tbody.innerHTML = _osParsedRows.map(r => `
-    <tr style="${r.valid ? '' : 'background:#fff0f0;'}">
+  tbody.innerHTML = _osParsedRows.map(r => {
+    const rowBg = !r.valid ? 'background:#fff0f0;'
+                : r.material_code ? ''
+                : 'background:#fffbeb;';
+    return `<tr style="${rowBg}">
       <td class="center">${r.sno}</td>
-      <td>${esc(r.material_name) || '<span style="color:var(--error);">—</span>'}</td>
+      <td style="font-size:12px;">${esc(r.file_desc) || '<span style="color:var(--error);">—</span>'}</td>
+      <td id="os_match_cell_${r.sno}" style="min-width:200px;">${_osMatchCellHtml(r)}</td>
       <td>${esc(r.uom)}</td>
       <td>${r.open_date || '<span style="color:var(--error);">Invalid</span>'}</td>
       <td class="num">${r.qty > 0 ? r.qty : '<span style="color:var(--error);">'+r.qty+'</span>'}</td>
@@ -4048,12 +4243,14 @@ function renderOSPreview() {
       <td>${esc(r.category)}</td>
       <td style="font-size:11px;">${esc(r.remarks)}</td>
       <td>${r.valid
-        ? '<span style="color:#059669;font-weight:600;">✓ OK</span>'
+        ? '<span style="color:#059669;font-weight:600;font-size:11px;">✓ OK</span>'
         : '<span style="color:var(--error);font-size:11px;">'+r.errors.join(', ')+'</span>'}</td>
-    </tr>`).join('');
+    </tr>`;
+  }).join('');
 
   document.getElementById('osPreviewCard').style.display = '';
-  document.getElementById('osUploadBtn').disabled = valid.length === 0;
+  // Upload only when all valid rows have a confirmed material_code
+  document.getElementById('osUploadBtn').disabled = (matched.length === 0 || unmatched.length > 0);
 }
 
 // ── Confirm Upload ─────────────────────────────────────────
@@ -4062,12 +4259,18 @@ async function confirmOSUpload() {
   const validRows = _osParsedRows.filter(r => r.valid);
   if (!validRows.length) { toast('No valid rows to upload', 'error'); return; }
 
+  // Final guard: all rows must have a material_code
+  const unmatched = validRows.filter(r => !r.material_code);
+  if (unmatched.length) {
+    toast(`${unmatched.length} rows still unmatched. Select a material master item for each.`, 'error');
+    return;
+  }
+
   pbShow('Generating GRN number…');
   try {
     const grnNumber = await nextPUGRNNumber();
-    const openDate  = validRows[0].open_date;   // use date from first valid row
+    const openDate  = validRows[0].open_date;
 
-    // Insert GRN header
     const { error: hErr } = await sb.from('pu_grn').insert({
       grn_number: grnNumber,
       grn_date: openDate,
@@ -4081,18 +4284,17 @@ async function confirmOSUpload() {
       received_by: state.userName,
       received_by_id: state.userId,
       remarks: 'Bulk opening stock upload by Admin',
-      status: 'Verified',   // Opening stock pre-verified — no challan flow needed
+      status: 'Verified',
     });
     if (hErr) throw new Error(hErr.message);
 
     pbShow(`Uploading ${validRows.length} items…`);
 
-    // Insert GRN items in one batch
     const items = validRows.map((r, i) => ({
       grn_number: grnNumber,
       sno: i + 1,
-      material_name: r.material_name,
-      material_code: r.material_code || null,
+      material_name: r.material_name,   // master name (not file_desc)
+      material_code: r.material_code,   // guaranteed non-null by guard above
       uom: r.uom,
       this_grn_qty: r.qty,
       total_received_qty: r.qty,
@@ -18983,6 +19185,236 @@ function renderMISLedger() {
   }).join('')||'<tr><td colspan="9" class="center muted">No issue records.</td></tr>';
 }
 
+// ── MIS Material Search — fuzzy dropdown ─────────────────
+function misLookupTypeahead() {
+  const inp = document.getElementById('misMatSearch');
+  const res = document.getElementById('misMatResults');
+  if (!inp || !res) return;
+
+  const q = inp.value.trim();
+  // Hide clear btn and hint while typing
+  document.getElementById('misMatClearBtn').style.display = q ? '' : 'none';
+  document.getElementById('misMatHint').textContent = '';
+
+  if (!q) { res.classList.remove('show'); return; }
+
+  const tokens = _fuzzyTokens(q);
+  const mats = puState.materials || [];
+
+  // Score: exact code match = 200, exact name = 100, fuzzy = 60+length bonus
+  const scored = mats.map(m => {
+    const nameNorm = _normKey(m.material_name || '');
+    const codeNorm = _normKey(m.material_code || '');
+    const qNorm    = _normKey(q);
+    let score = 0;
+    if (codeNorm === qNorm)   score = 200;
+    else if (nameNorm === qNorm) score = 100;
+    else if (codeNorm.includes(qNorm)) score = 80;
+    else if (_fuzzyMatch(nameNorm, tokens)) {
+      const ratio = Math.min(nameNorm.length, qNorm.length) / Math.max(nameNorm.length, qNorm.length);
+      score = 60 + Math.round(ratio * 20);
+    }
+    return score > 0 ? { m, score } : null;
+  }).filter(Boolean).sort((a,b) => b.score - a.score).slice(0, 12).map(x => x.m);
+
+  if (!scored.length) { res.classList.remove('show'); return; }
+
+  // Highlight matching tokens in display text
+  const highlight = (text) => {
+    if (!q) return esc(text);
+    let out = esc(text);
+    tokens.forEach(t => {
+      const re = new RegExp(t.replace(/[.*+?^${}()|[\]\\]/g,'\\$&'), 'gi');
+      out = out.replace(re, m => `<strong style="color:var(--accent);">${m}</strong>`);
+    });
+    return out;
+  };
+
+  res.innerHTML = scored.map(m => `
+    <div class="typeahead-item"
+      onmousedown="event.preventDefault();selectMISLookupMaterial('${esc(m.material_code)}','${esc(m.material_name).replace(/'/g,"\'")}')">
+      <div>${highlight(m.material_name||'')}</div>
+      <div class="muted">${esc(m.material_code||'')}${m.uom ? ' · '+esc(m.uom) : ''}${m.material_group ? ' · '+esc(m.material_group) : ''}</div>
+    </div>`).join('');
+
+  _anchorDropdown(inp, res);
+}
+
+function selectMISLookupMaterial(code, name) {
+  const inp = document.getElementById('misMatSearch');
+  const res = document.getElementById('misMatResults');
+  if (inp) inp.value = name;
+  if (res) res.classList.remove('show');
+  document.getElementById('misMatClearBtn').style.display = '';
+  showMISForMaterial(code, name);
+}
+
+function clearMISLookup() {
+  const inp = document.getElementById('misMatSearch');
+  const res = document.getElementById('misMatResults');
+  if (inp) inp.value = '';
+  if (res) res.classList.remove('show');
+  document.getElementById('misMatClearBtn').style.display = 'none';
+  document.getElementById('misMatHint').textContent = '';
+}
+
+// ── MIS Material History Modal ────────────────────────────
+function showMISForMaterial(code, name) {
+  // Find all ledger items for this material (by code if available, else name)
+  const ledgerItems = puState.misLedger.filter(it =>
+    code
+      ? (it.material_code === code || _normKey(it.material_name) === _normKey(name))
+      : _normKey(it.material_name) === _normKey(name)
+  );
+
+  if (!ledgerItems.length) {
+    document.getElementById('misMatHint').textContent = 'No MIS entries found for this material';
+    openModal(`
+      <h3>MIS History — ${esc(name)}</h3>
+      <p style="color:var(--muted);margin-top:8px;">No material issue entries found for this material.</p>
+      <div class="actions-row" style="margin-top:16px;">
+        <button class="btn btn-ghost" onclick="closeModal()">Close</button>
+      </div>`);
+    return;
+  }
+
+  // Group ledger items by mis_number, join with misList for header fields
+  const misNums = [...new Set(ledgerItems.map(it => it.mis_number))];
+  const misHeaders = puState.misList.filter(m => misNums.includes(m.mis_number));
+
+  // Build a map: mis_number → { header, items[] }
+  const misMap = {};
+  misHeaders.forEach(h => { misMap[h.mis_number] = { h, items: [] }; });
+  // Include headers not yet in misList (edge case: deleted but ledger remains)
+  ledgerItems.forEach(it => {
+    if (!misMap[it.mis_number]) misMap[it.mis_number] = { h: null, items: [] };
+    misMap[it.mis_number].items.push(it);
+  });
+  // Re-attach items
+  ledgerItems.forEach(it => { misMap[it.mis_number].items.push(it); });
+  // De-duplicate items (we pushed twice above due to two loops)
+  Object.values(misMap).forEach(entry => {
+    const seen = new Set();
+    entry.items = entry.items.filter(it => {
+      const key = it.id || (it.mis_number + '_' + it.sno);
+      if (seen.has(key)) return false;
+      seen.add(key); return true;
+    });
+  });
+
+  // Sort MIS entries newest first (by issue_date or mis_number)
+  const sortedNums = misNums.sort((a, b) => {
+    const ha = misMap[a]?.h, hb = misMap[b]?.h;
+    const da = ha?.issue_date || ha?.created_at || a;
+    const db = hb?.issue_date || hb?.created_at || b;
+    return db.localeCompare(da);
+  });
+
+  // Summary stats
+  const totalQty   = ledgerItems.reduce((s, it) => s + (parseFloat(it.qty_issued)  || 0), 0);
+  const totalAmt   = ledgerItems.reduce((s, it) => s + (parseFloat(it.amount)      || 0), 0);
+  const uom        = (ledgerItems.find(it => it.uom) || {}).uom || '';
+  const approvedCt = sortedNums.filter(n => misMap[n]?.h?.status === 'Approved').length;
+  const pendingCt  = sortedNums.filter(n => ['Pending Approval','Rejected - Correction'].includes(misMap[n]?.h?.status)).length;
+  const rejectedCt = sortedNums.filter(n => misMap[n]?.h?.status === 'Rejected').length;
+
+  // Status helpers (matching renderMISList style exactly)
+  const stCls = st =>
+    st === 'Approved'            ? 'approved'            :
+    st === 'Rejected'            ? 'rejected'            :
+    st === 'Rejected - Correction'? 'rejected-correction':
+    st === 'Audit Entry'         ? 'approved'            : 'pending-approval';
+  const stLabel = st => st === 'Rejected - Correction' ? 'Needs Correction' : (st || 'Pending Approval');
+
+  // Badge helpers (matching renderMISList exactly)
+  const cashBadge  = (items) => items.some(it => it.is_cash_purchase)
+    ? ' <span style="font-size:10px;background:#ad6800;color:#fff;padding:1px 6px;border-radius:3px;font-weight:600;vertical-align:middle;">DIRECT</span>'
+    : '';
+  const auditBadge = (st) => st === 'Audit Entry'
+    ? ' <span style="font-size:10px;background:#6d28d9;color:#fff;padding:1px 6px;border-radius:3px;font-weight:600;vertical-align:middle;">AUDIT</span>'
+    : '';
+  const rmcBadge = (to) => (to||'').toLowerCase().includes('rmc plant')
+    ? ' <span class="rmc-badge">RMC</span>'
+    : '';
+
+  // Table rows — one row per MIS, showing this material's qty/rate/amount
+  const rows = sortedNums.map(num => {
+    const { h, items } = misMap[num];
+    const matItems = items.filter(it =>
+      code
+        ? (it.material_code === code || _normKey(it.material_name) === _normKey(name))
+        : _normKey(it.material_name) === _normKey(name)
+    );
+    const matQty = matItems.reduce((s, it) => s + (parseFloat(it.qty_issued) || 0), 0);
+    const matAmt = matItems.reduce((s, it) => s + (parseFloat(it.amount)     || 0), 0);
+    const matRate = matQty > 0 ? matAmt / matQty : 0;
+    const st = h?.status || '—';
+
+    const acts = `<button class="btn btn-ghost btn-sm" onclick="viewMIS('${esc(num)}')">View</button>`
+      + (hasPerm('canCreateMIS') && st === 'Rejected - Correction'
+          ? ` <button class="btn btn-warn btn-sm" onclick="closeModal();reviseMIS('${esc(num)}')">✎ Revise</button>`
+          : '');
+
+    return `<tr>
+      <td class="mono">${esc(num)}${cashBadge(items)}${rmcBadge(h?.issued_to)}${auditBadge(st)}</td>
+      <td>${fmtDate(h?.issue_date)}</td>
+      <td>${esc(h?.issued_to||'—')}</td>
+      <td>${esc(h?.issued_by||'—')}</td>
+      <td class="num">${fmtINR(matQty)} ${esc(uom)}</td>
+      <td class="num">${fmtINR(matRate)}</td>
+      <td class="num">${fmtINRSym(matAmt)}</td>
+      <td><span class="status ${stCls(st)}">${stLabel(st)}</span></td>
+      <td>${acts}</td>
+    </tr>`;
+  }).join('');
+
+  // Summary pills
+  const pills = [
+    approvedCt ? `<span style="font-size:11px;padding:3px 10px;background:#dcfce7;color:#166534;border-radius:12px;font-weight:600;">${approvedCt} Approved</span>` : '',
+    pendingCt  ? `<span style="font-size:11px;padding:3px 10px;background:#fef9c3;color:#854d0e;border-radius:12px;font-weight:600;">${pendingCt} Pending</span>` : '',
+    rejectedCt ? `<span style="font-size:11px;padding:3px 10px;background:#fee2e2;color:#991b1b;border-radius:12px;font-weight:600;">${rejectedCt} Rejected</span>` : '',
+  ].filter(Boolean).join(' ');
+
+  const matCode = code ? `<span style="font-size:11px;background:#e0e7ff;color:#3730a3;padding:2px 8px;border-radius:3px;font-weight:600;vertical-align:middle;margin-left:6px;">${esc(code)}</span>` : '';
+
+  openModal(`
+    <h3 style="margin-bottom:4px;">
+      MIS History &mdash; ${esc(name)}${matCode}
+    </h3>
+    <div style="font-size:12px;color:var(--muted);margin-bottom:10px;">
+      ${sortedNums.length} MIS entr${sortedNums.length===1?'y':'ies'} &nbsp;·&nbsp;
+      Total issued: <strong>${fmtINR(totalQty)} ${esc(uom)}</strong> &nbsp;·&nbsp;
+      Total value: <strong>${fmtINRSym(totalAmt)}</strong>
+    </div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;">${pills}</div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr>
+          <th>MIS Number</th><th>Date</th><th>Issued To</th><th>Issued By</th>
+          <th class="num">Qty (${esc(uom)})</th><th class="num">Rate (₹)</th>
+          <th class="num">Amount</th><th>Status</th><th>Actions</th>
+        </tr></thead>
+        <tbody>
+          ${rows}
+          <tr style="background:#e6f4f1;font-weight:700;">
+            <td colspan="4" style="text-align:right;padding:6px 8px;">Total</td>
+            <td class="num">${fmtINR(totalQty)} ${esc(uom)}</td>
+            <td class="num">—</td>
+            <td class="num">${fmtINRSym(totalAmt)}</td>
+            <td colspan="2"></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="actions-row" style="margin-top:12px;">
+      <button class="btn btn-ghost" onclick="closeModal()">Close</button>
+    </div>
+  `, 'large');
+
+  document.getElementById('misMatHint').textContent =
+    `${sortedNums.length} MIS entr${sortedNums.length===1?'y':'ies'} found`;
+}
+
 async function newMIS() {
   if(!hasPerm('canCreateMIS')){toast('Only Store Executive can issue materials','error');return;}
   document.getElementById('misForm').style.display='block';
@@ -19004,13 +19436,37 @@ async function newMIS() {
 // Cache of stock-balance rows keyed by material_name (lower-cased).
 // Refreshed each time the MIS form is opened (newMIS) so balances stay current.
 let _misStockMap = {};
+let _misLayerRateMap = {};   // material_code (lower) → unit_rate of oldest non-exhausted FIFO layer
 
 async function _refreshMISStockMap() {
-  const {data:stockRows} = await sb.from('pu_stock_balance').select('*');
+  // Parallel: stock balances (qty/balance) + FIFO layer rates
+  const [stockRes, layerRes] = await Promise.all([
+    sb.from('pu_stock_balance').select('*'),
+    sb.from('material_fifo_layers')
+      .select('material_id,unit_rate,qty_remaining')
+      .eq('is_exhausted', false)
+      .order('received_date', { ascending: true })
+      .order('created_at',    { ascending: true }),
+  ]);
   _misStockMap = {};
-  (stockRows||[]).forEach(s => {
+  (stockRes.data||[]).forEach(s => {
     if (s.material_name) _misStockMap[s.material_name.toLowerCase()] = s;
   });
+  _misLayerRateMap = {};
+  (layerRes.data||[]).forEach(l => {
+    const key = (l.material_id||'').toLowerCase();
+    if (!_misLayerRateMap[key] && parseFloat(l.qty_remaining||0) > 0)
+      _misLayerRateMap[key] = parseFloat(l.unit_rate || 0);
+  });
+}
+
+// Return the FIFO rate for a material: oldest non-exhausted layer rate.
+// Keyed by material_code; falls back to latest_rate from stock balance view.
+function _fifoRateFor(materialName, materialCode) {
+  const codeKey = (materialCode||'').toLowerCase();
+  if (codeKey && _misLayerRateMap[codeKey] !== undefined) return _misLayerRateMap[codeKey];
+  const stock = _misStockMap[(materialName||'').toLowerCase()];
+  return stock ? parseFloat(stock.latest_rate||0) : 0;
 }
 
 async function addMISItem() {
@@ -19077,7 +19533,7 @@ function misMaterialTypeahead(i) {
   res.innerHTML = hint + matches.map(m => {
     const stock = _misStockMap[(m.material_name||'').toLowerCase()];
     const bal   = stock ? parseFloat(stock.balance_qty||0) : 0;
-    const rate  = stock ? parseFloat(stock.latest_rate||0) : 0;
+    const rate  = _fifoRateFor(m.material_name, m.material_code);  // FIFO layer rate, not weighted avg
     const balBadge = stock && bal>0
       ? `<span style="color:var(--accent);font-weight:600;">Bal: ${fmtINR(bal)} ${esc(m.uom||'')}</span>`
       : `<span class="muted" style="color:#dc2626;">No stock</span>`;
@@ -19270,16 +19726,43 @@ async function saveMIS() {
   });
   pbShow('Saving MIS…');
   try {
-    // v73: fetch FIFO GRN layer per material — one call replaces old cashMatSet query
-    // Gives us procurement_line_id AND cash_purchase flag in a single round-trip
-    const fifoLayerMap = {};  // material_name → { procurement_line_id, procurement_source, is_cash }
+    // Fetch FIFO layer data for all materials in this MIS:
+    // (a) pu_grn_items for procurement_line_id + cash flag (existing logic)
+    // (b) material_fifo_layers for the actual unit_rate of the oldest non-exhausted layer
+    const fifoLayerMap = {};  // material_name → { procurement_line_id, procurement_source, is_cash, unit_rate }
     const cashMatSet   = new Set();
     if (matNames.length) {
-      const {data:grnLayers} = await sb.from('pu_grn_items')
-        .select('material_name,grn_number,this_grn_qty,procurement_line_id,procurement_source,is_cash_purchase')
-        .in('material_name', matNames)
-        .order('grn_number', {ascending: true});  // oldest GRN first = FIFO
-      const grnNums2 = [...new Set((grnLayers||[]).map(g=>g.grn_number))];
+      // Resolve material_code for each material (needed to key into fifo layers)
+      const matCodeMap = {};
+      (puState.materials||[]).forEach(m => {
+        if (m.material_name && m.material_code) matCodeMap[m.material_name] = m.material_code;
+      });
+
+      const [grnLayerRes, fifoRes] = await Promise.all([
+        sb.from('pu_grn_items')
+          .select('material_name,grn_number,this_grn_qty,procurement_line_id,procurement_source,is_cash_purchase,unit_rate')
+          .in('material_name', matNames)
+          .order('grn_number', {ascending: true}),   // oldest GRN first = FIFO
+        sb.from('material_fifo_layers')
+          .select('material_id,unit_rate,qty_remaining,is_exhausted,received_date,created_at')
+          .eq('is_exhausted', false)
+          .order('received_date', { ascending: true })
+          .order('created_at',    { ascending: true }),
+      ]);
+
+      const grnLayers = grnLayerRes.data || [];
+
+      // Build FIFO layer rate map: material_id (code) → unit_rate of oldest non-exhausted layer
+      const fifoRateByCode = {};
+      (fifoRes.data||[]).forEach(l => {
+        const key = (l.material_id||'').toLowerCase();
+        if (!fifoRateByCode[key] && parseFloat(l.qty_remaining||0) > 0) {
+          fifoRateByCode[key] = parseFloat(l.unit_rate || 0);
+        }
+      });
+
+      // Validate GRN statuses
+      const grnNums2 = [...new Set(grnLayers.map(g=>g.grn_number))];
       let validGRNSet = new Set(grnNums2);
       if (grnNums2.length) {
         const {data:grnSts} = await sb.from('pu_grn')
@@ -19290,14 +19773,22 @@ async function saveMIS() {
             .map(g => g.grn_number)
         );
       }
-      (grnLayers||[])
+
+      grnLayers
         .filter(g => validGRNSet.has(g.grn_number) && g.procurement_line_id)
         .forEach(g => {
-          if (!fifoLayerMap[g.material_name]) {  // first = oldest = FIFO winner
+          if (!fifoLayerMap[g.material_name]) {
+            // FIFO rate: prefer material_fifo_layers (authoritative oldest layer),
+            // fall back to pu_grn_items unit_rate of the oldest verified GRN
+            const code     = (matCodeMap[g.material_name] || '').toLowerCase();
+            const fifoRate = (code && fifoRateByCode[code] !== undefined)
+              ? fifoRateByCode[code]
+              : parseFloat(g.unit_rate || 0);
             fifoLayerMap[g.material_name] = {
               procurement_line_id: g.procurement_line_id,
               procurement_source:  g.procurement_source,
               is_cash:             !!g.is_cash_purchase,
+              unit_rate:           fifoRate,   // ← FIFO layer rate, not weighted avg
             };
           }
           if (g.is_cash_purchase) cashMatSet.add(g.material_name);
@@ -19568,11 +20059,20 @@ async function openStockAuditWizard() {
 function downloadStockAuditTemplate() {
   const rows = puState.stockBalance || [];
   if (!rows.length) { toast('No stock data to download', 'warn'); return; }
-  const headers = ['material_name', 'uom', 'balance_qty', 'latest_rate', 'audited_qty', 'remarks'];
+  const headers = ['material_name', 'uom', 'balance_qty', 'fifo_rate', 'audited_qty', 'remarks'];
   const csvLines = [headers.join(',')];
+  // Build material_code map for fifo rate lookup
+  const auditTplCodeMap = {};
+  (puState.materials||[]).forEach(m => {
+    if (m.material_name && m.material_code)
+      auditTplCodeMap[m.material_name.toLowerCase()] = m.material_code.toLowerCase();
+  });
   rows.forEach(s => {
     const bal = parseFloat(s.balance_qty || 0).toFixed(3);
-    const rate = parseFloat(s.latest_rate || 0).toFixed(2);
+    const matCode = auditTplCodeMap[(s.material_name||'').toLowerCase()] || '';
+    const fifoFromLayer = (matCode && _misLayerRateMap[matCode] !== undefined)
+      ? _misLayerRateMap[matCode] : null;
+    const rate = (fifoFromLayer !== null ? fifoFromLayer : parseFloat(s.latest_rate || 0)).toFixed(2);
     const name = '"' + (s.material_name || '').replace(/"/g, '""') + '"';
     const uom  = '"' + (s.uom || '').replace(/"/g, '""') + '"';
     csvLines.push([name, uom, bal, rate, '', ''].join(','));
@@ -19589,11 +20089,11 @@ function downloadStockAuditTemplate() {
 // Stores parsed diff rows from CSV preview for use at confirm step
 window._auditDiffRows = [];
 
-function previewStockAuditUpload(input) {
+async function previewStockAuditUpload(input) {
   const file = input.files[0];
   if (!file) return;
   const reader = new FileReader();
-  reader.onload = function(e) {
+  reader.onload = async function(e) {
     const text = e.target.result;
     const lines = text.split(/\r?\n/).filter(l => l.trim());
     if (lines.length < 2) { document.getElementById('audit_preview').innerHTML = '<p style="color:var(--danger);">CSV appears empty.</p>'; return; }
@@ -19624,26 +20124,54 @@ function previewStockAuditUpload(input) {
     const stockMap = {};
     (puState.stockBalance || []).forEach(s => { stockMap[s.material_name.toLowerCase().trim()] = s; });
 
+    // Resolve material codes and fetch FIFO layer rates for audit materials
+    const auditMatCodeMap = {};
+    (puState.materials||[]).forEach(m => {
+      if (m.material_name && m.material_code)
+        auditMatCodeMap[m.material_name.toLowerCase()] = m.material_code.toLowerCase();
+    });
+    const allAuditCodes = [...new Set(
+      Object.values(auditMatCodeMap).filter(Boolean)
+    )];
+    const auditFifoRateMap = {};
+    if (allAuditCodes.length) {
+      const {data:auditLayers} = await sb.from('material_fifo_layers')
+        .select('material_id,unit_rate,qty_remaining')
+        .eq('is_exhausted', false)
+        .in('material_id', allAuditCodes)
+        .order('received_date', { ascending: true })
+        .order('created_at',    { ascending: true });
+      (auditLayers||[]).forEach(l => {
+        const key = (l.material_id||'').toLowerCase();
+        if (!auditFifoRateMap[key] && parseFloat(l.qty_remaining||0) > 0)
+          auditFifoRateMap[key] = parseFloat(l.unit_rate || 0);
+      });
+    }
+
     const diff = [];
     for (let i = 1; i < lines.length; i++) {
       const cols = parseCSVLine(lines[i]);
       const name = (cols[iName] || '').trim();
       const auditedStr = (cols[iAudit] || '').trim();
-      if (!name || auditedStr === '') continue; // skip blank audited_qty
+      if (!name || auditedStr === '') continue;
       const auditedQty = parseFloat(auditedStr);
       if (isNaN(auditedQty) || auditedQty < 0) continue;
       const stockRow = stockMap[name.toLowerCase().trim()];
       if (!stockRow) continue;
       const balQty = parseFloat(stockRow.balance_qty || 0);
       const delta = auditedQty - balQty;
-      if (Math.abs(delta) < 0.0001) continue; // no change — skip
+      if (Math.abs(delta) < 0.0001) continue;
+      const matCode6 = auditMatCodeMap[name.toLowerCase().trim()] || '';
+      const fifoRate6 = (matCode6 && auditFifoRateMap[matCode6] !== undefined)
+        ? auditFifoRateMap[matCode6]
+        : parseFloat(stockRow.latest_rate || 0);
       diff.push({
-        material_name: stockRow.material_name, // use master-cased name
+        material_name: stockRow.material_name,
         uom: stockRow.uom || '',
         balance_qty: balQty,
         audited_qty: auditedQty,
         delta: delta,
-        unit_rate: parseFloat(stockRow.latest_rate || 0),
+        unit_rate: fifoRate6,   // FIFO layer rate, not weighted avg
         remarks: iRmk >= 0 ? (cols[iRmk] || '').trim() : '',
       });
     }
@@ -19818,32 +20346,58 @@ async function loadStockBalance() {
 }
 
 function renderStockBalance() {
-  const q=(document.getElementById('stockSearch')?.value||'').toLowerCase();
-  let rows=puState.stockBalance;
-  if(q) rows=rows.filter(s=>s.material_name.toLowerCase().includes(q));
-  let totalVal=0, matCount=0, lowCount=0;
-  document.getElementById('stock_body').innerHTML=rows.map(s=>{
-    totalVal+=num(s.stock_value||0); matCount++;
-    const bal     = num(s.balance_qty||0);
-    const reserved = num(s.reserved_qty||0);
-    const isLow   = bal <= 0; if(isLow) lowCount++;
+  const q       = (document.getElementById('stockSearch')?.value || '').toLowerCase();
+  const lowOnly = document.getElementById('stockLowOnly')?.checked || false;
+  let rows = puState.stockBalance;
+  if (q)       rows = rows.filter(s => (s.material_name||'').toLowerCase().includes(q)
+                                    || (s.material_code||'').toLowerCase().includes(q));
+  if (lowOnly) rows = rows.filter(s => num(s.balance_qty || 0) <= 0);
+
+  // Column getters — order must match thead column order exactly:
+  // 0:Material  1:Code  2:UOM  3:TotalReceived  4:ApprovedIssued  5:Reserved  6:Balance  7:Rate  8:StockValue
+  rows = _applyTableSort('stock_body', rows, [
+    s => s.material_name        || '',
+    s => s.material_code        || '',
+    s => s.uom                  || '',
+    s => num(s.total_received_qty  || 0),
+    s => num(s.total_issued_qty    || 0),
+    s => num(s.reserved_qty        || 0),
+    s => num(s.balance_qty         || 0),
+    s => num(s.latest_rate         || 0),
+    s => num(s.stock_value         || 0),
+  ]);
+
+  let totalVal = 0, matCount = 0, lowCount = 0;
+  document.getElementById('stock_body').innerHTML = rows.map(s => {
+    totalVal  += num(s.stock_value    || 0);
+    matCount++;
+    const bal      = num(s.balance_qty  || 0);
+    const reserved = num(s.reserved_qty || 0);
+    const isLow    = bal <= 0; if (isLow) lowCount++;
     const balColor = bal <= 0 ? 'var(--danger)' : bal < 10 ? 'var(--warn)' : 'var(--accent)';
     const resColor = reserved > 0 ? '#d97706' : 'var(--muted)';
-    return `<tr style="${isLow?'background:#fef2f2;':''}">
+    return `<tr style="${isLow ? 'background:#fef2f2;' : ''}">
       <td><span class="mat-grn-link" data-mat="${esc(s.material_name)}" style="cursor:pointer;color:var(--accent-2);">${esc(s.material_name)}</span></td>
-      <td><span class="muted">—</span></td>
+      <td style="font-size:11px;color:var(--muted);">${esc(s.material_code||'—')}</td>
       <td>${esc(s.uom||'')}</td>
       <td class="num">${fmtINR(s.total_received_qty||0)}</td>
       <td class="num">${fmtINR(s.total_issued_qty||0)}</td>
-      <td class="num" style="font-weight:600;color:${resColor};">${reserved>0?fmtINR(reserved):'—'}</td>
+      <td class="num" style="font-weight:600;color:${resColor};">${reserved > 0 ? fmtINR(reserved) : '—'}</td>
       <td class="num" style="font-weight:700;color:${balColor};">${fmtINR(bal)}</td>
       <td class="num">${fmtINR(s.latest_rate||0)}</td>
       <td class="num" style="font-weight:600;">${fmtINRSym(s.stock_value||0)}</td>
     </tr>`;
-  }).join('')||'<tr><td colspan="9" class="center muted">No stock data. Verify GRNs to populate.</td></tr>';
-  document.getElementById('stock_matCount').textContent=matCount;
-  document.getElementById('stock_totalValue').textContent=fmtINRSym(totalVal);
-  document.getElementById('stock_lowCount').textContent=lowCount;
+  }).join('') || '<tr><td colspan="9" class="center muted">No stock data. Verify GRNs to populate.</td></tr>';
+
+  document.getElementById('stock_matCount').textContent  = matCount;
+  document.getElementById('stock_totalValue').textContent = fmtINRSym(totalVal);
+  document.getElementById('stock_lowCount').textContent   = lowCount;
+
+  // Wire sortable headers — identical pattern to all other list screens
+  setTimeout(() => {
+    const t = document.getElementById('stock_body')?.closest('table');
+    if (t) makeSortable(t);
+  }, 50);
 }
 
 // ============================================================
@@ -20265,10 +20819,11 @@ function makeSortable(tableOrId) {
   const renderFnMap = {
     'grn_listBody':  () => renderGRNList(),
     'mir_listBody':  () => renderMIRList(),
-    'po_listBody':   () => typeof renderPOList  === 'function' ? renderPOList()  : null,
-    'qc_listBody':   () => typeof renderQCList  === 'function' ? renderQCList()  : null,
-    'pob_listBody':  () => typeof renderPOBList === 'function' ? renderPOBList() : null,
-    'mis_listBody':  () => typeof renderMISList === 'function' ? renderMISList() : null,
+    'po_listBody':   () => typeof renderPOList       === 'function' ? renderPOList()       : null,
+    'qc_listBody':   () => typeof renderQCList       === 'function' ? renderQCList()       : null,
+    'pob_listBody':  () => typeof renderPOBList      === 'function' ? renderPOBList()      : null,
+    'mis_listBody':  () => typeof renderMISList      === 'function' ? renderMISList()      : null,
+    'stock_body':    () => typeof renderStockBalance === 'function' ? renderStockBalance() : null,
   };
   const renderFn = renderFnMap[tbodyId] || null;
 
