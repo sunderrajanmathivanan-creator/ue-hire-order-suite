@@ -3115,6 +3115,7 @@ input[type="number"] {
       </div>
       <div style="display:flex;gap:8px;align-items:center;">
         <button class="btn btn-ghost" onclick="loadStockBalance()">↻ Refresh</button>
+        <button class="btn btn-ghost" onclick="downloadStockBalanceCSV()" title="Download current stock balance as CSV">⬇ Download</button>
         <button class="btn btn-primary" id="btn_stockAudit" onclick="openStockAuditWizard()" title="Admin only: download current stock, adjust quantities, and post a corrective MIS">⚖ Stock Audit</button>
       </div>
     </div>
@@ -20327,6 +20328,51 @@ async function confirmPostStockAudit() {
 // ============================================================
 // STOCK BALANCE
 // ============================================================
+function downloadStockBalanceCSV() {
+  const rows = puState.stockBalance || [];
+  if (!rows.length) { toast('No stock data to download — click Refresh first', 'warn'); return; }
+
+  const q       = (document.getElementById('stockSearch')?.value || '').toLowerCase();
+  const lowOnly = document.getElementById('stockLowOnly')?.checked || false;
+  let filtered  = rows;
+  if (q)       filtered = filtered.filter(s =>
+                  (s.material_name||'').toLowerCase().includes(q) ||
+                  (s.material_code||'').toLowerCase().includes(q));
+  if (lowOnly) filtered = filtered.filter(s => num(s.balance_qty||0) <= 0);
+
+  const headers = [
+    'Material Name','Code','UOM',
+    'Total Received','Approved Issued','Reserved (Pending)',
+    'Available Balance','FIFO Rate (Rs)','Stock Value (Rs)'
+  ];
+  const esc = v => '"' + String(v ?? '').replace(/"/g, '""') + '"';
+  const csvLines = [
+    headers.map(esc).join(','),
+    ...filtered.map(s => [
+      esc(s.material_name || ''),
+      esc(s.material_code || ''),
+      esc(s.uom           || ''),
+      parseFloat(s.total_received_qty || 0).toFixed(3),
+      parseFloat(s.total_issued_qty   || 0).toFixed(3),
+      parseFloat(s.reserved_qty       || 0).toFixed(3),
+      parseFloat(s.balance_qty        || 0).toFixed(3),
+      parseFloat(s.latest_rate        || 0).toFixed(4),
+      parseFloat(s.stock_value        || 0).toFixed(2),
+    ].join(','))
+  ];
+  const totalVal = filtered.reduce((s, r) => s + parseFloat(r.stock_value || 0), 0);
+  csvLines.push('"","","","","","",TOTAL,"",'+totalVal.toFixed(2));
+  csvLines.push('"Downloaded: '+new Date().toLocaleString('en-IN')+'","","","","","","","",""');
+
+  const blob = new Blob([csvLines.join('\r\n')], { type: 'text/csv;charset=utf-8;' });
+  const a    = document.createElement('a');
+  a.href     = URL.createObjectURL(blob);
+  a.download = 'StockBalance_PoE_' + today() + '.csv';
+  a.click();
+  URL.revokeObjectURL(a.href);
+  toast('Downloaded ' + filtered.length + ' material' + (filtered.length !== 1 ? 's' : ''), 'success');
+}
+
 async function loadStockBalance() {
   pbShow('Loading stock…');
   const {data,error}=await sb.from('pu_stock_balance').select('*').order('material_name');
