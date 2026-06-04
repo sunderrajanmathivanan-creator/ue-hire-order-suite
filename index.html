@@ -18858,8 +18858,34 @@ async function printPOB(billNum) {
     prevMap[k].amount += n(it.base_amount);
   });
 
-  // ── Description table rows (material rows only, skip extra) ───────────────
-  const descRows = matItems.map((it,i)=>{
+  // ── Consolidate current bill items by material_name + unit_rate ─────────
+  // Multiple rows for the same material (different GRNs) are merged into one.
+  // Different rates for the same material stay as separate rows.
+  const consolidatedMap = {};
+  matItems.forEach(it => {
+    const key = (it.material_name||'') + '||' + n(it.unit_rate).toFixed(4);
+    if (!consolidatedMap[key]) {
+      consolidatedMap[key] = {
+        material_name: it.material_name,
+        uom:           it.uom,
+        unit_rate:     n(it.unit_rate),
+        qty:           0,
+        base_amount:   0,
+        cgst_amount:   0,
+        sgst_amount:   0,
+        igst_amount:   0,
+      };
+    }
+    consolidatedMap[key].qty         += n(it.qty);
+    consolidatedMap[key].base_amount += n(it.base_amount);
+    consolidatedMap[key].cgst_amount += n(it.cgst_amount);
+    consolidatedMap[key].sgst_amount += n(it.sgst_amount);
+    consolidatedMap[key].igst_amount += n(it.igst_amount);
+  });
+  const consolidatedItems = Object.values(consolidatedMap);
+
+  // ── Description table rows (consolidated) ───────────────────────────
+  const descRows = consolidatedItems.map((it,i)=>{
     const prev    = prevMap[it.material_name]||{qty:0,amount:0};
     const prevQty = prev.qty, prevAmt = prev.amount;
     const prevRate= prevQty>0 ? prevAmt/prevQty : n(it.unit_rate);
@@ -18868,7 +18894,7 @@ async function printPOB(billNum) {
     const cumAmt  = prevAmt + currAmt;
     const cumRate = cumQty>0 ? cumAmt/cumQty : currRate;
     return `<tr>
-      <td class="c" style="border-left:2pt solid #555;">${it.sno||i+1}</td>
+      <td class="c" style="border-left:2pt solid #555;">${i+1}</td>
       <td>${esc(it.material_name||'')}</td>
       <td class="c">${esc(it.uom||'')}</td>
       <td class="r prev-col" style="border-left:2.5pt solid #1e3a5f;">${fmtI(prevQty)}</td>
