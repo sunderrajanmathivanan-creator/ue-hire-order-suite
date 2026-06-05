@@ -19231,7 +19231,10 @@ function renderMISList() {
   const perms=mergedPerms();
   document.getElementById('mis_listBody').innerHTML=rows.map(m=>{
     const its=puState.misLedger.filter(it=>it.mis_number===m.mis_number);
-    const totalVal=its.reduce((s,it)=>s+num(it.amount),0);
+    // Use ledger total if items loaded; fall back to stored total_value on header
+    const totalVal = its.length > 0
+      ? its.reduce((s,it)=>s+num(it.amount),0)
+      : num(m.total_value||0);
     const hasCash=its.some(it=>it.is_cash_purchase);
     const cashBadge = hasCash
       ? ' <span style="font-size:10px;background:#ad6800;color:#fff;padding:1px 6px;border-radius:3px;font-weight:600;vertical-align:middle;" title="Contains material with cash-purchase history">DIRECT</span>'
@@ -19895,11 +19898,13 @@ async function saveMIS() {
     const revisingMIS = document.getElementById('misForm')?.dataset?.revisingMIS || '';
     if (revisingMIS) {
       // Revision mode — update header and replace items
+      const misTotal = items.reduce((s,it)=>s+num(it.amount),0);
       const {error:hErr} = await sb.from('pu_mis').update({
         issue_date:date, issued_to:issuedTo,
         issued_by:state.userName, issued_by_id:state.userId,
         remarks:document.getElementById('mis_remarks').value||null,
         status:'Pending Approval', rejection_reason:null,
+        total_value: misTotal,
       }).eq('mis_number', revisingMIS);
       if (hErr) throw new Error(hErr.message);
       await sb.from('pu_mis_items').delete().eq('mis_number', revisingMIS);
@@ -19917,11 +19922,13 @@ async function saveMIS() {
       flashSuccess('MIS '+revisingMIS+' revised and resubmitted for approval');
     } else {
       const misNumber=await nextPUMISNumber();
+      const misTotal = items.reduce((s,it)=>s+num(it.amount),0);
       const {error}=await sb.from('pu_mis').insert({
         mis_number:misNumber, issue_date:date, issued_to:issuedTo,
         issued_by:state.userName, issued_by_id:state.userId,
         remarks:document.getElementById('mis_remarks').value||null,
         status:'Pending Approval',
+        total_value: misTotal,
       });
       if(error) throw new Error(error.message);
       await sb.from('pu_mis_items').insert(items.map((it,idx2)=>{
