@@ -1008,6 +1008,30 @@ input[type="number"] {
     </div>
   </div>
 
+  <!-- Unbilled HOCs banner -->
+  <div id="hob_unbilledBanner" style="display:none;margin-bottom:12px;">
+    <div style="border:1.5px solid #d97706;border-radius:8px;background:#fffbeb;padding:14px 16px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+        <div>
+          <span style="font-size:13px;font-weight:700;color:#92400e;">HOCs Ready to Bill</span>
+          <span style="font-size:11px;color:#b45309;margin-left:8px;">These certifications are approved and waiting for a bill to be created</span>
+        </div>
+        <button class="btn btn-ghost btn-sm" onclick="document.getElementById('hob_unbilledBanner').style.display='none'" style="font-size:11px;">x Dismiss</button>
+      </div>
+      <div class="table-wrap">
+        <table style="font-size:12px;">
+          <thead>
+            <tr style="background:#fef3c7;">
+              <th>HOC Number</th><th>HO Number</th><th>Vendor</th>
+              <th>Period</th><th class="num">Gross Value</th><th class="center">Action</th>
+            </tr>
+          </thead>
+          <tbody id="hob_unbilledBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
   <!-- HOB List -->
   <div class="card" id="hobListCard">
     <h3>Hire Order Running Bills <span class="badge-count" id="hob_listBadge">0</span></h3>
@@ -8115,6 +8139,51 @@ async function printHOCById(hocNum) {
 // ============================================================
 // HO BILLING
 // ============================================================
+async function loadHOBUnbilledBanner() {
+  if (!hasPerm('canCreateHOB')) {
+    document.getElementById('hob_unbilledBanner').style.display = 'none';
+    return;
+  }
+  _cacheBust('unbilledHOCs');
+  const r = await apiGetUnbilledHOCs();
+  const certs = r.ok ? r.certs : [];
+  const banner = document.getElementById('hob_unbilledBanner');
+  const tbody  = document.getElementById('hob_unbilledBody');
+  if (!certs.length) { banner.style.display = 'none'; return; }
+  tbody.innerHTML = certs.map(c => [
+    '<tr>',
+    '<td class="mono" style="font-weight:600;">' + esc(c['HOC Number']) + '</td>',
+    '<td class="mono">' + esc(c['HO Number']) + '</td>',
+    '<td>' + esc(c['Vendor Name']) + '</td>',
+    '<td style="font-size:11px;color:var(--muted);">' + (c['Period From'] ? fmtDate(c['Period From'])+' to '+fmtDate(c['Period To']) : '\u2014') + '</td>',
+    '<td class="num" style="font-weight:600;">' + fmtINRSym(c['Gross Value']||0) + '</td>',
+    '<td class="center"><button class="btn btn-primary btn-sm" onclick="newHOBFromHOC(\''+ esc(c['HOC Number']) +'\')">' + 'Create Bill</button></td>',
+    '</tr>',
+  ].join('')).join('');
+  banner.style.display = '';
+}
+
+async function newHOBFromHOC(hocNum) {
+  await newHOB();
+  const sel = document.getElementById('hob_hocSelect');
+  if (!sel) return;
+  sel.value = hocNum;
+  if (sel.value === hocNum) {
+    await onHOBHOCChange();
+  } else {
+    _cacheBust('unbilledHOCs');
+    const r2 = await apiGetUnbilledHOCs();
+    sel.innerHTML = '<option value="">\u2014 Select Certification \u2014</option>' +
+      (r2.ok ? r2.certs : []).map(function(c) {
+        return '<option value="' + esc(c['HOC Number']) + '">' + esc(c['HOC Number']) + ' \u2014 ' + esc(c['HO Number']) + ' \u2014 ' + esc(c['Vendor Name']) + '</option>';
+      }).join('');
+    sel.value = hocNum;
+    if (sel.value === hocNum) await onHOBHOCChange();
+  }
+  toast('HOC ' + hocNum + ' pre-selected \u2014 fill invoice details and submit', 'info', 4000);
+  document.getElementById('hob_unbilledBanner').style.display = 'none';
+}
+
 async function loadHOBList() {
   const r = await apiGetHOBList();
   if (r.ok) {
@@ -8122,6 +8191,7 @@ async function loadHOBList() {
     document.getElementById('hob_listBadge').textContent = state.bills.length;
   }
   renderHOBList();
+  loadHOBUnbilledBanner();
 }
 
 function renderHOBList() {
@@ -8188,7 +8258,8 @@ async function newHOB() {
   document.getElementById('hob_grossAmt').textContent = '0.00';
   recalcHOBTotals();
 
-  // Load unbilled certifications
+  // Load unbilled certifications — always bust cache first so newly approved HOCs appear immediately
+  _cacheBust('unbilledHOCs');
   const r = await apiGetUnbilledHOCs();
   const sel = document.getElementById('hob_hocSelect');
   sel.innerHTML = '<option value="">— Select Certification —</option>' +
@@ -18268,7 +18339,7 @@ async function newPOB() {
   _pobExtraCount=0; _pobSelectedGRNs=[]; _pobLineItems=[]; _pobGSTInfo={};
   // Load POs with unverified/partial GRNs
   const {data:pos}=await sb.from('pu_po_orders').select('po_number,vendor_name,grand_total')
-    .in('status',['Partial Receipt','Fully Received']).order('po_number');
+    .in('status',['Partial Receipt','Fully Received','Short-Closed']).order('po_number');
   const sel=document.getElementById('pob_poSelect');
   sel.innerHTML='<option value="">— Select PO —</option>'+
     (pos||[]).map(p=>`<option value="${esc(p.po_number)}" data-vendor="${esc(p.vendor_name)}">${esc(p.po_number)} — ${esc(p.vendor_name)}</option>`).join('');
@@ -20745,7 +20816,7 @@ async function confirmRejectDoc(docType, docNum) {
   // ── POB rejection: roll GRNs back to Verified so a new POB can be raised ──────
   if (docType === 'POB') {
     const {data:pobH} = await sb.from('pu_po_bills').select('grn_numbers').eq('bill_number',docNum).maybeSingle();
-    const gnums = pobH?.grn_numbers || [];
+    const gnums = pobH?.grn_numbers ? pobH.grn_numbers.split(',').map(s=>s.trim()).filter(Boolean) : [];
     if (gnums.length) {
       const {error:grnRollErr} = await sb.from('pu_grn')
         .update({status:'Verified'}).in('grn_number', gnums);
