@@ -1344,7 +1344,7 @@ input[type="number"] {
     </div>
     <div class="grid-3" style="margin-top:12px;">
       <div class="field"><label>GST %</label><input type="number" id="wob_gstPct" value="18" step="0.01" oninput="recalcWOBTotals()"></div>
-      <div class="field"><label>Retention %</label><input type="number" id="wob_retentionPct" value="5" readonly style="background:#f0fdf9;"></div>
+      <div class="field"><label>Retention %</label><input type="number" id="wob_retentionPct" value="5" step="0.1" min="0" max="100" oninput="recalcWOBTotals()"></div>
       <div class="field"><label>Prepared By</label><input id="wob_preparedBy" readonly></div>
     </div>
 
@@ -1465,6 +1465,30 @@ input[type="number"] {
     <div class="actions-row">
       <button class="btn btn-primary" onclick="guardedSave(saveWOB_direct, this)" style="font-size:14px;padding:11px 22px;">💾 Save RA Bill</button>
       <button class="btn btn-ghost" onclick="closeWOBForm()">Close</button>
+    </div>
+  </div>
+
+  <!-- WOB Unbilled Banner -->
+  <div id="wob_unbilledBanner" style="display:none;margin-bottom:12px;">
+    <div style="border:1.5px solid #d97706;border-radius:8px;background:#fffbeb;padding:14px 16px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+        <div>
+          <span style="font-size:13px;font-weight:700;color:#92400e;">WOCs Ready to Bill</span>
+          <span style="font-size:11px;color:#b45309;margin-left:8px;">These certifications are approved and waiting for a bill to be created</span>
+        </div>
+        <button class="btn btn-ghost btn-sm" onclick="document.getElementById('wob_unbilledBanner').style.display='none'" style="font-size:11px;">x Dismiss</button>
+      </div>
+      <div class="table-wrap">
+        <table style="font-size:12px;">
+          <thead>
+            <tr style="background:#fef3c7;">
+              <th>WOC Number</th><th>WO Number</th><th>Vendor</th>
+              <th>Period</th><th class="num">Gross Value</th><th class="center">Action</th>
+            </tr>
+          </thead>
+          <tbody id="wob_unbilledBody"></tbody>
+        </table>
+      </div>
     </div>
   </div>
 
@@ -5356,7 +5380,7 @@ async function apiSaveWO(data) {
       gst_amount: data.gstAmount, total_amount: data.totalAmount,
       remarks: data.remarks||null, contact_person: data.contactPerson||null,
       cert_mode: data.certMode||'QTY',
-      retention_pct: data.retentionPct||5,
+      retention_pct: data.retentionPct??0,
       mob_advance_pct: data.mobAdvPct||null, mob_advance_amount: data.mobAdvAmt||null,
       status: 'Pending Approval', created_by: state.userId, created_by_name: state.userName
     });
@@ -5606,7 +5630,7 @@ async function apiSaveWOB(data) {
       gst_pct: data.gstPct, gst_amount: data.gstAmount, extra_after_gst: data.extraAfter||0,
       invoice_value: data.invoiceValue, mob_advance_recovery: data.mobAdvRecovery||0,
       advance_recovery: data.advanceRecovery||0, tds_pct: data.tdsPct||0, tds_amount: data.tdsAmount||0,
-      retention_pct: data.retentionPct||5, retention_amount: data.retentionAmount||0,
+      retention_pct: data.retentionPct??0, retention_amount: data.retentionAmount||0,
       hold_amount: data.holdAmount||0, hold_description: data.holdDescription||null,
       net_payable: data.netPayable, prepared_by: state.userName, prepared_by_id: state.userId,
       remarks: data.remarks||null, status: 'Pending Approval', rejection_reason: null,
@@ -9763,6 +9787,7 @@ async function loadWOBList() {
   const r = await apiGetWOBList();
   if (r.ok) { state.woBills = r.bills||[]; document.getElementById('wob_listBadge').textContent = state.woBills.length; }
   renderWOBList();
+  loadWOBUnbilledBanner();
 }
 
 function renderWOBList() {
@@ -9839,6 +9864,51 @@ async function newWOB() {
   window.scrollTo(0,0);
 }
 
+async function loadWOBUnbilledBanner() {
+  if (!hasPerm('canCreateWOB')) {
+    document.getElementById('wob_unbilledBanner').style.display = 'none';
+    return;
+  }
+  _cacheBust('unbilledWOCs');
+  const r = await apiGetUnbilledWOCs();
+  const certs = r.ok ? r.certs : [];
+  const banner = document.getElementById('wob_unbilledBanner');
+  const tbody  = document.getElementById('wob_unbilledBody');
+  if (!certs.length) { banner.style.display = 'none'; return; }
+  tbody.innerHTML = certs.map(c => [
+    '<tr>',
+    '<td class="mono" style="font-weight:600;">' + esc(c['WOC Number']) + '</td>',
+    '<td class="mono">' + esc(c['WO Number']) + '</td>',
+    '<td>' + esc(c['Vendor Name']) + '</td>',
+    '<td style="font-size:11px;color:var(--muted);">' + (c['Period From'] ? fmtDate(c['Period From'])+' to '+fmtDate(c['Period To']) : '\u2014') + '</td>',
+    '<td class="num" style="font-weight:600;">' + fmtINRSym(c['Gross Value']||0) + '</td>',
+    '<td class="center"><button class="btn btn-primary btn-sm" onclick="newWOBFromWOC(\''+ esc(c['WOC Number']) +'\')">' + 'Create Bill</button></td>',
+    '</tr>',
+  ].join('')).join('');
+  banner.style.display = '';
+}
+
+async function newWOBFromWOC(wocNum) {
+  await newWOB();
+  const sel = document.getElementById('wob_wocSelect');
+  if (!sel) return;
+  sel.value = wocNum;
+  if (sel.value === wocNum) {
+    await onWOBWOCChange();
+  } else {
+    _cacheBust('unbilledWOCs');
+    const r2 = await apiGetUnbilledWOCs();
+    sel.innerHTML = '<option value="">\u2014 Select Certification \u2014</option>' +
+      (r2.ok ? r2.certs : []).map(function(c) {
+        return '<option value="' + esc(c['WOC Number']) + '">' + esc(c['WOC Number']) + ' \u2014 ' + esc(c['WO Number']) + ' \u2014 ' + esc(c['Vendor Name']) + '</option>';
+      }).join('');
+    sel.value = wocNum;
+    if (sel.value === wocNum) await onWOBWOCChange();
+  }
+  toast('WOC ' + wocNum + ' pre-selected \u2014 fill invoice details and submit', 'info', 4000);
+  document.getElementById('wob_unbilledBanner').style.display = 'none';
+}
+
 function closeWOBForm() {
   const cb=document.getElementById('wob_isRmcOpex');if(cb){cb.checked=false;toggleWOBRmcFields();}
   document.getElementById('wobForm').style.display = 'none';
@@ -9875,7 +9945,7 @@ async function onWOBWOCChange() {
   const woRes = await apiGetWODetails(woNum);
   if (woRes.ok) {
     document.getElementById('wob_gstPct').value       = woRes.header['GST %']||18;
-    document.getElementById('wob_retentionPct').value = woRes.header['Retention %']||5;
+    document.getElementById('wob_retentionPct').value = woRes.header['Retention %']??5;
     // Mob advance outstanding
     const mobAdvTotal = num(woRes.header['Mob Advance Amount'])||(num(woRes.header['Total Amount'])*num(woRes.header['Mob Advance %']||0)/100);
     const { data:prevBills } = await sb.from('wo_bills').select('mob_advance_recovery').eq('wo_number', woNum).neq('status','Rejected');
@@ -9886,7 +9956,7 @@ async function onWOBWOCChange() {
   }
 
   let gross = 0;
-  const retentionPct = num(document.getElementById('wob_retentionPct').value)||5;
+  const retentionPct = num(document.getElementById('wob_retentionPct').value)||0;
   document.getElementById('wob_itemsBody').innerHTML = items.map((it,i) => {
     const amt = num(it['Cert Value']);
     gross += amt;
@@ -9923,7 +9993,7 @@ function addWOBExtraLine() {
 function recalcWOBTotals() {
   const gross = num(document.getElementById('wob_grossAmt').textContent);
   const gstPct = num(document.getElementById('wob_gstPct').value);
-  const retentionPct = num(document.getElementById('wob_retentionPct').value)||5;
+  const retentionPct = num(document.getElementById('wob_retentionPct').value)||0;
   let extraBefore=0, extraAfter=0;
   document.querySelectorAll('#wob_extraBody tr').forEach(tr => {
     const cells=tr.cells; if(!cells||cells.length<5) return;
@@ -9987,7 +10057,7 @@ async function saveWOB_direct() {
   const vendor = optParts[2]||'';
   const gross=items.reduce((s,x)=>s+x.amount,0);
   const gstPct=num(document.getElementById('wob_gstPct').value);
-  const retPct=num(document.getElementById('wob_retentionPct').value)||5;
+  const retPct=num(document.getElementById('wob_retentionPct').value)||0;
   let extraBefore=0, extraAfter=0;
   extraLines.forEach(e=>{const s=e.type==='Addition'?e.amount:-e.amount; if(e.timing==='Before GST')extraBefore+=s; else extraAfter+=s;});
   const taxable=gross+extraBefore, gstAmt=taxable*gstPct/100;
@@ -10049,7 +10119,7 @@ async function reviseWOB(billNum) {
   document.getElementById('wob_date').value         = h['Bill Date'] || today();
   document.getElementById('wob_preparedBy').value   = state.userName;
   document.getElementById('wob_gstPct').value        = h['GST %'] || 18;
-  document.getElementById('wob_retentionPct').value  = h['Retention %'] || 5;
+  document.getElementById('wob_retentionPct').value  = h['Retention %'] ?? 5;
   document.getElementById('wob_vendorInvNo').value   = h['Vendor Invoice No'] || '';
   document.getElementById('wob_vendorInvDate').value = h['Vendor Invoice Date'] || '';
   document.getElementById('wob_creditPeriod').value  = h['Credit Period'] || 30;
@@ -10095,7 +10165,7 @@ async function reviseWOB(billNum) {
     </tr>`;
   }).join('');
   document.getElementById('wob_grossAmt').textContent = fmtINR(gross);
-  document.getElementById('wob_retentionAmt').value = (gross * num(h['Retention %']||5) / 100).toFixed(2);
+  document.getElementById('wob_retentionAmt').value = (gross * num(h['Retention %']||0) / 100).toFixed(2);
 
   // Extra lines
   document.getElementById('wob_extraBody').innerHTML = '';
