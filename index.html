@@ -610,7 +610,7 @@ input[type="number"] {
       </div>
       <div class="field">
         <label>GST %</label>
-        <input type="number" id="ho_gstPct" value="18" step="0.01" oninput="recalcHOTotals()" onwheel="this.blur()">
+        <input type="number" id="ho_gstPct" value="18" step="0.01" oninput="recalcHOTotals()" onwheel="this.blur()" onkeydown="if(event.key==='ArrowUp'||event.key==='ArrowDown')event.preventDefault()">
       </div>
     </div>
 
@@ -863,7 +863,7 @@ input[type="number"] {
       </div>
       <div class="field">
         <label>Credit Period (days)</label>
-        <input type="number" id="hob_creditPeriod" value="30" min="0" oninput="calcInvPayDue()" onwheel="this.blur()">
+        <input type="number" id="hob_creditPeriod" value="30" min="0" oninput="calcInvPayDue()" onwheel="this.blur()" onkeydown="if(event.key==='ArrowUp'||event.key==='ArrowDown')event.preventDefault()">
       </div>
       <div class="field">
         <label>Invoice Payment Due Date</label>
@@ -873,7 +873,7 @@ input[type="number"] {
     <div class="grid-2" style="margin-top:12px;">
       <div class="field">
         <label>GST %</label>
-        <input type="number" id="hob_gstPct" value="18" step="0.01" oninput="recalcHOBTotals()" onwheel="this.blur()">
+        <input type="number" id="hob_gstPct" value="18" step="0.01" oninput="recalcHOBTotals()" onwheel="this.blur()" onkeydown="if(event.key==='ArrowUp'||event.key==='ArrowDown')event.preventDefault()">
       </div>
       <div class="field">
         <label>Prepared By</label>
@@ -923,16 +923,16 @@ input[type="number"] {
           <div class="grid-2" style="gap:10px;">
             <div class="field">
               <label>Advance Recovery (₹)</label>
-              <input type="number" id="hob_advRecovery" step="0.01" value="0" oninput="recalcHOBTotals()" placeholder="0.00" onwheel="this.blur()">
+              <input type="number" id="hob_advRecovery" step="0.01" value="0" oninput="recalcHOBTotals()" placeholder="0.00" onwheel="this.blur()" onkeydown="if(event.key==='ArrowUp'||event.key==='ArrowDown')event.preventDefault()">
               <small id="hob_advOutstandingHint" style="color:var(--warn);">O/S Advance: Loading…</small>
             </div>
             <div class="field">
               <label>TDS %</label>
-              <input type="number" id="hob_tdsPct" step="0.01" value="2" oninput="recalcHOBTotals()" onwheel="this.blur()">
+              <input type="number" id="hob_tdsPct" step="0.01" value="2" oninput="recalcHOBTotals()" onwheel="this.blur()" onkeydown="if(event.key==='ArrowUp'||event.key==='ArrowDown')event.preventDefault()">
             </div>
             <div class="field">
               <label>Hold Amount (₹)</label>
-              <input type="number" id="hob_holdAmt" step="0.01" value="0" oninput="recalcHOBTotals()" onwheel="this.blur()">
+              <input type="number" id="hob_holdAmt" step="0.01" value="0" oninput="recalcHOBTotals()" onwheel="this.blur()" onkeydown="if(event.key==='ArrowUp'||event.key==='ArrowDown')event.preventDefault()">
             </div>
             <div class="field">
               <label>Hold Description</label>
@@ -1126,12 +1126,12 @@ input[type="number"] {
     <div class="grid-4" style="margin-top:12px;">
       <div class="field"><label>Work Start Date</label><input type="date" id="wo_startDate"></div>
       <div class="field"><label>Work End Date</label><input type="date" id="wo_endDate"></div>
-      <div class="field"><label>GST %</label><input type="number" id="wo_gstPct" value="18" step="0.01" oninput="recalcWOTotals()" onwheel="this.blur()"></div>
-      <div class="field"><label>Retention %</label><input type="number" id="wo_retentionPct" value="5" step="0.1" min="0" max="100" onwheel="this.blur()"></div>
+      <div class="field"><label>GST %</label><input type="number" id="wo_gstPct" value="18" step="0.01" oninput="recalcWOTotals()" onwheel="this.blur()" onkeydown="if(event.key==='ArrowUp'||event.key==='ArrowDown')event.preventDefault()"></div>
+      <div class="field"><label>Retention %</label><input type="number" id="wo_retentionPct" value="5" step="0.1" min="0" max="100" onwheel="this.blur()" onkeydown="if(event.key==='ArrowUp'||event.key==='ArrowDown')event.preventDefault()"></div>
     </div>
     <div class="grid-4" style="margin-top:12px;">
-      <div class="field"><label>Mob. Advance %</label><input type="number" id="wo_mobAdvPct" step="0.1" placeholder="e.g. 10" onwheel="this.blur()"></div>
-      <div class="field"><label>Mob. Advance Amount (₹)</label><input type="number" id="wo_mobAdvAmt" step="0.01" placeholder="0.00" onwheel="this.blur()"></div>
+      <div class="field"><label>Mob. Advance %</label><input type="number" id="wo_mobAdvPct" step="0.1" placeholder="e.g. 10" onwheel="this.blur()" onkeydown="if(event.key==='ArrowUp'||event.key==='ArrowDown')event.preventDefault()"></div>
+      <div class="field"><label>Mob. Advance Amount (₹)</label><input type="number" id="wo_mobAdvAmt" step="0.01" placeholder="0.00" onwheel="this.blur()" onkeydown="if(event.key==='ArrowUp'||event.key==='ArrowDown')event.preventDefault()"></div>
       <div class="field" style="grid-column:3/5;"><label>Remarks / Terms</label></div>
     </div>
     <div class="field" style="margin-top:4px;">
@@ -1339,12 +1339,12 @@ input[type="number"] {
     <div class="grid-4" style="margin-top:12px;">
       <div class="field"><label>Vendor Invoice No.</label><input id="wob_vendorInvNo" placeholder="Contractor invoice #"></div>
       <div class="field"><label class="req">Vendor Invoice Date</label><input type="date" id="wob_vendorInvDate" oninput="calcWOBInvPayDue()"></div>
-      <div class="field"><label>Credit Period (days)</label><input type="number" id="wob_creditPeriod" value="30" min="0" oninput="calcWOBInvPayDue()" onwheel="this.blur()"></div>
+      <div class="field"><label>Credit Period (days)</label><input type="number" id="wob_creditPeriod" value="30" min="0" oninput="calcWOBInvPayDue()" onwheel="this.blur()" onkeydown="if(event.key==='ArrowUp'||event.key==='ArrowDown')event.preventDefault()"></div>
       <div class="field"><label>Invoice Payment Due</label><input type="date" id="wob_invPayDue" readonly style="background:#f0fdf9;"></div>
     </div>
     <div class="grid-3" style="margin-top:12px;">
-      <div class="field"><label>GST %</label><input type="number" id="wob_gstPct" value="18" step="0.01" oninput="recalcWOBTotals()" onwheel="this.blur()"></div>
-      <div class="field"><label>Retention %</label><input type="number" id="wob_retentionPct" value="5" step="0.1" min="0" max="100" oninput="recalcWOBTotals()" onwheel="this.blur()"></div>
+      <div class="field"><label>GST %</label><input type="number" id="wob_gstPct" value="18" step="0.01" oninput="recalcWOBTotals()" onwheel="this.blur()" onkeydown="if(event.key==='ArrowUp'||event.key==='ArrowDown')event.preventDefault()"></div>
+      <div class="field"><label>Retention %</label><input type="number" id="wob_retentionPct" value="5" step="0.1" min="0" max="100" oninput="recalcWOBTotals()" onwheel="this.blur()" onkeydown="if(event.key==='ArrowUp'||event.key==='ArrowDown')event.preventDefault()"></div>
       <div class="field"><label>Prepared By</label><input id="wob_preparedBy" readonly></div>
     </div>
 
@@ -1382,20 +1382,20 @@ input[type="number"] {
           <div class="grid-2" style="gap:10px;">
             <div class="field">
               <label>Mob. Advance Recovery (₹)</label>
-              <input type="number" id="wob_mobAdvRecovery" step="0.01" value="0" oninput="recalcWOBTotals()" placeholder="0.00" onwheel="this.blur()">
+              <input type="number" id="wob_mobAdvRecovery" step="0.01" value="0" oninput="recalcWOBTotals()" placeholder="0.00" onwheel="this.blur()" onkeydown="if(event.key==='ArrowUp'||event.key==='ArrowDown')event.preventDefault()">
               <small id="wob_mobAdvHint" style="color:var(--warn);">O/S Mob. Advance: —</small>
             </div>
             <div class="field">
               <label>Other Advance Recovery (₹)</label>
-              <input type="number" id="wob_advRecovery" step="0.01" value="0" oninput="recalcWOBTotals()" placeholder="0.00" onwheel="this.blur()">
+              <input type="number" id="wob_advRecovery" step="0.01" value="0" oninput="recalcWOBTotals()" placeholder="0.00" onwheel="this.blur()" onkeydown="if(event.key==='ArrowUp'||event.key==='ArrowDown')event.preventDefault()">
             </div>
-            <div class="field"><label>TDS %</label><input type="number" id="wob_tdsPct" step="0.01" value="2" oninput="recalcWOBTotals()" onwheel="this.blur()"></div>
+            <div class="field"><label>TDS %</label><input type="number" id="wob_tdsPct" step="0.01" value="2" oninput="recalcWOBTotals()" onwheel="this.blur()" onkeydown="if(event.key==='ArrowUp'||event.key==='ArrowDown')event.preventDefault()"></div>
             <div class="field">
               <label>Retention (auto)</label>
-              <input type="number" id="wob_retentionAmt" readonly style="background:#f0fdf9;" onwheel="this.blur()">
+              <input type="number" id="wob_retentionAmt" readonly style="background:#f0fdf9;" onwheel="this.blur()" onkeydown="if(event.key==='ArrowUp'||event.key==='ArrowDown')event.preventDefault()">
               <small style="color:var(--muted);">Auto from WO retention %</small>
             </div>
-            <div class="field"><label>Hold Amount (₹)</label><input type="number" id="wob_holdAmt" step="0.01" value="0" oninput="recalcWOBTotals()" onwheel="this.blur()"></div>
+            <div class="field"><label>Hold Amount (₹)</label><input type="number" id="wob_holdAmt" step="0.01" value="0" oninput="recalcWOBTotals()" onwheel="this.blur()" onkeydown="if(event.key==='ArrowUp'||event.key==='ArrowDown')event.preventDefault()"></div>
             <div class="field"><label>Hold Description</label><input id="wob_holdDesc" placeholder="Reason for hold…"></div>
           </div>
         </div>
@@ -1681,7 +1681,7 @@ input[type="number"] {
       <div class="grid-3" style="margin-top:12px;">
         <div class="field">
           <label class="req">Advance Amount (₹)</label>
-          <input type="number" id="arr_amount" step="0.01" placeholder="0.00" onwheel="this.blur()">
+          <input type="number" id="arr_amount" step="0.01" placeholder="0.00" onwheel="this.blur()" onkeydown="if(event.key==='ArrowUp'||event.key==='ArrowDown')event.preventDefault()">
         </div>
         <div class="field">
           <label>Remarks</label>
@@ -1739,7 +1739,7 @@ input[type="number"] {
           </div>
           <div class="field">
             <label class="req">Release Amount (₹)</label>
-            <input type="number" id="hrr_amount" step="0.01" placeholder="0.00" onwheel="this.blur()">
+            <input type="number" id="hrr_amount" step="0.01" placeholder="0.00" onwheel="this.blur()" onkeydown="if(event.key==='ArrowUp'||event.key==='ArrowDown')event.preventDefault()">
           </div>
         </div>
         <div class="field" style="margin-top:12px;">
@@ -1805,7 +1805,7 @@ input[type="number"] {
           </div>
           <div class="field">
             <label class="req">Release Amount (₹)</label>
-            <input type="number" id="rrr_amount" step="0.01" placeholder="0.00" onwheel="this.blur()">
+            <input type="number" id="rrr_amount" step="0.01" placeholder="0.00" onwheel="this.blur()" onkeydown="if(event.key==='ArrowUp'||event.key==='ArrowDown')event.preventDefault()">
           </div>
         </div>
         <div class="field" style="margin-top:12px;">
@@ -1881,7 +1881,7 @@ input[type="number"] {
         <div class="grid-4">
           <div class="field">
             <label class="req">Amount Paid (₹)</label>
-            <input type="number" id="payconf_amount" step="0.01" placeholder="0.00" oninput="onPayConfAmountInput()" onwheel="this.blur()">
+            <input type="number" id="payconf_amount" step="0.01" placeholder="0.00" oninput="onPayConfAmountInput()" onwheel="this.blur()" onkeydown="if(event.key==='ArrowUp'||event.key==='ArrowDown')event.preventDefault()">
             <small id="payconf_reqHint" style="color:var(--muted);">O/S: —</small>
             <small id="payconf_warnHint" style="color:var(--warn);display:none;">⚠ Amount exceeds O/S</small>
           </div>
@@ -2478,9 +2478,9 @@ input[type="number"] {
           </label>
         </div>
         <div id="po_overallGSTPanel" class="grid-4">
-          <div class="field"><label>CGST %</label><input type="number" id="po_cgstPct" value="9" step="0.01" oninput="recalcPOTotals()" onwheel="this.blur()"></div>
-          <div class="field"><label>SGST %</label><input type="number" id="po_sgstPct" value="9" step="0.01" oninput="recalcPOTotals()" onwheel="this.blur()"></div>
-          <div class="field"><label>IGST %</label><input type="number" id="po_igstPct" value="0" step="0.01" oninput="recalcPOTotals()" onwheel="this.blur()"></div>
+          <div class="field"><label>CGST %</label><input type="number" id="po_cgstPct" value="9" step="0.01" oninput="recalcPOTotals()" onwheel="this.blur()" onkeydown="if(event.key==='ArrowUp'||event.key==='ArrowDown')event.preventDefault()"></div>
+          <div class="field"><label>SGST %</label><input type="number" id="po_sgstPct" value="9" step="0.01" oninput="recalcPOTotals()" onwheel="this.blur()" onkeydown="if(event.key==='ArrowUp'||event.key==='ArrowDown')event.preventDefault()"></div>
+          <div class="field"><label>IGST %</label><input type="number" id="po_igstPct" value="0" step="0.01" oninput="recalcPOTotals()" onwheel="this.blur()" onkeydown="if(event.key==='ArrowUp'||event.key==='ArrowDown')event.preventDefault()"></div>
           <div class="field"><label style="color:var(--muted);">Total GST %</label><input id="po_totalGSTPct" readonly style="opacity:.6;"></div>
         </div>
       </div>
@@ -2512,7 +2512,7 @@ input[type="number"] {
           <tr><td style="padding:4px 8px;color:var(--muted);">CGST (₹)</td><td class="num" style="padding:4px 8px;" id="po_cgstTotal">0.00</td></tr>
           <tr><td style="padding:4px 8px;color:var(--muted);">SGST (₹)</td><td class="num" style="padding:4px 8px;" id="po_sgstTotal">0.00</td></tr>
           <tr><td style="padding:4px 8px;color:var(--muted);">IGST (₹)</td><td class="num" style="padding:4px 8px;" id="po_igstTotal">0.00</td></tr>
-          <tr><td style="padding:4px 8px;color:var(--muted);">Round Off (₹)</td><td class="num" style="padding:4px 8px;"><input type="number" id="po_roundOff" value="0" step="0.01" style="width:90px;text-align:right;" oninput="recalcPOTotals()" onwheel="this.blur()"></td></tr>
+          <tr><td style="padding:4px 8px;color:var(--muted);">Round Off (₹)</td><td class="num" style="padding:4px 8px;"><input type="number" id="po_roundOff" value="0" step="0.01" style="width:90px;text-align:right;" oninput="recalcPOTotals()" onwheel="this.blur()" onkeydown="if(event.key==='ArrowUp'||event.key==='ArrowDown')event.preventDefault()"></td></tr>
           <tr style="background:#e6f4f1;"><td style="padding:6px 8px;font-weight:700;color:var(--accent);">Grand Total (₹)</td><td class="num" style="padding:6px 8px;font-weight:700;font-size:16px;color:var(--accent);" id="po_grandTotal">0.00</td></tr>
         </table>
       </div>
@@ -2794,7 +2794,7 @@ input[type="number"] {
           <div class="field"><label class="req">Vendor Invoice Date</label><input type="date" id="pob_vendorInvDate"></div>
         </div>
         <div class="grid-2" style="margin-top:12px;">
-          <div class="field"><label>Credit Period (days)</label><input type="number" id="pob_creditPeriod" value="30" oninput="calcPOBPayDue()" onwheel="this.blur()"></div>
+          <div class="field"><label>Credit Period (days)</label><input type="number" id="pob_creditPeriod" value="30" oninput="calcPOBPayDue()" onwheel="this.blur()" onkeydown="if(event.key==='ArrowUp'||event.key==='ArrowDown')event.preventDefault()"></div>
           <div class="field"><label>Invoice Pay Due</label><input type="date" id="pob_invPayDue" readonly style="opacity:.6;"></div>
         </div>
         <!-- Bill Line Items -->
@@ -2838,7 +2838,7 @@ input[type="number"] {
             <tbody id="pob_s_after_rows"></tbody>
             <tr style="border-top:1px solid var(--border);"><td style="padding:6px 8px;font-weight:600;">Invoice Value</td><td class="num" style="padding:6px 8px;font-weight:600;" id="pob_s_invoice">0.00</td></tr>
             <tr><td style="padding:4px 8px;color:var(--muted);">Less: Hold Amount</td>
-              <td class="num" style="padding:4px 8px;"><input type="number" id="pob_holdAmt" value="0" step="0.01" style="width:100px;text-align:right;" oninput="recalcPOBTotals()" onwheel="this.blur()"></td></tr>
+              <td class="num" style="padding:4px 8px;"><input type="number" id="pob_holdAmt" value="0" step="0.01" style="width:100px;text-align:right;" oninput="recalcPOBTotals()" onwheel="this.blur()" onkeydown="if(event.key==='ArrowUp'||event.key==='ArrowDown')event.preventDefault()"></td></tr>
             <tr style="background:#e6f4f1;"><td style="padding:6px 8px;font-weight:700;color:var(--accent);">Net Payable (₹)</td>
               <td class="num" style="padding:6px 8px;font-weight:700;font-size:16px;color:var(--accent);" id="pob_s_net">0.00</td></tr>
           </table>
@@ -2910,14 +2910,14 @@ input[type="number"] {
                 <option value="none">No GST</option>
               </select>
             </div>
-            <div class="field" id="cpob_cgstWrap"><label>CGST %</label><input type="number" id="cpob_cgstPct" step="0.01" value="9" oninput="recalcCashPobTotals()" onwheel="this.blur()"></div>
-            <div class="field" id="cpob_sgstWrap"><label>SGST %</label><input type="number" id="cpob_sgstPct" step="0.01" value="9" oninput="recalcCashPobTotals()" onwheel="this.blur()"></div>
-            <div class="field" id="cpob_igstWrap" style="display:none;"><label>IGST %</label><input type="number" id="cpob_igstPct" step="0.01" value="18" oninput="recalcCashPobTotals()" onwheel="this.blur()"></div>
+            <div class="field" id="cpob_cgstWrap"><label>CGST %</label><input type="number" id="cpob_cgstPct" step="0.01" value="9" oninput="recalcCashPobTotals()" onwheel="this.blur()" onkeydown="if(event.key==='ArrowUp'||event.key==='ArrowDown')event.preventDefault()"></div>
+            <div class="field" id="cpob_sgstWrap"><label>SGST %</label><input type="number" id="cpob_sgstPct" step="0.01" value="9" oninput="recalcCashPobTotals()" onwheel="this.blur()" onkeydown="if(event.key==='ArrowUp'||event.key==='ArrowDown')event.preventDefault()"></div>
+            <div class="field" id="cpob_igstWrap" style="display:none;"><label>IGST %</label><input type="number" id="cpob_igstPct" step="0.01" value="18" oninput="recalcCashPobTotals()" onwheel="this.blur()" onkeydown="if(event.key==='ArrowUp'||event.key==='ArrowDown')event.preventDefault()"></div>
           </div>
         </div>
 
         <div class="grid-2" style="margin-top:12px;">
-          <div class="field"><label>Credit Period (days)</label><input type="number" id="cpob_creditPeriod" value="0" oninput="calcCashPobPayDue()" onwheel="this.blur()"></div>
+          <div class="field"><label>Credit Period (days)</label><input type="number" id="cpob_creditPeriod" value="0" oninput="calcCashPobPayDue()" onwheel="this.blur()" onkeydown="if(event.key==='ArrowUp'||event.key==='ArrowDown')event.preventDefault()"></div>
           <div class="field"><label>Invoice Pay Due</label><input type="date" id="cpob_invPayDue" readonly style="opacity:.6;"></div>
         </div>
 
@@ -2959,7 +2959,7 @@ input[type="number"] {
             <tbody id="cpob_s_after_rows"></tbody>
             <tr style="border-top:1px solid var(--border);"><td style="padding:6px 8px;font-weight:600;">Invoice Value</td><td class="num" style="padding:6px 8px;font-weight:600;" id="cpob_s_invoice">0.00</td></tr>
             <tr><td style="padding:4px 8px;color:var(--muted);">Less: Hold Amount</td>
-              <td class="num" style="padding:4px 8px;"><input type="number" id="cpob_holdAmt" value="0" step="0.01" style="width:100px;text-align:right;" oninput="recalcCashPobTotals()" onwheel="this.blur()"></td></tr>
+              <td class="num" style="padding:4px 8px;"><input type="number" id="cpob_holdAmt" value="0" step="0.01" style="width:100px;text-align:right;" oninput="recalcCashPobTotals()" onwheel="this.blur()" onkeydown="if(event.key==='ArrowUp'||event.key==='ArrowDown')event.preventDefault()"></td></tr>
             <tr style="background:#e6f4f1;"><td style="padding:6px 8px;font-weight:700;color:var(--accent);">Net Payable (₹)</td>
               <td class="num" style="padding:6px 8px;font-weight:700;font-size:16px;color:var(--accent);" id="cpob_s_net">0.00</td></tr>
           </table>
@@ -6729,7 +6729,7 @@ function openActivityEdit(code) {
       <div class="field"><label class="req">UOM</label><input id="ae_uom" value="${esc(a['UOM']||'')}" style="width:100%;"></div>
     </div>
     <div class="grid-3" style="margin-bottom:18px;">
-      <div class="field"><label>Default Rate (&#8377;)</label><input type="number" id="ae_rate" value="${esc(String(a['Default Rate']||0))}" step="0.01" style="width:100%;" onwheel="this.blur()"></div>
+      <div class="field"><label>Default Rate (&#8377;)</label><input type="number" id="ae_rate" value="${esc(String(a['Default Rate']||0))}" step="0.01" style="width:100%;" onwheel="this.blur()" onkeydown="if(event.key==='ArrowUp'||event.key==='ArrowDown')event.preventDefault()"></div>
       <div class="field" style="position:relative;">
         <label>Cost Head</label>
         <input id="ae_costhead" value="${esc(a['Cost Head']||'')}" autocomplete="off" style="width:100%;"
@@ -7505,8 +7505,8 @@ function addHOItem() {
       <div class="typeahead-results" id="hoItemResults_${i}"></div>
     </td>
     <td><input class="ho_uom" placeholder="UOM" readonly style="width:60px;background:var(--input-bg);opacity:0.8;"></td>
-    <td><input class="ho_qty" type="number" placeholder="0" style="width:80px;text-align:right;" oninput="recalcHORow(${i});recalcHOTotals()" onwheel="this.blur()"></td>
-    <td><input class="ho_rate" type="number" placeholder="0.00" style="width:90px;text-align:right;" oninput="recalcHORow(${i});recalcHOTotals()" onwheel="this.blur()"></td>
+    <td><input class="ho_qty" type="number" placeholder="0" style="width:80px;text-align:right;" oninput="recalcHORow(${i});recalcHOTotals()" onwheel="this.blur()" onkeydown="if(event.key==='ArrowUp'||event.key==='ArrowDown')event.preventDefault()"></td>
+    <td><input class="ho_rate" type="number" placeholder="0.00" style="width:90px;text-align:right;" oninput="recalcHORow(${i});recalcHOTotals()" onwheel="this.blur()" onkeydown="if(event.key==='ArrowUp'||event.key==='ArrowDown')event.preventDefault()"></td>
     <td class="num mono" id="hoAmt_${i}">0.00</td>
     <td><button class="btn btn-ghost btn-sm" onclick="removeHOItem(${i})" style="padding:3px 7px;">✕</button></td>
   `;
@@ -7962,7 +7962,7 @@ async function onHOCHOChange() {
       <td class="num mono">${fmtINR(prevQty)}</td>
       <td><input type="number" class="hoc_thisQty" min="0" max="${remaining}" step="0.001" placeholder="0" style="width:85px;text-align:right;"
         data-maxqty="${remaining}" data-prevqty="${prevQty}" data-rate="${num(it['Unit Rate'])}" data-hoqty="${num(it['Qty'])}"
-        oninput="validateHOCQty(this);recalcHOCTotals()" onwheel="this.blur()"></td>
+        oninput="validateHOCQty(this);recalcHOCTotals()" onwheel="this.blur()" onkeydown="if(event.key==='ArrowUp'||event.key==='ArrowDown')event.preventDefault()"></td>
       <td class="num mono hoc_cumQty">${fmtINR(prevQty)}</td>
       <td class="num mono">${fmtINR(it['Unit Rate'])}</td>
       <td class="num mono hoc_certVal">0.00</td>
@@ -8102,7 +8102,7 @@ async function reviseHOC(hocNum) {
       <td class="num mono">${fmtINR(prevQty)}</td>
       <td><input type="number" class="hoc_thisQty" min="0" max="${remaining}" step="0.001" value="${preQty||''}" style="width:85px;text-align:right;"
         data-maxqty="${remaining}" data-prevqty="${prevQty}" data-rate="${num(it['Unit Rate'])}" data-hoqty="${num(it['Qty'])}"
-        oninput="validateHOCQty(this);recalcHOCTotals()" onwheel="this.blur()"></td>
+        oninput="validateHOCQty(this);recalcHOCTotals()" onwheel="this.blur()" onkeydown="if(event.key==='ArrowUp'||event.key==='ArrowDown')event.preventDefault()"></td>
       <td class="num mono hoc_cumQty">${fmtINR(prevQty + preQty)}</td>
       <td class="num mono">${fmtINR(it['Unit Rate'])}</td>
       <td class="num mono hoc_certVal">${fmtINR(preQty * num(it['Unit Rate']))}</td>
@@ -8361,7 +8361,7 @@ function addHOBExtraLine() {
       <option value="Before GST">Before GST</option>
       <option value="After GST">After GST</option>
     </select></td>
-    <td><input type="number" step="0.01" placeholder="0.00" style="width:100%;text-align:right;" oninput="recalcHOBTotals()" onwheel="this.blur()"></td>
+    <td><input type="number" step="0.01" placeholder="0.00" style="width:100%;text-align:right;" oninput="recalcHOBTotals()" onwheel="this.blur()" onkeydown="if(event.key==='ArrowUp'||event.key==='ArrowDown')event.preventDefault()"></td>
     <td><button class="btn btn-ghost btn-sm" onclick="document.getElementById('hobExtra_${i}').remove();recalcHOBTotals()" style="padding:3px 7px;">✕</button></td>
   `;
   tbody.appendChild(tr);
@@ -9193,8 +9193,8 @@ function addWOItem() {
       <div class="typeahead-results" id="woItemResults_${i}"></div>
     </td>
     <td><input class="wo_uom" placeholder="UOM" readonly style="width:60px;background:var(--input-bg);opacity:0.8;"></td>
-    <td><input class="wo_qty" type="number" placeholder="0" style="width:80px;text-align:right;" oninput="recalcWORow(${i});recalcWOTotals()" onwheel="this.blur()"></td>
-    <td><input class="wo_rate" type="number" placeholder="0.00" style="width:90px;text-align:right;" oninput="recalcWORow(${i});recalcWOTotals()" onwheel="this.blur()"></td>
+    <td><input class="wo_qty" type="number" placeholder="0" style="width:80px;text-align:right;" oninput="recalcWORow(${i});recalcWOTotals()" onwheel="this.blur()" onkeydown="if(event.key==='ArrowUp'||event.key==='ArrowDown')event.preventDefault()"></td>
+    <td><input class="wo_rate" type="number" placeholder="0.00" style="width:90px;text-align:right;" oninput="recalcWORow(${i});recalcWOTotals()" onwheel="this.blur()" onkeydown="if(event.key==='ArrowUp'||event.key==='ArrowDown')event.preventDefault()"></td>
     <td class="num mono" id="woAmt_${i}">0.00</td>
     <td><button class="btn btn-ghost btn-sm" onclick="removeWOItem(${i})" style="padding:3px 7px;">✕</button></td>
   `;
@@ -9639,7 +9639,7 @@ async function onWOCWOChange() {
         style="width:85px;text-align:right;"
         data-maxval="${maxVal}" data-prevval="${prevVal}" data-rate="${num(it['Unit Rate'])}"
         data-hoqty="${hoQty}" data-ispct="${isPct?'1':'0'}"
-        oninput="validateWOCVal(this);recalcWOCTotals()" onwheel="this.blur()"></td>
+        oninput="validateWOCVal(this);recalcWOCTotals()" onwheel="this.blur()" onkeydown="if(event.key==='ArrowUp'||event.key==='ArrowDown')event.preventDefault()"></td>
       <td class="num mono woc_cumVal">${isPct ? prevVal.toFixed(2)+'%' : fmtINR(prevVal)}</td>
       <td class="num mono">${fmtINR(it['Unit Rate'])}</td>
       <td class="num mono woc_certVal">0.00</td>
@@ -9985,7 +9985,7 @@ function addWOBExtraLine() {
     <td><input placeholder="Description…" style="width:100%;" oninput="recalcWOBTotals()"></td>
     <td><select onchange="recalcWOBTotals()" style="font-size:12px;"><option value="Addition">Addition (+)</option><option value="Deduction">Deduction (−)</option></select></td>
     <td><select onchange="recalcWOBTotals()" style="font-size:12px;"><option value="Before GST">Before GST</option><option value="After GST">After GST</option></select></td>
-    <td><input type="number" step="0.01" placeholder="0.00" style="width:100%;text-align:right;" oninput="recalcWOBTotals()" onwheel="this.blur()"></td>
+    <td><input type="number" step="0.01" placeholder="0.00" style="width:100%;text-align:right;" oninput="recalcWOBTotals()" onwheel="this.blur()" onkeydown="if(event.key==='ArrowUp'||event.key==='ArrowDown')event.preventDefault()"></td>
     <td><button class="btn btn-ghost btn-sm" onclick="document.getElementById('wobExtra_${i}').remove();recalcWOBTotals()" style="padding:3px 7px;">✕</button></td>`;
   tbody.appendChild(tr);
 }
@@ -10439,7 +10439,7 @@ async function newPRR() {
       <td class="num mono" style="color:var(--accent);font-weight:600;">${fmtINRSym(os)}</td>
       <td class="num"><input type="number" class="prr_reqAmt" step="0.01" min="0.01" max="${os}" value="${os.toFixed(2)}"
         style="width:110px;text-align:right;padding:5px 6px;border:1px solid var(--border);border-radius:3px;font-size:12px;background:var(--input-bg);color:var(--text);"
-        oninput="updatePRRTotal()" disabled onwheel="this.blur()"></td>
+        oninput="updatePRRTotal()" disabled onwheel="this.blur()" onkeydown="if(event.key==='ArrowUp'||event.key==='ArrowDown')event.preventDefault()"></td>
     </tr>`;
   }).join('');
 }
@@ -10846,7 +10846,7 @@ async function onPayConfRefChange() {
             data-os="${os}" data-billnum="${esc(it.bill_number)}" data-billtype="${esc(it.bill_type||'HOB')}"
             value="${os.toFixed(2)}" min="0" step="0.01"
             style="width:110px;text-align:right;padding:5px;"
-            oninput="updatePRRPayTotal()" onwheel="this.blur()">
+            oninput="updatePRRPayTotal()" onwheel="this.blur()" onkeydown="if(event.key==='ArrowUp'||event.key==='ArrowDown')event.preventDefault()">
           <div id="prrPayWarn_${i}" style="display:none;color:var(--warn);font-size:10px;">⚠ Over O/S</div>
         </td>
         <td class="center"><span style="font-size:11px;padding:2px 7px;background:var(--panel-2);border-radius:8px;">${esc(it.status||'Unpaid')}</span></td>
@@ -11987,7 +11987,7 @@ function amAddActivity(grp, sub, subId) {
           style="width:100%;padding:6px 8px;border:1px solid var(--border);border-radius:4px;font-size:12px;background:var(--bg);color:var(--text);"></div>
       <div><label style="font-size:11px;color:var(--muted);display:block;margin-bottom:3px;">Default Rate (₹)</label>
         <input type="number" id="am_new_rate" placeholder="0.00" step="0.01"
-          style="width:100%;padding:6px 8px;border:1px solid var(--border);border-radius:4px;font-size:12px;background:var(--bg);color:var(--text);" onwheel="this.blur()"></div>
+          style="width:100%;padding:6px 8px;border:1px solid var(--border);border-radius:4px;font-size:12px;background:var(--bg);color:var(--text);" onwheel="this.blur()" onkeydown="if(event.key==='ArrowUp'||event.key==='ArrowDown')event.preventDefault()"></div>
     </div>
     <div style="display:flex;gap:6px;">
       <button class="btn btn-primary btn-sm" onclick="amSaveActivity('${esc(grp)}','${esc(sub)}')">Save Activity</button>
@@ -12581,7 +12581,7 @@ function mmAddMaterial(grp, sub, subId) {
           style="width:100%;padding:6px 8px;border:1px solid var(--border);border-radius:4px;font-size:12px;background:var(--bg);color:var(--text);"></div>
       <div><label style="font-size:11px;color:var(--muted);display:block;margin-bottom:3px;">Est. Rate (₹)</label>
         <input type="number" id="mm_new_est_rate" placeholder="0.00" step="0.01"
-          style="width:100%;padding:6px 8px;border:1px solid var(--border);border-radius:4px;font-size:12px;background:var(--bg);color:var(--text);" onwheel="this.blur()"></div>
+          style="width:100%;padding:6px 8px;border:1px solid var(--border);border-radius:4px;font-size:12px;background:var(--bg);color:var(--text);" onwheel="this.blur()" onkeydown="if(event.key==='ArrowUp'||event.key==='ArrowDown')event.preventDefault()"></div>
     </div>
     <div style="margin-bottom:8px;">
       <label style="font-size:11px;color:var(--muted);display:block;margin-bottom:3px;">Specification</label>
@@ -13364,7 +13364,7 @@ function openMatEdit(code) {
       </div>
       <div class="field">
         <label>Estimated Rate (&#8377;)</label>
-        <input type="number" id="me_est_rate" value="${esc(String(m.estimated_rate||''))}" step="0.01" placeholder="0.00" style="width:100%;" onwheel="this.blur()">
+        <input type="number" id="me_est_rate" value="${esc(String(m.estimated_rate||''))}" step="0.01" placeholder="0.00" style="width:100%;" onwheel="this.blur()" onkeydown="if(event.key==='ArrowUp'||event.key==='ArrowDown')event.preventDefault()">
       </div>
     </div>
     <div class="field" style="margin-bottom:18px;">
@@ -14051,7 +14051,7 @@ function addMIRItem() {
       <div class="typeahead-results" id="mirMatRes_${i}" style="min-width:380px;position:absolute;top:100%;left:0;z-index:9999;box-shadow:0 4px 16px rgba(0,0,0,.15);"></div>
     </div></td>
     <td><input class="pu_uom" id="mirUom_${i}" style="width:70px;" placeholder="UOM"></td>
-    <td><input type="number" class="num" id="mirQty_${i}" style="width:90px;" step="0.001" placeholder="0" onwheel="this.blur()"></td>
+    <td><input type="number" class="num" id="mirQty_${i}" style="width:90px;" step="0.001" placeholder="0" onwheel="this.blur()" onkeydown="if(event.key==='ArrowUp'||event.key==='ArrowDown')event.preventDefault()"></td>
     <td><input id="mirSpec_${i}" style="width:160px;" placeholder="Grade / spec"></td>
     <td><div style="position:relative;width:160px;">
     </div></td>
@@ -14366,7 +14366,7 @@ function _mirQtyConfirmModal(mirNum, action, selectedEls) {
       <td class="num" style="font-size:12px;font-weight:600;color:#b45309;">${fmtINR(balance)}</td>
       <td><input type="number" id="mirQtyConf_${i}" value="${balance}"
           min="0.001" max="${balance}" step="0.001"
-          style="width:85px;padding:3px 6px;border:1px solid var(--border);border-radius:4px;text-align:right;font-size:12px;" onwheel="this.blur()"></td>
+          style="width:85px;padding:3px 6px;border:1px solid var(--border);border-radius:4px;text-align:right;font-size:12px;" onwheel="this.blur()" onkeydown="if(event.key==='ArrowUp'||event.key==='ArrowDown')event.preventDefault()"></td>
     </tr>`;
   }).join('');
 
@@ -14832,9 +14832,9 @@ async function newRFQQuote(rfqNum) {
       <td class="c">${esc(item.uom)}</td>
       <td class="num">${item.qty_required}</td>
       <td><input type="number" id="rqRate_${idx}" step="0.01" style="width:90px;text-align:right;"
-        oninput="calcRQTotal(${idx},${item.qty_required})" placeholder="0.00" onwheel="this.blur()"></td>
+        oninput="calcRQTotal(${idx},${item.qty_required})" placeholder="0.00" onwheel="this.blur()" onkeydown="if(event.key==='ArrowUp'||event.key==='ArrowDown')event.preventDefault()"></td>
       <td><input type="number" id="rqGST_${idx}" step="0.01" style="width:55px;text-align:right;" value="18"
-        oninput="calcRQTotal(${idx},${item.qty_required})" onwheel="this.blur()"></td>
+        oninput="calcRQTotal(${idx},${item.qty_required})" onwheel="this.blur()" onkeydown="if(event.key==='ArrowUp'||event.key==='ArrowDown')event.preventDefault()"></td>
       <td class="num" id="rqTotal_${idx}">—</td>
     </tr>`).join('');
 
@@ -14855,7 +14855,7 @@ async function newRFQQuote(rfqNum) {
     </div>
     <div class="grid-2" style="margin-bottom:10px;">
       <div class="field"><label>Delivery Days</label>
-        <input type="number" id="rqDeliveryDays" placeholder="e.g. 14" onwheel="this.blur()"></div>
+        <input type="number" id="rqDeliveryDays" placeholder="e.g. 14" onwheel="this.blur()" onkeydown="if(event.key==='ArrowUp'||event.key==='ArrowDown')event.preventDefault()"></div>
       <div class="field"><label>Payment Terms</label>
         <input id="rqPayTerms" placeholder="e.g. 30 days from invoice"></div>
     </div>
@@ -15442,7 +15442,7 @@ function addRFQItem() {
       <div class="typeahead-results" id="rfqMatRes_${i}" style="min-width:380px;position:absolute;top:100%;left:0;z-index:9999;box-shadow:0 4px 16px rgba(0,0,0,.15);"></div>
     </div></td>
     <td><input class="pu_uom" id="rfqUom_${i}" style="width:70px;"></td>
-    <td><input type="number" class="num" id="rfqQty_${i}" style="width:90px;" step="0.001" onwheel="this.blur()"></td>
+    <td><input type="number" class="num" id="rfqQty_${i}" style="width:90px;" step="0.001" onwheel="this.blur()" onkeydown="if(event.key==='ArrowUp'||event.key==='ArrowDown')event.preventDefault()"></td>
     <td><input id="rfqSpec_${i}" style="width:160px;" placeholder="Spec / grade"></td>
     <td><button class="btn btn-ghost btn-sm" onclick="document.getElementById('rfqItem_${i}').remove()">✕</button></td>`;
   document.getElementById('rfqItemsBody').appendChild(tr);
@@ -15965,7 +15965,7 @@ async function viewQC(qcNum) {
               <input type="number" step="0.01" placeholder="New rate"
                 id="neg_${vi}_${idx}" value=""
                 style="width:110px;text-align:right;font-size:12px;"
-                data-vendor="${esc(v.vendor_name)}" data-mat="${esc(mat)}" onwheel="this.blur()">
+                data-vendor="${esc(v.vendor_name)}" data-mat="${esc(mat)}" onwheel="this.blur()" onkeydown="if(event.key==='ArrowUp'||event.key==='ArrowDown')event.preventDefault()">
             </td>`;
           });
           return row+'</tr>';
@@ -16249,14 +16249,14 @@ function addPOItem() {
       <div class="typeahead-results" id="poMatRes_${i}" style="min-width:380px;position:absolute;top:100%;left:0;z-index:9999;box-shadow:0 4px 16px rgba(0,0,0,.15);"></div>
     </div></td>
     <td><input class="po_uom" id="poUom_${i}" style="width:65px;"></td>
-    <td><input type="number" class="po_qty num" id="poQty_${i}" style="width:80px;" step="0.001" oninput="recalcPORow(${i})" onwheel="this.blur()"></td>
-    <td><input type="number" class="po_rate num" id="poRate_${i}" style="width:90px;" step="0.01" oninput="recalcPORow(${i})" onwheel="this.blur()"></td>
+    <td><input type="number" class="po_qty num" id="poQty_${i}" style="width:80px;" step="0.001" oninput="recalcPORow(${i})" onwheel="this.blur()" onkeydown="if(event.key==='ArrowUp'||event.key==='ArrowDown')event.preventDefault()"></td>
+    <td><input type="number" class="po_rate num" id="poRate_${i}" style="width:90px;" step="0.01" oninput="recalcPORow(${i})" onwheel="this.blur()" onkeydown="if(event.key==='ArrowUp'||event.key==='ArrowDown')event.preventDefault()"></td>
     <td class="num" id="poBaseAmt_${i}">0.00</td>
-    <td class="po_perlineGST" style="display:none;"><input type="number" id="poCGST_${i}" value="9" style="width:55px;" oninput="recalcPORow(${i})" onwheel="this.blur()"></td>
+    <td class="po_perlineGST" style="display:none;"><input type="number" id="poCGST_${i}" value="9" style="width:55px;" oninput="recalcPORow(${i})" onwheel="this.blur()" onkeydown="if(event.key==='ArrowUp'||event.key==='ArrowDown')event.preventDefault()"></td>
     <td class="po_perlineGST num" style="display:none;" id="poCGSTAmt_${i}">0.00</td>
-    <td class="po_perlineGST" style="display:none;"><input type="number" id="poSGST_${i}" value="9" style="width:55px;" oninput="recalcPORow(${i})" onwheel="this.blur()"></td>
+    <td class="po_perlineGST" style="display:none;"><input type="number" id="poSGST_${i}" value="9" style="width:55px;" oninput="recalcPORow(${i})" onwheel="this.blur()" onkeydown="if(event.key==='ArrowUp'||event.key==='ArrowDown')event.preventDefault()"></td>
     <td class="po_perlineGST num" style="display:none;" id="poSGSTAmt_${i}">0.00</td>
-    <td class="po_perlineGST" style="display:none;"><input type="number" id="poIGST_${i}" value="0" style="width:55px;" oninput="recalcPORow(${i})" onwheel="this.blur()"></td>
+    <td class="po_perlineGST" style="display:none;"><input type="number" id="poIGST_${i}" value="0" style="width:55px;" oninput="recalcPORow(${i})" onwheel="this.blur()" onkeydown="if(event.key==='ArrowUp'||event.key==='ArrowDown')event.preventDefault()"></td>
     <td class="po_perlineGST num" style="display:none;" id="poIGSTAmt_${i}">0.00</td>
     <td class="num" id="poTotalAmt_${i}">0.00</td>
     <td><input id="poRmk_${i}" style="width:100px;" placeholder="Remarks"></td>
@@ -17526,7 +17526,7 @@ async function onGRNPOChange() {
           data-matcode="${esc(it.material_code||'')}"
           data-poqty="${num(it.qty)}" data-prev="${prev}" data-balance="${balance}"
           data-rate="${num(it.unit_rate)}" data-sno="${it.sno}"
-          oninput="recalcGRNRow(${i})" ${exhausted?'disabled title="PO balance fully received — cannot enter quantity"':''} onwheel="this.blur()">
+          oninput="recalcGRNRow(${i})" ${exhausted?'disabled title="PO balance fully received — cannot enter quantity"':''} onwheel="this.blur()" onkeydown="if(event.key==='ArrowUp'||event.key==='ArrowDown')event.preventDefault()">
         <div id="grnOverWarn_${i}" style="display:none;font-size:10px;color:#92400e;font-weight:600;margin-top:2px;white-space:nowrap;"></div>
       </td>
       <td class="num">${fmtINR(it.unit_rate)}</td>
@@ -17845,8 +17845,8 @@ async function addCashGRNItem() {
       <div class="typeahead-results" id="cgrnMatRes_${i}" style="position:fixed;min-width:280px;max-width:420px;z-index:9999;"></div>
     </td>
     <td><input id="cgrnUOM_${i}" readonly style="opacity:.7;width:80px;"></td>
-    <td><input type="number" step="0.001" id="cgrnQty_${i}" class="num" style="width:90px;" oninput="cgrnRecalcRow(${i})" onwheel="this.blur()"></td>
-    <td><input type="number" step="0.01" id="cgrnRate_${i}" class="num" style="width:110px;" oninput="cgrnRecalcRow(${i})" onwheel="this.blur()"></td>
+    <td><input type="number" step="0.001" id="cgrnQty_${i}" class="num" style="width:90px;" oninput="cgrnRecalcRow(${i})" onwheel="this.blur()" onkeydown="if(event.key==='ArrowUp'||event.key==='ArrowDown')event.preventDefault()"></td>
+    <td><input type="number" step="0.01" id="cgrnRate_${i}" class="num" style="width:110px;" oninput="cgrnRecalcRow(${i})" onwheel="this.blur()" onkeydown="if(event.key==='ArrowUp'||event.key==='ArrowDown')event.preventDefault()"></td>
     <td class="num" id="cgrnAmt_${i}" style="font-weight:600;">₹0.00</td>
     <td><input id="cgrnRmk_${i}" placeholder="Remarks" style="width:140px;"></td>
     <td><button type="button" class="btn btn-ghost btn-sm" onclick="removeCashGRNItem(${i})" title="Remove">✕</button></td>
@@ -18515,7 +18515,7 @@ function addPOBExtraLine() {
     <td><input placeholder="Description" style="width:180px;"></td>
     <td><select><option value="Addition">Addition</option><option value="Deduction">Deduction</option></select></td>
     <td><select><option value="Before GST">Before GST</option><option value="After GST">After GST</option></select></td>
-    <td><input type="number" step="0.01" style="width:100px;text-align:right;" oninput="recalcPOBTotals()" onwheel="this.blur()"></td>
+    <td><input type="number" step="0.01" style="width:100px;text-align:right;" oninput="recalcPOBTotals()" onwheel="this.blur()" onkeydown="if(event.key==='ArrowUp'||event.key==='ArrowDown')event.preventDefault()"></td>
     <td><button class="btn btn-ghost btn-sm" onclick="this.closest('tr').remove();recalcPOBTotals()">✕</button></td>`;
   document.getElementById('pob_extraBody').appendChild(tr);
 }
@@ -19496,7 +19496,7 @@ async function addMISItem() {
       <div id="misCsh_${i}_pill" style="display:none;margin-top:3px;"></div>
     </div></td>
     <td class="num" id="misBalance_${i}" style="font-weight:600;color:var(--accent);">—</td>
-    <td><input type="number" id="misQty_${i}" class="num" style="width:90px;" step="0.001" oninput="recalcMISRow(${i})" onwheel="this.blur()"></td>
+    <td><input type="number" id="misQty_${i}" class="num" style="width:90px;" step="0.001" oninput="recalcMISRow(${i})" onwheel="this.blur()" onkeydown="if(event.key==='ArrowUp'||event.key==='ArrowDown')event.preventDefault()"></td>
     <td style="min-width:160px;"><div style="position:relative;"></div></td>
     <td class="num" id="misRate_${i}">—</td>
     <td class="num" id="misAmt_${i}">—</td>
@@ -21307,7 +21307,7 @@ async function onCashPobGRNSelect() {
       <td>${esc(it.material_name)}</td>
       <td>${esc(it.uom)}</td>
       <td class="num">${fmtINR(it.this_grn_qty)}</td>
-      <td class="num"><input type="number" id="cpobRate_${i}" class="num" step="0.01" value="${num(it.unit_rate).toFixed(2)}" style="width:110px;text-align:right;" oninput="cpobRecalcLine(${i})" onwheel="this.blur()"></td>
+      <td class="num"><input type="number" id="cpobRate_${i}" class="num" step="0.01" value="${num(it.unit_rate).toFixed(2)}" style="width:110px;text-align:right;" oninput="cpobRecalcLine(${i})" onwheel="this.blur()" onkeydown="if(event.key==='ArrowUp'||event.key==='ArrowDown')event.preventDefault()"></td>
       <td class="num" id="cpobAmt_${i}">${fmtINR(it.base_amount)}</td>
       <td class="typeahead" style="position:relative;width:200px;">
       </td>
@@ -21362,7 +21362,7 @@ function addCashPobExtraLine() {
     <td><input placeholder="Description" style="width:180px;"></td>
     <td><select><option value="Addition">Addition</option><option value="Deduction">Deduction</option></select></td>
     <td><select><option value="Before GST">Before GST</option><option value="After GST">After GST</option></select></td>
-    <td><input type="number" step="0.01" style="width:100px;text-align:right;" oninput="recalcCashPobTotals()" onwheel="this.blur()"></td>
+    <td><input type="number" step="0.01" style="width:100px;text-align:right;" oninput="recalcCashPobTotals()" onwheel="this.blur()" onkeydown="if(event.key==='ArrowUp'||event.key==='ArrowDown')event.preventDefault()"></td>
     <td><button class="btn btn-ghost btn-sm" onclick="this.closest('tr').remove();recalcCashPobTotals()">✕</button></td>`;
   document.getElementById('cpob_extraBody').appendChild(tr);
 }
