@@ -2203,6 +2203,7 @@ input[type="number"] {
 <div class="module" id="mod-purchase">
   <div class="sub-tabs">
     <div class="sub-tab active" data-putab="mir"    onclick="switchPUTab('mir')">Material Indent (MIR)</div>
+    <div class="sub-tab"        data-putab="workbench" id="tab-workbench" onclick="switchPUTab('workbench')" style="display:none;">Raise RFQ / PO</div>
     <div class="sub-tab"        data-putab="rfq"    onclick="switchPUTab('rfq')">RFQ &amp; Quotes</div>
     <div class="sub-tab"        data-putab="po"     onclick="switchPUTab('po')">Purchase Orders</div>
     <div class="sub-tab"        data-putab="grn"    onclick="switchPUTab('grn')">GRN</div>
@@ -3194,6 +3195,27 @@ input[type="number"] {
         </table>
       </div>
     </div>
+  </div>
+
+  <!-- ── PROCUREMENT WORKBENCH ── -->
+  <div id="puTab-workbench" style="display:none;">
+    <div class="row" style="justify-content:space-between;margin:16px 0;">
+      <div>
+        <div class="section-title">Raise RFQ / PO</div>
+        <div class="section-sub">Select items from any open MIR to raise a combined RFQ or Direct PO</div>
+      </div>
+      <div style="display:flex;gap:8px;align-items:center;">
+        <button class="btn btn-ghost btn-sm" onclick="loadWorkbench()" title="Refresh">&#8635; Refresh</button>
+        <button id="wb_raiseRFQ" class="btn btn-secondary" onclick="wbRaise('rfq')" style="display:none;">Raise RFQ</button>
+        <button id="wb_raisePO"  class="btn btn-primary"   onclick="wbRaise('po')"  style="display:none;">Direct PO</button>
+      </div>
+    </div>
+    <div id="wb_banner" style="display:none;margin-bottom:12px;padding:10px 16px;background:#eff6ff;border:1px solid #bfdbfe;border-radius:6px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">
+      <span id="wb_bannerText" style="font-size:13px;color:#1e40af;font-weight:500;"></span>
+      <button class="btn btn-ghost btn-sm" onclick="wbClearAll()" style="font-size:12px;">Clear selection</button>
+    </div>
+    <div id="wb_loading" class="card" style="text-align:center;padding:32px;color:var(--muted);font-size:13px;">Loading open MIR items&#8230;</div>
+    <div id="wb_content"></div>
   </div>
 
   <!-- ── OPENING STOCK (Admin only) ── -->
@@ -6419,9 +6441,19 @@ function filterMasterTable(inputId, tbodyId) {
   rows.forEach(tr => {
     if (!q) { tr.style.display = ''; return; }
     const text = tr.textContent.toLowerCase();
-    // Fuzzy: all tokens must appear somewhere in the row text
+    // Fuzzy: all tokens must appear somewhere in the row text.
+    // Short tokens (<=2 non-numeric chars) also match against word initials
+    // so e.g. "sn" finds "S N Enterprises" even though there is a space.
     const tokens = q.split(/\s+/).filter(Boolean);
-    tr.style.display = tokens.every(t => text.includes(t)) ? '' : 'none';
+    tr.style.display = tokens.every(t => {
+      if (text.includes(t)) return true;
+      if (t.length <= 2 && !/\d/.test(t)) {
+        const words = text.split(/[\s\/|·,\-]+/).filter(Boolean);
+        const initials = words.map(w => w[0]).join('');
+        if (initials.includes(t)) return true;
+      }
+      return false;
+    }) ? '' : 'none';
   });
 }
 
@@ -7098,6 +7130,12 @@ function _fuzzyMatch(haystackLower, tokens, words /* optional pre-split words */
     const isNum = _isNumericToken(t);
     if (isNum) return false;                                        // numbers must match exactly
     let matched = false;
+    // Short token (1–2 chars, non-numeric): treat as initials abbreviation.
+    // e.g. "sn" matches "S N Enterprises" because initials = "sne" ⊇ "sn"
+    if (!matched && t.length <= 2) {
+      const initials = w.map(word => word[0]).join('');
+      if (initials.includes(t)) matched = true;
+    }
     if (t.length >= 3) {
       for (const word of w) {
         if (word.startsWith(t)) { matched = true; break; }          // (b)
@@ -10641,6 +10679,12 @@ async function arrOrderTypeahead() {
     if (scope.includes(q))    return 1;
     const words = q.split(/\s+/);
     if (words.length > 1 && words.every(w => vendor.includes(w) || num.includes(w))) return 1;
+    // Initials check: short single token (<=2 non-numeric chars) matches vendor word-initials.
+    // e.g. "sn" finds vendor "S N Enterprises" (initials = "sne")
+    if (q.length <= 2 && !/\d/.test(q)) {
+      const vendorInitials = vendor.split(/[\s\/|·,\-]+/).filter(Boolean).map(w => w[0]).join('');
+      if (vendorInitials.includes(q)) return 1;
+    }
     return 0;
   }
 
@@ -11521,7 +11565,7 @@ function renderPrintPRR(d) {
 // ============================================================
 // PURCHASE MODULE — TAB NAVIGATION
 // ============================================================
-const PU_TABS = ['mir','rfq','po','grn','pob','mis','stock','openstock'];
+const PU_TABS = ['mir','rfq','po','grn','pob','mis','stock','openstock','workbench'];
 
 function switchPUTab(tab) {
   PU_TABS.forEach(t => {
@@ -11538,6 +11582,7 @@ function switchPUTab(tab) {
   if (tab === 'mis')   { loadMISList(); }
   if (tab === 'stock') loadStockBalance();
   if (tab === 'openstock') { if (hasRole('Admin')) loadOSHistory(); else toast('Admin access only','error'); }
+  if (tab === 'workbench') loadWorkbench();
 }
 
 // puState is defined early in the file (after ROLE_PERMS) so initApp can use it
@@ -11808,6 +11853,8 @@ function renderActivityTree() {
     Object.keys(tree[grp]).sort().forEach(sub => {
       const subId = 'ams_' + btoa(encodeURIComponent(grp+'|'+sub)).replace(/[^a-z0-9]/gi,'');
       const items = tree[grp][sub];
+      const amSafeGrpQ = grp.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+      const amSafeSubQ = sub.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
 
       const filtered = searching
         ? items.filter(a =>
@@ -11844,7 +11891,7 @@ function renderActivityTree() {
             <span style="font-size:13px;">${subArrow}</span>
             <span style="font-weight:600;color:var(--accent);">📂 ${esc(sub)}</span>
             <span style="flex:1;"></span>
-            ${canAdd ? `<button class="btn btn-primary btn-sm" onclick="event.stopPropagation();amAddActivity('${esc(grp)}','${esc(sub)}','${subId}')">+ Activity</button>` : ''}
+            ${canAdd ? `<button class="btn btn-primary btn-sm" onclick="event.stopPropagation();amAddActivity('${amSafeGrpQ}','${amSafeSubQ}','${subId}')">+ Activity</button>` : ''}
           </div>
           <div id="${subId}_ch" style="${searching?'':'display:none;'}margin-left:22px;margin-top:4px;">
             <div id="${subId}_inline"></div>
@@ -11859,6 +11906,7 @@ function renderActivityTree() {
     const totalActs = Object.values(tree[grp]).reduce((s,a)=>s+a.length,0);
     const grpOpen = searching;
     const grpArrow = searching ? '▾' : '▸';
+    const amSafeGrpQ2 = grp.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
 
     html += `
     <div style="margin-bottom:12px;">
@@ -11867,7 +11915,7 @@ function renderActivityTree() {
         <span style="font-weight:700;color:#1e3a5f;font-size:14px;">📁 ${esc(grp)}</span>
         <span class="badge-count">${totalActs} activit${totalActs!==1?'ies':'y'}</span>
         <span style="flex:1;"></span>
-        ${canAdd ? `<button class="btn btn-primary btn-sm" onclick="event.stopPropagation();amAddSub('${esc(grp)}','${grpId}')">+ Sub-head</button>` : ''}
+        ${canAdd ? `<button class="btn btn-primary btn-sm" onclick="event.stopPropagation();amAddSub('${amSafeGrpQ2}','${grpId}')">+ Sub-head</button>` : ''}
       </div>
       <div id="${grpId}_ch" style="${grpOpen?'':'display:none;'}margin-left:24px;margin-top:4px;">
         <div id="${grpId}_inline"></div>
@@ -11943,8 +11991,8 @@ function amAddSub(grp, grpId) {
   wrap.innerHTML = `<span style="font-size:12px;color:var(--muted);">New Activity Sub-head:</span>
     <input class="tree-inline-input" placeholder="e.g. Tower Crane, Batching Plant" autocomplete="off"
       style="padding:6px 10px;border:1px solid var(--accent);border-radius:4px;font-size:12px;width:280px;background:var(--input-bg);color:var(--text);"
-      onkeydown="if(event.key==='Enter')amSaveNewSub(this,'${esc(grp)}','${grpId}');if(event.key==='Escape')this.closest('.tree-inline-wrap').remove()">
-    <button class="btn btn-primary btn-sm" onclick="amSaveNewSub(this.previousElementSibling,'${esc(grp)}','${grpId}')">Save</button>
+      onkeydown="if(event.key==='Enter')amSaveNewSub(this,'${grp.replace(/\\/g,'\\\\').replace(/'/g,'\\\'')}','${grpId}');if(event.key==='Escape')this.closest('.tree-inline-wrap').remove()">
+    <button class="btn btn-primary btn-sm" onclick="amSaveNewSub(this.previousElementSibling,'${grp.replace(/\\/g,'\\\\').replace(/'/g,'\\\'')}','${grpId}')">Save</button>
     <button class="btn btn-ghost btn-sm" onclick="this.closest('.tree-inline-wrap').remove()">✕</button>`;
   c.appendChild(wrap);
   wrap.querySelector('input').focus();
@@ -11990,7 +12038,7 @@ function amAddActivity(grp, sub, subId) {
           style="width:100%;padding:6px 8px;border:1px solid var(--border);border-radius:4px;font-size:12px;background:var(--bg);color:var(--text);" onwheel="this.blur()" onkeydown="if(event.key==='ArrowUp'||event.key==='ArrowDown')event.preventDefault()"></div>
     </div>
     <div style="display:flex;gap:6px;">
-      <button class="btn btn-primary btn-sm" onclick="amSaveActivity('${esc(grp)}','${esc(sub)}')">Save Activity</button>
+      <button class="btn btn-primary btn-sm" onclick="amSaveActivity('${grp.replace(/\\/g,'\\\\').replace(/'/g,'\\\'')}','${sub.replace(/\\/g,'\\\\').replace(/'/g,'\\\'')}')">Save Activity</button>
       <button class="btn btn-ghost btn-sm" onclick="this.closest('.tree-inline-wrap').remove()">Cancel</button>
     </div>`;
   c.appendChild(wrap);
@@ -12415,7 +12463,7 @@ function renderMaterialTree() {
             <span style="font-weight:600;color:var(--accent);">📂 ${safeSubEsc}</span>
             <span class="badge-count" style="font-size:11px;color:var(--muted);">${subCount} material${subCount!==1?'s':''}</span>
             <span style="flex:1;"></span>
-            ${canAdd ? `<button class="btn btn-primary btn-sm" onclick="event.stopPropagation();mmAddMaterial('${safeGrpEsc}','${safeSubEsc}','${subId}')">+ Material</button>` : ''}
+            ${canAdd ? `<button class="btn btn-primary btn-sm" onclick="event.stopPropagation();mmAddMaterial('${safeGrpQ}','${safeSubQ}','${subId}')">+ Material</button>` : ''}
             ${isAdmin ? `<button class="btn btn-ghost btn-sm" style="color:var(--danger);font-size:11px;padding:2px 7px;" title="Delete sub-head" onclick="event.stopPropagation();mmDeleteSub(${subChId},'${safeGrpQ}','${safeSubQ}')">🗑 Delete</button>` : ''}
           </div>
           <div id="${subId}_ch" style="${searching?'':'display:none;'}margin-left:22px;margin-top:4px;">
@@ -12441,7 +12489,7 @@ function renderMaterialTree() {
         <span style="font-weight:700;color:#1e3a5f;font-size:14px;">📁 ${esc(grp)}</span>
         <span class="badge-count">${totalMats} material${totalMats!==1?'s':''}</span>
         <span style="flex:1;"></span>
-        ${canAdd ? `<button class="btn btn-primary btn-sm" onclick="event.stopPropagation();mmAddSub('${esc(grp)}','${grpId}')">+ Sub-head</button>` : ''}
+        ${canAdd ? `<button class="btn btn-primary btn-sm" onclick="event.stopPropagation();mmAddSub('${safeGrpQ2}','${grpId}')">+ Sub-head</button>` : ''}
         ${isAdmin ? `<button class="btn btn-ghost btn-sm" style="color:var(--danger);font-size:11px;padding:2px 7px;" title="Delete group" onclick="event.stopPropagation();mmDeleteGroup('${safeGrpQ2}')">🗑 Delete</button>` : ''}
       </div>
       <div id="${grpId}_ch" style="${searching?'':'display:none;'}margin-left:24px;margin-top:4px;">
@@ -12589,7 +12637,7 @@ function mmAddMaterial(grp, sub, subId) {
         style="width:100%;padding:6px 8px;border:1px solid var(--border);border-radius:4px;font-size:12px;background:var(--bg);color:var(--text);">
     </div>
     <div style="display:flex;gap:6px;">
-      <button class="btn btn-primary btn-sm" onclick="mmSaveMaterial('${esc(grp)}','${esc(sub)}')">Save Material</button>
+      <button class="btn btn-primary btn-sm" onclick="mmSaveMaterial('${grp.replace(/\\/g,'\\\\').replace(/'/g,'\\\'')}','${sub.replace(/\\/g,'\\\\').replace(/'/g,'\\\'')}')">Save Material</button>
       <button class="btn btn-ghost btn-sm" onclick="this.closest('.tree-inline-wrap').remove()">Cancel</button>
     </div>`;
   c.appendChild(wrap);
@@ -13827,7 +13875,7 @@ async function loadMIRList() {
   if (allPlIds.length) {
     const [poItemsRes, grnItemsRes, grnHdrRes] = await Promise.all([
       sb.from('pu_po_items')
-        .select('procurement_line_id,qty,short_closed_qty')
+        .select('procurement_line_id,qty,short_closed_qty,po_number')  // po_number needed for cancel filter
         .in('procurement_line_id', allPlIds),
       sb.from('pu_grn_items')
         .select('procurement_line_id,this_grn_qty,grn_number')
@@ -13836,9 +13884,25 @@ async function loadMIRList() {
         .select('grn_number,status')
         .in('status', ['Verified','Partially Billed','Billed']),
     ]);
+    // approvedPOs is already built above from po_links + legacy po_number.
+    // Extend it to also cover any POs found only in po_items (e.g. direct POs
+    // whose plid was set but who have no po_links row yet).
+    const poNumsInItems = [...new Set((poItemsRes.data||[]).map(r=>r.po_number).filter(Boolean))];
+    const newPONums = poNumsInItems.filter(n => !approvedPOs.has(n) && !cancelledPOs.has(n));
+    if (newPONums.length) {
+      const {data:extraSt} = await sb.from('pu_po_orders')
+        .select('po_number,status').in('po_number', newPONums);
+      (extraSt||[]).forEach(p => {
+        if (['Open','Partial Receipt','Fully Received','Short-Closed','Closed'].includes(p.status))
+          approvedPOs.add(p.po_number);
+        else if (p.status === 'Cancelled')
+          cancelledPOs.add(p.po_number);
+      });
+    }
     const validGRNs = new Set((grnHdrRes.data||[]).map(g => g.grn_number));
     (poItemsRes.data||[]).forEach(r => {
       if (!r.procurement_line_id) return;
+      if (r.po_number && !approvedPOs.has(r.po_number)) return; // skip cancelled/rejected POs
       poQtyMap[r.procurement_line_id] = (poQtyMap[r.procurement_line_id]||0) + (r.qty||0);
       scQtyMap[r.procurement_line_id] = (scQtyMap[r.procurement_line_id]||0) + (r.short_closed_qty||0);
     });
@@ -14143,9 +14207,23 @@ async function viewMIR(mirNum) {
         .select('grn_number,status')
         .in('status',['Verified','Partially Billed','Billed']),
     ]);
+    // Exclude cancelled/rejected POs from qty coverage.
+    // pu_po_items rows for cancelled POs are never deleted — they must be
+    // filtered here or a cancelled PO keeps showing as "PO Issued".
+    const poNumsInItems = [...new Set((poItemsRes.data||[]).map(r=>r.po_number).filter(Boolean))];
+    const activePOsInView = new Set();
+    if (poNumsInItems.length) {
+      const {data:poSt} = await sb.from('pu_po_orders')
+        .select('po_number,status').in('po_number', poNumsInItems);
+      (poSt||[]).forEach(p => {
+        if (!['Cancelled','Rejected','Rejected - Correction'].includes(p.status))
+          activePOsInView.add(p.po_number);
+      });
+    }
     const validGRNs = new Set((grnHdrRes.data||[]).map(g=>g.grn_number));
     (poItemsRes.data||[]).forEach(r => {
       if (!r.procurement_line_id) return;
+      if (r.po_number && !activePOsInView.has(r.po_number)) return; // skip cancelled POs
       poQtyMap[r.procurement_line_id] = (poQtyMap[r.procurement_line_id]||0) + (r.qty||0);
       scQtyMap[r.procurement_line_id] = (scQtyMap[r.procurement_line_id]||0) + (r.short_closed_qty||0);
       if (r.po_number) {
@@ -15382,13 +15460,21 @@ async function directPOFromSelection(mirNum, confirmedItems) {
   switchPUTab('po');
   await newPO();
   document.getElementById('poItemsBody').innerHTML=''; _poItemCount=0;
-  document.getElementById('poForm').dataset.directMirNum  = mirNum;
+  // Build the full MIR reference string — workbench items carry individual mirNum per item;
+  // for single-MIR calls mirNum is the only source.
+  const allMirNums = items.some(it => it.mirNum)
+    ? [...new Set(items.map(it => it.mirNum).filter(Boolean))]
+    : [mirNum].filter(Boolean);
+  const mirRefDisplay = allMirNums.join(', ');
+
+  document.getElementById('poForm').dataset.directMirNum  = mirNum;  // legacy single-MIR field (first MIR)
   document.getElementById('poForm').dataset.directMirSnos = items.map(it=>it.sno).join(',');
   document.getElementById('poForm').dataset.directMirMats = items.map(it=>it.mat).join('|||');
   document.getElementById('poForm').dataset.directMirQtys = items.map(it=>it.qty).join(',');
-  document.getElementById('poForm').dataset.poMirNum      = mirNum;
+  document.getElementById('poForm').dataset.poMirNum      = mirNum;    // legacy — first MIR only
+  document.getElementById('poForm').dataset.wbMirNums     = allMirNums.join(','); // all MIRs for this workbench PO
   const mirRefEl = document.getElementById('po_mirRef');
-  if(mirRefEl) mirRefEl.value = mirNum;
+  if(mirRefEl) mirRefEl.value = mirRefDisplay;  // show all MIRs in the display field
   items.forEach(it => {
     addPOItem();
     const i = _poItemCount-1;
@@ -15397,11 +15483,18 @@ async function directPOFromSelection(mirNum, confirmedItems) {
     document.getElementById('poQty_'+i).value = it.qty;
     const rmkEl = document.getElementById('poRmk_'+i);
     if(rmkEl && it.spec) rmkEl.value = it.spec;
+    // Stamp workbench provenance on the TR for getPOItemsData to read
+    const tr = document.querySelector('#poItemsBody tr:last-child');
+    if (tr && it.mirNum) {
+      tr.dataset.wbMirNum = it.mirNum;
+      tr.dataset.wbSno    = it.sno;
+      tr.dataset.wbPlid   = it.plid||'';
+    }
   });
   recalcPOTotals();
   const qcEl = document.getElementById('po_qcRef');
-  if(qcEl) { qcEl.value = 'Direct from '+mirNum; qcEl.readOnly = false; }
-  toast('PO pre-filled from MIR '+mirNum+' — select vendor and enter rates.','info',5000);
+  if(qcEl) { qcEl.value = 'Direct from '+mirRefDisplay; qcEl.readOnly = false; }
+  toast('PO pre-filled from '+mirRefDisplay+' — select vendor and enter rates.','info',5000);
 }
 
 
@@ -15459,16 +15552,29 @@ async function saveRFQ() {
   const desc=document.getElementById('rfq_description').value.trim();
   if(!date){toast('RFQ Date required','error');return;}
   if(!desc){toast('Description required','error');return;}
+  // Workbench path: _wbConfirmedItems is set when arriving from the procurement workbench
+  const wbItems = (typeof _wbConfirmedItems !== 'undefined') ? _wbConfirmedItems : null;
   const items=[];
-  document.querySelectorAll('#rfqItemsBody tr').forEach((tr,i)=>{
-    const rfqMatEl=tr.querySelector('.pu_material');
-    const mat=rfqMatEl?.value?.trim();
-    const rfqMatCode=rfqMatEl?.dataset?.matCode||null;
-    if(mat) items.push({sno:items.length+1,material_code:rfqMatCode,material_name:mat,
-      uom:tr.querySelector('.pu_uom')?.value?.trim()||'',
-      qty_required:parseFloat(tr.querySelector('input[type="number"]')?.value)||0,
-      specification:tr.cells[4]?.querySelector('input')?.value||null});
-  });
+  if (wbItems && wbItems.length) {
+    // Build items array from workbench selections — plid already resolved per line
+    wbItems.forEach((sel, i) => {
+      items.push({
+        sno: i+1, material_code: sel.matCode||null, material_name: sel.mat,
+        uom: sel.uom, qty_required: sel.qty, specification: sel.spec||null,
+        _wbMirNum: sel.mirNum, _wbSno: sel.sno, _wbPlid: sel.plid,
+      });
+    });
+  } else {
+    document.querySelectorAll('#rfqItemsBody tr').forEach((tr,i)=>{
+      const rfqMatEl=tr.querySelector('.pu_material');
+      const mat=rfqMatEl?.value?.trim();
+      const rfqMatCode=rfqMatEl?.dataset?.matCode||null;
+      if(mat) items.push({sno:items.length+1,material_code:rfqMatCode,material_name:mat,
+        uom:tr.querySelector('.pu_uom')?.value?.trim()||'',
+        qty_required:parseFloat(tr.querySelector('input[type="number"]')?.value)||0,
+        specification:tr.cells[4]?.querySelector('input')?.value||null});
+    });
+  }
   if(!items.length){toast('Add at least one material','error');return;}
   pbShow('Saving RFQ…');
   try {
@@ -15484,24 +15590,76 @@ async function saveRFQ() {
     });
     if(error) throw new Error(error.message);
     // Save RFQ items — carry procurement_line_id from MIR items if linked (v73)
-    let mirLineIdMap = {};  // material_name → procurement_line_id
-    if (mirNum) {
+    // Resolve procurement_line_id per item:
+    // Workbench items carry _wbPlid directly. Legacy single-MIR path uses sno-keyed map.
+    let mirLineIdMap = {};
+    const rfqMirSnosList = (() => {
+      const s = document.getElementById('rfqForm')?.dataset?.mirSnos||'';
+      return s ? s.split(',').map(Number).filter(Boolean) : [];
+    })();
+    const isWbPath = wbItems && wbItems.length;
+    if (!isWbPath && mirNum) {
       const {data:mirLineIds} = await sb.from('pu_mir_items')
-        .select('material_name,procurement_line_id')
+        .select('sno,material_name,procurement_line_id')
         .eq('mir_number', mirNum);
-      (mirLineIds||[]).forEach(r => {
-        if (r.procurement_line_id) mirLineIdMap[r.material_name] = r.procurement_line_id;
-      });
+      if (rfqMirSnosList.length) {
+        (mirLineIds||[]).forEach(r => {
+          if (r.procurement_line_id) mirLineIdMap[r.sno] = r.procurement_line_id;
+        });
+      } else {
+        (mirLineIds||[]).forEach(r => {
+          if (r.procurement_line_id) mirLineIdMap[r.material_name] = r.procurement_line_id;
+        });
+      }
     }
-    const rfqItemPayloads = items.map(it => ({
-      ...it,
-      rfq_number:          rfqNumber,
-      procurement_line_id: mirLineIdMap[it.material_name] || crypto.randomUUID(),
-      procurement_source:  mirLineIdMap[it.material_name] ? 'mir' : 'direct_rfq',
-    }));
+    const rfqItemPayloads = items.map((it, i) => {
+      // Workbench path: use plid stamped directly on the item
+      let plid = it._wbPlid || null;
+      if (!plid) {
+        plid = rfqMirSnosList.length
+          ? (mirLineIdMap[rfqMirSnosList[i]] || null)
+          : (mirLineIdMap[it.material_name]  || null);
+      }
+      const { _wbMirNum, _wbSno, _wbPlid: _p, ...itemFields } = it;
+      return {
+        ...itemFields,
+        rfq_number:          rfqNumber,
+        procurement_line_id: plid || crypto.randomUUID(),
+        procurement_source:  plid ? 'mir' : 'direct_rfq',
+      };
+    });
     await sb.from('pu_rfq_items').insert(rfqItemPayloads);
 
-    if (mirNum) {
+    if (isWbPath) {
+      // Workbench path: insert rfq_links per (mirNum, sno) from workbench selections
+      const linkPayloads = items
+        .filter(it => it._wbMirNum && it._wbSno)
+        .map(it => ({
+          mir_number: it._wbMirNum, sno: it._wbSno,
+          material_name: it.material_name,
+          rfq_number: rfqNumber,
+          qty_assigned: it.qty_required || 0,
+        })).filter(l => l.qty_assigned > 0);
+      if (linkPayloads.length) {
+        await sb.from('pu_mir_item_rfq_links').insert(linkPayloads);
+      }
+      // Keep legacy rfq_number field in sync per MIR sno
+      const mirSnoGroups = {};
+      items.filter(it => it._wbMirNum && it._wbSno).forEach(it => {
+        if (!mirSnoGroups[it._wbMirNum]) mirSnoGroups[it._wbMirNum] = [];
+        mirSnoGroups[it._wbMirNum].push(it._wbSno);
+      });
+      const affectedMirs = Object.keys(mirSnoGroups);
+      await Promise.all(affectedMirs.map(mn =>
+        sb.from('pu_mir_items').update({rfq_number:rfqNumber})
+          .eq('mir_number',mn).in('sno',mirSnoGroups[mn])
+      ));
+      await Promise.all(affectedMirs.map(mn => _refreshAllMIRItems(mn)));
+      // Clear workbench state
+      _wbConfirmedItems = [];
+      _wbBasket = [];
+      wbUpdateBanner();
+    } else if (mirNum) {
       const mirSnosStr = document.getElementById('rfqForm')?.dataset?.mirSnos||'';
       const mirSnos = mirSnosStr ? mirSnosStr.split(',').map(Number).filter(Boolean) : [];
       if (mirSnos.length) {
@@ -16143,6 +16301,9 @@ async function newPO() {
   ['po_qcRef','po_mirRef','po_remarks','po_vendor','po_vendorCode','po_vendorGSTIN','po_vendorAddress','po_paymentTerms'].forEach(id=>{
     const e=document.getElementById(id); if(e) e.value='';
   });
+  // Clear workbench multi-MIR dataset field on form reset
+  const _pfReset = document.getElementById('poForm');
+  if (_pfReset) { delete _pfReset.dataset.wbMirNums; delete _pfReset.dataset.poMirNum; delete _pfReset.dataset.directMirNum; }
   // Pre-fill contact person with default site contacts (editable)
   const cpEl=document.getElementById('po_contactPerson');
   if(cpEl) cpEl.value='Mr.Niteesh (7996631552) & Mr.Raghavendra (9901374170)';
@@ -16339,11 +16500,16 @@ function getPOItemsData() {
       igstP=parseFloat(document.getElementById('po_igstPct')?.value)||0;
     }
     cgst=base*cgstP/100; sgst=base*sgstP/100; igst=base*igstP/100;
+    // Carry workbench provenance fields if present on the row element
+    const wbMirNum = tr.dataset.wbMirNum||null;
+    const wbSno    = tr.dataset.wbSno    ? Number(tr.dataset.wbSno) : null;
+    const wbPlid   = tr.dataset.wbPlid  ||null;
     items.push({sno:items.length+1,material_code:matCode,material_name:mat,uom,qty,unit_rate:rate,base_amount:base,
       cgst_pct:cgstP,sgst_pct:sgstP,igst_pct:igstP,
       cgst_amount:cgst,sgst_amount:sgst,igst_amount:igst,
       total_amount:base+cgst+sgst+igst,
-      remarks:document.getElementById('poRmk_'+rn)?.value||null});
+      remarks:document.getElementById('poRmk_'+rn)?.value||null,
+      _wbMirNum:wbMirNum, _wbSno:wbSno, _wbPlid:wbPlid});
   });
   return items;
 }
@@ -16393,7 +16559,12 @@ async function savePO() {
     const {error}=await sb.from('pu_po_orders').insert({
       po_number:poNumber, po_date:date, project:document.getElementById('po_project').value,
       qc_number:(()=>{const v=document.getElementById('po_qcRef').value||''; return v.startsWith('QC/')?v:null;})(),
-      mir_number:document.getElementById('poForm').dataset.poMirNum||document.getElementById('po_mirRef')?.value||null,
+      // For workbench multi-MIR POs, store comma-joined MIR list so the PO list
+      // and PO view header show all MIRs. Cancel/SC rollback uses po_links scan
+      // (v83+) so the comma string does not break anything there.
+      // For single-MIR POs the value is unchanged from before.
+      mir_number: (document.getElementById('po_mirRef')?.value) ||
+                  document.getElementById('poForm').dataset.poMirNum || null,
       vendor_name:vendor, vendor_code:document.getElementById('po_vendorCode').value||null,
       vendor_address:document.getElementById('po_vendorAddress').value.trim()||null,
       vendor_gstin:document.getElementById('po_vendorGSTIN').value.trim()||null,
@@ -16439,22 +16610,59 @@ async function savePO() {
         });
       }
     }
-    // Path B: Direct PO from MIR — fetch mir_items UUIDs
-    if (!Object.keys(poLineIdMap).length && (directMirN || poMirRef)) {
+    // Path B: Direct PO from MIR — fetch mir_items UUIDs keyed by sno (not name)
+    // Workbench path: items carry _wbPlid/_wbMirNum/_wbSno directly — no map needed.
+    const isWbPOPath = (typeof _wbConfirmedItems !== 'undefined') && _wbConfirmedItems.length > 0;
+    if (isWbPOPath) {
+      items.forEach(it => {
+        if (it._wbPlid) {
+          it._resolvedPlid   = it._wbPlid;
+          it._resolvedSource = 'mir';
+          it._mirSno         = it._wbSno;
+        }
+      });
+    }
+    const directSnosList = directMirN
+      ? (document.getElementById('poForm').dataset.directMirSnos||'').split(',').map(Number).filter(Boolean)
+      : [];
+    if (!isWbPOPath && !Object.keys(poLineIdMap).length && (directMirN || poMirRef)) {
       const mirSrc = directMirN || poMirRef;
       const {data:mirLineIds2} = await sb.from('pu_mir_items')
-        .select('material_name,procurement_line_id')
+        .select('sno,material_name,procurement_line_id')
         .eq('mir_number', mirSrc);
-      (mirLineIds2||[]).forEach(r => {
-        if (r.procurement_line_id) poLineIdMap[r.material_name] = {
-          procurement_line_id: r.procurement_line_id,
-          procurement_source:  'mir',
-        };
-      });
+      if (directMirN && directSnosList.length) {
+        // Positional resolution: sno → plid (collision-safe for duplicate material names)
+        const snoToPlidMap = {};
+        (mirLineIds2||[]).forEach(r => {
+          if (r.procurement_line_id) snoToPlidMap[r.sno] = {
+            procurement_line_id: r.procurement_line_id,
+            procurement_source:  'mir',
+          };
+        });
+        // Stamp each item with its resolved plid by position
+        items.forEach((it, i) => {
+          const mirSno = directSnosList[i];
+          if (mirSno && snoToPlidMap[mirSno]) {
+            it._resolvedPlid   = snoToPlidMap[mirSno].procurement_line_id;
+            it._resolvedSource = snoToPlidMap[mirSno].procurement_source;
+            it._mirSno         = mirSno;
+          }
+        });
+      } else {
+        // Fallback for poMirRef path (no sno list) — keyed by name, accepts collision risk
+        (mirLineIds2||[]).forEach(r => {
+          if (r.procurement_line_id) poLineIdMap[r.material_name] = {
+            procurement_line_id: r.procurement_line_id,
+            procurement_source:  'mir',
+          };
+        });
+      }
     }
     // Path C (standalone direct PO): no map entry → fresh UUID generated per item below
     await sb.from('pu_po_items').insert(items.map(it => {
-      const resolved = poLineIdMap[it.material_name];
+      const resolved = it._resolvedPlid
+        ? { procurement_line_id: it._resolvedPlid, procurement_source: it._resolvedSource }
+        : poLineIdMap[it.material_name];
       return {
         ...it,
         po_number:           poNumber,
@@ -16471,16 +16679,22 @@ async function savePO() {
         if(rfqH?.mir_number) {
           const mirNum = rfqH.mir_number;
           const {data:mirItemRecs} = await sb.from('pu_mir_items')
-            .select('sno,material_name').eq('mir_number',mirNum);
-          const matToSno = {};
-          (mirItemRecs||[]).forEach(it => { matToSno[it.material_name] = it.sno; });
+            .select('sno,material_name,procurement_line_id').eq('mir_number',mirNum);
+          const plidToMirSno = {};
+          (mirItemRecs||[]).forEach(it => {
+            if (it.procurement_line_id) plidToMirSno[it.procurement_line_id] = it.sno;
+          });
           const poLinkPayloads = items
-            .filter(it => matToSno[it.material_name])
-            .map(it => ({
-              mir_number:mirNum, sno:matToSno[it.material_name],
-              material_name:it.material_name, po_number:poNumber,
-              qty_linked:it.qty, qty_received:0, qty_short_closed:0, is_short_closed:false
-            }));
+            .map(it => {
+              const mirSno = plidToMirSno[it._resolvedPlid] || plidToMirSno[it.procurement_line_id];
+              if (!mirSno) return null;
+              return {
+                mir_number: mirNum, sno: mirSno,
+                material_name: it.material_name, po_number: poNumber,
+                qty_linked: it.qty, qty_received: 0, qty_short_closed: 0, is_short_closed: false
+              };
+            })
+            .filter(Boolean);
           if(poLinkPayloads.length) await sb.from('pu_mir_item_po_links').insert(poLinkPayloads);
           // Keep legacy po_number field in sync
           await sb.from('pu_mir_items').update({po_number:poNumber})
@@ -16488,24 +16702,51 @@ async function savePO() {
         }
       }
     }
+    // Workbench path: insert po_links per (mirNum, sno) from workbench selections
+    if (isWbPOPath) {
+      const wbPoLinkPayloads = items
+        .filter(it => it._wbMirNum && it._wbSno)
+        .map(it => ({
+          mir_number: it._wbMirNum, sno: it._wbSno,
+          material_name: it.material_name, po_number: poNumber,
+          qty_linked: it.qty, qty_received: 0, qty_short_closed: 0, is_short_closed: false,
+        }));
+      if (wbPoLinkPayloads.length) {
+        await sb.from('pu_mir_item_po_links').insert(wbPoLinkPayloads);
+      }
+      // Keep legacy po_number field in sync per MIR sno
+      const wbMirSnoGroups = {};
+      items.filter(it => it._wbMirNum && it._wbSno).forEach(it => {
+        if (!wbMirSnoGroups[it._wbMirNum]) wbMirSnoGroups[it._wbMirNum] = [];
+        wbMirSnoGroups[it._wbMirNum].push(it._wbSno);
+      });
+      const wbAffectedMirs = Object.keys(wbMirSnoGroups);
+      await Promise.all(wbAffectedMirs.map(mn =>
+        sb.from('pu_mir_items').update({po_number:poNumber})
+          .eq('mir_number',mn).in('sno',wbMirSnoGroups[mn])
+      ));
+      // Clear workbench state
+      _wbConfirmedItems = [];
+      _wbBasket = [];
+      wbUpdateBanner();
+    }
     // Direct PO from MIR — insert po_links; items NOT in PO remain Pending (auto cascade)
     const directMir  = document.getElementById('poForm').dataset.directMirNum;
     const directSnos = document.getElementById('poForm').dataset.directMirSnos;
-    if(directMir) {
+    if(!isWbPOPath && directMir) {
       const snos = directSnos ? directSnos.split(',').map(Number).filter(Boolean) : [];
       if(snos.length) {
-        const {data:mirItemRecs} = await sb.from('pu_mir_items')
-          .select('sno,material_name').eq('mir_number',directMir).in('sno',snos);
-        const matToSno = {};
-        (mirItemRecs||[]).forEach(it => { matToSno[it.material_name] = it.sno; });
-        // Match PO items to MIR items by material_name; use actual PO item qty as qty_linked
         const poLinkPayloads = items
-          .filter(it => matToSno[it.material_name])
-          .map(it => ({
-            mir_number:directMir, sno:matToSno[it.material_name],
-            material_name:it.material_name, po_number:poNumber,
-            qty_linked:it.qty, qty_received:0, qty_short_closed:0, is_short_closed:false
-          }));
+          .map((it, i) => {
+            const mirSno = it._mirSno || snos[i];
+            if (!mirSno) return null;
+            return {
+              mir_number: directMir, sno: mirSno,
+              material_name: it.material_name, po_number: poNumber,
+              qty_linked: it.qty, qty_received: 0, qty_short_closed: 0, is_short_closed: false
+            };
+          })
+          .filter(Boolean);
         if(poLinkPayloads.length) await sb.from('pu_mir_item_po_links').insert(poLinkPayloads);
         // Keep legacy po_number field in sync for items included in this PO
         await sb.from('pu_mir_items').update({po_number:poNumber})
@@ -16516,6 +16757,7 @@ async function savePO() {
       delete document.getElementById('poForm').dataset.directMirMats;
       delete document.getElementById('poForm').dataset.directMirQtys;
       delete document.getElementById('poForm').dataset.poMirNum;
+      delete document.getElementById('poForm').dataset.wbMirNums;
     }
     flashSuccess('PO '+poNumber+' submitted for PM approval');
     closePOForm(); loadPOList();
@@ -16537,7 +16779,8 @@ async function approvePO(poNum) {
 
   // 1. Primary: MIR from PO header
   let mirNum = poHdr?.mir_number || null;
-  if (mirNum) mirNumsToRefresh.add(mirNum);
+  // mir_number may be comma-joined for multi-MIR workbench POs
+  if (mirNum) mirNum.split(',').map(s=>s.trim()).filter(Boolean).forEach(m => mirNumsToRefresh.add(m));
 
   // 2. If not on header, trace QC → RFQ → MIR
   if (!mirNum && poHdr?.qc_number) {
@@ -16694,10 +16937,11 @@ async function apiRevisePO(poNum, data) {
 
 async function viewPO(poNum) {
   pbShow('Loading…');
-  const [{data:h},{data:items},{data:grnsForPO}]=await Promise.all([
+  const [{data:h},{data:items},{data:grnsForPO},{data:linksForPO}]=await Promise.all([
     sb.from('pu_po_orders').select('*').eq('po_number',poNum).single(),
     sb.from('pu_po_items').select('*').eq('po_number',poNum).order('sno'),
     sb.from('pu_grn').select('grn_number,grn_date,status').eq('po_number',poNum),
+    sb.from('pu_mir_item_po_links').select('mir_number').eq('po_number',poNum),
   ]);
   pbDone();
   if(!h){toast('PO not found','error');return;}
@@ -16822,7 +17066,12 @@ async function viewPO(poNum) {
       <div><label class="muted" style="font-size:11px;">STATUS</label><div>${esc(h.status)}</div></div>
       <div><label class="muted" style="font-size:11px;">GST MODE</label><div>${h.gst_mode==='per_line'?'Per-Line':'Overall'}</div></div>
       <div><label class="muted" style="font-size:11px;">QC REF</label><div>${esc(h.qc_number||'—')}</div></div>
-      <div><label class="muted" style="font-size:11px;">MIR REF</label><div class="mono" style="color:#d97706;">${esc(h.mir_number||'—')}</div></div>
+      <div><label class="muted" style="font-size:11px;">MIR REF</label><div class="mono" style="color:#d97706;">${(() => {
+        // For multi-MIR workbench POs, h.mir_number is null; read from po_links instead
+        if (h.mir_number) return esc(h.mir_number);
+        const linkedMirs = [...new Set((linksForPO||[]).map(l=>l.mir_number).filter(Boolean))];
+        return linkedMirs.length ? linkedMirs.map(m=>esc(m)).join(', ') : '—';
+      })()}</div></div>
       <div><label class="muted" style="font-size:11px;">GRAND TOTAL</label><div style="font-weight:700;color:var(--accent);">${fmtINRSym(h.grand_total)}</div></div>
     </div>
     <div class="table-wrap"><table>
@@ -16996,7 +17245,9 @@ async function confirmCancelPO(poNum) {
     closed_at:new Date().toISOString(), close_reason:reason
   }).eq('po_number',poNum).eq('status','Open');
   if(error){pbDone();toast('Update failed: '+error.message,'error');return;}
-  // Resolve MIR number — direct field, or trace via QC → RFQ → MIR
+  // Resolve ALL MIR numbers for this PO:
+  // 1. Direct header field, 2. QC→RFQ trace, 3. po_links scan (covers multi-MIR workbench POs)
+  const mirNumsToCancel = new Set();
   let mirNum = poHdr?.mir_number || null;
   if (!mirNum && poHdr?.qc_number) {
     const {data:qcH} = await sb.from('pu_quote_comparison').select('rfq_number').eq('qc_number',poHdr.qc_number).maybeSingle();
@@ -17005,7 +17256,12 @@ async function confirmCancelPO(poNum) {
       mirNum = rfqH?.mir_number || null;
     }
   }
-  if (mirNum) await _rollupMIRAfterPOTermination(mirNum, poNum, 'cancel');
+  // mir_number may be comma-joined for multi-MIR workbench POs ("MIR/040, MIR/041")
+  if (mirNum) mirNum.split(',').map(s=>s.trim()).filter(Boolean).forEach(m => mirNumsToCancel.add(m));
+  // Always scan po_links — catches multi-MIR workbench POs where header mir_number is null
+  const {data:cancelLinks} = await sb.from('pu_mir_item_po_links').select('mir_number').eq('po_number',poNum);
+  (cancelLinks||[]).forEach(l => { if (l.mir_number) mirNumsToCancel.add(l.mir_number); });
+  await Promise.all([...mirNumsToCancel].map(mn => _rollupMIRAfterPOTermination(mn, poNum, 'cancel')));
   pbDone();
   closeModal();
   flashSuccess('PO '+poNum+' Cancelled');
@@ -17075,7 +17331,8 @@ async function confirmShortClosePO(poNum) {
     }));
   } catch(e) { console.error('SC qty write error:', e.message); }
 
-  // Resolve MIR number and run legacy rollup (keeps pu_mir_item_po_links in sync)
+  // Resolve ALL MIR numbers for this PO (multi-MIR workbench POs need full scan)
+  const mirNumsToSC = new Set();
   let mirNum = poHdr?.mir_number || null;
   if (!mirNum && poHdr?.qc_number) {
     const {data:qcH} = await sb.from('pu_quote_comparison').select('rfq_number').eq('qc_number',poHdr.qc_number).maybeSingle();
@@ -17084,7 +17341,11 @@ async function confirmShortClosePO(poNum) {
       mirNum = rfqH?.mir_number || null;
     }
   }
-  if (mirNum) await _rollupMIRAfterPOTermination(mirNum, poNum, 'short-close');
+  // mir_number may be comma-joined for multi-MIR workbench POs
+  if (mirNum) mirNum.split(',').map(s=>s.trim()).filter(Boolean).forEach(m => mirNumsToSC.add(m));
+  const {data:scLinks} = await sb.from('pu_mir_item_po_links').select('mir_number').eq('po_number',poNum);
+  (scLinks||[]).forEach(l => { if (l.mir_number) mirNumsToSC.add(l.mir_number); });
+  await Promise.all([...mirNumsToSC].map(mn => _rollupMIRAfterPOTermination(mn, poNum, 'short-close')));
   pbDone();
   closeModal();
   flashSuccess('PO '+poNum+' Short-Closed');
@@ -20789,7 +21050,8 @@ async function confirmRejectDoc(docType, docNum) {
     if (poHdrErr) { console.warn('PO cascade: could not read PO header:', poHdrErr.message); }
     else {
       // Resolve MIR number — may be stored directly or via QC → RFQ → MIR
-      let mirNum = poHdr?.mir_number || null;
+      // mir_number may be comma-joined for multi-MIR workbench POs
+      let mirNum = (poHdr?.mir_number||'').split(',').map(s=>s.trim()).filter(Boolean)[0] || null;
       const qcRef = poHdr?.qc_number || null; // null for Direct PO
       const isQCBased = qcRef && qcRef.startsWith('QC/');
 
@@ -22102,6 +22364,7 @@ function applyPurchaseSubTabVisibility() {
     'mis':   ['Store Executive','Site Manager','Project Manager','Admin'],
     'stock': ['Store Executive','Site Manager','Planning/ QS','Project Manager','Admin'],
     'openstock': ['Admin'],
+    'workbench': ['Procurement','Project Manager','Admin'],
   };
   Object.entries(puTabRules).forEach(([tab, roles]) => {
     const el = document.querySelector('.sub-tab[data-putab="'+tab+'"]');
@@ -22905,6 +23168,314 @@ function prefillWOBRmcFields(isRmc,cat,amcS,amcE){
     calcWOBAmcSlice();
   }
 }
+
+
+// ============================================================
+// PROCUREMENT WORKBENCH
+// ============================================================
+
+// _wbBasket: [{mirNum, sno, plid, matCode, mat, uom, qty, spec, qtyRequired, effPoQty}]
+// _wbConfirmedItems: set just before saveRFQ/directPOFromSelection is called
+let _wbBasket = [];
+let _wbConfirmedItems = [];
+
+async function loadWorkbench() {
+  if (!mergedPerms().canCreateRFQ) { toast('Only Procurement can use the workbench','error'); return; }
+  document.getElementById('wb_loading').style.display = '';
+  document.getElementById('wb_content').innerHTML = '';
+  // Ensure MIR data is fresh
+  if (!puState.mirList.length) await loadMIRList();
+
+  // Collect all MIRs with at least one item that has Qty Available
+  const mirs = (puState.mirList||[]).filter(m => puState.mirBalanceSet?.has(m.mir_number));
+
+  if (!mirs.length) {
+    document.getElementById('wb_loading').innerHTML =
+      '<div style="padding:32px;text-align:center;color:var(--muted);font-size:13px;">No open MIR items with available balance.</div>';
+    return;
+  }
+
+  // Fetch all items for those MIRs
+  const mirNums = mirs.map(m => m.mir_number);
+  const { data: allItems } = await sb.from('pu_mir_items')
+    .select('mir_number,sno,material_name,material_code,uom,qty_required,specification,procurement_line_id,is_locked')
+    .in('mir_number', mirNums).order('sno');
+
+  // Build per-MIR item status from puState
+  // effPoQty and balance already computed in puState.mirItemsMap
+  const itemMap = {};
+  (puState.mirItemsMap ? Object.values(puState.mirItemsMap).flat() : []).forEach(it => {
+    itemMap[it.mir_number + '|' + it.sno] = it;
+  });
+
+  document.getElementById('wb_loading').style.display = 'none';
+  let html = '';
+
+  mirs.forEach(m => {
+    const mirItems = (allItems||[]).filter(it => it.mir_number === m.mir_number);
+    // Only show items with balance and not locked
+    const openItems = mirItems.filter(it => {
+      const cached = itemMap[it.mir_number + '|' + it.sno];
+      if (!cached) return false;
+      const balance = Math.max(0, (it.qty_required||0) - (cached._effPoQty||0));
+      return balance > 0 && !it.is_locked;
+    });
+    if (!openItems.length) return;
+
+    const liveStatus = m._liveStatus || 'PO Pending';
+    const statusCls  = liveStatus.toLowerCase().replace(/[\s/()]+/g,'-');
+    html += `
+    <div class="card" style="margin-bottom:14px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;flex-wrap:wrap;gap:8px;">
+        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+          <span class="mono" style="font-weight:600;color:var(--accent);font-size:14px;">${esc(m.mir_number)}</span>
+          <span style="font-size:12px;color:var(--muted);">${fmtDate(m.mir_date)}</span>
+          ${m.purpose ? `<span style="font-size:12px;color:var(--muted);">|</span><span style="font-size:12px;color:var(--text);">${esc(m.purpose)}</span>` : ''}
+          <span class="status ${statusCls}" style="font-size:11px;">${liveStatus}</span>
+        </div>
+        <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:12px;color:var(--muted);">
+          <input type="checkbox" id="wbChkAll_${esc(m.mir_number)}"
+            onchange="wbToggleMIR('${esc(m.mir_number)}',this.checked)"
+            style="width:14px;height:14px;cursor:pointer;">
+          Select all
+        </label>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr>
+            <th style="width:32px;"></th>
+            <th>#</th><th>Material</th><th>UOM</th>
+            <th class="num">Required</th>
+            <th class="num" style="color:#7c3aed;">PO Covered</th>
+            <th class="num" style="color:#0d9488;font-weight:700;">Balance</th>
+            <th class="num">Select Qty</th>
+            <th style="max-width:160px;">Spec</th>
+          </tr></thead>
+          <tbody>`;
+
+    openItems.forEach(it => {
+      const cached = itemMap[it.mir_number + '|' + it.sno];
+      const effPo   = cached ? (cached._effPoQty||0) : 0;
+      const balance = Math.max(0, (it.qty_required||0) - effPo);
+      const wbKey   = it.mir_number + '|' + it.sno;
+      const inBasket = _wbBasket.find(b => b.mirNum === it.mir_number && b.sno === it.sno);
+      const chkd    = inBasket ? 'checked' : '';
+      const selQty  = inBasket ? inBasket.qty : balance;
+      html += `
+          <tr id="wbRow_${it.mir_number}_${it.sno}">
+            <td><input type="checkbox" class="wb_item_chk"
+              data-mir="${esc(it.mir_number)}" data-sno="${it.sno}"
+              data-plid="${esc(it.procurement_line_id||'')}"
+              data-mat="${esc(it.material_name)}" data-matcode="${esc(it.material_code||'')}"
+              data-uom="${esc(it.uom)}" data-balance="${balance}"
+              data-req="${it.qty_required||0}" data-spec="${esc(it.specification||'')}"
+              ${chkd}
+              onchange="wbToggleItem(this)"
+              style="width:15px;height:15px;cursor:pointer;"></td>
+            <td>${it.sno}</td>
+            <td>${esc(it.material_name)}</td>
+            <td>${esc(it.uom)}</td>
+            <td class="num">${fmtINR(it.qty_required||0)}</td>
+            <td class="num" style="color:#7c3aed;">${fmtINR(effPo)}</td>
+            <td class="num" style="color:#0d9488;font-weight:700;">${fmtINR(balance)}</td>
+            <td>
+              <input type="number" id="wbQty_${it.mir_number}_${it.sno}"
+                value="${fmtINR(selQty).replace(/,/g,'')}"
+                min="0.001" max="${balance}" step="0.001"
+                style="width:90px;padding:4px 6px;border:1px solid var(--border);border-radius:4px;
+                  font-size:12px;text-align:right;background:var(--input-bg);color:var(--text);"
+                ${!inBasket ? 'disabled' : ''}
+                onwheel="this.blur()"
+                onkeydown="if(event.key==='ArrowUp'||event.key==='ArrowDown')event.preventDefault()"
+                oninput="wbQtyChange('${esc(it.mir_number)}',${it.sno},this.value)">
+            </td>
+            <td style="font-size:11px;color:var(--muted);max-width:160px;white-space:nowrap;
+              overflow:hidden;text-overflow:ellipsis;" title="${esc(it.specification||'')}">
+              ${esc(it.specification||'—')}
+            </td>
+          </tr>`;
+    });
+
+    html += `</tbody></table></div></div>`;
+  });
+
+  document.getElementById('wb_content').innerHTML = html;
+  wbUpdateBanner();
+}
+
+function wbToggleItem(chk) {
+  const mirNum  = chk.dataset.mir;
+  const sno     = Number(chk.dataset.sno);
+  const plid    = chk.dataset.plid;
+  const mat     = chk.dataset.mat;
+  const matCode = chk.dataset.matcode;
+  const uom     = chk.dataset.uom;
+  const balance = parseFloat(chk.dataset.balance)||0;
+  const spec    = chk.dataset.spec||'';
+  const qtyInp  = document.getElementById('wbQty_'+mirNum+'_'+sno);
+
+  if (chk.checked) {
+    const qty = parseFloat(qtyInp?.value)||balance;
+    if (qtyInp) { qtyInp.disabled = false; qtyInp.value = qty||balance; }
+    // Remove if already in basket (re-add with updated qty)
+    _wbBasket = _wbBasket.filter(b => !(b.mirNum===mirNum && b.sno===sno));
+    _wbBasket.push({ mirNum, sno, plid, matCode, mat, uom, qty: qty||balance, spec,
+                     qtyRequired: parseFloat(chk.dataset.req)||0, effPoQty: 0 });
+  } else {
+    _wbBasket = _wbBasket.filter(b => !(b.mirNum===mirNum && b.sno===sno));
+    if (qtyInp) { qtyInp.disabled = true; }
+  }
+  // Sync MIR-level select-all checkbox
+  const mirChk = document.getElementById('wbChkAll_'+mirNum);
+  if (mirChk) {
+    const allInMir = [...document.querySelectorAll(`.wb_item_chk[data-mir="${mirNum}"]`)];
+    mirChk.checked = allInMir.length > 0 && allInMir.every(c => c.checked);
+    mirChk.indeterminate = allInMir.some(c => c.checked) && !mirChk.checked;
+  }
+  wbUpdateBanner();
+}
+
+function wbToggleMIR(mirNum, checked) {
+  document.querySelectorAll(`.wb_item_chk[data-mir="${mirNum}"]`).forEach(chk => {
+    if (chk.checked !== checked) { chk.checked = checked; wbToggleItem(chk); }
+  });
+}
+
+function wbQtyChange(mirNum, sno, val) {
+  const entry = _wbBasket.find(b => b.mirNum===mirNum && b.sno===sno);
+  if (entry) entry.qty = parseFloat(val)||0;
+}
+
+function wbUpdateBanner() {
+  const banner   = document.getElementById('wb_banner');
+  const bannerTx = document.getElementById('wb_bannerText');
+  const rfqBtn   = document.getElementById('wb_raiseRFQ');
+  const poBtn    = document.getElementById('wb_raisePO');
+  if (!banner) return;
+  const count = _wbBasket.length;
+  const mirSet = new Set(_wbBasket.map(b => b.mirNum));
+  if (count === 0) {
+    banner.style.display    = 'none';
+    if(rfqBtn) rfqBtn.style.display = 'none';
+    if(poBtn)  poBtn.style.display  = 'none';
+  } else {
+    banner.style.display    = '';
+    bannerTx.textContent    = `${count} item${count!==1?'s':''} selected from ${mirSet.size} MIR${mirSet.size!==1?'s':''} — ready to raise`;
+    if(rfqBtn) rfqBtn.style.display = '';
+    if(poBtn)  poBtn.style.display  = '';
+  }
+}
+
+function wbClearAll() {
+  _wbBasket = [];
+  // Uncheck all checkboxes
+  document.querySelectorAll('.wb_item_chk').forEach(c => {
+    c.checked = false;
+    const qtyInp = document.getElementById('wbQty_'+c.dataset.mir+'_'+c.dataset.sno);
+    if (qtyInp) qtyInp.disabled = true;
+  });
+  document.querySelectorAll('[id^="wbChkAll_"]').forEach(c => { c.checked = false; c.indeterminate = false; });
+  wbUpdateBanner();
+}
+
+function wbRaise(action /* 'rfq' | 'po' */) {
+  if (!_wbBasket.length) { toast('Select at least one item first','error'); return; }
+  // Validate all selected qtys
+  const invalid = _wbBasket.filter(b => !b.qty || b.qty <= 0);
+  if (invalid.length) { toast('One or more selected items has zero qty — please fix','error'); return; }
+
+  // Show qty-confirm modal (reuse existing structure but populated from basket)
+  const isRFQ = action === 'rfq';
+  const rows = _wbBasket.map((b, i) => {
+    const mirLabel = `<span class="mono" style="font-size:10px;color:var(--muted);">${esc(b.mirNum)}/sno${b.sno}</span>`;
+    return `<tr>
+      <td style="font-size:12px;">${esc(b.mat)} ${mirLabel}</td>
+      <td style="font-size:12px;">${esc(b.uom)}</td>
+      <td class="num" style="font-size:12px;">${fmtINR(b.qtyRequired||b.qty)}</td>
+      <td class="num" style="font-size:12px;font-weight:600;color:#0d9488;">${fmtINR(b.qty)}</td>
+      <td><input type="number" id="wbConf_${i}" value="${b.qty}"
+          min="0.001" max="${b.qty}" step="0.001"
+          style="width:85px;padding:3px 6px;border:1px solid var(--border);border-radius:4px;
+            text-align:right;font-size:12px;background:var(--input-bg);color:var(--text);"
+          onwheel="this.blur()"
+          onkeydown="if(event.key==='ArrowUp'||event.key==='ArrowDown')event.preventDefault()">
+      </td></tr>`;
+  }).join('');
+
+  const mirList = [...new Set(_wbBasket.map(b => b.mirNum))].join(', ');
+
+  openModal(`
+    <h3 style="margin-bottom:6px;">${isRFQ?'Raise RFQ':'Direct PO'} — Confirm Quantities</h3>
+    <div style="font-size:12px;color:var(--muted);margin-bottom:12px;">
+      Items from: <span class="mono" style="color:var(--accent);">${esc(mirList)}</span>
+    </div>
+    <div class="table-wrap"><table>
+      <thead><tr>
+        <th>Material / MIR ref</th><th>UOM</th>
+        <th class="num">Required</th>
+        <th class="num">Max qty</th>
+        <th class="num">Qty for this ${isRFQ?'RFQ':'PO'}</th>
+      </tr></thead>
+      <tbody>${rows}</tbody>
+    </table></div>
+    <div class="actions-row" style="margin-top:14px;">
+      <button class="btn btn-primary" onclick="wbConfirmProceed('${action}')">Proceed →</button>
+      <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+    </div>`, 'large');
+}
+
+async function wbConfirmProceed(action) {
+  // Read confirmed qtys from modal inputs
+  _wbConfirmedItems = _wbBasket.map((b, i) => {
+    const qty = parseFloat(document.getElementById('wbConf_'+i)?.value)||0;
+    return { ...b, qty };
+  }).filter(b => b.qty > 0);
+
+  if (!_wbConfirmedItems.length) { toast('Enter qty for at least one item','error'); return; }
+  closeModal();
+
+  if (action === 'rfq') {
+    // Switch to RFQ tab and open a new RFQ form pre-filled from workbench
+    switchPUTab('rfq');
+    await newRFQ();
+    // Pre-fill RFQ items from workbench selections
+    document.getElementById('rfqItemsBody').innerHTML = '';
+    _rfqItemC = 0;
+    _wbConfirmedItems.forEach(sel => {
+      addRFQItem();
+      const i = _rfqItemC - 1;
+      const matEl = document.getElementById('rfqMat_'+i);
+      if (matEl) { matEl.value = sel.mat; matEl.dataset.matCode = sel.matCode||''; }
+      const uomEl = document.getElementById('rfqUOM_'+i);
+      if (uomEl) uomEl.value = sel.uom;
+      const qtyEl = document.querySelector('#rfqItemsBody tr:last-child input[type="number"]');
+      if (qtyEl) qtyEl.value = sel.qty;
+    });
+    // Clear single-MIR dataset fields so saveRFQ uses _wbConfirmedItems path instead
+    const rfqF = document.getElementById('rfqForm');
+    if (rfqF) {
+      delete rfqF.dataset.mirNum;
+      delete rfqF.dataset.mirSnos;
+      delete rfqF.dataset.mirMats;
+    }
+    const descEl = document.getElementById('rfq_description');
+    if (descEl && !descEl.value) {
+      const mirList = [...new Set(_wbConfirmedItems.map(b => b.mirNum))].join(', ');
+      descEl.value = 'Procurement from ' + mirList;
+    }
+    toast('RFQ pre-filled from workbench — add vendor description and save.','info',5000);
+  } else {
+    // Direct PO path — build confirmedItems in the format directPOFromSelection expects
+    // but augmented with mirNum/sno/plid for workbench tracing
+    const firstMirNum = _wbConfirmedItems[0]?.mirNum || '';
+    const confirmedItems = _wbConfirmedItems.map(sel => ({
+      sno: sel.sno, mat: sel.mat, uom: sel.uom, qty: sel.qty, spec: sel.spec||'',
+      mirNum: sel.mirNum, plid: sel.plid,
+    }));
+    await directPOFromSelection(firstMirNum, confirmedItems);
+  }
+}
+// ── End Procurement Workbench ────────────────────────────────────────────────
 
 </script>
 </body>
