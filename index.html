@@ -16282,7 +16282,7 @@ function renderPOList() {
     return `<tr>
       <td class="mono">${esc(p.po_number)}</td><td>${fmtDate(p.po_date)}</td>
       <td>${esc(p.vendor_name)}</td><td class="mono">${esc(p.qc_number||'—')}</td>
-      <td class="mono">${p.mir_number ? esc(p.mir_number) : (p.qc_number ? '—' : '<span style="color:#d97706;font-size:11px;">Multi-MIR</span>')}</td>
+      <td class="mono">${esc(p.mir_number||'—')}</td>
       <td class="num">${fmtINR(p.basic_value)}</td>
       <td class="num" style="font-weight:600;">${fmtINR(p.grand_total)}</td>
       <td><span class="status ${stCls}">${p.status}</span></td><td>${acts}</td></tr>`;
@@ -16568,8 +16568,11 @@ async function savePO() {
         const wbMirs = (document.getElementById('poForm').dataset.wbMirNums||'').split(',').filter(Boolean);
         if (wbMirs.length > 1) return null;            // multi-MIR: FK can't hold comma string
         if (wbMirs.length === 1) return wbMirs[0];     // single workbench MIR
-        return document.getElementById('poForm').dataset.poMirNum
-            || document.getElementById('po_mirRef')?.value || null; // legacy direct/QC path
+        // Legacy direct/QC path: only use po_mirRef if it looks like a valid MIR number
+        // (starts with 'MIR/'). Prevents stale workbench values contaminating direct POs.
+        const mirRefVal = document.getElementById('poForm').dataset.poMirNum
+            || document.getElementById('po_mirRef')?.value || '';
+        return mirRefVal.startsWith('MIR/') ? mirRefVal : null;
       })(),
       vendor_name:vendor, vendor_code:document.getElementById('po_vendorCode').value||null,
       vendor_address:document.getElementById('po_vendorAddress').value.trim()||null,
@@ -16770,7 +16773,22 @@ async function savePO() {
     }
     flashSuccess('PO '+poNumber+' submitted for PM approval');
     closePOForm(); loadPOList();
-  } catch(e){toast('Error: '+e.message,'error');}
+  } catch(e){
+    toast('Error: '+e.message,'error');
+    // Clear all MIR/workbench context so a subsequent save or New PO
+    // doesn't inherit stale MIR references from this failed attempt.
+    const _pfCatch = document.getElementById('poForm');
+    if (_pfCatch) {
+      delete _pfCatch.dataset.poMirNum;
+      delete _pfCatch.dataset.directMirNum;
+      delete _pfCatch.dataset.directMirSnos;
+      delete _pfCatch.dataset.directMirMats;
+      delete _pfCatch.dataset.directMirQtys;
+      delete _pfCatch.dataset.wbMirNums;
+    }
+    const _mirRefCatch = document.getElementById('po_mirRef');
+    if (_mirRefCatch) _mirRefCatch.value = '';
+  }
   finally{pbDone();}
 }
 
