@@ -17194,7 +17194,24 @@ async function savePO() {
           qty_linked: it.qty, qty_received: 0, qty_short_closed: 0, is_short_closed: false,
         }));
       if (wbPoLinkPayloads.length) {
-        await sb.from('pu_mir_item_po_links').insert(wbPoLinkPayloads);
+        // Use upsert to handle stale links from cancelled POs that weren't cleaned up.
+        // If (mir_number, sno, po_number) already exists, update qty_linked.
+        // If (mir_number, sno) exists with a DIFFERENT po_number (stale cancelled PO),
+        // the upsert on the full PK won't conflict — a new row is inserted.
+        const {error: poLinksErr} = await sb.from('pu_mir_item_po_links')
+          .upsert(wbPoLinkPayloads, {onConflict: 'mir_number,sno,po_number', ignoreDuplicates: false});
+        if (poLinksErr) {
+          // If upsert fails (e.g. unique constraint on mir_number,sno only),
+          // delete stale links for these MIR items and re-insert
+          console.warn('[savePO] po_links upsert failed, attempting delete+insert:', poLinksErr.message);
+          const mirSnosToClean = wbPoLinkPayloads.map(l => `(${JSON.stringify(l.mir_number)},${l.sno})`).join(',');
+          for (const l of wbPoLinkPayloads) {
+            await sb.from('pu_mir_item_po_links').delete()
+              .eq('mir_number', l.mir_number).eq('sno', l.sno).neq('po_number', l.po_number);
+          }
+          await sb.from('pu_mir_item_po_links').upsert(wbPoLinkPayloads,
+            {onConflict: 'mir_number,sno,po_number', ignoreDuplicates: false});
+        }
       }
       // Keep legacy po_number field in sync per MIR sno
       const wbMirSnoGroups = {};
@@ -17627,8 +17644,9 @@ async function _rollupMIRAfterPOTermination(mirNum, terminatedPONum, action /* '
   if (!mirNum) return;
 
   if (action === 'cancel') {
-    // Remove po_links for this PO (no-op for legacy POs, safe either way)
-    await sb.from('pu_mir_item_po_links').delete().eq('po_number',terminatedPONum).eq('mir_number',mirNum);
+    // Remove ALL po_links for this PO across all MIRs (not just the passed mirNum)
+    // A cancelled PO's links must all be cleared so subsequent POs can link those MIR items.
+    await sb.from('pu_mir_item_po_links').delete().eq('po_number',terminatedPONum);
     // Clear legacy po_number field AND reset qty_covered so _refreshAllMIRItems shows correct state
     await sb.from('pu_mir_items').update({po_number:null, qty_covered:0})
       .eq('mir_number',mirNum).eq('po_number',terminatedPONum);
