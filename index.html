@@ -3830,7 +3830,7 @@ function mapHOB(r) {
     'TDS %': r.tds_pct, 'TDS Amount': r.tds_amount,
     'Hold Amount': r.hold_amount, 'Hold Description': r.hold_description,
     'Net Payable': r.net_payable, 'Prepared By': r.prepared_by,
-    'Remarks': r.remarks, 'Status': r.status, 'Rejection Reason': r.rejection_reason
+    'Remarks': r.remarks, 'Status': r.status, 'Rejection Reason': r.rejection_reason, 'Created At': r.created_at
   };
 }
 function mapVendor(r) {
@@ -5604,7 +5604,7 @@ function mapWOB(r) {
     'Retention %': r.retention_pct, 'Retention Amount': r.retention_amount,
     'Hold Amount': r.hold_amount, 'Hold Description': r.hold_description,
     'Net Payable': r.net_payable, 'Prepared By': r.prepared_by,
-    'Remarks': r.remarks, 'Status': r.status, 'Rejection Reason': r.rejection_reason
+    'Remarks': r.remarks, 'Status': r.status, 'Rejection Reason': r.rejection_reason, 'Created At': r.created_at
   };
 }
 
@@ -8253,12 +8253,7 @@ function renderHOBList() {
   const perms = mergedPerms();
   tbody.innerHTML = rows.map(b => {
     const st = b['Status'] || 'Unpaid';
-    let actionBtns = `<button class="btn btn-ghost btn-sm" onclick="viewHOBById('${esc(b['Bill Number'])}')">View</button>
-      <button class="btn btn-ghost btn-sm" onclick="printHOBById('${esc(b['Bill Number'])}')">🖨</button>`;
-    if (perms.canApproveBill && st === 'Pending Approval') {
-      actionBtns += `<button class="btn btn-warn btn-sm" onclick="promptReject('HOB','${esc(b['Bill Number'])}','correction')">↩ Return</button>
-        <button class="btn btn-danger btn-sm" onclick="promptReject('HOB','${esc(b['Bill Number'])}','reject')">✕ Reject</button>`;
-    }
+    let actionBtns = `<button class="btn btn-ghost btn-sm" onclick="viewHOBById('${esc(b['Bill Number'])}')">View</button>`;
     if (perms.canCreateHOB && st === 'Rejected - Correction') {
       actionBtns += `<button class="btn btn-warn btn-sm" onclick="reviseHOB('${esc(b['Bill Number'])}')">✎ Revise &amp; Resubmit</button>`;
     }
@@ -8631,11 +8626,12 @@ async function viewHOBById(billNum) {
     .eq('vendor_name', h['Vendor Name']).maybeSingle();
 
   // ── Fetch prior approved bills for same vendor ───────────────────────────
-  const {data:priorBills} = await sb.from('ho_bills')
-    .select('bill_number,ho_number')
-    .eq('vendor_name', h['Vendor Name'])
-    .neq('bill_number', billNum)
-    .in('status',['Unpaid','Paid']);
+  const {data:priorBills} = await _priorBillsTemporal(
+    sb.from('ho_bills')
+      .select('bill_number,ho_number')
+      .eq('vendor_name', h['Vendor Name'])
+      .neq('bill_number', billNum),
+    h['Bill Date'], h['Created At']);
   const priorBillNums = (priorBills||[]).map(b=>b.bill_number);
   const priorHONums   = [...new Set((priorBills||[]).map(b=>b.ho_number).filter(Boolean))];
   let priorItemsData = [];
@@ -8665,15 +8661,32 @@ async function viewHOBById(billNum) {
          </div></div>`
     : '';
 
-  // ── Bill Line Items table ────────────────────────────────────────────────
-  const lineRows = items.map((it,i)=>`<tr>
+  // ── Bill Line Items table — Previous / Current / Cumulative (print parity) ─
+  const hasPrev = priorBillNums.length > 0;
+  const lineRows = items.map((it,i)=>{
+    const prev     = prevMap[it['Description']]||{qty:0,amount:0};
+    const prevQty  = prev.qty, prevAmt = prev.amount;
+    const prevRate = prevQty>0 ? prevAmt/prevQty : num(it['Unit Rate']);
+    const currQty  = num(it['This Period Qty']), currRate = num(it['Unit Rate']), currAmt = num(it['Amount']);
+    const cumQty   = prevQty + currQty;
+    const cumAmt   = prevAmt + currAmt;
+    const cumRate  = cumQty>0 ? cumAmt/cumQty : currRate;
+    return `<tr>
     <td style="text-align:center;">${it['S.No']||i+1}</td>
     <td>${esc(it['Description'])}</td>
     <td style="text-align:center;">${esc(it['UOM']||'')}</td>
-    <td style="text-align:right;">${fmtINR(it['This Period Qty'])}</td>
-    <td style="text-align:right;">${fmtINR(it['Unit Rate'])}</td>
-    <td style="text-align:right;font-weight:600;">${fmtINR(it['Amount'])}</td>
-  </tr>`).join('');
+    <td style="text-align:right;background:#eef2f7;border-left:2px solid #1e3a5f;">${fmtINR(prevQty)}</td>
+    <td style="text-align:right;background:#eef2f7;">${fmtINR(prevRate)}</td>
+    <td style="text-align:right;background:#eef2f7;">${fmtINR(prevAmt)}</td>
+    <td style="text-align:right;background:#e8f1fa;border-left:2px solid #1565a0;">${fmtINR(currQty)}</td>
+    <td style="text-align:right;background:#e8f1fa;">${fmtINR(currRate)}</td>
+    <td style="text-align:right;background:#e8f1fa;font-weight:600;">${fmtINR(currAmt)}</td>
+    <td style="text-align:right;background:#e9f5ee;border-left:2px solid #155a38;">${fmtINR(cumQty)}</td>
+    <td style="text-align:right;background:#e9f5ee;">${fmtINR(cumRate)}</td>
+    <td style="text-align:right;background:#e9f5ee;font-weight:600;">${fmtINR(cumAmt)}</td>
+  </tr>`;}).join('');
+  const prevGrossTotal = priorItemsData.reduce((s,it)=>s+num(it.amount),0);
+  const cumGrossTotal  = prevGrossTotal + num(h['Gross Amount']);
 
   // ── Extra lines ──────────────────────────────────────────────────────────
   const extraRows = extraLines.length ? extraLines.map(el=>`<tr>
@@ -8784,21 +8797,36 @@ async function viewHOBById(billNum) {
     ${hoCard}
 
     <!-- Bill Line Items -->
-    <div style="font-size:12px;font-weight:700;color:var(--accent);margin-bottom:6px;text-transform:uppercase;letter-spacing:.5px;">Bill Line Items</div>
+    <div style="font-size:12px;font-weight:700;color:var(--accent);margin-bottom:6px;text-transform:uppercase;letter-spacing:.5px;">Bill Line Items <span style="color:var(--muted);font-weight:400;font-size:11px;text-transform:none;">(Previous · Current · Cumulative${hasPrev?'':' — no prior approved bills'})</span></div>
     <div style="overflow-x:auto;margin-bottom:16px;">
-      <table style="width:100%;border-collapse:collapse;font-size:12px;">
-        <thead><tr style="background:var(--panel-2);">
-          <th style="padding:6px 8px;text-align:center;border-bottom:2px solid var(--border);width:32px;">#</th>
-          <th style="padding:6px 8px;border-bottom:2px solid var(--border);">Description</th>
-          <th style="padding:6px 8px;text-align:center;border-bottom:2px solid var(--border);">UOM</th>
-          <th style="padding:6px 8px;text-align:right;border-bottom:2px solid var(--border);">Qty</th>
-          <th style="padding:6px 8px;text-align:right;border-bottom:2px solid var(--border);">Rate (₹)</th>
-          <th style="padding:6px 8px;text-align:right;border-bottom:2px solid var(--border);">Amount (₹)</th>
-        </tr></thead>
+      <table style="width:100%;border-collapse:collapse;font-size:11.5px;min-width:900px;">
+        <thead>
+          <tr style="background:var(--panel-2);">
+            <th rowspan="2" style="padding:5px 6px;text-align:center;border-bottom:2px solid var(--border);width:30px;">#</th>
+            <th rowspan="2" style="padding:5px 6px;border-bottom:2px solid var(--border);">Description</th>
+            <th rowspan="2" style="padding:5px 6px;text-align:center;border-bottom:2px solid var(--border);">UOM</th>
+            <th colspan="3" style="padding:4px 6px;text-align:center;background:#1e3a5f;color:#fff;border-left:2px solid #1e3a5f;">Previous Bills</th>
+            <th colspan="3" style="padding:4px 6px;text-align:center;background:#1565a0;color:#fff;border-left:2px solid #1565a0;">Current Bill</th>
+            <th colspan="3" style="padding:4px 6px;text-align:center;background:#155a38;color:#fff;border-left:2px solid #155a38;">Cumulative</th>
+          </tr>
+          <tr style="background:var(--panel-2);">
+            <th style="padding:4px 6px;text-align:right;border-bottom:2px solid var(--border);background:#eef2f7;border-left:2px solid #1e3a5f;">Qty</th>
+            <th style="padding:4px 6px;text-align:right;border-bottom:2px solid var(--border);background:#eef2f7;">Rate</th>
+            <th style="padding:4px 6px;text-align:right;border-bottom:2px solid var(--border);background:#eef2f7;">Amt (₹)</th>
+            <th style="padding:4px 6px;text-align:right;border-bottom:2px solid var(--border);background:#e8f1fa;border-left:2px solid #1565a0;">Qty</th>
+            <th style="padding:4px 6px;text-align:right;border-bottom:2px solid var(--border);background:#e8f1fa;">Rate</th>
+            <th style="padding:4px 6px;text-align:right;border-bottom:2px solid var(--border);background:#e8f1fa;">Amt (₹)</th>
+            <th style="padding:4px 6px;text-align:right;border-bottom:2px solid var(--border);background:#e9f5ee;border-left:2px solid #155a38;">Qty</th>
+            <th style="padding:4px 6px;text-align:right;border-bottom:2px solid var(--border);background:#e9f5ee;">Rate</th>
+            <th style="padding:4px 6px;text-align:right;border-bottom:2px solid var(--border);background:#e9f5ee;">Amt (₹)</th>
+          </tr>
+        </thead>
         <tbody>${lineRows}</tbody>
         <tfoot><tr style="background:var(--panel-2);">
-          <td colspan="5" style="padding:6px 8px;text-align:right;font-weight:700;font-size:12px;">Gross Amount</td>
-          <td style="padding:6px 8px;text-align:right;font-weight:700;font-size:13px;color:var(--accent);">${fmtINR(gross)}</td>
+          <td colspan="3" style="padding:6px 8px;text-align:right;font-weight:700;font-size:12px;">Gross Amount</td>
+          <td colspan="3" style="padding:6px 8px;text-align:right;font-weight:700;background:#eef2f7;border-left:2px solid #1e3a5f;">${fmtINR(prevGrossTotal)}</td>
+          <td colspan="3" style="padding:6px 8px;text-align:right;font-weight:700;background:#e8f1fa;border-left:2px solid #1565a0;color:var(--accent);">${fmtINR(gross)}</td>
+          <td colspan="3" style="padding:6px 8px;text-align:right;font-weight:700;background:#e9f5ee;border-left:2px solid #155a38;">${fmtINR(cumGrossTotal)}</td>
         </tr></tfoot>
       </table>
     </div>
@@ -8846,11 +8874,12 @@ async function printHOBById(billNum) {
     .eq('vendor_name', h.vendor_name).maybeSingle();
 
   // ── Fetch prior approved bills for same vendor ────────────────────────────
-  const {data:priorBills} = await sb.from('ho_bills')
-    .select('bill_number,ho_number,hold_amount')
-    .eq('vendor_name', h.vendor_name)
-    .neq('bill_number', billNum)
-    .in('status',['Unpaid','Paid']);
+  const {data:priorBills} = await _priorBillsTemporal(
+    sb.from('ho_bills')
+      .select('bill_number,ho_number,hold_amount')
+      .eq('vendor_name', h.vendor_name)
+      .neq('bill_number', billNum),
+    h.bill_date, h.created_at);
   const priorBillNums = (priorBills||[]).map(b=>b.bill_number);
   const priorHONums   = [...new Set((priorBills||[]).map(b=>b.ho_number).filter(Boolean))];
   let priorItems = [], priorExtra = [];
@@ -9846,13 +9875,7 @@ function renderWOBList() {
   const perms = mergedPerms();
   tbody.innerHTML = rows.map(b => {
     const st = b['Status']||'Unpaid';
-    let ab = `<button class="btn btn-ghost btn-sm" onclick="viewWOBById('${esc(b['Bill Number'])}')">View</button>
-      <button class="btn btn-ghost btn-sm" onclick="printWOBById('${esc(b['Bill Number'])}')">Print</button>`;
-    if (perms.canApproveBill && st === 'Pending Approval') {
-      ab += `<button class="btn btn-primary btn-sm" onclick="approveWOB('${esc(b['Bill Number'])}')">Approve</button>
-        <button class="btn btn-warn btn-sm" onclick="promptReject('WOB','${esc(b['Bill Number'])}','correction')">↩ Return</button>
-        <button class="btn btn-danger btn-sm" onclick="promptReject('WOB','${esc(b['Bill Number'])}','reject')">✕ Reject</button>`;
-    }
+    let ab = `<button class="btn btn-ghost btn-sm" onclick="viewWOBById('${esc(b['Bill Number'])}')">View</button>`;
     if (perms.canCreateWOB && st === 'Rejected - Correction') {
       ab += `<button class="btn btn-warn btn-sm" onclick="reviseWOB('${esc(b['Bill Number'])}')">✎ Revise &amp; Resubmit</button>`;
     }
@@ -10248,11 +10271,12 @@ async function viewWOBById(billNum) {
     .eq('contractor_name', h['Vendor Name']).maybeSingle();
 
   // ── Fetch prior approved bills for same vendor ───────────────────────────
-  const {data:priorBills} = await sb.from('wo_bills')
-    .select('bill_number,wo_number')
-    .eq('vendor_name', h['Vendor Name'])
-    .neq('bill_number', billNum)
-    .in('status',['Unpaid','Paid']);
+  const {data:priorBills} = await _priorBillsTemporal(
+    sb.from('wo_bills')
+      .select('bill_number,wo_number')
+      .eq('vendor_name', h['Vendor Name'])
+      .neq('bill_number', billNum),
+    h['Bill Date'], h['Created At']);
   const priorBillNums = (priorBills||[]).map(b=>b.bill_number);
   const priorWONums   = [...new Set((priorBills||[]).map(b=>b.wo_number).filter(Boolean))];
   let priorItemsData = [];
@@ -10282,15 +10306,32 @@ async function viewWOBById(billNum) {
          </div></div>`
     : '';
 
-  // ── Bill Line Items table ────────────────────────────────────────────────
-  const lineRows = items.map((it,i)=>`<tr>
+  // ── Bill Line Items table — Previous / Current / Cumulative (print parity) ─
+  const hasPrev = priorBillNums.length > 0;
+  const lineRows = items.map((it,i)=>{
+    const prev     = prevMap[it['Description']]||{qty:0,amount:0};
+    const prevQty  = prev.qty, prevAmt = prev.amount;
+    const prevRate = prevQty>0 ? prevAmt/prevQty : num(it['Unit Rate']);
+    const currQty  = num(it['This Period Qty']), currRate = num(it['Unit Rate']), currAmt = num(it['Amount']);
+    const cumQty   = prevQty + currQty;
+    const cumAmt   = prevAmt + currAmt;
+    const cumRate  = cumQty>0 ? cumAmt/cumQty : currRate;
+    return `<tr>
     <td style="text-align:center;">${it['S.No']||i+1}</td>
     <td>${esc(it['Description'])}</td>
     <td style="text-align:center;">${esc(it['UOM']||'')}</td>
-    <td style="text-align:right;">${fmtINR(it['This Period Qty'])}</td>
-    <td style="text-align:right;">${fmtINR(it['Unit Rate'])}</td>
-    <td style="text-align:right;font-weight:600;">${fmtINR(it['Amount'])}</td>
-  </tr>`).join('');
+    <td style="text-align:right;background:#eef2f7;border-left:2px solid #1e3a5f;">${fmtINR(prevQty)}</td>
+    <td style="text-align:right;background:#eef2f7;">${fmtINR(prevRate)}</td>
+    <td style="text-align:right;background:#eef2f7;">${fmtINR(prevAmt)}</td>
+    <td style="text-align:right;background:#e8f1fa;border-left:2px solid #1565a0;">${fmtINR(currQty)}</td>
+    <td style="text-align:right;background:#e8f1fa;">${fmtINR(currRate)}</td>
+    <td style="text-align:right;background:#e8f1fa;font-weight:600;">${fmtINR(currAmt)}</td>
+    <td style="text-align:right;background:#e9f5ee;border-left:2px solid #155a38;">${fmtINR(cumQty)}</td>
+    <td style="text-align:right;background:#e9f5ee;">${fmtINR(cumRate)}</td>
+    <td style="text-align:right;background:#e9f5ee;font-weight:600;">${fmtINR(cumAmt)}</td>
+  </tr>`;}).join('');
+  const prevGrossTotal = priorItemsData.reduce((s,it)=>s+num(it.amount),0);
+  const cumGrossTotal  = prevGrossTotal + num(h['Gross Amount']);
 
   // ── Extra lines ──────────────────────────────────────────────────────────
   const extraRows = extraLines.length ? extraLines.map(el=>`<tr>
@@ -10405,21 +10446,36 @@ async function viewWOBById(billNum) {
     ${woCard}
 
     <!-- Bill Line Items -->
-    <div style="font-size:12px;font-weight:700;color:var(--accent);margin-bottom:6px;text-transform:uppercase;letter-spacing:.5px;">Bill Line Items</div>
+    <div style="font-size:12px;font-weight:700;color:var(--accent);margin-bottom:6px;text-transform:uppercase;letter-spacing:.5px;">Bill Line Items <span style="color:var(--muted);font-weight:400;font-size:11px;text-transform:none;">(Previous · Current · Cumulative${hasPrev?'':' — no prior approved bills'})</span></div>
     <div style="overflow-x:auto;margin-bottom:16px;">
-      <table style="width:100%;border-collapse:collapse;font-size:12px;">
-        <thead><tr style="background:var(--panel-2);">
-          <th style="padding:6px 8px;text-align:center;border-bottom:2px solid var(--border);width:32px;">#</th>
-          <th style="padding:6px 8px;border-bottom:2px solid var(--border);">Description</th>
-          <th style="padding:6px 8px;text-align:center;border-bottom:2px solid var(--border);">UOM</th>
-          <th style="padding:6px 8px;text-align:right;border-bottom:2px solid var(--border);">Qty</th>
-          <th style="padding:6px 8px;text-align:right;border-bottom:2px solid var(--border);">Rate (₹)</th>
-          <th style="padding:6px 8px;text-align:right;border-bottom:2px solid var(--border);">Amount (₹)</th>
-        </tr></thead>
+      <table style="width:100%;border-collapse:collapse;font-size:11.5px;min-width:900px;">
+        <thead>
+          <tr style="background:var(--panel-2);">
+            <th rowspan="2" style="padding:5px 6px;text-align:center;border-bottom:2px solid var(--border);width:30px;">#</th>
+            <th rowspan="2" style="padding:5px 6px;border-bottom:2px solid var(--border);">Description</th>
+            <th rowspan="2" style="padding:5px 6px;text-align:center;border-bottom:2px solid var(--border);">UOM</th>
+            <th colspan="3" style="padding:4px 6px;text-align:center;background:#1e3a5f;color:#fff;border-left:2px solid #1e3a5f;">Previous Bills</th>
+            <th colspan="3" style="padding:4px 6px;text-align:center;background:#1565a0;color:#fff;border-left:2px solid #1565a0;">Current Bill</th>
+            <th colspan="3" style="padding:4px 6px;text-align:center;background:#155a38;color:#fff;border-left:2px solid #155a38;">Cumulative</th>
+          </tr>
+          <tr style="background:var(--panel-2);">
+            <th style="padding:4px 6px;text-align:right;border-bottom:2px solid var(--border);background:#eef2f7;border-left:2px solid #1e3a5f;">Qty</th>
+            <th style="padding:4px 6px;text-align:right;border-bottom:2px solid var(--border);background:#eef2f7;">Rate</th>
+            <th style="padding:4px 6px;text-align:right;border-bottom:2px solid var(--border);background:#eef2f7;">Amt (₹)</th>
+            <th style="padding:4px 6px;text-align:right;border-bottom:2px solid var(--border);background:#e8f1fa;border-left:2px solid #1565a0;">Qty</th>
+            <th style="padding:4px 6px;text-align:right;border-bottom:2px solid var(--border);background:#e8f1fa;">Rate</th>
+            <th style="padding:4px 6px;text-align:right;border-bottom:2px solid var(--border);background:#e8f1fa;">Amt (₹)</th>
+            <th style="padding:4px 6px;text-align:right;border-bottom:2px solid var(--border);background:#e9f5ee;border-left:2px solid #155a38;">Qty</th>
+            <th style="padding:4px 6px;text-align:right;border-bottom:2px solid var(--border);background:#e9f5ee;">Rate</th>
+            <th style="padding:4px 6px;text-align:right;border-bottom:2px solid var(--border);background:#e9f5ee;">Amt (₹)</th>
+          </tr>
+        </thead>
         <tbody>${lineRows}</tbody>
         <tfoot><tr style="background:var(--panel-2);">
-          <td colspan="5" style="padding:6px 8px;text-align:right;font-weight:700;font-size:12px;">Gross Amount</td>
-          <td style="padding:6px 8px;text-align:right;font-weight:700;font-size:13px;color:var(--accent);">${fmtINR(gross)}</td>
+          <td colspan="3" style="padding:6px 8px;text-align:right;font-weight:700;font-size:12px;">Gross Amount</td>
+          <td colspan="3" style="padding:6px 8px;text-align:right;font-weight:700;background:#eef2f7;border-left:2px solid #1e3a5f;">${fmtINR(prevGrossTotal)}</td>
+          <td colspan="3" style="padding:6px 8px;text-align:right;font-weight:700;background:#e8f1fa;border-left:2px solid #1565a0;color:var(--accent);">${fmtINR(gross)}</td>
+          <td colspan="3" style="padding:6px 8px;text-align:right;font-weight:700;background:#e9f5ee;border-left:2px solid #155a38;">${fmtINR(cumGrossTotal)}</td>
         </tr></tfoot>
       </table>
     </div>
@@ -10467,11 +10523,12 @@ async function printWOBById(billNum) {
     .eq('contractor_name', h.vendor_name).maybeSingle();
 
   // ── Fetch prior approved bills for same vendor ────────────────────────────
-  const {data:priorBills} = await sb.from('wo_bills')
-    .select('bill_number,wo_number,hold_amount')
-    .eq('vendor_name', h.vendor_name)
-    .neq('bill_number', billNum)
-    .in('status',['Unpaid','Paid']);
+  const {data:priorBills} = await _priorBillsTemporal(
+    sb.from('wo_bills')
+      .select('bill_number,wo_number,hold_amount')
+      .eq('vendor_name', h.vendor_name)
+      .neq('bill_number', billNum),
+    h.bill_date, h.created_at);
   const priorBillNums = (priorBills||[]).map(b=>b.bill_number);
   const priorWONums   = [...new Set((priorBills||[]).map(b=>b.wo_number).filter(Boolean))];
   let priorItems = [], priorExtra = [];
@@ -14501,6 +14558,16 @@ function clearColFilters() {
 
 function gv(id) { const e = document.getElementById(id); return e ? (e.value || '') : ''; }
 function gvl(id) { return gv(id).toLowerCase(); }
+
+// ── Prior-bills temporal predicate (shared by HOB / WOB / POB views & prints) ──
+// "Previous" = approved bills (Unpaid / Partial / Paid) strictly BEFORE the
+// reference bill: bill_date < ref date, or same date but created earlier.
+// The created_at tie-break keeps same-day RA bills correctly ordered.
+function _priorBillsTemporal(q, refBillDate, refCreatedAt) {
+  const ts = refCreatedAt || new Date().toISOString();
+  return q.in('status',['Unpaid','Partial','Paid'])
+          .or(`bill_date.lt."${refBillDate}",and(bill_date.eq."${refBillDate}",created_at.lt."${ts}")`);
+}
 
 function toggleMIRLegend() {
   const body = document.getElementById('mirLegendBody');
@@ -19411,23 +19478,21 @@ function closePOBForm() {
 
 async function viewPOB(billNum) {
   pbShow('Loading bill…');
-  const [{data:h},{data:items},{data:extraLines},{data:prevBills}] = await Promise.all([
+  const [{data:h},{data:items},{data:extraLines}] = await Promise.all([
     sb.from('pu_po_bills').select('*').eq('bill_number',billNum).single(),
     sb.from('pu_po_bill_items').select('*').eq('bill_number',billNum).eq('row_type','material').order('sno'),
     sb.from('pu_po_bill_items').select('*').eq('bill_number',billNum).eq('row_type','extra').order('sno'),
-    sb.from('pu_po_bills').select('bill_number,po_number,status').neq('bill_number',billNum).neq('status','Rejected').neq('status','Pending Approval'),
   ]);
   pbDone();
   if(!h){toast('Bill not found','error');return;}
 
-  // ── Previous bills for same vendor ──────────────────────────────────────
-  const vendorPrevBills = (prevBills||[]).filter(b=>b.vendor_name===undefined); // vendor_name not in select, fetch separately
-  // Fetch all prev bill items for this vendor from approved bills
-  const {data:allVendorBills} = await sb.from('pu_po_bills')
-    .select('bill_number,po_number,status')
-    .eq('vendor_name', h.vendor_name)
-    .neq('bill_number', billNum)
-    .in('status',['Unpaid','Paid']);
+  // ── Previous bills for same vendor — approved & strictly before this bill ─
+  const {data:allVendorBills} = await _priorBillsTemporal(
+    sb.from('pu_po_bills')
+      .select('bill_number,po_number,status')
+      .eq('vendor_name', h.vendor_name)
+      .neq('bill_number', billNum),
+    h.bill_date, h.created_at);
   const prevBillNums = (allVendorBills||[]).map(b=>b.bill_number);
   const prevPONums   = [...new Set((allVendorBills||[]).map(b=>b.po_number).filter(Boolean))];
   let prevItemsData = [];
@@ -19651,11 +19716,12 @@ async function printPOB(billNum) {
     .eq('vendor_name', h.vendor_name).maybeSingle();
 
   // ── Fetch all prior approved bills for same vendor ────────────────────────
-  const {data:priorBills} = await sb.from('pu_po_bills')
-    .select('bill_number,po_number,hold_amount')
-    .eq('vendor_name', h.vendor_name)
-    .neq('bill_number', billNum)
-    .in('status',['Unpaid','Paid']);
+  const {data:priorBills} = await _priorBillsTemporal(
+    sb.from('pu_po_bills')
+      .select('bill_number,po_number,hold_amount')
+      .eq('vendor_name', h.vendor_name)
+      .neq('bill_number', billNum),
+    h.bill_date, h.created_at);
   const priorBillNums = (priorBills||[]).map(b=>b.bill_number);
   const priorPONums   = [...new Set((priorBills||[]).map(b=>b.po_number).filter(Boolean))];
   let priorMatItems = [], priorExtraLines = [];
