@@ -119,6 +119,7 @@ td input, td select { padding: 5px 6px; background: var(--input-bg); color: var(
 .status.approved { background: #d1fae5; color: #065f46; border: 1px solid #6ee7b7; }
 .status.rejected { background: #fee2e2; color: #991b1b; border: 1px solid #fca5a5; }
 .status.rejected-correction { background: #fff7ed; color: #92400e; border: 1px solid #fcd34d; }
+.status.pending-billing { background: #e0f2fe; color: #075985; border: 1px solid #7dd3fc; }
 .status.billed { background: #dbeafe; color: #1e40af; border: 1px solid #93c5fd; }
 .status.unbilled { background: #fef3c7; color: #92400e; border: 1px solid #fcd34d; }
 .status.paid { background: #ccfbf1; color: #065f46; border: 1px solid #5eead4; }
@@ -293,6 +294,13 @@ td input, td select { padding: 5px 6px; background: var(--input-bg); color: var(
 .dash-section-title { font-size: 13px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
 .dash-section-title::after { content: ''; flex: 1; height: 1px; background: var(--border); }
 .dash-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px; }
+.dash-group { border: 1px solid var(--border); border-left: 4px solid var(--grp-color, var(--accent)); border-radius: 8px; padding: 12px 14px 14px; margin-bottom: 14px; background: var(--grp-bg, transparent); }
+.dash-group-title { font-size: 12px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--grp-color, var(--accent)); margin-bottom: 10px; display: flex; align-items: center; gap: 6px; }
+.dash-group .dash-cards { margin: 0; }
+.dash-group.grp-ho  { --grp-color: #0d9488; --grp-bg: rgba(13,148,136,0.035); }
+.dash-group.grp-wo  { --grp-color: #2563eb; --grp-bg: rgba(37,99,235,0.035); }
+.dash-group.grp-po  { --grp-color: #7c3aed; --grp-bg: rgba(124,58,237,0.035); }
+.dash-group.grp-pay { --grp-color: #16a34a; --grp-bg: rgba(22,163,74,0.035); }
 .dash-card { background: #fff; border: 1px solid var(--border); border-radius: 8px; padding: 16px; cursor: pointer; transition: all 0.15s; position: relative; overflow: hidden; }
 .dash-card:hover { border-color: var(--accent); box-shadow: 0 4px 12px rgba(13,148,136,0.12); transform: translateY(-1px); }
 .dash-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px; background: var(--card-color, var(--accent)); }
@@ -534,7 +542,7 @@ input[type="number"] {
   <!-- SECTION 1: PENDING ACTIONS -->
   <div class="dash-section" id="dash-pending-section">
     <div class="dash-section-title">⚡ Pending Actions</div>
-    <div class="dash-cards" id="dash-cards-container">
+    <div id="dash-cards-container">
       <div style="color:var(--muted);font-size:13px;">Loading…</div>
     </div>
   </div>
@@ -681,7 +689,7 @@ input[type="number"] {
           <div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:5px;"><span style="font-size:11px;font-weight:500;padding:2px 8px;border-radius:20px;background:#d1fae5;color:#065f46;white-space:nowrap;min-width:120px;text-align:center;flex-shrink:0;">Completed</span><span style="font-size:11px;color:var(--text-muted);line-height:1.4;">All work/items completed</span></div>
           <div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:5px;"><span style="font-size:11px;font-weight:500;padding:2px 8px;border-radius:20px;background:#e0e7ff;color:#3730a3;white-space:nowrap;min-width:120px;text-align:center;flex-shrink:0;">Short-Closed</span><span style="font-size:11px;color:var(--text-muted);line-height:1.4;">Closed before full completion</span></div>
           <div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:5px;"><span style="font-size:11px;font-weight:500;padding:2px 8px;border-radius:20px;background:#f3f4f6;color:#374151;white-space:nowrap;min-width:120px;text-align:center;flex-shrink:0;">Cancelled</span><span style="font-size:11px;color:var(--text-muted);line-height:1.4;">Cancelled; no active items remain</span></div>
-          <div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:5px;"><span style="font-size:11px;font-weight:500;padding:2px 8px;border-radius:20px;background:#fee2e2;color:#991b1b;white-space:nowrap;min-width:120px;text-align:center;flex-shrink:0;">Rejected</span><span style="font-size:11px;color:var(--text-muted);line-height:1.4;">Rejected by approver; cannot proceed</span></div>
+          <div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:5px;"><span style="font-size:11px;font-weight:500;padding:2px 8px;border-radius:20px;background:#fee2e2;color:#991b1b;white-space:nowrap;min-width:120px;text-align:center;flex-shrink:0;">Rejected</span><span style="font-size:11px;color:var(--text-muted);line-height:1.4;">Rejected by approver; terminal; cannot be revised</span></div>
           <div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:5px;"><span style="font-size:11px;font-weight:500;padding:2px 8px;border-radius:20px;background:#fff7ed;color:#92400e;white-space:nowrap;min-width:120px;text-align:center;flex-shrink:0;">Rejected - Correction</span><span style="font-size:11px;color:var(--text-muted);line-height:1.4;">Returned for correction; can be revised</span></div>
         </div>
       </div>
@@ -698,7 +706,7 @@ input[type="number"] {
             <td style="padding:4px 6px;"><input id="hoF_vendor" placeholder="Filter&#8230;" oninput="renderHOList()" style="width:100%;padding:4px 6px;font-size:11px;background:var(--bg);color:var(--text);border:1px solid var(--border);border-radius:4px;"></td>
             <td style="padding:4px 6px;"><input id="hoF_scope" placeholder="Filter&#8230;" oninput="renderHOList()" style="width:100%;padding:4px 6px;font-size:11px;background:var(--bg);color:var(--text);border:1px solid var(--border);border-radius:4px;"></td>
             <td style="padding:4px 6px;"></td>
-            <td style="padding:4px 6px;"><select id="hoF_status" onchange="renderHOList()" style="width:100%;padding:4px 5px;font-size:11px;background:var(--bg);color:var(--text);border:1px solid var(--border);border-radius:4px;"><option value="">All</option><option>Pending Approval</option><option>Open</option><option>Active</option><option>Completed</option><option>Short-Closed</option><option>Cancelled</option><option>Rejected</option><option value="Rejected - Correction">Returned for Correction</option></select></td>
+            <td style="padding:4px 6px;"><select id="hoF_status" onchange="renderHOList()" style="width:100%;padding:4px 5px;font-size:11px;background:var(--bg);color:var(--text);border:1px solid var(--border);border-radius:4px;"><option value="">All</option><option>Pending Approval</option><option>Open</option><option>Active</option><option>Completed</option><option>Short-Closed</option><option>Cancelled</option><option>Rejected</option><option value="Rejected - Correction">Needs Correction</option></select></td>
             <td style="padding:4px 6px;text-align:center;"><button onclick="clearColFilters('hoF_number','hoF_vendor','hoF_scope','hoF_dateFrom','hoF_dateTo','hoF_status','renderHOList')" title="Clear" style="font-size:10px;padding:3px 8px;background:var(--input-bg);color:var(--text-muted);border:1px solid var(--border);border-radius:4px;cursor:pointer;">&#10005; Clear</button></td>
           </tr>
         </thead>
@@ -796,9 +804,9 @@ input[type="number"] {
         </div>
         <div id="hocLegendBody" style="display:none;padding:12px 14px 14px;">
           <div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:5px;"><span style="font-size:11px;font-weight:500;padding:2px 8px;border-radius:20px;background:#fef9c3;color:#854d0e;white-space:nowrap;min-width:120px;text-align:center;flex-shrink:0;">Pending Approval</span><span style="font-size:11px;color:var(--text-muted);line-height:1.4;">Newly created; awaiting Admin/PM approval</span></div>
-          <div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:5px;"><span style="font-size:11px;font-weight:500;padding:2px 8px;border-radius:20px;background:#dbeafe;color:#1e40af;white-space:nowrap;min-width:120px;text-align:center;flex-shrink:0;">Unbilled</span><span style="font-size:11px;color:var(--text-muted);line-height:1.4;">Certified; not yet billed</span></div>
+          <div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:5px;"><span style="font-size:11px;font-weight:500;padding:2px 8px;border-radius:20px;background:#dbeafe;color:#1e40af;white-space:nowrap;min-width:120px;text-align:center;flex-shrink:0;">Unbilled</span><span style="font-size:11px;color:var(--text-muted);line-height:1.4;">Certified; not yet billed</span></div><div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:5px;"><span style="font-size:11px;font-weight:500;padding:2px 8px;border-radius:20px;background:#e0f2fe;color:#075985;white-space:nowrap;min-width:120px;text-align:center;flex-shrink:0;">Pending Billing</span><span style="font-size:11px;color:var(--text-muted);line-height:1.4;">Bill raised against this certification; awaiting bill approval</span></div>
           <div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:5px;"><span style="font-size:11px;font-weight:500;padding:2px 8px;border-radius:20px;background:#ede9fe;color:#4c1d95;white-space:nowrap;min-width:120px;text-align:center;flex-shrink:0;">Billed</span><span style="font-size:11px;color:var(--text-muted);line-height:1.4;">Fully billed</span></div>
-          <div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:5px;"><span style="font-size:11px;font-weight:500;padding:2px 8px;border-radius:20px;background:#fee2e2;color:#991b1b;white-space:nowrap;min-width:120px;text-align:center;flex-shrink:0;">Rejected</span><span style="font-size:11px;color:var(--text-muted);line-height:1.4;">Rejected by approver; cannot proceed</span></div>
+          <div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:5px;"><span style="font-size:11px;font-weight:500;padding:2px 8px;border-radius:20px;background:#fff7ed;color:#92400e;white-space:nowrap;min-width:120px;text-align:center;flex-shrink:0;">Needs Correction</span><span style="font-size:11px;color:var(--text-muted);line-height:1.4;">Returned by approver; Site Manager can revise and resubmit</span></div><div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:5px;"><span style="font-size:11px;font-weight:500;padding:2px 8px;border-radius:20px;background:#fee2e2;color:#991b1b;white-space:nowrap;min-width:120px;text-align:center;flex-shrink:0;">Rejected</span><span style="font-size:11px;color:var(--text-muted);line-height:1.4;">Rejected by approver; terminal; cannot be revised</span></div>
         </div>
       </div>
     <div class="table-wrap">
@@ -814,7 +822,7 @@ input[type="number"] {
             <td style="padding:4px 6px;"><input id="hocF_honum" placeholder="Filter&#8230;" oninput="renderHOCList()" style="width:100%;padding:4px 6px;font-size:11px;background:var(--bg);color:var(--text);border:1px solid var(--border);border-radius:4px;"></td>
             <td style="padding:4px 6px;"><input id="hocF_vendor" placeholder="Filter&#8230;" oninput="renderHOCList()" style="width:100%;padding:4px 6px;font-size:11px;background:var(--bg);color:var(--text);border:1px solid var(--border);border-radius:4px;"></td>
             <td style="padding:4px 6px;"></td>
-            <td style="padding:4px 6px;"><select id="hocF_status" onchange="renderHOCList()" style="width:100%;padding:4px 5px;font-size:11px;background:var(--bg);color:var(--text);border:1px solid var(--border);border-radius:4px;"><option value="">All</option><option>Pending Approval</option><option>Unbilled</option><option>Billed</option><option>Rejected</option><option value="Rejected - Correction">Returned for Correction</option></select></td>
+            <td style="padding:4px 6px;"><select id="hocF_status" onchange="renderHOCList()" style="width:100%;padding:4px 5px;font-size:11px;background:var(--bg);color:var(--text);border:1px solid var(--border);border-radius:4px;"><option value="">All</option><option>Pending Approval</option><option>Unbilled</option><option>Pending Billing</option><option>Billed</option><option>Rejected</option><option value="Rejected - Correction">Needs Correction</option></select></td>
             <td style="padding:4px 6px;text-align:center;"><button onclick="clearColFilters('hocF_number','hocF_vendor','hocF_honum','hocF_dateFrom','hocF_dateTo','hocF_status','renderHOCList')" title="Clear" style="font-size:10px;padding:3px 8px;background:var(--input-bg);color:var(--text-muted);border:1px solid var(--border);border-radius:4px;cursor:pointer;">&#10005; Clear</button></td>
           </tr>
         </thead>
@@ -1047,7 +1055,7 @@ input[type="number"] {
           <div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:5px;"><span style="font-size:11px;font-weight:500;padding:2px 8px;border-radius:20px;background:#fef3c7;color:#92400e;white-space:nowrap;min-width:120px;text-align:center;flex-shrink:0;">Unpaid</span><span style="font-size:11px;color:var(--text-muted);line-height:1.4;">Bill approved; payment pending</span></div>
           <div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:5px;"><span style="font-size:11px;font-weight:500;padding:2px 8px;border-radius:20px;background:#fef3c7;color:#92400e;white-space:nowrap;min-width:120px;text-align:center;flex-shrink:0;">Partial</span><span style="font-size:11px;color:var(--text-muted);line-height:1.4;">Partially paid</span></div>
           <div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:5px;"><span style="font-size:11px;font-weight:500;padding:2px 8px;border-radius:20px;background:#d1fae5;color:#065f46;white-space:nowrap;min-width:120px;text-align:center;flex-shrink:0;">Paid</span><span style="font-size:11px;color:var(--text-muted);line-height:1.4;">Fully paid</span></div>
-          <div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:5px;"><span style="font-size:11px;font-weight:500;padding:2px 8px;border-radius:20px;background:#fee2e2;color:#991b1b;white-space:nowrap;min-width:120px;text-align:center;flex-shrink:0;">Rejected</span><span style="font-size:11px;color:var(--text-muted);line-height:1.4;">Rejected by approver; cannot proceed</span></div>
+          <div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:5px;"><span style="font-size:11px;font-weight:500;padding:2px 8px;border-radius:20px;background:#fff7ed;color:#92400e;white-space:nowrap;min-width:120px;text-align:center;flex-shrink:0;">Needs Correction</span><span style="font-size:11px;color:var(--text-muted);line-height:1.4;">Returned by approver; Planning/QS can revise and resubmit</span></div><div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:5px;"><span style="font-size:11px;font-weight:500;padding:2px 8px;border-radius:20px;background:#fee2e2;color:#991b1b;white-space:nowrap;min-width:120px;text-align:center;flex-shrink:0;">Rejected</span><span style="font-size:11px;color:var(--text-muted);line-height:1.4;">Rejected by approver; terminal; cannot be revised</span></div>
         </div>
       </div>
     <div class="table-wrap">
@@ -1066,7 +1074,7 @@ input[type="number"] {
             <td style="padding:4px 6px;"><input id="hobF_certnum" placeholder="Filter&#8230;" oninput="renderHOBList()" style="width:100%;padding:4px 6px;font-size:11px;background:var(--bg);color:var(--text);border:1px solid var(--border);border-radius:4px;"></td>
             <td style="padding:4px 6px;"><input id="hobF_vendor" placeholder="Filter&#8230;" oninput="renderHOBList()" style="width:100%;padding:4px 6px;font-size:11px;background:var(--bg);color:var(--text);border:1px solid var(--border);border-radius:4px;"></td>
             <td style="padding:4px 6px;"></td><td style="padding:4px 6px;"></td><td style="padding:4px 6px;"></td><td style="padding:4px 6px;"></td>
-            <td style="padding:4px 6px;"><select id="hobF_status" onchange="renderHOBList()" style="width:100%;padding:4px 5px;font-size:11px;background:var(--bg);color:var(--text);border:1px solid var(--border);border-radius:4px;"><option value="">All</option><option>Pending Approval</option><option>Unpaid</option><option>Partial</option><option>Paid</option><option>Rejected</option><option value="Rejected - Correction">Returned for Correction</option></select></td>
+            <td style="padding:4px 6px;"><select id="hobF_status" onchange="renderHOBList()" style="width:100%;padding:4px 5px;font-size:11px;background:var(--bg);color:var(--text);border:1px solid var(--border);border-radius:4px;"><option value="">All</option><option>Pending Approval</option><option>Unpaid</option><option>Partial</option><option>Paid</option><option>Rejected</option><option value="Rejected - Correction">Needs Correction</option></select></td>
             <td style="padding:4px 6px;text-align:center;"><button onclick="clearColFilters('hobF_number','hobF_vendor','hobF_honum','hobF_certnum','hobF_dateFrom','hobF_dateTo','hobF_status','renderHOBList')" title="Clear" style="font-size:10px;padding:3px 8px;background:var(--input-bg);color:var(--text-muted);border:1px solid var(--border);border-radius:4px;cursor:pointer;">&#10005; Clear</button></td>
           </tr>
         </thead>
@@ -1195,7 +1203,7 @@ input[type="number"] {
           <div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:5px;"><span style="font-size:11px;font-weight:500;padding:2px 8px;border-radius:20px;background:#e0e7ff;color:#3730a3;white-space:nowrap;min-width:120px;text-align:center;flex-shrink:0;">Short-Closed</span><span style="font-size:11px;color:var(--text-muted);line-height:1.4;">Closed before full completion</span></div>
           <div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:5px;"><span style="font-size:11px;font-weight:500;padding:2px 8px;border-radius:20px;background:#fee2e2;color:#991b1b;white-space:nowrap;min-width:120px;text-align:center;flex-shrink:0;">Terminated</span><span style="font-size:11px;color:var(--text-muted);line-height:1.4;">Terminated; no further work</span></div>
           <div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:5px;"><span style="font-size:11px;font-weight:500;padding:2px 8px;border-radius:20px;background:#f3f4f6;color:#374151;white-space:nowrap;min-width:120px;text-align:center;flex-shrink:0;">Cancelled</span><span style="font-size:11px;color:var(--text-muted);line-height:1.4;">Cancelled; no active items remain</span></div>
-          <div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:5px;"><span style="font-size:11px;font-weight:500;padding:2px 8px;border-radius:20px;background:#fee2e2;color:#991b1b;white-space:nowrap;min-width:120px;text-align:center;flex-shrink:0;">Rejected</span><span style="font-size:11px;color:var(--text-muted);line-height:1.4;">Rejected by approver; cannot proceed</span></div>
+          <div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:5px;"><span style="font-size:11px;font-weight:500;padding:2px 8px;border-radius:20px;background:#fee2e2;color:#991b1b;white-space:nowrap;min-width:120px;text-align:center;flex-shrink:0;">Rejected</span><span style="font-size:11px;color:var(--text-muted);line-height:1.4;">Rejected by approver; terminal; cannot be revised</span></div>
           <div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:5px;"><span style="font-size:11px;font-weight:500;padding:2px 8px;border-radius:20px;background:#fff7ed;color:#92400e;white-space:nowrap;min-width:120px;text-align:center;flex-shrink:0;">Rejected - Correction</span><span style="font-size:11px;color:var(--text-muted);line-height:1.4;">Returned for correction; can be revised</span></div>
         </div>
       </div>
@@ -1212,7 +1220,7 @@ input[type="number"] {
             <td style="padding:4px 6px;"><input id="woF_vendor" placeholder="Filter&#8230;" oninput="renderWOList()" style="width:100%;padding:4px 6px;font-size:11px;background:var(--bg);color:var(--text);border:1px solid var(--border);border-radius:4px;"></td>
             <td style="padding:4px 6px;"><input id="woF_scope" placeholder="Filter&#8230;" oninput="renderWOList()" style="width:100%;padding:4px 6px;font-size:11px;background:var(--bg);color:var(--text);border:1px solid var(--border);border-radius:4px;"></td>
             <td style="padding:4px 6px;"></td><td style="padding:4px 6px;"></td>
-            <td style="padding:4px 6px;"><select id="woF_status" onchange="renderWOList()" style="width:100%;padding:4px 5px;font-size:11px;background:var(--bg);color:var(--text);border:1px solid var(--border);border-radius:4px;"><option value="">All</option><option>Pending Approval</option><option>Open</option><option>Active</option><option>Completed</option><option>Short-Closed</option><option>Terminated</option><option>Cancelled</option><option>Rejected</option><option value="Rejected - Correction">Returned for Correction</option></select></td>
+            <td style="padding:4px 6px;"><select id="woF_status" onchange="renderWOList()" style="width:100%;padding:4px 5px;font-size:11px;background:var(--bg);color:var(--text);border:1px solid var(--border);border-radius:4px;"><option value="">All</option><option>Pending Approval</option><option>Open</option><option>Active</option><option>Completed</option><option>Short-Closed</option><option>Terminated</option><option>Cancelled</option><option>Rejected</option><option value="Rejected - Correction">Needs Correction</option></select></td>
             <td style="padding:4px 6px;text-align:center;"><button onclick="clearColFilters('woF_number','woF_vendor','woF_scope','woF_dateFrom','woF_dateTo','woF_status','renderWOList')" title="Clear" style="font-size:10px;padding:3px 8px;background:var(--input-bg);color:var(--text-muted);border:1px solid var(--border);border-radius:4px;cursor:pointer;">&#10005; Clear</button></td>
           </tr>
         </thead>
@@ -1287,9 +1295,9 @@ input[type="number"] {
         </div>
         <div id="wocLegendBody" style="display:none;padding:12px 14px 14px;">
           <div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:5px;"><span style="font-size:11px;font-weight:500;padding:2px 8px;border-radius:20px;background:#fef9c3;color:#854d0e;white-space:nowrap;min-width:120px;text-align:center;flex-shrink:0;">Pending Approval</span><span style="font-size:11px;color:var(--text-muted);line-height:1.4;">Newly created; awaiting Admin/PM approval</span></div>
-          <div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:5px;"><span style="font-size:11px;font-weight:500;padding:2px 8px;border-radius:20px;background:#dbeafe;color:#1e40af;white-space:nowrap;min-width:120px;text-align:center;flex-shrink:0;">Unbilled</span><span style="font-size:11px;color:var(--text-muted);line-height:1.4;">Certified; not yet billed</span></div>
+          <div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:5px;"><span style="font-size:11px;font-weight:500;padding:2px 8px;border-radius:20px;background:#dbeafe;color:#1e40af;white-space:nowrap;min-width:120px;text-align:center;flex-shrink:0;">Unbilled</span><span style="font-size:11px;color:var(--text-muted);line-height:1.4;">Certified; not yet billed</span></div><div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:5px;"><span style="font-size:11px;font-weight:500;padding:2px 8px;border-radius:20px;background:#e0f2fe;color:#075985;white-space:nowrap;min-width:120px;text-align:center;flex-shrink:0;">Pending Billing</span><span style="font-size:11px;color:var(--text-muted);line-height:1.4;">Bill raised against this certification; awaiting bill approval</span></div>
           <div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:5px;"><span style="font-size:11px;font-weight:500;padding:2px 8px;border-radius:20px;background:#ede9fe;color:#4c1d95;white-space:nowrap;min-width:120px;text-align:center;flex-shrink:0;">Billed</span><span style="font-size:11px;color:var(--text-muted);line-height:1.4;">Fully billed</span></div>
-          <div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:5px;"><span style="font-size:11px;font-weight:500;padding:2px 8px;border-radius:20px;background:#fee2e2;color:#991b1b;white-space:nowrap;min-width:120px;text-align:center;flex-shrink:0;">Rejected</span><span style="font-size:11px;color:var(--text-muted);line-height:1.4;">Rejected by approver; cannot proceed</span></div>
+          <div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:5px;"><span style="font-size:11px;font-weight:500;padding:2px 8px;border-radius:20px;background:#fff7ed;color:#92400e;white-space:nowrap;min-width:120px;text-align:center;flex-shrink:0;">Needs Correction</span><span style="font-size:11px;color:var(--text-muted);line-height:1.4;">Returned by approver; Site Manager can revise and resubmit</span></div><div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:5px;"><span style="font-size:11px;font-weight:500;padding:2px 8px;border-radius:20px;background:#fee2e2;color:#991b1b;white-space:nowrap;min-width:120px;text-align:center;flex-shrink:0;">Rejected</span><span style="font-size:11px;color:var(--text-muted);line-height:1.4;">Rejected by approver; terminal; cannot be revised</span></div>
         </div>
       </div>
     <div class="table-wrap">
@@ -1305,7 +1313,7 @@ input[type="number"] {
             <td style="padding:4px 6px;"><input id="wocF_wonum" placeholder="Filter&#8230;" oninput="renderWOCList()" style="width:100%;padding:4px 6px;font-size:11px;background:var(--bg);color:var(--text);border:1px solid var(--border);border-radius:4px;"></td>
             <td style="padding:4px 6px;"><input id="wocF_vendor" placeholder="Filter&#8230;" oninput="renderWOCList()" style="width:100%;padding:4px 6px;font-size:11px;background:var(--bg);color:var(--text);border:1px solid var(--border);border-radius:4px;"></td>
             <td style="padding:4px 6px;"></td>
-            <td style="padding:4px 6px;"><select id="wocF_status" onchange="renderWOCList()" style="width:100%;padding:4px 5px;font-size:11px;background:var(--bg);color:var(--text);border:1px solid var(--border);border-radius:4px;"><option value="">All</option><option>Pending Approval</option><option>Unbilled</option><option>Billed</option><option>Rejected</option><option value="Rejected - Correction">Returned for Correction</option></select></td>
+            <td style="padding:4px 6px;"><select id="wocF_status" onchange="renderWOCList()" style="width:100%;padding:4px 5px;font-size:11px;background:var(--bg);color:var(--text);border:1px solid var(--border);border-radius:4px;"><option value="">All</option><option>Pending Approval</option><option>Unbilled</option><option>Pending Billing</option><option>Billed</option><option>Rejected</option><option value="Rejected - Correction">Needs Correction</option></select></td>
             <td style="padding:4px 6px;text-align:center;"><button onclick="clearColFilters('wocF_number','wocF_vendor','wocF_wonum','wocF_dateFrom','wocF_dateTo','wocF_status','renderWOCList')" title="Clear" style="font-size:10px;padding:3px 8px;background:var(--input-bg);color:var(--text-muted);border:1px solid var(--border);border-radius:4px;cursor:pointer;">&#10005; Clear</button></td>
           </tr>
         </thead>
@@ -1507,7 +1515,7 @@ input[type="number"] {
           <div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:5px;"><span style="font-size:11px;font-weight:500;padding:2px 8px;border-radius:20px;background:#fef3c7;color:#92400e;white-space:nowrap;min-width:120px;text-align:center;flex-shrink:0;">Unpaid</span><span style="font-size:11px;color:var(--text-muted);line-height:1.4;">Bill approved; payment pending</span></div>
           <div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:5px;"><span style="font-size:11px;font-weight:500;padding:2px 8px;border-radius:20px;background:#fef3c7;color:#92400e;white-space:nowrap;min-width:120px;text-align:center;flex-shrink:0;">Partial</span><span style="font-size:11px;color:var(--text-muted);line-height:1.4;">Partially paid</span></div>
           <div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:5px;"><span style="font-size:11px;font-weight:500;padding:2px 8px;border-radius:20px;background:#d1fae5;color:#065f46;white-space:nowrap;min-width:120px;text-align:center;flex-shrink:0;">Paid</span><span style="font-size:11px;color:var(--text-muted);line-height:1.4;">Fully paid</span></div>
-          <div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:5px;"><span style="font-size:11px;font-weight:500;padding:2px 8px;border-radius:20px;background:#fee2e2;color:#991b1b;white-space:nowrap;min-width:120px;text-align:center;flex-shrink:0;">Rejected</span><span style="font-size:11px;color:var(--text-muted);line-height:1.4;">Rejected by approver; cannot proceed</span></div>
+          <div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:5px;"><span style="font-size:11px;font-weight:500;padding:2px 8px;border-radius:20px;background:#fff7ed;color:#92400e;white-space:nowrap;min-width:120px;text-align:center;flex-shrink:0;">Needs Correction</span><span style="font-size:11px;color:var(--text-muted);line-height:1.4;">Returned by approver; Planning/QS can revise and resubmit</span></div><div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:5px;"><span style="font-size:11px;font-weight:500;padding:2px 8px;border-radius:20px;background:#fee2e2;color:#991b1b;white-space:nowrap;min-width:120px;text-align:center;flex-shrink:0;">Rejected</span><span style="font-size:11px;color:var(--text-muted);line-height:1.4;">Rejected by approver; terminal; cannot be revised</span></div>
         </div>
       </div>
     <div class="table-wrap">
@@ -1526,7 +1534,7 @@ input[type="number"] {
             <td style="padding:4px 6px;"><input id="wobF_certnum" placeholder="Filter&#8230;" oninput="renderWOBList()" style="width:100%;padding:4px 6px;font-size:11px;background:var(--bg);color:var(--text);border:1px solid var(--border);border-radius:4px;"></td>
             <td style="padding:4px 6px;"><input id="wobF_vendor" placeholder="Filter&#8230;" oninput="renderWOBList()" style="width:100%;padding:4px 6px;font-size:11px;background:var(--bg);color:var(--text);border:1px solid var(--border);border-radius:4px;"></td>
             <td style="padding:4px 6px;"></td><td style="padding:4px 6px;"></td><td style="padding:4px 6px;"></td><td style="padding:4px 6px;"></td>
-            <td style="padding:4px 6px;"><select id="wobF_status" onchange="renderWOBList()" style="width:100%;padding:4px 5px;font-size:11px;background:var(--bg);color:var(--text);border:1px solid var(--border);border-radius:4px;"><option value="">All</option><option>Pending Approval</option><option>Unpaid</option><option>Partial</option><option>Paid</option><option>Rejected</option><option value="Rejected - Correction">Returned for Correction</option></select></td>
+            <td style="padding:4px 6px;"><select id="wobF_status" onchange="renderWOBList()" style="width:100%;padding:4px 5px;font-size:11px;background:var(--bg);color:var(--text);border:1px solid var(--border);border-radius:4px;"><option value="">All</option><option>Pending Approval</option><option>Unpaid</option><option>Partial</option><option>Paid</option><option>Rejected</option><option value="Rejected - Correction">Needs Correction</option></select></td>
             <td style="padding:4px 6px;text-align:center;"><button onclick="clearColFilters('wobF_number','wobF_vendor','wobF_wonum','wobF_certnum','wobF_dateFrom','wobF_dateTo','wobF_status','renderWOBList')" title="Clear" style="font-size:10px;padding:3px 8px;background:var(--input-bg);color:var(--text-muted);border:1px solid var(--border);border-radius:4px;cursor:pointer;">&#10005; Clear</button></td>
           </tr>
         </thead>
@@ -2544,7 +2552,7 @@ input[type="number"] {
           <div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:5px;"><span style="font-size:11px;font-weight:500;padding:2px 8px;border-radius:20px;background:#fef3c7;color:#92400e;white-space:nowrap;min-width:120px;text-align:center;flex-shrink:0;">Partial Receipt</span><span style="font-size:11px;color:var(--text-muted);line-height:1.4;">Some items received, balance pending</span></div>
           <div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:5px;"><span style="font-size:11px;font-weight:500;padding:2px 8px;border-radius:20px;background:#d1fae5;color:#065f46;white-space:nowrap;min-width:120px;text-align:center;flex-shrink:0;">Fully Received</span><span style="font-size:11px;color:var(--text-muted);line-height:1.4;">All items received at site</span></div>
           <div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:5px;"><span style="font-size:11px;font-weight:500;padding:2px 8px;border-radius:20px;background:#d1fae5;color:#065f46;white-space:nowrap;min-width:120px;text-align:center;flex-shrink:0;">Closed</span><span style="font-size:11px;color:var(--text-muted);line-height:1.4;">All items completed and closed</span></div>
-          <div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:5px;"><span style="font-size:11px;font-weight:500;padding:2px 8px;border-radius:20px;background:#fee2e2;color:#991b1b;white-space:nowrap;min-width:120px;text-align:center;flex-shrink:0;">Rejected</span><span style="font-size:11px;color:var(--text-muted);line-height:1.4;">Rejected by approver; cannot proceed</span></div>
+          <div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:5px;"><span style="font-size:11px;font-weight:500;padding:2px 8px;border-radius:20px;background:#fee2e2;color:#991b1b;white-space:nowrap;min-width:120px;text-align:center;flex-shrink:0;">Rejected</span><span style="font-size:11px;color:var(--text-muted);line-height:1.4;">Rejected by approver; terminal; cannot be revised</span></div>
           <div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:5px;"><span style="font-size:11px;font-weight:500;padding:2px 8px;border-radius:20px;background:#fff7ed;color:#92400e;white-space:nowrap;min-width:120px;text-align:center;flex-shrink:0;">Rejected - Correction</span><span style="font-size:11px;color:var(--text-muted);line-height:1.4;">Returned for correction; can be revised</span></div>
           <div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:5px;"><span style="font-size:11px;font-weight:500;padding:2px 8px;border-radius:20px;background:#f3f4f6;color:#374151;white-space:nowrap;min-width:120px;text-align:center;flex-shrink:0;">Cancelled</span><span style="font-size:11px;color:var(--text-muted);line-height:1.4;">Cancelled; no active items remain</span></div>
           <div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:5px;"><span style="font-size:11px;font-weight:500;padding:2px 8px;border-radius:20px;background:#e0e7ff;color:#3730a3;white-space:nowrap;min-width:120px;text-align:center;flex-shrink:0;">Short-Closed</span><span style="font-size:11px;color:var(--text-muted);line-height:1.4;">Closed before full completion</span></div>
@@ -2566,7 +2574,7 @@ input[type="number"] {
               <td style="padding:4px 6px;"><input id="poF_mirref" placeholder="Filter&#8230;" oninput="renderPOList()" style="width:100%;padding:4px 6px;font-size:11px;background:var(--bg);color:var(--text);border:1px solid var(--border);border-radius:4px;"></td>
               <td style="padding:4px 6px;"></td>
               <td style="padding:4px 6px;"></td>
-              <td style="padding:4px 6px;"><select id="poF_status" onchange="renderPOList()" style="width:100%;padding:4px 5px;font-size:11px;background:var(--bg);color:var(--text);border:1px solid var(--border);border-radius:4px;"><option value="">All</option><option>Pending Approval</option><option>Open</option><option>Partial Receipt</option><option>Fully Received</option><option>Closed</option><option>Rejected</option><option value="Rejected - Correction">Returned for Correction</option><option>Cancelled</option><option>Short-Closed</option></select></td>
+              <td style="padding:4px 6px;"><select id="poF_status" onchange="renderPOList()" style="width:100%;padding:4px 5px;font-size:11px;background:var(--bg);color:var(--text);border:1px solid var(--border);border-radius:4px;"><option value="">All</option><option>Pending Approval</option><option>Open</option><option>Partial Receipt</option><option>Fully Received</option><option>Closed</option><option>Rejected</option><option value="Rejected - Correction">Needs Correction</option><option>Cancelled</option><option>Short-Closed</option></select></td>
               <td style="padding:4px 6px;text-align:center;"><button onclick="clearColFilters('poF_number','poF_vendor','poF_qcref','poF_mirref','poF_dateFrom','poF_dateTo','poF_status','renderPOList')" title="Clear" style="font-size:10px;padding:3px 8px;background:var(--input-bg);color:var(--text-muted);border:1px solid var(--border);border-radius:4px;cursor:pointer;">&#10005; Clear</button></td>
             </tr>
           </thead>
@@ -2711,7 +2719,7 @@ input[type="number"] {
           <div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:5px;"><span style="font-size:11px;font-weight:500;padding:2px 8px;border-radius:20px;background:#dcfce7;color:#166534;white-space:nowrap;min-width:120px;text-align:center;flex-shrink:0;">Verified</span><span style="font-size:11px;color:var(--text-muted);line-height:1.4;">Verified by store; ready for billing</span></div>
           <div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:5px;"><span style="font-size:11px;font-weight:500;padding:2px 8px;border-radius:20px;background:#fef3c7;color:#92400e;white-space:nowrap;min-width:120px;text-align:center;flex-shrink:0;">Partially Billed</span><span style="font-size:11px;color:var(--text-muted);line-height:1.4;">Partially included in a bill</span></div>
           <div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:5px;"><span style="font-size:11px;font-weight:500;padding:2px 8px;border-radius:20px;background:#ede9fe;color:#4c1d95;white-space:nowrap;min-width:120px;text-align:center;flex-shrink:0;">Billed</span><span style="font-size:11px;color:var(--text-muted);line-height:1.4;">Fully billed</span></div>
-          <div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:5px;"><span style="font-size:11px;font-weight:500;padding:2px 8px;border-radius:20px;background:#fee2e2;color:#991b1b;white-space:nowrap;min-width:120px;text-align:center;flex-shrink:0;">Rejected</span><span style="font-size:11px;color:var(--text-muted);line-height:1.4;">Rejected by approver; cannot proceed</span></div>
+          <div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:5px;"><span style="font-size:11px;font-weight:500;padding:2px 8px;border-radius:20px;background:#fee2e2;color:#991b1b;white-space:nowrap;min-width:120px;text-align:center;flex-shrink:0;">Rejected</span><span style="font-size:11px;color:var(--text-muted);line-height:1.4;">Rejected by approver; terminal; cannot be revised</span></div>
           <div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:5px;"><span style="font-size:11px;font-weight:500;padding:2px 8px;border-radius:20px;background:#fff7ed;color:#92400e;white-space:nowrap;min-width:120px;text-align:center;flex-shrink:0;">Needs Correction</span><span style="font-size:11px;color:var(--text-muted);line-height:1.4;">Returned by Site Manager for correction; Store Executive can revise and resubmit</span></div>
         </div>
       </div>
@@ -2738,7 +2746,7 @@ input[type="number"] {
               <td style="padding:4px 6px;"><input id="grnF_vendor" placeholder="Filter&#8230;" oninput="renderGRNList()" style="width:100%;padding:4px 6px;font-size:11px;background:var(--bg);color:var(--text);border:1px solid var(--border);border-radius:4px;"></td>
               <td style="padding:4px 6px;"><input id="grnF_challan" placeholder="Filter&#8230;" oninput="renderGRNList()" style="width:100%;padding:4px 6px;font-size:11px;background:var(--bg);color:var(--text);border:1px solid var(--border);border-radius:4px;"></td>
               <td style="padding:4px 6px;"></td><td style="padding:4px 6px;"></td>
-              <td style="padding:4px 6px;"><select id="grnF_status" onchange="renderGRNList()" style="width:100%;padding:4px 5px;font-size:11px;background:var(--bg);color:var(--text);border:1px solid var(--border);border-radius:4px;"><option value="">All</option><option>Pending Verification</option><option>Verified</option><option>Partially Billed</option><option>Billed</option><option>Rejected</option><option value="Rejected - Correction">Returned for Correction</option></select></td>
+              <td style="padding:4px 6px;"><select id="grnF_status" onchange="renderGRNList()" style="width:100%;padding:4px 5px;font-size:11px;background:var(--bg);color:var(--text);border:1px solid var(--border);border-radius:4px;"><option value="">All</option><option>Pending Verification</option><option>Verified</option><option>Partially Billed</option><option>Billed</option><option>Rejected</option><option value="Rejected - Correction">Needs Correction</option></select></td>
               <td style="padding:4px 6px;text-align:center;"><button onclick="clearColFilters('grnF_number','grnF_vendor','grnF_po','grnF_challan','grnF_dateFrom','grnF_dateTo','grnF_status','renderGRNList')" title="Clear" style="font-size:10px;padding:3px 8px;background:var(--input-bg);color:var(--text-muted);border:1px solid var(--border);border-radius:4px;cursor:pointer;">&#10005; Clear</button></td>
             </tr>
           </thead>
@@ -2990,7 +2998,7 @@ input[type="number"] {
           <div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:5px;"><span style="font-size:11px;font-weight:500;padding:2px 8px;border-radius:20px;background:#fef3c7;color:#92400e;white-space:nowrap;min-width:120px;text-align:center;flex-shrink:0;">Unpaid</span><span style="font-size:11px;color:var(--text-muted);line-height:1.4;">Bill approved; payment pending</span></div>
           <div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:5px;"><span style="font-size:11px;font-weight:500;padding:2px 8px;border-radius:20px;background:#fef3c7;color:#92400e;white-space:nowrap;min-width:120px;text-align:center;flex-shrink:0;">Partial</span><span style="font-size:11px;color:var(--text-muted);line-height:1.4;">Partially paid</span></div>
           <div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:5px;"><span style="font-size:11px;font-weight:500;padding:2px 8px;border-radius:20px;background:#d1fae5;color:#065f46;white-space:nowrap;min-width:120px;text-align:center;flex-shrink:0;">Paid</span><span style="font-size:11px;color:var(--text-muted);line-height:1.4;">Fully paid</span></div>
-          <div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:5px;"><span style="font-size:11px;font-weight:500;padding:2px 8px;border-radius:20px;background:#fee2e2;color:#991b1b;white-space:nowrap;min-width:120px;text-align:center;flex-shrink:0;">Rejected</span><span style="font-size:11px;color:var(--text-muted);line-height:1.4;">Rejected by approver; cannot proceed</span></div>
+          <div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:5px;"><span style="font-size:11px;font-weight:500;padding:2px 8px;border-radius:20px;background:#fee2e2;color:#991b1b;white-space:nowrap;min-width:120px;text-align:center;flex-shrink:0;">Rejected</span><span style="font-size:11px;color:var(--text-muted);line-height:1.4;">Rejected by approver; terminal; cannot be revised</span></div>
         </div>
       </div>
       <div style="margin-bottom:10px;">
@@ -3109,7 +3117,7 @@ input[type="number"] {
         <div id="misLegendBody" style="display:none;padding:12px 14px 14px;">
           <div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:5px;"><span style="font-size:11px;font-weight:500;padding:2px 8px;border-radius:20px;background:#fef9c3;color:#854d0e;white-space:nowrap;min-width:120px;text-align:center;flex-shrink:0;">Pending Approval</span><span style="font-size:11px;color:var(--text-muted);line-height:1.4;">Newly created; awaiting Admin/PM approval</span></div>
           <div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:5px;"><span style="font-size:11px;font-weight:500;padding:2px 8px;border-radius:20px;background:#dcfce7;color:#166534;white-space:nowrap;min-width:120px;text-align:center;flex-shrink:0;">Approved</span><span style="font-size:11px;color:var(--text-muted);line-height:1.4;">Approved and ready to proceed</span></div>
-          <div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:5px;"><span style="font-size:11px;font-weight:500;padding:2px 8px;border-radius:20px;background:#fee2e2;color:#991b1b;white-space:nowrap;min-width:120px;text-align:center;flex-shrink:0;">Rejected</span><span style="font-size:11px;color:var(--text-muted);line-height:1.4;">Rejected by approver; cannot proceed</span></div>
+          <div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:5px;"><span style="font-size:11px;font-weight:500;padding:2px 8px;border-radius:20px;background:#fff7ed;color:#92400e;white-space:nowrap;min-width:120px;text-align:center;flex-shrink:0;">Needs Correction</span><span style="font-size:11px;color:var(--text-muted);line-height:1.4;">Returned by approver; creator can revise and resubmit</span></div><div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:5px;"><span style="font-size:11px;font-weight:500;padding:2px 8px;border-radius:20px;background:#fee2e2;color:#991b1b;white-space:nowrap;min-width:120px;text-align:center;flex-shrink:0;">Rejected</span><span style="font-size:11px;color:var(--text-muted);line-height:1.4;">Rejected by approver; terminal; cannot be revised</span></div>
         </div>
       </div>
       <div class="table-wrap">
@@ -4913,12 +4921,14 @@ async function apiUpdateHOBStatus(billNumber, status, rejectionReason) {
   const updates = { status, rejection_reason: rejectionReason || null };
   const r = await dbUpdate('ho_bills', { bill_number: billNumber }, updates, ['hobList','unpaidBills']);
   if (r.ok && (status === 'Rejected' || status === 'Rejected - Correction')) {
-    // Revert the certification back to Unbilled so it can be rebilled
     const { data: bill } = await sb.from('ho_bills')
       .select('hoc_number').eq('bill_number', billNumber).single();
     if (bill) {
+      // Terminal reject → free the cert ('Unbilled'). Correction → keep it locked
+      // ('Pending Billing') so no duplicate bill is raised during revision.
+      const certStatus = status === 'Rejected' ? 'Unbilled' : 'Pending Billing';
       await sb.from('ho_certifications')
-        .update({ status: 'Unbilled' })
+        .update({ status: certStatus })
         .eq('hoc_number', bill.hoc_number);
       _cacheBust('hocList','unbilledHOCs');
     }
@@ -5679,7 +5689,11 @@ async function apiUpdateWOBStatus(billNumber, status, rejectionReason) {
   if (r.ok && (status === 'Rejected' || status === 'Rejected - Correction')) {
     const { data: bill } = await sb.from('wo_bills').select('woc_number').eq('bill_number', billNumber).single();
     if (bill) {
-      await sb.from('wo_certifications').update({ status: 'Unbilled' }).eq('woc_number', bill.woc_number);
+      // Terminal reject → free the cert for a fresh bill ('Unbilled', shows in Ready-to-Bill).
+      // Return for correction → keep the cert locked ('Pending Billing') so no duplicate
+      // bill can be raised against it while the returned bill awaits revision.
+      const certStatus = status === 'Rejected' ? 'Unbilled' : 'Pending Billing';
+      await sb.from('wo_certifications').update({ status: certStatus }).eq('woc_number', bill.woc_number);
       _cacheBust('wocList','unbilledWOCs');
     }
   }
@@ -7428,8 +7442,8 @@ function renderHOList() {
   if(fVen)  rows=rows.filter(o=>(o['Vendor Name']||'').toLowerCase().includes(fVen));
   if(fSc)   rows=rows.filter(o=>(o['Scope']||'').toLowerCase().includes(fSc));
   if(fSt)   rows=rows.filter(o=>o['Status']===fSt);
-  if(fFrom) rows=rows.filter(o=>o['Date']&&o['Date']>=fFrom);
-  if(fTo)   rows=rows.filter(o=>o['Date']&&o['Date']<=fTo);
+  if(fFrom) rows=rows.filter(o=>o['HO Date']&&o['HO Date']>=fFrom);
+  if(fTo)   rows=rows.filter(o=>o['HO Date']&&o['HO Date']<=fTo);
   if (!rows.length) { tbody.innerHTML = '<tr><td colspan="7" class="center muted">No hire orders found.</td></tr>'; return; }
 
   const perms = mergedPerms();
@@ -7861,8 +7875,8 @@ function renderHOCList() {
   if(fHO)   rows=rows.filter(c=>(c['HO Number']||'').toLowerCase().includes(fHO));
   if(fVen)  rows=rows.filter(c=>(c['Vendor Name']||'').toLowerCase().includes(fVen));
   if(fSt)   rows=rows.filter(c=>c['Status']===fSt);
-  if(fFrom) rows=rows.filter(c=>c['Date']&&c['Date']>=fFrom);
-  if(fTo)   rows=rows.filter(c=>c['Date']&&c['Date']<=fTo);
+  if(fFrom) rows=rows.filter(c=>c['HOC Date']&&c['HOC Date']>=fFrom);
+  if(fTo)   rows=rows.filter(c=>c['HOC Date']&&c['HOC Date']<=fTo);
   if (!rows.length) { tbody.innerHTML = '<tr><td colspan="7" class="center muted">No certifications found.</td></tr>'; return; }
 
   const perms = mergedPerms();
@@ -7885,7 +7899,7 @@ function renderHOCList() {
       <td class="mono" data-sort="${esc(c['HO Number'])}">${esc(c['HO Number'])}</td>
       <td data-sort="${esc(c['Vendor Name'])}">${esc(c['Vendor Name'])}</td>
       <td class="num mono" data-sort="${num(c['Gross Value'])}">${fmtINRSym(c['Gross Value'])}</td>
-      <td data-sort="${esc(st)}"><span class="status ${st === 'Rejected - Correction' ? 'rejected-correction' : st.toLowerCase()}">${esc(st === 'Rejected - Correction' ? 'Needs Correction' : st)}</span>${rejReason}</td>
+      <td data-sort="${esc(st)}"><span class="status ${st === 'Rejected - Correction' ? 'rejected-correction' : st.toLowerCase().replace(/ /g,'-')}">${esc(st === 'Rejected - Correction' ? 'Needs Correction' : st)}</span>${rejReason}</td>
       <td class="center" style="white-space:nowrap;">${actionBtns}</td>
     </tr>`;
   }).join('');
@@ -8232,8 +8246,8 @@ function renderHOBList() {
   if(fCert) rows=rows.filter(b=>(b['HOC Number']||'').toLowerCase().includes(fCert));
   if(fVen)  rows=rows.filter(b=>(b['Vendor Name']||'').toLowerCase().includes(fVen));
   if(fSt)   rows=rows.filter(b=>b['Status']===fSt);
-  if(fFrom) rows=rows.filter(b=>b['Date']&&b['Date']>=fFrom);
-  if(fTo)   rows=rows.filter(b=>b['Date']&&b['Date']<=fTo);
+  if(fFrom) rows=rows.filter(b=>b['Bill Date']&&b['Bill Date']>=fFrom);
+  if(fTo)   rows=rows.filter(b=>b['Bill Date']&&b['Bill Date']<=fTo);
   if (!rows.length) { tbody.innerHTML = '<tr><td colspan="11" class="center muted">No bills found.</td></tr>'; return; }
 
   const perms = mergedPerms();
@@ -9132,8 +9146,8 @@ function renderWOList() {
   if(fVen)  rows=rows.filter(o=>(o['Vendor Name']||'').toLowerCase().includes(fVen));
   if(fSc)   rows=rows.filter(o=>(o['Scope']||'').toLowerCase().includes(fSc));
   if(fSt)   rows=rows.filter(o=>o['Status']===fSt);
-  if(fFrom) rows=rows.filter(o=>o['Date']&&o['Date']>=fFrom);
-  if(fTo)   rows=rows.filter(o=>o['Date']&&o['Date']<=fTo);
+  if(fFrom) rows=rows.filter(o=>o['WO Date']&&o['WO Date']>=fFrom);
+  if(fTo)   rows=rows.filter(o=>o['WO Date']&&o['WO Date']<=fTo);
   if (!rows.length) { tbody.innerHTML = '<tr><td colspan="8" class="center muted">No work orders found.</td></tr>'; return; }
 
   const perms = mergedPerms();
@@ -9545,8 +9559,8 @@ function renderWOCList() {
   if(fWO)   rows=rows.filter(c=>(c['WO Number']||'').toLowerCase().includes(fWO));
   if(fVen)  rows=rows.filter(c=>(c['Vendor Name']||'').toLowerCase().includes(fVen));
   if(fSt)   rows=rows.filter(c=>c['Status']===fSt);
-  if(fFrom) rows=rows.filter(c=>c['Date']&&c['Date']>=fFrom);
-  if(fTo)   rows=rows.filter(c=>c['Date']&&c['Date']<=fTo);
+  if(fFrom) rows=rows.filter(c=>c['WOC Date']&&c['WOC Date']>=fFrom);
+  if(fTo)   rows=rows.filter(c=>c['WOC Date']&&c['WOC Date']<=fTo);
   if (!rows.length) { tbody.innerHTML = '<tr><td colspan="7" class="center muted">No certifications found.</td></tr>'; return; }
   const perms = mergedPerms();
   tbody.innerHTML = rows.map(c => {
@@ -9568,7 +9582,7 @@ function renderWOCList() {
       <td class="mono">${esc(c['WO Number'])}</td>
       <td>${esc(c['Vendor Name'])}</td>
       <td class="num mono">${fmtINRSym(c['Gross Value'])}</td>
-      <td><span class="status ${st === 'Rejected - Correction' ? 'rejected-correction' : st.toLowerCase()}">${esc(st === 'Rejected - Correction' ? 'Needs Correction' : st)}</span>${rr}</td>
+      <td><span class="status ${st === 'Rejected - Correction' ? 'rejected-correction' : st.toLowerCase().replace(/ /g,'-')}">${esc(st === 'Rejected - Correction' ? 'Needs Correction' : st)}</span>${rr}</td>
       <td class="center" style="white-space:nowrap;">${ab}</td>
     </tr>`;
   }).join('');
@@ -9826,8 +9840,8 @@ function renderWOBList() {
   if(fCert) rows=rows.filter(b=>(b['WOC Number']||'').toLowerCase().includes(fCert));
   if(fVen)  rows=rows.filter(b=>(b['Vendor Name']||'').toLowerCase().includes(fVen));
   if(fSt)   rows=rows.filter(b=>b['Status']===fSt);
-  if(fFrom) rows=rows.filter(b=>b['Date']&&b['Date']>=fFrom);
-  if(fTo)   rows=rows.filter(b=>b['Date']&&b['Date']<=fTo);
+  if(fFrom) rows=rows.filter(b=>b['Bill Date']&&b['Bill Date']>=fFrom);
+  if(fTo)   rows=rows.filter(b=>b['Bill Date']&&b['Bill Date']<=fTo);
   if (!rows.length) { tbody.innerHTML = '<tr><td colspan="11" class="center muted">No bills found.</td></tr>'; return; }
   const perms = mergedPerms();
   tbody.innerHTML = rows.map(b => {
@@ -10159,13 +10173,14 @@ async function reviseWOB(billNum) {
   document.getElementById('wob_holdDesc').value      = h['Hold Description'] || '';
   document.getElementById('wob_remarks').value       = h['Remarks'] || '';
 
-  // BOQ
+  // BOQ — elements may not exist in current form layout; guard all access
   wob_boq_locked = false;
   const boqEl = document.getElementById('wob_boqItem');
   const boqClear = document.getElementById('wob_boq_clear');
   if (boqEl) { boqEl.value = h['BOQ Item']||''; boqEl.readOnly = !!(h['BOQ Item']); }
   if (boqClear) boqClear.style.display = h['BOQ Item'] ? '' : 'none';
-  document.getElementById('wob_boqCode').value = h['BOQ Item Code']||'';
+  const boqCodeEl = document.getElementById('wob_boqCode');
+  if (boqCodeEl) boqCodeEl.value = h['BOQ Item Code']||'';
   if (h['BOQ Item']) wob_boq_locked = true;
 
   // Populate WOC dropdown and pre-select — include the rejected bill's WOC even if already billed
@@ -22818,6 +22833,10 @@ const DASH_CARD_DEFS = {
       query: function(){return sb.from('ho_certifications').select('hoc_number',{count:'exact',head:true}).eq('status','Pending Approval');} },
     { id:'sm_woc',    label:'WOC to Review',     sub:'WO Certifications pending',  cls:'info',   nav:function(){navDash('wo','cert','Pending Approval');},
       query: function(){return sb.from('wo_certifications').select('woc_number',{count:'exact',head:true}).eq('status','Pending Approval');} },
+    { id:'sm_hoc_corr', label:'HOCs for Correction', sub:'Certifications returned — revise & resubmit', cls:'urgent', nav:function(){navDash('ho','cert','Rejected - Correction');},
+      query: function(){return sb.from('ho_certifications').select('hoc_number',{count:'exact',head:true}).eq('status','Rejected - Correction');} },
+    { id:'sm_woc_corr', label:'WOCs for Correction', sub:'WO certifications returned — revise & resubmit', cls:'urgent', nav:function(){navDash('wo','cert','Rejected - Correction');},
+      query: function(){return sb.from('wo_certifications').select('woc_number',{count:'exact',head:true}).eq('status','Rejected - Correction');} },
     { id:'sm_mis',    label:'MIS to Approve',    sub:'Material issues pending',    cls:'warn',   nav:function(){navDash('purchase','mis','Pending Approval');},
       query: function(){return sb.from('pu_mis').select('mis_number',{count:'exact',head:true}).eq('status','Pending Approval');} },
   ],
@@ -22864,6 +22883,10 @@ const DASH_CARD_DEFS = {
       query: function(){return sb.from('ho_bills').select('bill_number',{count:'exact',head:true}).eq('status','Pending Approval');} },
     { id:'qs_wob',    label:'WOBs Pending',      sub:'WO bills to create',         cls:'urgent', nav:function(){navDash('wo','billing','Pending Approval');},
       query: function(){return sb.from('wo_bills').select('bill_number',{count:'exact',head:true}).eq('status','Pending Approval');} },
+    { id:'qs_hob_corr', label:'HOBs for Correction', sub:'HO bills returned — revise & resubmit', cls:'urgent', nav:function(){navDash('ho','billing','Rejected - Correction');},
+      query: function(){return sb.from('ho_bills').select('bill_number',{count:'exact',head:true}).eq('status','Rejected - Correction');} },
+    { id:'qs_wob_corr', label:'WOBs for Correction', sub:'WO bills returned — revise & resubmit', cls:'urgent', nav:function(){navDash('wo','billing','Rejected - Correction');},
+      query: function(){return sb.from('wo_bills').select('bill_number',{count:'exact',head:true}).eq('status','Rejected - Correction');} },
     { id:'qs_pob',    label:'POBs Pending',      sub:'GRN bills pending approval', cls:'warn',   nav:function(){navDash('purchase','pob','Pending Approval');},
       query: function(){return sb.from('pu_po_bills').select('bill_number',{count:'exact',head:true}).eq('status','Pending Approval');} },
     // ── Follow-on: next step for QS after upstream docs are ready ──────────────
@@ -22946,6 +22969,27 @@ const DASH_CARD_DEFS = {
 };
 DASH_CARD_DEFS['Admin'] = DASH_CARD_DEFS['Project Manager'].slice();
 
+// Card id → document family. Cards not listed fall into 'po' (Purchase) by default.
+const DASH_CARD_GROUP = {
+  // Hire Order family
+  sm_hoc:'ho', sm_hoc_corr:'ho', pr_ho:'ho', pr_ho_corr:'ho',
+  qs_hob:'ho', qs_hob_corr:'ho', qs_hoc_unbilled:'ho',
+  pm_ho:'ho', pm_hoc:'ho', pm_hob:'ho', pm_hob_prr:'ho',
+  // Work Order family
+  sm_woc:'wo', sm_woc_corr:'wo', pr_wo:'wo', pr_wo_corr:'wo',
+  qs_wob:'wo', qs_wob_corr:'wo', qs_woc_unbilled:'wo',
+  pm_wo:'wo', pm_woc:'wo', pm_wob:'wo', pm_wob_prr:'wo',
+  // Payments
+  qs_pay:'pay',
+  // Everything else (MIR/RFQ/QC/PO/GRN/POB/MIS) defaults to 'po'
+};
+const DASH_GROUP_META = {
+  ho:  { title: '🏗 Hire Orders',  cls: 'grp-ho'  },
+  wo:  { title: '🔨 Work Orders',  cls: 'grp-wo'  },
+  po:  { title: '📦 Purchase',     cls: 'grp-po'  },
+  pay: { title: '💰 Payments',     cls: 'grp-pay' },
+};
+
 async function loadDashPendingCards() {
   // Merge dashboard cards from all assigned roles, deduplicated by card id
   const seen = new Set();
@@ -22958,20 +23002,42 @@ async function loadDashPendingCards() {
     container.innerHTML = '<div class="dash-all-clear"><div class="icon">✅</div>No pending actions for your role.</div>';
     return;
   }
-  container.innerHTML = defs.map(function(d, idx) {
-    return '<div class="dash-card '+d.cls+'" id="dcard-'+d.id+'" data-idx="'+idx+'">'+
+
+  // Group cards by document family, preserving role-merge order within each group
+  const groupOrder = ['ho','wo','po','pay'];
+  const grouped = {};
+  defs.forEach(function(d){
+    const g = DASH_CARD_GROUP[d.id] || 'po';
+    (grouped[g] = grouped[g] || []).push(d);
+  });
+
+  const cardHTML = function(d) {
+    return '<div class="dash-card '+d.cls+'" id="dcard-'+d.id+'" data-cid="'+d.id+'">'+
       '<div class="dc-count loading">…</div>'+
       '<div class="dc-label">'+esc(d.label)+'</div>'+
       '<div class="dc-sub">'+esc(d.sub)+'</div>'+
     '</div>';
-  }).join('');
-  // Attach click handlers
+  };
+
+  container.innerHTML = groupOrder.filter(function(g){ return (grouped[g]||[]).length; })
+    .map(function(g){
+      const meta = DASH_GROUP_META[g];
+      return '<div class="dash-group '+meta.cls+'">'+
+        '<div class="dash-group-title">'+meta.title+'</div>'+
+        '<div class="dash-cards">'+grouped[g].map(cardHTML).join('')+'</div>'+
+      '</div>';
+    }).join('');
+
+  // Attach click handlers by card id (robust against grouped reordering)
+  const defById = {};
+  defs.forEach(function(d){ defById[d.id] = d; });
   container.querySelectorAll('.dash-card').forEach(function(card) {
-    const idx = parseInt(card.dataset.idx);
+    const d = defById[card.dataset.cid];
     card.addEventListener('click', function() {
-      if (defs[idx] && defs[idx].nav) defs[idx].nav();
+      if (d && d.nav) d.nav();
     });
   });
+
   // Run queries in parallel
   defs.forEach(async function(d) {
     try {
