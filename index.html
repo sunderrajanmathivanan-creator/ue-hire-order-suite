@@ -118,6 +118,7 @@ td input, td select { padding: 5px 6px; background: var(--input-bg); color: var(
 .status.pending-approval { background: #fef9c3; color: #854d0e; border: 1px solid #fde047; }
 .status.approved { background: #d1fae5; color: #065f46; border: 1px solid #6ee7b7; }
 .status.rejected { background: #fee2e2; color: #991b1b; border: 1px solid #fca5a5; }
+.status.rejected-correction { background: #fff7ed; color: #92400e; border: 1px solid #fcd34d; }
 .status.billed { background: #dbeafe; color: #1e40af; border: 1px solid #93c5fd; }
 .status.unbilled { background: #fef3c7; color: #92400e; border: 1px solid #fcd34d; }
 .status.paid { background: #ccfbf1; color: #065f46; border: 1px solid #5eead4; }
@@ -813,7 +814,7 @@ input[type="number"] {
             <td style="padding:4px 6px;"><input id="hocF_honum" placeholder="Filter&#8230;" oninput="renderHOCList()" style="width:100%;padding:4px 6px;font-size:11px;background:var(--bg);color:var(--text);border:1px solid var(--border);border-radius:4px;"></td>
             <td style="padding:4px 6px;"><input id="hocF_vendor" placeholder="Filter&#8230;" oninput="renderHOCList()" style="width:100%;padding:4px 6px;font-size:11px;background:var(--bg);color:var(--text);border:1px solid var(--border);border-radius:4px;"></td>
             <td style="padding:4px 6px;"></td>
-            <td style="padding:4px 6px;"><select id="hocF_status" onchange="renderHOCList()" style="width:100%;padding:4px 5px;font-size:11px;background:var(--bg);color:var(--text);border:1px solid var(--border);border-radius:4px;"><option value="">All</option><option>Pending Approval</option><option>Unbilled</option><option>Billed</option><option>Rejected</option></select></td>
+            <td style="padding:4px 6px;"><select id="hocF_status" onchange="renderHOCList()" style="width:100%;padding:4px 5px;font-size:11px;background:var(--bg);color:var(--text);border:1px solid var(--border);border-radius:4px;"><option value="">All</option><option>Pending Approval</option><option>Unbilled</option><option>Billed</option><option>Rejected</option><option value="Rejected - Correction">Returned for Correction</option></select></td>
             <td style="padding:4px 6px;text-align:center;"><button onclick="clearColFilters('hocF_number','hocF_vendor','hocF_honum','hocF_dateFrom','hocF_dateTo','hocF_status','renderHOCList')" title="Clear" style="font-size:10px;padding:3px 8px;background:var(--input-bg);color:var(--text-muted);border:1px solid var(--border);border-radius:4px;cursor:pointer;">&#10005; Clear</button></td>
           </tr>
         </thead>
@@ -1065,7 +1066,7 @@ input[type="number"] {
             <td style="padding:4px 6px;"><input id="hobF_certnum" placeholder="Filter&#8230;" oninput="renderHOBList()" style="width:100%;padding:4px 6px;font-size:11px;background:var(--bg);color:var(--text);border:1px solid var(--border);border-radius:4px;"></td>
             <td style="padding:4px 6px;"><input id="hobF_vendor" placeholder="Filter&#8230;" oninput="renderHOBList()" style="width:100%;padding:4px 6px;font-size:11px;background:var(--bg);color:var(--text);border:1px solid var(--border);border-radius:4px;"></td>
             <td style="padding:4px 6px;"></td><td style="padding:4px 6px;"></td><td style="padding:4px 6px;"></td><td style="padding:4px 6px;"></td>
-            <td style="padding:4px 6px;"><select id="hobF_status" onchange="renderHOBList()" style="width:100%;padding:4px 5px;font-size:11px;background:var(--bg);color:var(--text);border:1px solid var(--border);border-radius:4px;"><option value="">All</option><option>Pending Approval</option><option>Unpaid</option><option>Partial</option><option>Paid</option><option>Rejected</option></select></td>
+            <td style="padding:4px 6px;"><select id="hobF_status" onchange="renderHOBList()" style="width:100%;padding:4px 5px;font-size:11px;background:var(--bg);color:var(--text);border:1px solid var(--border);border-radius:4px;"><option value="">All</option><option>Pending Approval</option><option>Unpaid</option><option>Partial</option><option>Paid</option><option>Rejected</option><option value="Rejected - Correction">Returned for Correction</option></select></td>
             <td style="padding:4px 6px;text-align:center;"><button onclick="clearColFilters('hobF_number','hobF_vendor','hobF_honum','hobF_certnum','hobF_dateFrom','hobF_dateTo','hobF_status','renderHOBList')" title="Clear" style="font-size:10px;padding:3px 8px;background:var(--input-bg);color:var(--text-muted);border:1px solid var(--border);border-radius:4px;cursor:pointer;">&#10005; Clear</button></td>
           </tr>
         </thead>
@@ -1304,7 +1305,7 @@ input[type="number"] {
             <td style="padding:4px 6px;"><input id="wocF_wonum" placeholder="Filter&#8230;" oninput="renderWOCList()" style="width:100%;padding:4px 6px;font-size:11px;background:var(--bg);color:var(--text);border:1px solid var(--border);border-radius:4px;"></td>
             <td style="padding:4px 6px;"><input id="wocF_vendor" placeholder="Filter&#8230;" oninput="renderWOCList()" style="width:100%;padding:4px 6px;font-size:11px;background:var(--bg);color:var(--text);border:1px solid var(--border);border-radius:4px;"></td>
             <td style="padding:4px 6px;"></td>
-            <td style="padding:4px 6px;"><select id="wocF_status" onchange="renderWOCList()" style="width:100%;padding:4px 5px;font-size:11px;background:var(--bg);color:var(--text);border:1px solid var(--border);border-radius:4px;"><option value="">All</option><option>Pending Approval</option><option>Unbilled</option><option>Billed</option><option>Rejected</option></select></td>
+            <td style="padding:4px 6px;"><select id="wocF_status" onchange="renderWOCList()" style="width:100%;padding:4px 5px;font-size:11px;background:var(--bg);color:var(--text);border:1px solid var(--border);border-radius:4px;"><option value="">All</option><option>Pending Approval</option><option>Unbilled</option><option>Billed</option><option>Rejected</option><option value="Rejected - Correction">Returned for Correction</option></select></td>
             <td style="padding:4px 6px;text-align:center;"><button onclick="clearColFilters('wocF_number','wocF_vendor','wocF_wonum','wocF_dateFrom','wocF_dateTo','wocF_status','renderWOCList')" title="Clear" style="font-size:10px;padding:3px 8px;background:var(--input-bg);color:var(--text-muted);border:1px solid var(--border);border-radius:4px;cursor:pointer;">&#10005; Clear</button></td>
           </tr>
         </thead>
@@ -1525,7 +1526,7 @@ input[type="number"] {
             <td style="padding:4px 6px;"><input id="wobF_certnum" placeholder="Filter&#8230;" oninput="renderWOBList()" style="width:100%;padding:4px 6px;font-size:11px;background:var(--bg);color:var(--text);border:1px solid var(--border);border-radius:4px;"></td>
             <td style="padding:4px 6px;"><input id="wobF_vendor" placeholder="Filter&#8230;" oninput="renderWOBList()" style="width:100%;padding:4px 6px;font-size:11px;background:var(--bg);color:var(--text);border:1px solid var(--border);border-radius:4px;"></td>
             <td style="padding:4px 6px;"></td><td style="padding:4px 6px;"></td><td style="padding:4px 6px;"></td><td style="padding:4px 6px;"></td>
-            <td style="padding:4px 6px;"><select id="wobF_status" onchange="renderWOBList()" style="width:100%;padding:4px 5px;font-size:11px;background:var(--bg);color:var(--text);border:1px solid var(--border);border-radius:4px;"><option value="">All</option><option>Pending Approval</option><option>Unpaid</option><option>Partial</option><option>Paid</option><option>Rejected</option></select></td>
+            <td style="padding:4px 6px;"><select id="wobF_status" onchange="renderWOBList()" style="width:100%;padding:4px 5px;font-size:11px;background:var(--bg);color:var(--text);border:1px solid var(--border);border-radius:4px;"><option value="">All</option><option>Pending Approval</option><option>Unpaid</option><option>Partial</option><option>Paid</option><option>Rejected</option><option value="Rejected - Correction">Returned for Correction</option></select></td>
             <td style="padding:4px 6px;text-align:center;"><button onclick="clearColFilters('wobF_number','wobF_vendor','wobF_wonum','wobF_certnum','wobF_dateFrom','wobF_dateTo','wobF_status','renderWOBList')" title="Clear" style="font-size:10px;padding:3px 8px;background:var(--input-bg);color:var(--text-muted);border:1px solid var(--border);border-radius:4px;cursor:pointer;">&#10005; Clear</button></td>
           </tr>
         </thead>
@@ -4706,7 +4707,7 @@ async function apiGetHOCDetails(hocNumber) {
 async function apiGetHOCumulativeQty(hoNumber) {
   // Get highest cumulative qty per description for non-rejected certs on this HO
   const { data: certs } = await sb.from('ho_certifications')
-    .select('hoc_number').eq('ho_number', hoNumber).neq('status','Rejected');
+    .select('hoc_number').eq('ho_number', hoNumber).not('status','in','("Rejected","Rejected - Correction")');
   if (!certs || !certs.length) return { ok: true, items: [] };
   const hocNums = certs.map(c => c.hoc_number);
   const { data: items } = await sb.from('ho_certification_items')
@@ -4832,7 +4833,7 @@ async function apiGetHOBDetails(billNumber) {
 async function apiGetAdvanceOutstanding(vendor) {
   const [arrs, bills] = await Promise.all([
     sb.from('ho_arr').select('paid_amount').eq('vendor', vendor).in('status',['Unpaid','Partial Paid','Paid']),
-    sb.from('ho_bills').select('advance_recovery').eq('vendor_name', vendor).neq('status','Rejected')
+    sb.from('ho_bills').select('advance_recovery').eq('vendor_name', vendor).not('status','in','("Rejected","Rejected - Correction")')
   ]);
   const totalAdv = (arrs.data||[]).reduce((s,r) => s + num(r.paid_amount), 0);
   const totalRec = (bills.data||[]).reduce((s,r) => s + num(r.advance_recovery), 0);
@@ -4911,7 +4912,7 @@ async function apiSaveHOB(data) {
 async function apiUpdateHOBStatus(billNumber, status, rejectionReason) {
   const updates = { status, rejection_reason: rejectionReason || null };
   const r = await dbUpdate('ho_bills', { bill_number: billNumber }, updates, ['hobList','unpaidBills']);
-  if (r.ok && status === 'Rejected') {
+  if (r.ok && (status === 'Rejected' || status === 'Rejected - Correction')) {
     // Revert the certification back to Unbilled so it can be rebilled
     const { data: bill } = await sb.from('ho_bills')
       .select('hoc_number').eq('bill_number', billNumber).single();
@@ -4931,7 +4932,7 @@ async function apiMarkHOCBilled(billNumber) {
   await sb.from('ho_certifications').update({ status: 'Billed' }).eq('hoc_number', bill.hoc_number);
   // Check HO completion
   const { data: hoItems } = await sb.from('ho_order_items').select('description, qty').eq('ho_number', bill.ho_number);
-  const { data: certs } = await sb.from('ho_certifications').select('hoc_number').eq('ho_number', bill.ho_number).neq('status','Rejected');
+  const { data: certs } = await sb.from('ho_certifications').select('hoc_number').eq('ho_number', bill.ho_number).not('status','in','("Rejected","Rejected - Correction")');
   if (certs && certs.length && hoItems && hoItems.length) {
     const hocNums = certs.map(c => c.hoc_number);
     const { data: certItems } = await sb.from('ho_certification_items').select('description, cumulative_qty').in('hoc_number', hocNums);
@@ -5040,7 +5041,7 @@ async function apiGetHRRList() {
 }
 
 async function apiGetBillsWithHold() {
-  const { data: bills } = await sb.from('ho_bills').select('bill_number, ho_number, vendor_name, hold_amount').gt('hold_amount', 0).neq('status','Rejected');
+  const { data: bills } = await sb.from('ho_bills').select('bill_number, ho_number, vendor_name, hold_amount').gt('hold_amount', 0).not('status','in','("Rejected","Rejected - Correction")');
   const { data: hrrs }  = await sb.from('ho_hrr').select('bill_reference, paid_amount');
   const relMap = {};
   (hrrs||[]).forEach(h => { relMap[h.bill_reference] = (relMap[h.bill_reference]||0) + num(h.paid_amount); });
@@ -5483,7 +5484,7 @@ async function apiGetWOCDetails(wocNumber) {
 
 async function apiGetWOCumulativeData(woNumber) {
   const { data: certs } = await sb.from('wo_certifications')
-    .select('woc_number').eq('wo_number', woNumber).neq('status','Rejected');
+    .select('woc_number').eq('wo_number', woNumber).not('status','in','("Rejected","Rejected - Correction")');
   if (!certs || !certs.length) return { ok: true, items: [] };
   const hocNums = certs.map(c => c.woc_number);
   const { data: items } = await sb.from('wo_certification_items')
@@ -5675,7 +5676,7 @@ async function apiSaveWOB(data) {
 async function apiUpdateWOBStatus(billNumber, status, rejectionReason) {
   const updates = { status, rejection_reason: rejectionReason || null };
   const r = await dbUpdate('wo_bills', { bill_number: billNumber }, updates, ['wobList','unpaidBills']);
-  if (r.ok && status === 'Rejected') {
+  if (r.ok && (status === 'Rejected' || status === 'Rejected - Correction')) {
     const { data: bill } = await sb.from('wo_bills').select('woc_number').eq('bill_number', billNumber).single();
     if (bill) {
       await sb.from('wo_certifications').update({ status: 'Unbilled' }).eq('woc_number', bill.woc_number);
@@ -7871,9 +7872,10 @@ function renderHOCList() {
       <button class="btn btn-ghost btn-sm" onclick="printHOCById('${esc(c['HOC Number'])}')">Print</button>`;
     if (perms.canCreateHOB && st === 'Pending Approval') {
       actionBtns += `<button class="btn btn-primary btn-sm" onclick="approveHOC('${esc(c['HOC Number'])}','Approved')">Approve</button>
-        <button class="btn btn-danger btn-sm" onclick="promptReject('HOC','${esc(c['HOC Number'])}')">Reject</button>`;
+        <button class="btn btn-warn btn-sm" onclick="promptReject('HOC','${esc(c['HOC Number'])}','correction')">↩ Return</button>
+        <button class="btn btn-danger btn-sm" onclick="promptReject('HOC','${esc(c['HOC Number'])}','reject')">✕ Reject</button>`;
     }
-    if (perms.canCreateHOC && st === 'Rejected') {
+    if (perms.canCreateHOC && st === 'Rejected - Correction') {
       actionBtns += `<button class="btn btn-warn btn-sm" onclick="reviseHOC('${esc(c['HOC Number'])}')">✎ Revise &amp; Resubmit</button>`;
     }
     const rejReason = c['Rejection Reason'] ? `<br><span style="font-size:11px;color:var(--danger);">Reason: ${esc(c['Rejection Reason'])}</span>` : '';
@@ -7883,7 +7885,7 @@ function renderHOCList() {
       <td class="mono" data-sort="${esc(c['HO Number'])}">${esc(c['HO Number'])}</td>
       <td data-sort="${esc(c['Vendor Name'])}">${esc(c['Vendor Name'])}</td>
       <td class="num mono" data-sort="${num(c['Gross Value'])}">${fmtINRSym(c['Gross Value'])}</td>
-      <td data-sort="${esc(st)}"><span class="status ${st.toLowerCase()}">${esc(st)}</span>${rejReason}</td>
+      <td data-sort="${esc(st)}"><span class="status ${st === 'Rejected - Correction' ? 'rejected-correction' : st.toLowerCase()}">${esc(st === 'Rejected - Correction' ? 'Needs Correction' : st)}</span>${rejReason}</td>
       <td class="center" style="white-space:nowrap;">${actionBtns}</td>
     </tr>`;
   }).join('');
@@ -8056,6 +8058,7 @@ async function reviseHOC(hocNum) {
   if (!hasPerm('canCreateHOC')) { toast('Only Site Manager can revise certifications','error'); return; }
   const r = await apiGetHOCDetails(hocNum);
   if (!r.ok) { toast(r.error,'error'); return; }
+  if (r.header['Status'] !== 'Rejected - Correction') { toast('Only certifications returned for correction can be revised','error'); return; }
   const h = r.header; const items = r.items || [];
 
   // Open the HOC form in "revise" mode — same number, pre-filled
@@ -8238,7 +8241,11 @@ function renderHOBList() {
     const st = b['Status'] || 'Unpaid';
     let actionBtns = `<button class="btn btn-ghost btn-sm" onclick="viewHOBById('${esc(b['Bill Number'])}')">View</button>
       <button class="btn btn-ghost btn-sm" onclick="printHOBById('${esc(b['Bill Number'])}')">🖨</button>`;
-    if (perms.canCreateHOB && st === 'Rejected') {
+    if (perms.canApproveBill && st === 'Pending Approval') {
+      actionBtns += `<button class="btn btn-warn btn-sm" onclick="promptReject('HOB','${esc(b['Bill Number'])}','correction')">↩ Return</button>
+        <button class="btn btn-danger btn-sm" onclick="promptReject('HOB','${esc(b['Bill Number'])}','reject')">✕ Reject</button>`;
+    }
+    if (perms.canCreateHOB && st === 'Rejected - Correction') {
       actionBtns += `<button class="btn btn-warn btn-sm" onclick="reviseHOB('${esc(b['Bill Number'])}')">✎ Revise &amp; Resubmit</button>`;
     }
     const rejReason = b['Rejection Reason'] ? `<br><span style="font-size:11px;color:var(--danger);">Reason: ${esc(b['Rejection Reason'])}</span>` : '';
@@ -8254,7 +8261,7 @@ function renderHOBList() {
       <td class="num mono" data-sort="${num(b['Net Payable'])}">${fmtINRSym(b['Net Payable'])}</td>
       <td class="num mono" data-sort="${totalPaid}" style="color:var(--success,#1a6b4a);">${fmtINRSym(totalPaid)}</td>
       <td class="num mono" data-sort="${outstanding}" style="color:${outstanding > 0.005 ? 'var(--warn)' : 'var(--muted)'};">${fmtINRSym(outstanding)}</td>
-      <td data-sort="${esc(st)}"><span class="status ${st.toLowerCase().replace(' ','-')}">${esc(st)}</span>${rejReason}</td>
+      <td data-sort="${esc(st)}"><span class="status ${st === 'Rejected - Correction' ? 'rejected-correction' : st.toLowerCase().replace(/ /g,'-')}">${esc(st === 'Rejected - Correction' ? 'Needs Correction' : st)}</span>${rejReason}</td>
       <td class="center" style="white-space:nowrap;">${actionBtns}</td>
     </tr>`;
   }).join('');
@@ -8523,6 +8530,7 @@ async function reviseHOB(billNum) {
   if (!hasPerm('canCreateHOB')) { toast('Only Planning/ QS can revise bills','error'); return; }
   const r = await apiGetHOBDetails(billNum);
   if (!r.ok) { toast(r.error,'error'); return; }
+  if (r.header['Status'] !== 'Rejected - Correction') { toast('Only bills returned for correction can be revised','error'); return; }
   const h = r.header; const items = r.items || []; const extraLines = r.extraLines || [];
 
   // Open billing form pre-filled
@@ -8631,7 +8639,7 @@ async function viewHOBById(billNum) {
     prevMap[k].amount += num(it.amount);
   });
 
-  const stCls = h['Status']==='Unpaid'||h['Status']==='Paid'?'approved':h['Status']==='Rejected'?'rejected':'pending-approval';
+  const stCls = h['Status']==='Unpaid'||h['Status']==='Paid'?'approved':h['Status']==='Rejected'?'rejected':h['Status']==='Rejected - Correction'?'rejected-correction':'pending-approval';
 
   // ── Previous HOs card ────────────────────────────────────────────────────
   const allHOs = [...new Set([...(h['HO Number']?[h['HO Number']]:[]),...priorHONums])];
@@ -8723,14 +8731,29 @@ async function viewHOBById(billNum) {
     <button class="btn btn-ghost btn-sm" onclick="printHOBById('${esc(billNum)}')">🖨 Print</button>
     ${perms.canApproveBill && isPending
       ? `<button class="btn btn-primary btn-sm" onclick="approveHOB('${esc(billNum)}');closeModal();">✔ Approve</button>
-         <button class="btn btn-danger btn-sm" onclick="closeModal();promptReject('HOB','${esc(billNum)}')">✕ Reject</button>`
+         <button class="btn btn-warn btn-sm"    onclick="closeModal();promptReject('HOB','${esc(billNum)}','correction')">↩ Return for Correction</button>
+         <button class="btn btn-danger btn-sm"  onclick="closeModal();promptReject('HOB','${esc(billNum)}','reject')">✕ Reject</button>`
       : ''}
     <button class="btn btn-ghost" onclick="closeModal()">Close</button>`;
+
+  const closureBanner = (h['Status'] === 'Rejected' || h['Status'] === 'Rejected - Correction') ? `
+    <div style="background:${h['Status']==='Rejected - Correction'?'#fff7ed':'#fee2e2'};border:1px solid ${h['Status']==='Rejected - Correction'?'#fcd34d':'#fca5a5'};border-radius:6px;padding:10px 14px;margin-bottom:14px;">
+      <div style="font-size:11px;font-weight:700;color:${h['Status']==='Rejected - Correction'?'#92400e':'#991b1b'};text-transform:uppercase;margin-bottom:4px;">
+        ${h['Status']==='Rejected - Correction'?'Returned for Correction':'Rejected'}
+      </div>
+      ${h['Rejection Reason']?`<div style="font-size:12px;color:var(--text);">${esc(h['Rejection Reason'])}</div>`:''}
+    </div>` : '';
+
+  const reviseBtn = (perms.canCreateHOB && h['Status'] === 'Rejected - Correction')
+    ? `<button class="btn btn-warn btn-sm" onclick="closeModal();reviseHOB('${esc(billNum)}')">✎ Revise &amp; Resubmit</button>`
+    : '';
 
   openModal(`
     <h3 style="margin-bottom:14px;">HOB — ${esc(h['Bill Number'])}
       <span class="status ${stCls}" style="margin-left:8px;font-size:12px;">${esc(h['Status'])}</span>
     </h3>
+
+    ${closureBanner}
 
     <!-- Header summary -->
     <div class="grid-3" style="margin-bottom:14px;">
@@ -8789,7 +8812,7 @@ async function viewHOBById(billNum) {
     </div>
 
     <!-- Actions -->
-    <div class="actions-row" style="justify-content:flex-end;gap:8px;">${actionBtns}</div>
+    <div class="actions-row" style="justify-content:flex-end;gap:8px;">${reviseBtn}${actionBtns}</div>
   `, 'large');
 }
 
@@ -9532,9 +9555,10 @@ function renderWOCList() {
       <button class="btn btn-ghost btn-sm" onclick="printWOCById('${esc(c['WOC Number'])}')">Print</button>`;
     if (perms.canCreateWOB && st === 'Pending Approval') {
       ab += `<button class="btn btn-primary btn-sm" onclick="approveWOC('${esc(c['WOC Number'])}')">Approve</button>
-        <button class="btn btn-danger btn-sm" onclick="promptReject('WOC','${esc(c['WOC Number'])}')">Reject</button>`;
+        <button class="btn btn-warn btn-sm" onclick="promptReject('WOC','${esc(c['WOC Number'])}','correction')">↩ Return</button>
+        <button class="btn btn-danger btn-sm" onclick="promptReject('WOC','${esc(c['WOC Number'])}','reject')">✕ Reject</button>`;
     }
-    if (perms.canCreateWOC && st === 'Rejected') {
+    if (perms.canCreateWOC && st === 'Rejected - Correction') {
       ab += `<button class="btn btn-warn btn-sm" onclick="reviseWOC('${esc(c['WOC Number'])}')">✎ Revise &amp; Resubmit</button>`;
     }
     const rr = c['Rejection Reason'] ? `<br><span style="font-size:11px;color:var(--danger);">Reason: ${esc(c['Rejection Reason'])}</span>` : '';
@@ -9544,7 +9568,7 @@ function renderWOCList() {
       <td class="mono">${esc(c['WO Number'])}</td>
       <td>${esc(c['Vendor Name'])}</td>
       <td class="num mono">${fmtINRSym(c['Gross Value'])}</td>
-      <td><span class="status ${st.toLowerCase()}">${esc(st)}</span>${rr}</td>
+      <td><span class="status ${st === 'Rejected - Correction' ? 'rejected-correction' : st.toLowerCase()}">${esc(st === 'Rejected - Correction' ? 'Needs Correction' : st)}</span>${rr}</td>
       <td class="center" style="white-space:nowrap;">${ab}</td>
     </tr>`;
   }).join('');
@@ -9740,6 +9764,7 @@ async function reviseWOC(wocNum) {
   toast('Loading certification for revision…','info');
   const r = await apiGetWOCDetails(wocNum);
   if (!r.ok) { toast(r.error,'error'); return; }
+  if (r.header['Status'] !== 'Rejected - Correction') { toast('Only certifications returned for correction can be revised','error'); return; }
   // Re-open newWOC form pre-filled
   await newWOC();
   document.getElementById('woc_woSelect').value = r.header['WO Number'];
@@ -9811,9 +9836,10 @@ function renderWOBList() {
       <button class="btn btn-ghost btn-sm" onclick="printWOBById('${esc(b['Bill Number'])}')">Print</button>`;
     if (perms.canApproveBill && st === 'Pending Approval') {
       ab += `<button class="btn btn-primary btn-sm" onclick="approveWOB('${esc(b['Bill Number'])}')">Approve</button>
-        <button class="btn btn-danger btn-sm" onclick="promptReject('WOB','${esc(b['Bill Number'])}')">Reject</button>`;
+        <button class="btn btn-warn btn-sm" onclick="promptReject('WOB','${esc(b['Bill Number'])}','correction')">↩ Return</button>
+        <button class="btn btn-danger btn-sm" onclick="promptReject('WOB','${esc(b['Bill Number'])}','reject')">✕ Reject</button>`;
     }
-    if (perms.canCreateWOB && st === 'Rejected') {
+    if (perms.canCreateWOB && st === 'Rejected - Correction') {
       ab += `<button class="btn btn-warn btn-sm" onclick="reviseWOB('${esc(b['Bill Number'])}')">✎ Revise &amp; Resubmit</button>`;
     }
     const rr = b['Rejection Reason'] ? `<br><span style="font-size:11px;color:var(--danger);">Reason: ${esc(b['Rejection Reason'])}</span>` : '';
@@ -9827,7 +9853,7 @@ function renderWOBList() {
       <td class="num mono">${fmtINRSym(b['Net Payable'])}</td>
       <td class="num mono" style="color:var(--accent);">${fmtINRSym(b['Total Paid']||0)}</td>
       <td class="num mono" style="color:${num(b['Outstanding'])>0.005?'var(--warn)':'var(--muted)'};">${fmtINRSym(b['Outstanding']||0)}</td>
-      <td><span class="status ${st.toLowerCase().replace(' ','-')}">${esc(st)}</span>${rr}</td>
+      <td><span class="status ${st === 'Rejected - Correction' ? 'rejected-correction' : st.toLowerCase().replace(/ /g,'-')}">${esc(st === 'Rejected - Correction' ? 'Needs Correction' : st)}</span>${rr}</td>
       <td class="center" style="white-space:nowrap;">${ab}</td>
     </tr>`;
   }).join('');
@@ -9949,7 +9975,7 @@ async function onWOBWOCChange() {
     document.getElementById('wob_retentionPct').value = woRes.header['Retention %']??5;
     // Mob advance outstanding
     const mobAdvTotal = num(woRes.header['Mob Advance Amount'])||(num(woRes.header['Total Amount'])*num(woRes.header['Mob Advance %']||0)/100);
-    const { data:prevBills } = await sb.from('wo_bills').select('mob_advance_recovery').eq('wo_number', woNum).neq('status','Rejected');
+    const { data:prevBills } = await sb.from('wo_bills').select('mob_advance_recovery').eq('wo_number', woNum).not('status','in','("Rejected","Rejected - Correction")');
     const mobAdvRecovered = (prevBills||[]).reduce((s,r)=>s+num(r.mob_advance_recovery),0);
     const mobAdvOS = Math.max(0, mobAdvTotal - mobAdvRecovered);
     document.getElementById('wob_mobAdvHint').textContent = 'O/S Mob. Advance: ' + fmtINRSym(mobAdvOS);
@@ -10112,6 +10138,7 @@ async function reviseWOB(billNum) {
   if (!hasPerm('canCreateWOB')) { toast('Only Planning/QS can revise WO bills','error'); return; }
   const r = await apiGetWOBDetails(billNum);
   if (!r.ok) { toast(r.error,'error'); return; }
+  if (r.header['Status'] !== 'Rejected - Correction') { toast('Only bills returned for correction can be revised','error'); return; }
   const h = r.header; const items = r.items||[]; const extraLines = r.extraLines||[];
 
   // Open WOB form pre-filled
@@ -10228,7 +10255,7 @@ async function viewWOBById(billNum) {
     prevMap[k].amount += num(it.amount);
   });
 
-  const stCls = h['Status']==='Unpaid'||h['Status']==='Paid'?'approved':h['Status']==='Rejected'?'rejected':'pending-approval';
+  const stCls = h['Status']==='Unpaid'||h['Status']==='Paid'?'approved':h['Status']==='Rejected'?'rejected':h['Status']==='Rejected - Correction'?'rejected-correction':'pending-approval';
 
   // ── Previous WOs card ────────────────────────────────────────────────────
   const allWOs = [...new Set([...(h['WO Number']?[h['WO Number']]:[]),...priorWONums])];
@@ -10324,14 +10351,29 @@ async function viewWOBById(billNum) {
     <button class="btn btn-ghost btn-sm" onclick="printWOBById('${esc(billNum)}')">🖨 Print</button>
     ${perms.canApproveBill && isPending
       ? `<button class="btn btn-primary btn-sm" onclick="approveWOB('${esc(billNum)}');closeModal();">✔ Approve</button>
-         <button class="btn btn-danger btn-sm" onclick="closeModal();promptReject('WOB','${esc(billNum)}')">✕ Reject</button>`
+         <button class="btn btn-warn btn-sm"    onclick="closeModal();promptReject('WOB','${esc(billNum)}','correction')">↩ Return for Correction</button>
+         <button class="btn btn-danger btn-sm"  onclick="closeModal();promptReject('WOB','${esc(billNum)}','reject')">✕ Reject</button>`
       : ''}
     <button class="btn btn-ghost" onclick="closeModal()">Close</button>`;
+
+  const closureBanner = (h['Status'] === 'Rejected' || h['Status'] === 'Rejected - Correction') ? `
+    <div style="background:${h['Status']==='Rejected - Correction'?'#fff7ed':'#fee2e2'};border:1px solid ${h['Status']==='Rejected - Correction'?'#fcd34d':'#fca5a5'};border-radius:6px;padding:10px 14px;margin-bottom:14px;">
+      <div style="font-size:11px;font-weight:700;color:${h['Status']==='Rejected - Correction'?'#92400e':'#991b1b'};text-transform:uppercase;margin-bottom:4px;">
+        ${h['Status']==='Rejected - Correction'?'Returned for Correction':'Rejected'}
+      </div>
+      ${h['Rejection Reason']?`<div style="font-size:12px;color:var(--text);">${esc(h['Rejection Reason'])}</div>`:''}
+    </div>` : '';
+
+  const reviseBtn = (perms.canCreateWOB && h['Status'] === 'Rejected - Correction')
+    ? `<button class="btn btn-warn btn-sm" onclick="closeModal();reviseWOB('${esc(billNum)}')">✎ Revise &amp; Resubmit</button>`
+    : '';
 
   openModal(`
     <h3 style="margin-bottom:14px;">WOB — ${esc(h['Bill Number'])}
       <span class="status ${stCls}" style="margin-left:8px;font-size:12px;">${esc(h['Status'])}</span>
     </h3>
+
+    ${closureBanner}
 
     <!-- Header summary -->
     <div class="grid-3" style="margin-bottom:14px;">
@@ -10390,7 +10432,7 @@ async function viewWOBById(billNum) {
     </div>
 
     <!-- Actions -->
-    <div class="actions-row" style="justify-content:flex-end;gap:8px;">${actionBtns}</div>
+    <div class="actions-row" style="justify-content:flex-end;gap:8px;">${reviseBtn}${actionBtns}</div>
   `, 'large');
 }
 
@@ -10729,7 +10771,7 @@ async function newRRR() {
 async function onRRRWOChange() {
   const woNum=document.getElementById('rrr_woSelect').value;
   if (!woNum) return;
-  const {data:bills}=await sb.from('wo_bills').select('bill_number,retention_amount').eq('wo_number',woNum).neq('status','Rejected');
+  const {data:bills}=await sb.from('wo_bills').select('bill_number,retention_amount').eq('wo_number',woNum).not('status','in','("Rejected","Rejected - Correction")');
   const {data:released}=await sb.from('wo_retention_releases').select('amount').eq('wo_number',woNum).in('status',['Paid','Partial Paid','Unpaid']);
   const totalHeld=(bills||[]).reduce((s,r)=>s+num(r.retention_amount),0);
   const totalReleased=(released||[]).reduce((s,r)=>s+num(r.amount),0);
@@ -11436,40 +11478,62 @@ async function loadPayConfHistory() {
 // ============================================================
 // REJECTION MODAL — shared for HOC and HOB
 // ============================================================
-function promptReject(docType, docNum) {
+// promptReject — shared for HOB, HOC, WOB, WOC
+// mode: 'correction' → Rejected - Correction (revisable)
+//       'reject'     → Rejected (terminal)
+// Call sites that only offer one mode still pass a single button;
+// sites with both modes (view modals, list rows) pass mode directly.
+// ============================================================
+function promptReject(docType, docNum, mode) {
   const labels = { HOC:'HO Certification', HOB:'HO Bill', WOC:'WO Certification', WOB:'WO Bill' };
   const label = labels[docType] || 'Document';
+  const isCorrection = mode === 'correction';
+  const colour  = isCorrection ? 'var(--warn)'   : 'var(--danger)';
+  const btnCls  = isCorrection ? 'btn-warn'       : 'btn-danger';
+  const title   = isCorrection ? `↩ Return ${label} for Correction` : `✕ Reject ${label}`;
+  const desc    = isCorrection
+    ? `The ${label.toLowerCase()} creator will be able to edit and resubmit after making corrections.`
+    : `This will permanently reject <strong>${esc(docNum)}</strong>. The creator will not be able to revise it.`;
+  const placeholder = isCorrection
+    ? 'Describe what needs to be corrected…'
+    : 'State the reason for outright rejection…';
   openModal(`
-    <h3 style="color:var(--danger);">✕ Reject ${label}</h3>
-    <p style="color:var(--muted);font-size:13px;margin-bottom:16px;">
-      Rejecting <strong>${esc(docNum)}</strong>. The ${label.toLowerCase()} will be sent back for revision.
-    </p>
+    <h3 style="color:${colour};">${title}</h3>
+    <p style="color:var(--muted);font-size:13px;margin-bottom:16px;">${desc}</p>
     <div class="field">
-      <label class="req">Reason for Rejection</label>
-      <textarea id="rejectReasonInput" rows="3" placeholder="Describe the issue clearly so the creator can fix it…" style="background:var(--input-bg);color:var(--text);border:1px solid var(--border);border-radius:4px;padding:9px 10px;font-size:13px;font-family:inherit;width:100%;resize:vertical;"></textarea>
+      <label class="req">${isCorrection ? 'Correction Notes' : 'Reason for Rejection'}</label>
+      <textarea id="rejectReasonInput" rows="3" placeholder="${placeholder}"
+        style="background:var(--input-bg);color:var(--text);border:1px solid var(--border);border-radius:4px;padding:9px 10px;font-size:13px;font-family:inherit;width:100%;resize:vertical;"></textarea>
     </div>
     <div class="actions-row" style="margin-top:14px;">
-      <button class="btn btn-danger" onclick="confirmReject('${esc(docType)}','${esc(docNum)}')">Confirm Rejection</button>
+      <button class="btn ${btnCls}" onclick="confirmReject('${esc(docType)}','${esc(docNum)}','${mode||'reject'}')">
+        ${isCorrection ? '↩ Return for Correction' : '✕ Confirm Rejection'}
+      </button>
       <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
     </div>
   `);
   setTimeout(() => document.getElementById('rejectReasonInput')?.focus(), 100);
 }
 
-async function confirmReject(docType, docNum) {
+async function confirmReject(docType, docNum, mode) {
   const reason = (document.getElementById('rejectReasonInput')?.value || '').trim();
-  if (!reason) { toast('Please enter a rejection reason','error'); return; }
+  if (!reason) { toast('Please enter a reason','error'); return; }
+  const newStatus = mode === 'correction' ? 'Rejected - Correction' : 'Rejected';
   let r;
-  if (docType === 'HOC') r = await apiUpdateHOCStatus(docNum, 'Rejected', reason);
-  else if (docType === 'HOB') r = await apiUpdateHOBStatus(docNum, 'Rejected', reason);
-  else if (docType === 'WOC') r = await apiUpdateWOCStatus(docNum, 'Rejected', reason);
-  else if (docType === 'WOB') r = await apiUpdateWOBStatus(docNum, 'Rejected', reason);
+  if      (docType === 'HOC') r = await apiUpdateHOCStatus(docNum, newStatus, reason);
+  else if (docType === 'HOB') r = await apiUpdateHOBStatus(docNum, newStatus, reason);
+  else if (docType === 'WOC') r = await apiUpdateWOCStatus(docNum, newStatus, reason);
+  else if (docType === 'WOB') r = await apiUpdateWOBStatus(docNum, newStatus, reason);
   else r = { ok: false, error: 'Unknown type' };
   if (r.ok) {
     closeModal();
     const labels = { HOC:'Certification', HOB:'Bill', WOC:'WO Certification', WOB:'WO Bill' };
-    flashSuccess((labels[docType]||'Document') + ' ' + docNum + ' rejected');
-    if (docType === 'HOC') { state.certifications=[]; loadHOCList(); }
+    const docLabel = labels[docType] || 'Document';
+    const msg = mode === 'correction'
+      ? `${docLabel} ${docNum} — Returned for Correction`
+      : `${docLabel} ${docNum} — Rejected`;
+    flashSuccess(msg);
+    if      (docType === 'HOC') { state.certifications=[]; loadHOCList(); }
     else if (docType === 'HOB') { state.bills=[]; loadHOBList(); }
     else if (docType === 'WOC') { state.woCertifications=[]; loadWOCList(); }
     else if (docType === 'WOB') { state.woBills=[]; loadWOBList(); }
