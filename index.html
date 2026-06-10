@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Penguin-Procurement Suite v80 — Urban Excellence LLP · Poetry of Earth</title>
+<title>Penguin-Procurement Suite v83 — Urban Excellence LLP · Poetry of Earth</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <style>
@@ -151,6 +151,7 @@ td input, td select { padding: 5px 6px; background: var(--input-bg); color: var(
 .toast.success { background: var(--accent); }
 .toast.error { background: var(--danger); }
 .toast.info { background: var(--accent-2); }
+.toast.warning { background: #b45309; }
 .toast.warn { background: var(--warn); }
 @keyframes slideIn { from { transform: translateX(20px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
 
@@ -14210,6 +14211,48 @@ function selectMaterialItem(inputId, resultsId, name, uom, matCode) {
     const uomEl = row.querySelector('.pu_uom') || row.querySelector('.po_uom');
     if (uomEl) uomEl.value = uom;
   }
+  if (input) blockDupMaterial(input);
+}
+
+// v83: duplicate material lines are BLOCKED at entry in MIR and PO forms.
+// Downstream GRN received-qty attribution clubs by material_name, so duplicate
+// lines on one document corrupt tracking — genuinely different variants must be
+// distinct materials in the material master. Entry block here; save-time gate
+// in saveMIR/savePO catches edits that bypass it.
+function blockDupMaterial(inputEl) {
+  if (!inputEl) return false;
+  const name = (inputEl.value||'').trim().toLowerCase();
+  if (!name) return false;
+  const tbody = inputEl.closest('tbody');
+  if (!tbody) return false;
+  const matInputs = [...tbody.querySelectorAll('.pu_material, .po_material')];
+  const dupAt = matInputs.findIndex(el =>
+    el !== inputEl && (el.value||'').trim().toLowerCase() === name);
+  if (dupAt === -1) return false;
+  const dupRow = matInputs[dupAt].closest('tr');
+  const rowNo = dupRow ? ([...tbody.children].indexOf(dupRow) + 1) : (dupAt + 1);
+  toast(`"${inputEl.value.trim()}" already exists at row ${rowNo} — add the quantity to that line. Duplicate lines are not allowed; distinct variants need distinct materials in the master.`, 'error', 6500);
+  inputEl.value = '';
+  if (inputEl.dataset) inputEl.dataset.matCode = '';
+  if (dupRow) {
+    dupRow.style.outline = '2px solid #ef4444';
+    dupRow.style.outlineOffset = '-2px';
+    setTimeout(() => { dupRow.style.outline = ''; dupRow.style.outlineOffset = ''; }, 3000);
+  }
+  return true;
+}
+
+// v83: save-time duplicate gate — returns the first duplicated material name
+// (case-insensitive) with its row numbers, or null if clean.
+function findDupMaterial(items) {
+  const seen = {};
+  for (let i = 0; i < items.length; i++) {
+    const k = (items[i].material_name||'').trim().toLowerCase();
+    if (!k) continue;
+    if (seen[k] != null) return { name: items[i].material_name, rows: [seen[k]+1, i+1] };
+    seen[k] = i;
+  }
+  return null;
 }
 
 // ============================================================
@@ -14517,7 +14560,7 @@ function addMIRItem() {
     <td>${i+1}</td>
     <td style="min-width:280px;"><div style="position:relative;">
       <input class="pu_material" id="mirMat_${i}" placeholder="Type material…" style="width:100%;"
-        oninput="materialTypeahead('mirMat_${i}','mirMatRes_${i}')" autocomplete="off">
+        oninput="materialTypeahead('mirMat_${i}','mirMatRes_${i}')" onchange="blockDupMaterial(this)" autocomplete="off">
       <div class="typeahead-results" id="mirMatRes_${i}" style="min-width:380px;position:absolute;top:100%;left:0;z-index:9999;box-shadow:0 4px 16px rgba(0,0,0,.15);"></div>
     </div></td>
     <td><input class="pu_uom" id="mirUom_${i}" style="width:70px;" placeholder="UOM"></td>
@@ -14548,6 +14591,9 @@ async function saveMIR() {
     });
   });
   if (!items.length) { toast('Add at least one material item','error'); return; }
+  // v83: duplicate-line gate (entry block is bypassable via later edits)
+  const mirDup = findDupMaterial(items);
+  if (mirDup) { toast(`"${mirDup.name}" appears on rows ${mirDup.rows.join(' and ')} — merge into one line before saving`,'error',6000); return; }
   pbShow('Saving MIR…');
   try {
     const mirNumber = await nextPUDocNumber('MIR');
@@ -14987,12 +15033,21 @@ function _rollupMIRHeaderFromItems(items) {
 
 async function _refreshAllMIRItems(mirNum) {
   if (!mirNum) return;
-  const [{data:items},{data:rfqLinks},{data:poLinks}] = await Promise.all([
+  const [itemsRes, rfqRes, poRes] = await Promise.all([
     // Include material_name + po_number so we can handle legacy POs (no po_links row)
     sb.from('pu_mir_items').select('sno,qty_required,material_name,po_number').eq('mir_number',mirNum),
     sb.from('pu_mir_item_rfq_links').select('sno,qty_assigned').eq('mir_number',mirNum),
     sb.from('pu_mir_item_po_links').select('sno,po_number,qty_linked,qty_received,qty_short_closed,is_short_closed').eq('mir_number',mirNum),
   ]);
+  // GUARD: if the po_links fetch failed, a null result would make every linked item
+  // look "legacy / link-less" and the bootstrap upsert below would OVERWRITE real
+  // links with proxy values (resetting is_short_closed etc). Abort instead.
+  if (itemsRes.error || rfqRes.error || poRes.error) {
+    const msg = (itemsRes.error||rfqRes.error||poRes.error).message;
+    toast('MIR refresh skipped — fetch failed: '+msg,'error');
+    return;
+  }
+  const items = itemsRes.data; const rfqLinks = rfqRes.data; let poLinks = poRes.data;
   if (!items || !items.length) return;
 
   // ── Collect ALL PO numbers: from po_links + legacy po_number on items ──────
@@ -15060,12 +15115,16 @@ async function _refreshAllMIRItems(mirNum) {
         };
       });
     if (bootstrapLinks.length) {
-      await sb.from('pu_mir_item_po_links').upsert(bootstrapLinks,
+      const {error:upErr} = await sb.from('pu_mir_item_po_links').upsert(bootstrapLinks,
         {onConflict:'mir_number,sno,po_number', ignoreDuplicates:false});
-      bootstrapLinks.forEach(l => {
-        (poLinks || (poLinks = [])).push(l);
-        snosWithLinks.add(l.sno);
-      });
+      if (upErr) {
+        toast('MIR link bootstrap failed: '+upErr.message,'error');
+      } else {
+        bootstrapLinks.forEach(l => {
+          (poLinks || (poLinks = [])).push(l);
+          snosWithLinks.add(l.sno);
+        });
+      }
     }
   }
 
@@ -16715,7 +16774,7 @@ function addPOItem() {
     <td>${i+1}</td>
     <td style="min-width:280px;"><div style="position:relative;">
       <input class="po_material" id="poMat_${i}" placeholder="Type material…" style="width:100%;"
-        oninput="materialTypeahead('poMat_${i}','poMatRes_${i}')" autocomplete="off">
+        oninput="materialTypeahead('poMat_${i}','poMatRes_${i}')" onchange="blockDupMaterial(this)" autocomplete="off">
       <div class="typeahead-results" id="poMatRes_${i}" style="min-width:380px;position:absolute;top:100%;left:0;z-index:9999;box-shadow:0 4px 16px rgba(0,0,0,.15);"></div>
     </div></td>
     <td><input class="po_uom" id="poUom_${i}" style="width:65px;"></td>
@@ -16825,6 +16884,9 @@ async function savePO() {
   if(!vendor){toast('Vendor required','error');return;}
   if(!date){toast('PO Date required','error');return;}
   const items=getPOItemsData();
+  // v83: duplicate-line gate (entry block is bypassable via later edits)
+  const poDup = findDupMaterial(items);
+  if (poDup) { toast(`"${poDup.name}" appears on rows ${poDup.rows.join(' and ')} — merge into one line before saving`,'error',6000); return; }
   if(!items.length){toast('Add at least one line item','error');return;}
   let basic=0,cgst=0,sgst=0,igst=0;
   items.forEach(it=>{basic+=it.base_amount;cgst+=it.cgst_amount;sgst+=it.sgst_amount;igst+=it.igst_amount;});
@@ -16893,20 +16955,43 @@ async function savePO() {
     const poMirRef    = document.getElementById('poForm').dataset.poMirNum
                      || document.getElementById('po_mirRef')?.value || null;
 
-    // Path A: QC-driven PO — trace QC → RFQ → rfq_items for UUIDs
+    // Path A: QC-driven PO — resolve line identity via pu_mir_item_rfq_links (sno-keyed,
+    // duplicate-name safe). v82: this replaces the name-keyed pu_rfq_items map, which
+    // resolved duplicate material names last-wins. Legacy RFQs without link rows fall
+    // back to the old map.
     if (qcRef && qcRef.startsWith('QC/')) {
       const {data:qcH2} = await sb.from('pu_quote_comparison')
         .select('rfq_number').eq('qc_number',qcRef).maybeSingle();
       if (qcH2?.rfq_number) {
-        const {data:rfqMirIds} = await sb.from('pu_rfq_items')
-          .select('material_name,procurement_line_id,procurement_source')
-          .eq('rfq_number', qcH2.rfq_number);
-        (rfqMirIds||[]).forEach(r => {
-          if (r.procurement_line_id) poLineIdMap[r.material_name] = {
-            procurement_line_id: r.procurement_line_id,
-            procurement_source:  r.procurement_source || 'mir',
-          };
-        });
+        const {data:rfqLinks2} = await sb.from('pu_mir_item_rfq_links')
+          .select('mir_number,sno,material_name').eq('rfq_number', qcH2.rfq_number);
+        if ((rfqLinks2||[]).length) {
+          const linkMir = rfqLinks2[0].mir_number;
+          const {data:mirLines2} = await sb.from('pu_mir_items')
+            .select('sno,procurement_line_id')
+            .eq('mir_number', linkMir)
+            .in('sno', rfqLinks2.map(l=>l.sno));
+          const snoToPlid2 = {};
+          (mirLines2||[]).forEach(r => { if (r.procurement_line_id) snoToPlid2[r.sno] = r.procurement_line_id; });
+          rfqLinks2.forEach(l => {
+            if (snoToPlid2[l.sno]) poLineIdMap[l.material_name] = {
+              procurement_line_id: snoToPlid2[l.sno],
+              procurement_source:  'mir',
+            };
+          });
+        }
+        // Legacy fallback: RFQ predates link rows — use the old rfq_items name map
+        if (!Object.keys(poLineIdMap).length) {
+          const {data:rfqMirIds} = await sb.from('pu_rfq_items')
+            .select('material_name,procurement_line_id,procurement_source')
+            .eq('rfq_number', qcH2.rfq_number);
+          (rfqMirIds||[]).forEach(r => {
+            if (r.procurement_line_id) poLineIdMap[r.material_name] = {
+              procurement_line_id: r.procurement_line_id,
+              procurement_source:  r.procurement_source || 'mir',
+            };
+          });
+        }
       }
     }
     // Path B: Direct PO from MIR — fetch mir_items UUIDs
@@ -16941,17 +17026,40 @@ async function savePO() {
         if(rfqH?.mir_number) {
           const mirNum = rfqH.mir_number;
           const {data:mirItemRecs} = await sb.from('pu_mir_items')
-            .select('sno,material_name').eq('mir_number',mirNum);
-          const matToSno = {};
-          (mirItemRecs||[]).forEach(it => { matToSno[it.material_name] = it.sno; });
+            .select('sno,material_name,procurement_line_id').eq('mir_number',mirNum);
+          // v82: plid-first sno resolution — duplicate material names resolve to the
+          // correct line; name match retained only as fallback for legacy null plids.
+          const plidToSno = {}; const matToSno = {};
+          (mirItemRecs||[]).forEach(it => {
+            if (it.procurement_line_id) plidToSno[it.procurement_line_id] = it.sno;
+            matToSno[it.material_name] = it.sno;
+          });
           const poLinkPayloads = items
-            .filter(it => matToSno[it.material_name])
-            .map(it => ({
-              mir_number:mirNum, sno:matToSno[it.material_name],
-              material_name:it.material_name, po_number:poNumber,
-              qty_linked:it.qty, qty_received:0, qty_short_closed:0, is_short_closed:false
-            }));
-          if(poLinkPayloads.length) await sb.from('pu_mir_item_po_links').insert(poLinkPayloads);
+            .map(it => {
+              const plid = poLineIdMap[it.material_name]?.procurement_line_id;
+              const sno  = (plid && plidToSno[plid] != null) ? plidToSno[plid] : matToSno[it.material_name];
+              return sno != null ? {
+                mir_number:mirNum, sno,
+                material_name:it.material_name, po_number:poNumber,
+                qty_linked:it.qty, qty_received:0, qty_short_closed:0, is_short_closed:false
+              } : null;
+            })
+            .filter(Boolean);
+          // v82: merge duplicate snos (two same-named PO lines -> one link, summed qty)
+          // so the unique constraint can't fail the save
+          {
+            const bySno = {};
+            poLinkPayloads.forEach(p2 => {
+              if (bySno[p2.sno]) bySno[p2.sno].qty_linked += p2.qty_linked;
+              else bySno[p2.sno] = p2;
+            });
+            poLinkPayloads.length = 0;
+            Object.values(bySno).forEach(p2 => poLinkPayloads.push(p2));
+          }
+          if(poLinkPayloads.length){
+            const {error:plErr} = await sb.from('pu_mir_item_po_links').insert(poLinkPayloads);
+            if(plErr) throw new Error('MIR-PO link insert failed: '+plErr.message);
+          }
           // Keep legacy po_number field in sync
           await sb.from('pu_mir_items').update({po_number:poNumber})
             .eq('mir_number',mirNum).eq('rfq_number',qcH.rfq_number);
@@ -16965,18 +17073,41 @@ async function savePO() {
       const snos = directSnos ? directSnos.split(',').map(Number).filter(Boolean) : [];
       if(snos.length) {
         const {data:mirItemRecs} = await sb.from('pu_mir_items')
-          .select('sno,material_name').eq('mir_number',directMir).in('sno',snos);
-        const matToSno = {};
-        (mirItemRecs||[]).forEach(it => { matToSno[it.material_name] = it.sno; });
-        // Match PO items to MIR items by material_name; use actual PO item qty as qty_linked
+          .select('sno,material_name,procurement_line_id').eq('mir_number',directMir).in('sno',snos);
+        // v82: plid-first sno resolution within the selected snos; name fallback for
+        // legacy null plids. Selection scoping (.in sno) is retained as before.
+        const plidToSno = {}; const matToSno = {};
+        (mirItemRecs||[]).forEach(it => {
+          if (it.procurement_line_id) plidToSno[it.procurement_line_id] = it.sno;
+          matToSno[it.material_name] = it.sno;
+        });
+        // Match PO items to MIR items: plid first, name fallback; PO-only extras drop out
         const poLinkPayloads = items
-          .filter(it => matToSno[it.material_name])
-          .map(it => ({
-            mir_number:directMir, sno:matToSno[it.material_name],
-            material_name:it.material_name, po_number:poNumber,
-            qty_linked:it.qty, qty_received:0, qty_short_closed:0, is_short_closed:false
-          }));
-        if(poLinkPayloads.length) await sb.from('pu_mir_item_po_links').insert(poLinkPayloads);
+          .map(it => {
+            const plid = poLineIdMap[it.material_name]?.procurement_line_id;
+            const sno  = (plid && plidToSno[plid] != null) ? plidToSno[plid] : matToSno[it.material_name];
+            return sno != null ? {
+              mir_number:directMir, sno,
+              material_name:it.material_name, po_number:poNumber,
+              qty_linked:it.qty, qty_received:0, qty_short_closed:0, is_short_closed:false
+            } : null;
+          })
+          .filter(Boolean);
+        // v82: merge duplicate snos (two same-named PO lines -> one link, summed qty)
+        // so the unique constraint can't fail the save
+        {
+          const bySno = {};
+          poLinkPayloads.forEach(p2 => {
+            if (bySno[p2.sno]) bySno[p2.sno].qty_linked += p2.qty_linked;
+            else bySno[p2.sno] = p2;
+          });
+          poLinkPayloads.length = 0;
+          Object.values(bySno).forEach(p2 => poLinkPayloads.push(p2));
+        }
+        if(poLinkPayloads.length){
+          const {error:plErr} = await sb.from('pu_mir_item_po_links').insert(poLinkPayloads);
+          if(plErr) throw new Error('MIR-PO link insert failed: '+plErr.message);
+        }
         // Keep legacy po_number field in sync for items included in this PO
         await sb.from('pu_mir_items').update({po_number:poNumber})
           .eq('mir_number',directMir).in('sno',snos);
@@ -17255,12 +17386,17 @@ async function viewPO(poNum) {
       ? 'color:#15803d;font-weight:600;'
       : (received > 0 ? 'color:#b45309;font-weight:600;' : 'color:#64748b;');
     const breakdown = breakdownMap[it.material_name] || [];
+    // v82: flag lines added at PO preparation (no indent trail) — only meaningful
+    // when the PO is MIR/QC-traced; standalone direct POs would badge every line.
+    const directBadge = ((h.mir_number || h.qc_number) && it.procurement_source === 'direct_po')
+      ? ` <span style="display:inline-block;margin-left:6px;padding:1px 7px;font-size:10px;font-weight:700;color:#92400e;background:#fef3c7;border:1px solid #fde68a;border-radius:10px;vertical-align:middle;" title="This item was added during PO preparation and does not trace to any MIR line">Not in MIR</span>`
+      : '';
     const footnote = breakdown.length ? `<div style="font-size:10px;color:var(--muted);margin-top:3px;line-height:1.45;">
       ${breakdown.map(b => `${fmtINR(b.qty)} ${esc(it.uom||'')} via <span class="mono">${esc(b.grn_number)}</span>${b.grn_date?' on '+fmtDate(b.grn_date):''}`).join(' · ')}
     </div>` : '';
     return `<tr>
       <td>${it.sno}</td>
-      <td>${esc(it.material_name)}${footnote}</td>
+      <td>${esc(it.material_name)}${directBadge}${footnote}</td>
       <td>${esc(it.uom)}</td>
       <td class="num mono">${fmtINR(ordered)}</td>
       <td class="num mono" style="color:#15803d;">${fmtINR(received)}</td>
@@ -17372,41 +17508,57 @@ async function _rollupMIRAfterPOTermination(mirNum, terminatedPONum, action /* '
     }
 
     // Check if po_links exist for this PO (they won't for legacy POs approved before schema migration)
-    const {data:existingLinks} = await sb.from('pu_mir_item_po_links')
+    const {data:existingLinks, error:elErr} = await sb.from('pu_mir_item_po_links')
       .select('id,material_name,qty_linked').eq('po_number',terminatedPONum).eq('mir_number',mirNum);
+    // GUARD: a failed SELECT must NOT be read as "no links" — that is exactly how a
+    // duplicate bootstrap insert happened on 2026-05-27. Abort and let the user retry.
+    if (elErr) {
+      toast('Short-close link check failed: '+elErr.message+' — please retry','error');
+      return;
+    }
 
     if (!(existingLinks||[]).length) {
       // Legacy PO — bootstrap po_links from pu_po_items
+      // v82: plid-first sno resolution; material_name fallback for legacy null plids
       const [{data:poItems},{data:mirItemRecs}] = await Promise.all([
-        sb.from('pu_po_items').select('material_name,qty').eq('po_number',terminatedPONum),
-        sb.from('pu_mir_items').select('sno,material_name').eq('mir_number',mirNum),
+        sb.from('pu_po_items').select('material_name,qty,procurement_line_id').eq('po_number',terminatedPONum),
+        sb.from('pu_mir_items').select('sno,material_name,procurement_line_id').eq('mir_number',mirNum),
       ]);
-      const matToSno = {};
-      (mirItemRecs||[]).forEach(it => { matToSno[it.material_name] = it.sno; });
+      const plidToSno = {}; const matToSno = {};
+      (mirItemRecs||[]).forEach(it => {
+        if (it.procurement_line_id) plidToSno[it.procurement_line_id] = it.sno;
+        matToSno[it.material_name] = it.sno;
+      });
       const bootstrapLinks = (poItems||[])
-        .filter(it => matToSno[it.material_name])
         .map(it => {
+          const sno = (it.procurement_line_id && plidToSno[it.procurement_line_id] != null)
+            ? plidToSno[it.procurement_line_id] : matToSno[it.material_name];
+          if (sno == null) return null;
           const rec = receivedByMat[it.material_name]||0;
           const sc  = Math.max(0, (it.qty||0) - rec);
           return {
-            mir_number: mirNum, sno: matToSno[it.material_name],
+            mir_number: mirNum, sno,
             material_name: it.material_name, po_number: terminatedPONum,
             qty_linked: it.qty||0, qty_received: rec,
             qty_short_closed: sc, is_short_closed: true
           };
-        });
+        })
+        .filter(Boolean);
       if (bootstrapLinks.length) {
-        await sb.from('pu_mir_item_po_links').insert(bootstrapLinks);
+        const {error:bErr} = await sb.from('pu_mir_item_po_links').insert(bootstrapLinks);
+        if (bErr) toast('Short-close link insert failed: '+bErr.message,'error');
       }
     } else {
       // Links exist — update with actual received qty and SC flag
-      await Promise.all((existingLinks||[]).map(l => {
+      const updResults = await Promise.all((existingLinks||[]).map(l => {
         const rec = receivedByMat[l.material_name]||0;
         const sc  = Math.max(0, (l.qty_linked||0) - rec);
         return sb.from('pu_mir_item_po_links').update({
           qty_received:rec, qty_short_closed:sc, is_short_closed:true
         }).eq('id',l.id);
       }));
+      const updErr = updResults.find(r => r.error);
+      if (updErr) toast('Short-close link update failed: '+updErr.error.message,'error');
     }
   }
 
