@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Penguin-Procurement Suite v83 — Urban Excellence LLP · Poetry of Earth</title>
+<title>Penguin-Procurement Suite v90 — Urban Excellence LLP · Poetry of Earth</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <style>
@@ -3077,7 +3077,7 @@ input[type="number"] {
         <div class="table-wrap">
           <table>
             <thead><tr>
-              <th>#</th><th>Material</th><th>UOM</th><th>WBS Activity</th><th>Cost Subhead</th>
+              <th>#</th><th>Material</th><th>UOM</th><th>📦 Work Package</th><th>📍 Location Unit</th>
               <th class="num">Stock Available</th><th class="num">Qty to Issue</th>
               <th class="num">Latest Rate</th><th class="num">Amount</th><th></th>
             </tr></thead>
@@ -4325,32 +4325,10 @@ async function confirmOSUpload() {
     return;
   }
 
-  pbShow('Generating GRN number…');
+  pbShow('Saving opening stock…');
   try {
-    const grnNumber = await nextPUGRNNumber();
     const openDate  = validRows[0].open_date;
-
-    const { error: hErr } = await sb.from('pu_grn').insert({
-      grn_number: grnNumber,
-      grn_date: openDate,
-      po_number: null,
-      is_cash_purchase: true,
-      cash_purchase_ref: 'Opening Stock',
-      vendor_name: 'Opening Stock — 1st April',
-      vehicle_challan: 'Opening Stock',
-      invoice_no: 'Opening Stock',
-      invoice_date: openDate,
-      received_by: state.userName,
-      received_by_id: state.userId,
-      remarks: 'Bulk opening stock upload by Admin',
-      status: 'Verified',
-    });
-    if (hErr) throw new Error(hErr.message);
-
-    pbShow(`Uploading ${validRows.length} items…`);
-
     const items = validRows.map((r, i) => ({
-      grn_number: grnNumber,
       sno: i + 1,
       material_name: r.material_name,   // master name (not file_desc)
       material_code: r.material_code,   // guaranteed non-null by guard above
@@ -4364,10 +4342,26 @@ async function confirmOSUpload() {
       remarks: r.remarks || 'Opening Stock',
     }));
 
-    const { error: iErr } = await sb.from('pu_grn_items').insert(items);
-    if (iErr) throw new Error(iErr.message);
-
-    flashSuccess(`Opening Stock uploaded! GRN ${grnNumber} created with ${validRows.length} items.`);
+    // v90: header + all items atomically via RPC
+    const res = await puRPC('rpc_save_grn', {
+      fin_year: currentFY(),
+      header: {
+        grn_date: openDate,
+        po_number: null,
+        is_cash_purchase: true,
+        cash_purchase_ref: 'Opening Stock',
+        vendor_name: 'Opening Stock — 1st April',
+        vehicle_challan: 'Opening Stock',
+        invoice_no: 'Opening Stock',
+        invoice_date: openDate,
+        received_by: state.userName,
+        received_by_id: state.userId,
+        remarks: 'Bulk opening stock upload by Admin',
+        status: 'Verified',
+      },
+      items,
+    });
+    flashSuccess(`Opening Stock uploaded! GRN ${res.doc_number} created with ${validRows.length} items.`);
     resetOSUpload();
     loadOSHistory();
   } catch(e) {
@@ -14742,27 +14736,28 @@ async function saveMIR() {
   if (mirDup) { toast(`"${mirDup.name}" appears on rows ${mirDup.rows.join(' and ')} — merge into one line before saving`,'error',6000); return; }
   pbShow('Saving MIR…');
   try {
-    const mirNumber = await nextPUDocNumber('MIR');
-    const { error } = await sb.from('pu_mir').insert({
-      mir_number: mirNumber, mir_date: date,
-      required_by_date: document.getElementById('mir_requiredBy').value||null,
-      project: document.getElementById('mir_project').value,
-      purpose: document.getElementById('mir_purpose').value.trim()||null,
-      raised_by: state.userName, raised_by_id: state.userId,
-      remarks: document.getElementById('mir_remarks').value.trim()||null,
-      status: 'Pending Approval',
+    // v90: atomic create via RPC — number allocated in-transaction, all-or-nothing
+    const res = await puRPC('rpc_save_mir', {
+      fin_year: currentFY(),
+      header: {
+        mir_date: date,
+        required_by_date: document.getElementById('mir_requiredBy').value||null,
+        project: document.getElementById('mir_project').value,
+        purpose: document.getElementById('mir_purpose').value.trim()||null,
+        raised_by: state.userName, raised_by_id: state.userId,
+        remarks: document.getElementById('mir_remarks').value.trim()||null,
+        status: 'Pending Approval',
+      },
+      items: items.map((it)=>({
+        ...it,
+        item_status:         'Pending',
+        rfq_number:          null,
+        po_number:           null,
+        procurement_line_id: crypto.randomUUID(),  // v73: origin UUID for this MIR line
+        procurement_source:  'mir',
+      })),
     });
-    if (error) throw new Error(error.message);
-    await sb.from('pu_mir_items').insert(items.map((it,idx)=>({
-      ...it,
-      mir_number:          mirNumber,
-      item_status:         'Pending',
-      rfq_number:          null,
-      po_number:           null,
-      procurement_line_id: crypto.randomUUID(),  // v73: origin UUID for this MIR line
-      procurement_source:  'mir',
-    })));
-    flashSuccess('MIR ' + mirNumber + ' submitted for PM approval');
+    flashSuccess('MIR ' + res.doc_number + ' submitted for PM approval');
     closeMIRForm(); loadMIRList();
   } catch(e) { toast('Error: '+e.message,'error'); }
   finally { pbDone(); }
@@ -15913,44 +15908,37 @@ async function submitQCFromSelection(rfqNum) {
 
   pbShow('Submitting QC…');
   try {
-    const qcNumber = await nextPUDocNumber('QC');
-    const {error:qe} = await sb.from('pu_quote_comparison').insert({
-      qc_number:qcNumber, qc_date:today(),
-      rfq_number:rfqNum, prepared_by:state.userName, prepared_by_id:state.userId,
-      recommended_vendor_name:recName, recommended_vendor_code:recCode,
-      creator_remarks:`L1 vendor by grand total. Generated from ${quotes.length} quotes.`,
-      status:'Pending Approval',
+    // v90: atomic RPC — header + all vendors + all quote items + RFQ flip in one txn
+    const res = await puRPC('rpc_submit_qc', {
+      fin_year: currentFY(),
+      rfq_number: rfqNum,
+      header: {
+        qc_date:today(),
+        rfq_number:rfqNum, prepared_by:state.userName, prepared_by_id:state.userId,
+        recommended_vendor_name:recName, recommended_vendor_code:recCode,
+        creator_remarks:`L1 vendor by grand total. Generated from ${quotes.length} quotes.`,
+        status:'Pending Approval',
+      },
+      vendors: quotes.map((q, vi) => ({
+        quote: {
+          sno:vi+1,
+          vendor_code:q.vendor_code||null, vendor_name:q.vendor_name,
+          quote_ref:q.quote_ref||null, delivery_days:q.delivery_days||null,
+          payment_terms:q.payment_terms||null, tech_specs:q.tech_specs||null,
+          is_recommended: q.vendor_name===recName,
+        },
+        items: items
+          .filter(i=>i.rfq_quote_id===q.id)
+          .map((i, idx)=>({
+            rfq_item_sno: idx+1,
+            material_name:i.material_name, uom:i.uom,
+            qty_required:i.qty_required, unit_rate:i.unit_rate, gst_pct:i.gst_pct,
+            amount:i.amount,
+          })),
+      })),
     });
-    if (qe) throw new Error(qe.message);
 
-    // Copy each selected rfq_quote into pu_quotes, and rfq_quote_items into pu_quote_items
-    for (const [vi, q] of quotes.entries()) {
-      const {data:inserted, error:qve} = await sb.from('pu_quotes').insert({
-        qc_number:qcNumber, sno:vi+1,
-        vendor_code:q.vendor_code||null, vendor_name:q.vendor_name,
-        quote_ref:q.quote_ref||null, delivery_days:q.delivery_days||null,
-        payment_terms:q.payment_terms||null, tech_specs:q.tech_specs||null,
-        is_recommended: q.vendor_name===recName,
-      }).select().single();
-      if (qve||!inserted) throw new Error('Failed to save vendor quote: '+(qve?.message||'unknown'));
-      const qItems = items
-        .filter(i=>i.rfq_quote_id===q.id)
-        .map((i, idx)=>({
-          qc_number:qcNumber, quote_id:inserted.id,
-          rfq_item_sno: idx+1,
-          material_name:i.material_name, uom:i.uom,
-          qty_required:i.qty_required, unit_rate:i.unit_rate, gst_pct:i.gst_pct,
-          amount:i.amount,
-        }));
-      if (qItems.length) {
-        const {error:iErr} = await sb.from('pu_quote_items').insert(qItems);
-        if (iErr) throw new Error('Failed to save quote items for '+q.vendor_name+': '+iErr.message);
-      }
-    }
-    // Update RFQ status to Comparison Ready
-    await sb.from('pu_rfq').update({status:'Comparison Ready'}).eq('rfq_number',rfqNum);
-
-    flashSuccess(`QC ${qcNumber} submitted for PM approval`);
+    flashSuccess(`QC ${res.doc_number} submitted for PM approval`);
     closeModal();
     await Promise.all([loadRFQList(), loadQCList()]);
     // Clear selection for this RFQ
@@ -16147,62 +16135,53 @@ async function saveRFQ() {
   if(!items.length){toast('Add at least one material','error');return;}
   pbShow('Saving RFQ…');
   try {
-    const rfqNumber=await nextPUDocNumber('RFQ');
-    // Primary: use mirNum stored in dataset (more reliable than dropdown for Partial RFQ MIRs)
+    // v90: hoist all reads, then one atomic RPC for the entire write set
     const mirNumFromDataset = document.getElementById('rfqForm')?.dataset?.mirNum||'';
     const mirNum = mirNumFromDataset || document.getElementById('rfq_mirLink').value||null;
-    const {error}=await sb.from('pu_rfq').insert({
-      rfq_number:rfqNumber, rfq_date:date, mir_number:mirNum,
-      description:desc, response_due:document.getElementById('rfq_responseDue').value||null,
-      raised_by:state.userName, raised_by_id:state.userId,
-      remarks:document.getElementById('rfq_remarks').value.trim()||null, status:'Open',
-    });
-    if(error) throw new Error(error.message);
-    // Save RFQ items — carry procurement_line_id from MIR items if linked (v73)
+
     let mirLineIdMap = {};  // material_name → procurement_line_id
+    let links = [], mirSnos = [];
     if (mirNum) {
       const {data:mirLineIds} = await sb.from('pu_mir_items')
-        .select('material_name,procurement_line_id')
+        .select('sno,material_name,procurement_line_id')
         .eq('mir_number', mirNum);
       (mirLineIds||[]).forEach(r => {
         if (r.procurement_line_id) mirLineIdMap[r.material_name] = r.procurement_line_id;
       });
-    }
-    const rfqItemPayloads = items.map(it => ({
-      ...it,
-      rfq_number:          rfqNumber,
-      procurement_line_id: mirLineIdMap[it.material_name] || crypto.randomUUID(),
-      procurement_source:  mirLineIdMap[it.material_name] ? 'mir' : 'direct_rfq',
-    }));
-    await sb.from('pu_rfq_items').insert(rfqItemPayloads);
-
-    if (mirNum) {
       const mirSnosStr = document.getElementById('rfqForm')?.dataset?.mirSnos||'';
-      const mirSnos = mirSnosStr ? mirSnosStr.split(',').map(Number).filter(Boolean) : [];
+      mirSnos = mirSnosStr ? mirSnosStr.split(',').map(Number).filter(Boolean) : [];
       if (mirSnos.length) {
-        // Build mat→qty map from RFQ items (user may have adjusted qtys)
         const rfqMatQtyMap = {};
         items.forEach(it => { rfqMatQtyMap[it.material_name] = it.qty_required; });
-
-        // Fetch MIR items for selected SNOs
-        const {data:mirItemRecs} = await sb.from('pu_mir_items')
-          .select('sno,material_name').eq('mir_number',mirNum).in('sno',mirSnos);
-
-        const linkPayloads = (mirItemRecs||[]).map(it => ({
+        links = (mirLineIds||[]).filter(r=>mirSnos.includes(r.sno)).map(it => ({
           mir_number: mirNum, sno: it.sno, material_name: it.material_name,
-          rfq_number: rfqNumber,
           qty_assigned: rfqMatQtyMap[it.material_name] || 0
         })).filter(l => l.qty_assigned > 0);
-
-        if (linkPayloads.length) {
-          await sb.from('pu_mir_item_rfq_links').insert(linkPayloads);
-        }
-        // Keep legacy rfq_number field in sync for backward compat
-        await sb.from('pu_mir_items').update({rfq_number:rfqNumber})
-          .eq('mir_number',mirNum).in('sno',mirSnos);
-
-        await _refreshAllMIRItems(mirNum);
       }
+    }
+
+    const payload = {
+      fin_year: currentFY(),
+      header: {
+        rfq_date:date, mir_number:mirNum,
+        description:desc, response_due:document.getElementById('rfq_responseDue').value||null,
+        raised_by:state.userName, raised_by_id:state.userId,
+        remarks:document.getElementById('rfq_remarks').value.trim()||null, status:'Open',
+      },
+      items: items.map(it => ({
+        ...it,
+        procurement_line_id: mirLineIdMap[it.material_name] || crypto.randomUUID(),
+        procurement_source:  mirLineIdMap[it.material_name] ? 'mir' : 'direct_rfq',
+      })),
+    };
+    if (links.length) payload.links = links;
+    if (mirNum && mirSnos.length) payload.mir_sync = { mir_number: mirNum, snos: mirSnos };
+
+    const res = await puRPC('rpc_save_rfq', payload);
+    const rfqNumber = res.doc_number;
+
+    if (mirNum) {
+      if (mirSnos.length) await _refreshAllMIRItems(mirNum);
       // Clear stored metadata
       if (document.getElementById('rfqForm')) {
         delete document.getElementById('rfqForm').dataset.mirSnos;
@@ -17067,50 +17046,26 @@ async function savePO() {
   // ── New PO path ────────────────────────────────────────────
   pbShow('Saving PO…');
   try {
-    const poNumber=await nextPUDocNumber('PO');
-    const {error}=await sb.from('pu_po_orders').insert({
-      po_number:poNumber, po_date:date, project:document.getElementById('po_project').value,
-      qc_number:(()=>{const v=document.getElementById('po_qcRef').value||''; return v.startsWith('QC/')?v:null;})(),
-      mir_number:document.getElementById('poForm').dataset.poMirNum||document.getElementById('po_mirRef')?.value||null,
-      vendor_name:vendor, vendor_code:document.getElementById('po_vendorCode').value||null,
-      vendor_address:document.getElementById('po_vendorAddress').value.trim()||null,
-      vendor_gstin:document.getElementById('po_vendorGSTIN').value.trim()||null,
-      contact_person:document.getElementById('po_contactPerson').value.trim()||null,
-      payment_terms:document.getElementById('po_paymentTerms').value.trim()||null,
-      transport:document.getElementById('po_transport').value,
-      delivery_address:document.getElementById('po_deliveryAddr').value.trim()||null,
-      billing_address:document.getElementById('po_billingAddr').value.trim()||null,
-      delivery_date:document.getElementById('po_deliveryDate').value||null,
-      gst_mode:_gstMode,
-      cgst_pct:_gstMode==='overall'?parseFloat(document.getElementById('po_cgstPct').value)||0:0,
-      sgst_pct:_gstMode==='overall'?parseFloat(document.getElementById('po_sgstPct').value)||0:0,
-      igst_pct:_gstMode==='overall'?parseFloat(document.getElementById('po_igstPct').value)||0:0,
-      basic_value:basic,cgst_amount:cgst,sgst_amount:sgst,igst_amount:igst,
-      total_tax:cgst+sgst+igst, round_off:round, grand_total:grand,
-      prepared_by:state.userName, prepared_by_id:state.userId,
-      remarks:document.getElementById('po_remarks').value.trim()||null,
-      status:'Pending Approval',
-    });
-    if(error) throw new Error(error.message);
+    // v90: ALL reads hoisted; the entire write set executes in one RPC txn.
+    const qcRefVal = document.getElementById('po_qcRef').value||'';
+    const qcRef = qcRefVal.startsWith('QC/') ? qcRefVal : null;
+    const directMir   = document.getElementById('poForm').dataset.directMirNum;
+    const directSnos  = document.getElementById('poForm').dataset.directMirSnos;
+    const poMirRef    = document.getElementById('poForm').dataset.poMirNum
+                     || document.getElementById('po_mirRef')?.value || null;
 
     // v73: resolve procurement_line_id for each PO item
     // Path A: QC→RFQ→MIR | Path B: Direct PO from MIR | Path C: Standalone Direct PO
     const poLineIdMap = {};  // material_name → { procurement_line_id, procurement_source }
-    const qcRef=document.getElementById('po_qcRef').value;
-    const directMirN  = document.getElementById('poForm').dataset.directMirNum;
-    const poMirRef    = document.getElementById('poForm').dataset.poMirNum
-                     || document.getElementById('po_mirRef')?.value || null;
-
-    // Path A: QC-driven PO — resolve line identity via pu_mir_item_rfq_links (sno-keyed,
-    // duplicate-name safe). v82: this replaces the name-keyed pu_rfq_items map, which
-    // resolved duplicate material names last-wins. Legacy RFQs without link rows fall
-    // back to the old map.
-    if (qcRef && qcRef.startsWith('QC/')) {
+    let qcRfqNumber = null, qcMirNumber = null, qcMirItemRecs = null;
+    if (qcRef) {
       const {data:qcH2} = await sb.from('pu_quote_comparison')
         .select('rfq_number').eq('qc_number',qcRef).maybeSingle();
-      if (qcH2?.rfq_number) {
+      qcRfqNumber = qcH2?.rfq_number || null;
+      if (qcRfqNumber) {
+        // v82 semantics preserved: sno-keyed links first, legacy name map fallback
         const {data:rfqLinks2} = await sb.from('pu_mir_item_rfq_links')
-          .select('mir_number,sno,material_name').eq('rfq_number', qcH2.rfq_number);
+          .select('mir_number,sno,material_name').eq('rfq_number', qcRfqNumber);
         if ((rfqLinks2||[]).length) {
           const linkMir = rfqLinks2[0].mir_number;
           const {data:mirLines2} = await sb.from('pu_mir_items')
@@ -17126,11 +17081,10 @@ async function savePO() {
             };
           });
         }
-        // Legacy fallback: RFQ predates link rows — use the old rfq_items name map
         if (!Object.keys(poLineIdMap).length) {
           const {data:rfqMirIds} = await sb.from('pu_rfq_items')
             .select('material_name,procurement_line_id,procurement_source')
-            .eq('rfq_number', qcH2.rfq_number);
+            .eq('rfq_number', qcRfqNumber);
           (rfqMirIds||[]).forEach(r => {
             if (r.procurement_line_id) poLineIdMap[r.material_name] = {
               procurement_line_id: r.procurement_line_id,
@@ -17138,11 +17092,19 @@ async function savePO() {
             };
           });
         }
+        const {data:rfqH} = await sb.from('pu_rfq').select('mir_number').eq('rfq_number',qcRfqNumber).single();
+        qcMirNumber = rfqH?.mir_number || null;
+        if (qcMirNumber) {
+          const {data:recs} = await sb.from('pu_mir_items')
+            .select('sno,material_name,procurement_line_id').eq('mir_number',qcMirNumber);
+          qcMirItemRecs = recs||[];
+        }
       }
     }
     // Path B: Direct PO from MIR — fetch mir_items UUIDs
-    if (!Object.keys(poLineIdMap).length && (directMirN || poMirRef)) {
-      const mirSrc = directMirN || poMirRef;
+    let directMirItemRecs = null, directSnoList = [];
+    if (!Object.keys(poLineIdMap).length && (directMir || poMirRef)) {
+      const mirSrc = directMir || poMirRef;
       const {data:mirLineIds2} = await sb.from('pu_mir_items')
         .select('material_name,procurement_line_id')
         .eq('mir_number', mirSrc);
@@ -17153,111 +17115,98 @@ async function savePO() {
         };
       });
     }
-    // Path C (standalone direct PO): no map entry → fresh UUID generated per item below
-    await sb.from('pu_po_items').insert(items.map(it => {
-      const resolved = poLineIdMap[it.material_name];
-      return {
-        ...it,
-        po_number:           poNumber,
-        procurement_line_id: resolved?.procurement_line_id || crypto.randomUUID(),
-        procurement_source:  resolved?.procurement_source  || 'direct_po',
-      };
-    }));
-    if(qcRef && qcRef.startsWith('QC/')) {
-      await sb.from('pu_quote_comparison').update({status:'PO Raised'}).eq('qc_number',qcRef);
-      // Trace QC → RFQ → MIR and insert po_links (status update deferred to PO approval)
-      const {data:qcH} = await sb.from('pu_quote_comparison').select('rfq_number').eq('qc_number',qcRef).single();
-      if(qcH?.rfq_number) {
-        const {data:rfqH} = await sb.from('pu_rfq').select('mir_number').eq('rfq_number',qcH.rfq_number).single();
-        if(rfqH?.mir_number) {
-          const mirNum = rfqH.mir_number;
-          const {data:mirItemRecs} = await sb.from('pu_mir_items')
-            .select('sno,material_name,procurement_line_id').eq('mir_number',mirNum);
-          // v82: plid-first sno resolution — duplicate material names resolve to the
-          // correct line; name match retained only as fallback for legacy null plids.
-          const plidToSno = {}; const matToSno = {};
-          (mirItemRecs||[]).forEach(it => {
-            if (it.procurement_line_id) plidToSno[it.procurement_line_id] = it.sno;
-            matToSno[it.material_name] = it.sno;
-          });
-          const poLinkPayloads = items
-            .map(it => {
-              const plid = poLineIdMap[it.material_name]?.procurement_line_id;
-              const sno  = (plid && plidToSno[plid] != null) ? plidToSno[plid] : matToSno[it.material_name];
-              return sno != null ? {
-                mir_number:mirNum, sno,
-                material_name:it.material_name, po_number:poNumber,
-                qty_linked:it.qty, qty_received:0, qty_short_closed:0, is_short_closed:false
-              } : null;
-            })
-            .filter(Boolean);
-          // v82: merge duplicate snos (two same-named PO lines -> one link, summed qty)
-          // so the unique constraint can't fail the save
-          {
-            const bySno = {};
-            poLinkPayloads.forEach(p2 => {
-              if (bySno[p2.sno]) bySno[p2.sno].qty_linked += p2.qty_linked;
-              else bySno[p2.sno] = p2;
-            });
-            poLinkPayloads.length = 0;
-            Object.values(bySno).forEach(p2 => poLinkPayloads.push(p2));
-          }
-          if(poLinkPayloads.length){
-            const {error:plErr} = await sb.from('pu_mir_item_po_links').insert(poLinkPayloads);
-            if(plErr) throw new Error('MIR-PO link insert failed: '+plErr.message);
-          }
-          // Keep legacy po_number field in sync
-          await sb.from('pu_mir_items').update({po_number:poNumber})
-            .eq('mir_number',mirNum).eq('rfq_number',qcH.rfq_number);
-        }
+    if (directMir) {
+      directSnoList = directSnos ? directSnos.split(',').map(Number).filter(Boolean) : [];
+      if (directSnoList.length) {
+        const {data:recs} = await sb.from('pu_mir_items')
+          .select('sno,material_name,procurement_line_id')
+          .eq('mir_number',directMir).in('sno',directSnoList);
+        directMirItemRecs = recs||[];
       }
     }
-    // Direct PO from MIR — insert po_links; items NOT in PO remain Pending (auto cascade)
-    const directMir  = document.getElementById('poForm').dataset.directMirNum;
-    const directSnos = document.getElementById('poForm').dataset.directMirSnos;
-    if(directMir) {
-      const snos = directSnos ? directSnos.split(',').map(Number).filter(Boolean) : [];
-      if(snos.length) {
-        const {data:mirItemRecs} = await sb.from('pu_mir_items')
-          .select('sno,material_name,procurement_line_id').eq('mir_number',directMir).in('sno',snos);
-        // v82: plid-first sno resolution within the selected snos; name fallback for
-        // legacy null plids. Selection scoping (.in sno) is retained as before.
-        const plidToSno = {}; const matToSno = {};
-        (mirItemRecs||[]).forEach(it => {
-          if (it.procurement_line_id) plidToSno[it.procurement_line_id] = it.sno;
-          matToSno[it.material_name] = it.sno;
-        });
-        // Match PO items to MIR items: plid first, name fallback; PO-only extras drop out
-        const poLinkPayloads = items
-          .map(it => {
-            const plid = poLineIdMap[it.material_name]?.procurement_line_id;
-            const sno  = (plid && plidToSno[plid] != null) ? plidToSno[plid] : matToSno[it.material_name];
-            return sno != null ? {
-              mir_number:directMir, sno,
-              material_name:it.material_name, po_number:poNumber,
-              qty_linked:it.qty, qty_received:0, qty_short_closed:0, is_short_closed:false
-            } : null;
-          })
-          .filter(Boolean);
-        // v82: merge duplicate snos (two same-named PO lines -> one link, summed qty)
-        // so the unique constraint can't fail the save
-        {
-          const bySno = {};
-          poLinkPayloads.forEach(p2 => {
-            if (bySno[p2.sno]) bySno[p2.sno].qty_linked += p2.qty_linked;
-            else bySno[p2.sno] = p2;
-          });
-          poLinkPayloads.length = 0;
-          Object.values(bySno).forEach(p2 => poLinkPayloads.push(p2));
-        }
-        if(poLinkPayloads.length){
-          const {error:plErr} = await sb.from('pu_mir_item_po_links').insert(poLinkPayloads);
-          if(plErr) throw new Error('MIR-PO link insert failed: '+plErr.message);
-        }
-        // Keep legacy po_number field in sync for items included in this PO
-        await sb.from('pu_mir_items').update({po_number:poNumber})
-          .eq('mir_number',directMir).in('sno',snos);
-      }
+
+    // Link payloads (v82 semantics preserved: plid-first sno resolution,
+    // name fallback for legacy null plids, duplicate-sno merge so the
+    // unique constraint can't fail the save). RPC injects po_number and
+    // performs cancelled-PO stale-link cleanup in the same transaction.
+    function buildLinks(mirNum, mirItemRecs, scopeSnos){
+      const plidToSno = {}; const matToSno = {};
+      (mirItemRecs||[]).forEach(it => {
+        if (it.procurement_line_id) plidToSno[it.procurement_line_id] = it.sno;
+        matToSno[it.material_name] = it.sno;
+      });
+      const payloads = items
+        .map(it => {
+          const plid = poLineIdMap[it.material_name]?.procurement_line_id;
+          const sno  = (plid && plidToSno[plid] != null) ? plidToSno[plid] : matToSno[it.material_name];
+          if (sno == null) return null;
+          if (scopeSnos && !scopeSnos.includes(sno)) return null;
+          return {
+            mir_number:mirNum, sno,
+            material_name:it.material_name,
+            qty_linked:it.qty, qty_received:0, qty_short_closed:0, is_short_closed:false
+          };
+        })
+        .filter(Boolean);
+      const bySno = {};
+      payloads.forEach(p2 => {
+        if (bySno[p2.sno]) bySno[p2.sno].qty_linked += p2.qty_linked;
+        else bySno[p2.sno] = p2;
+      });
+      return Object.values(bySno);
+    }
+
+    let poLinks = [], mirSync = null;
+    if (qcRef && qcMirNumber) {
+      poLinks = buildLinks(qcMirNumber, qcMirItemRecs, null);
+      mirSync = { mir_number: qcMirNumber, rfq_number: qcRfqNumber };  // legacy sync by rfq
+    } else if (directMir && directSnoList.length) {
+      poLinks = buildLinks(directMir, directMirItemRecs, directSnoList);
+      mirSync = { mir_number: directMir, snos: directSnoList };        // legacy sync by snos
+    }
+
+    const payload = {
+      fin_year: currentFY(),
+      header: {
+        po_date:date, project:document.getElementById('po_project').value,
+        qc_number:qcRef,
+        mir_number:poMirRef||null,
+        vendor_name:vendor, vendor_code:document.getElementById('po_vendorCode').value||null,
+        vendor_address:document.getElementById('po_vendorAddress').value.trim()||null,
+        vendor_gstin:document.getElementById('po_vendorGSTIN').value.trim()||null,
+        contact_person:document.getElementById('po_contactPerson').value.trim()||null,
+        payment_terms:document.getElementById('po_paymentTerms').value.trim()||null,
+        transport:document.getElementById('po_transport').value,
+        delivery_address:document.getElementById('po_deliveryAddr').value.trim()||null,
+        billing_address:document.getElementById('po_billingAddr').value.trim()||null,
+        delivery_date:document.getElementById('po_deliveryDate').value||null,
+        gst_mode:_gstMode,
+        cgst_pct:_gstMode==='overall'?parseFloat(document.getElementById('po_cgstPct').value)||0:0,
+        sgst_pct:_gstMode==='overall'?parseFloat(document.getElementById('po_sgstPct').value)||0:0,
+        igst_pct:_gstMode==='overall'?parseFloat(document.getElementById('po_igstPct').value)||0:0,
+        basic_value:basic,cgst_amount:cgst,sgst_amount:sgst,igst_amount:igst,
+        total_tax:cgst+sgst+igst, round_off:round, grand_total:grand,
+        prepared_by:state.userName, prepared_by_id:state.userId,
+        remarks:document.getElementById('po_remarks').value.trim()||null,
+        status:'Pending Approval',
+      },
+      items: items.map(it => {
+        const resolved = poLineIdMap[it.material_name];
+        return {
+          ...it,
+          procurement_line_id: resolved?.procurement_line_id || crypto.randomUUID(),
+          procurement_source:  resolved?.procurement_source  || 'direct_po',
+        };
+      }),
+    };
+    if (qcRef) payload.qc_number = qcRef;
+    if (poLinks.length) payload.po_links = poLinks;
+    if (mirSync) payload.mir_sync = mirSync;
+
+    const res = await puRPC('rpc_save_po', payload);
+    const poNumber = res.doc_number;
+
+    if (directMir) {
       delete document.getElementById('poForm').dataset.directMirNum;
       delete document.getElementById('poForm').dataset.directMirSnos;
       delete document.getElementById('poForm').dataset.directMirMats;
@@ -17412,27 +17361,25 @@ async function revisePO(poNum) {
 async function apiRevisePO(poNum, data) {
   pbShow('Saving revised PO…');
   try {
-    // 1. Update PO header — status back to Pending Approval, clear rejection
-    const {error:he} = await sb.from('pu_po_orders').update({
-      po_date: data.date, vendor_name: data.vendor, vendor_code: data.vendorCode||null,
-      vendor_address: data.vendorAddress||null, vendor_gstin: data.vendorGSTIN||null,
-      contact_person: data.contactPerson||null, payment_terms: data.paymentTerms||null,
-      transport: data.transport, delivery_address: data.deliveryAddress||null,
-      billing_address: data.billingAddress||null, delivery_date: data.deliveryDate||null,
-      gst_mode: data.gstMode, basic_value: data.basicValue,
-      cgst_amount: data.cgstAmount, sgst_amount: data.sgstAmount, igst_amount: data.igstAmount,
-      total_tax: data.totalTax, round_off: data.roundOff, grand_total: data.grandTotal,
-      remarks: data.remarks||null, project: data.project,
-      status: 'Pending Approval', rejection_reason: null,
-      updated_at: new Date().toISOString(),
-    }).eq('po_number', poNum);
-    if(he) return {ok:false, error:he.message};
-
-    // 2. Replace line items
-    await sb.from('pu_po_items').delete().eq('po_number', poNum);
-    const {error:ie} = await sb.from('pu_po_items').insert(data.items.map(it=>({...it, po_number:poNum})));
-    if(ie) return {ok:false, error:ie.message};
-
+    // v90: header update + item replacement in ONE transaction via RPC
+    await puRPC('rpc_save_po', {
+      mode: 'revise', doc_number: poNum,
+      fin_year: currentFY(),
+      header: {
+        po_date: data.date, vendor_name: data.vendor, vendor_code: data.vendorCode||null,
+        vendor_address: data.vendorAddress||null, vendor_gstin: data.vendorGSTIN||null,
+        contact_person: data.contactPerson||null, payment_terms: data.paymentTerms||null,
+        transport: data.transport, delivery_address: data.deliveryAddress||null,
+        billing_address: data.billingAddress||null, delivery_date: data.deliveryDate||null,
+        gst_mode: data.gstMode, basic_value: data.basicValue,
+        cgst_amount: data.cgstAmount, sgst_amount: data.sgstAmount, igst_amount: data.igstAmount,
+        total_tax: data.totalTax, round_off: data.roundOff, grand_total: data.grandTotal,
+        remarks: data.remarks||null, project: data.project,
+        status: 'Pending Approval', rejection_reason: null,
+        updated_at: new Date().toISOString(),
+      },
+      items: data.items,
+    });
     return {ok:true};
   } catch(e){ return {ok:false, error:e.message}; }
   finally{ pbDone(); }
@@ -18388,108 +18335,72 @@ async function saveGRN() {
 
   // ── REVISE MODE: resubmitting a Rejected-Correction GRN ──────────────────
   const revisingGRN = document.getElementById('grnForm').dataset.revisingGRN || '';
-  if (revisingGRN) {
-    pbShow('Saving revised GRN…');
-    try {
-      const vendor = document.getElementById('grn_vendor').value;
-      const {error:he} = await sb.from('pu_grn').update({
-        grn_date: date, vendor_name: vendor,
-        vehicle_challan: challan, invoice_no: invNo, invoice_date: invDate||null,
-        remarks: document.getElementById('grn_remarks').value||null,
-        status: 'Pending Verification', rejection_reason: null,
-        updated_at: new Date().toISOString(),
-      }).eq('grn_number', revisingGRN);
-      if (he) throw new Error(he.message);
-      // Replace line items
-      await sb.from('pu_grn_items').delete().eq('grn_number', revisingGRN);
-      // v73: carry procurement_line_id from pu_po_items on revise
-      const {data:poLineIdsR} = await sb.from('pu_po_items')
-        .select('material_name,procurement_line_id,procurement_source')
-        .eq('po_number', poNum);
-      const grnLineIdMapR = {};
-      (poLineIdsR||[]).forEach(r => {
-        if (r.procurement_line_id) grnLineIdMapR[r.material_name] = r;
-      });
-      const {error:ie} = await sb.from('pu_grn_items').insert(
-        entries.map(e => {
-          const resolved = grnLineIdMapR[e.material_name];
-          return {
-            ...e,
-            grn_number:          revisingGRN,
-            procurement_line_id: resolved?.procurement_line_id || crypto.randomUUID(),
-            procurement_source:  resolved?.procurement_source  || 'legacy_unmatched',
-          };
-        })
-      );
-      if (ie) throw new Error(ie.message);
-      // Recalculate PO status from all active GRNs (excluding all rejected variants)
-      const {data:activeGRNs} = await sb.from('pu_grn').select('grn_number')
-        .eq('po_number',poNum).not('status','in','("Rejected","Rejected - Correction")');
-      const activeNums = (activeGRNs||[]).map(g=>g.grn_number);
-      let totalRecvd = 0;
-      if (activeNums.length) {
-        const {data:gItems} = await sb.from('pu_grn_items')
-          .select('this_grn_qty').in('grn_number',activeNums);
-        totalRecvd = (gItems||[]).reduce((s,r)=>s+num(r.this_grn_qty),0);
-      }
-      const {data:allPoItems2} = await sb.from('pu_po_items').select('qty').eq('po_number',poNum);
-      const poTotalQty2 = (allPoItems2||[]).reduce((s,r)=>s+num(r.qty),0);
-      const newPoSt = totalRecvd<=0 ? 'Open'
-                    : totalRecvd>=poTotalQty2-0.005 ? 'Fully Received'
-                    : 'Partial Receipt';
-      await sb.from('pu_po_orders').update({status:newPoSt}).eq('po_number',poNum);
-      flashSuccess('GRN '+revisingGRN+' revised — pending Site Manager verification');
-      closeGRNForm(); loadGRNList(); loadPOList();
-    } catch(e) { toast('Error: '+e.message,'error'); }
-    finally { pbDone(); }
-    return;
-  }
-  // ── END REVISE MODE ───────────────────────────────────────────────────────
-
-  pbShow('Saving GRN…');
+  pbShow(revisingGRN ? 'Saving revised GRN…' : 'Saving GRN…');
   try {
-    const grnNumber=await nextPUGRNNumber();
-    const vendor=document.getElementById('grn_vendor').value;
-    const {error}=await sb.from('pu_grn').insert({
-      grn_number:grnNumber, grn_date:date, po_number:poNum, vendor_name:vendor,
-      vehicle_challan:challan, invoice_no:invNo, invoice_date:invDate||null,
-      received_by:state.userName, received_by_id:state.userId,
-      remarks:document.getElementById('grn_remarks').value||null,
-      status:'Pending Verification',
-    });
-    if(error) throw new Error(error.message);
+    const vendor = document.getElementById('grn_vendor').value;
+    // v90: hoist all reads, then one atomic RPC for the entire write set.
     // v73: carry procurement_line_id from pu_po_items via material_name
     const {data:poLineIds} = await sb.from('pu_po_items')
-      .select('material_name,procurement_line_id,procurement_source')
+      .select('material_name,procurement_line_id,procurement_source,qty')
       .eq('po_number', poNum);
     const grnLineIdMap = {};
     (poLineIds||[]).forEach(r => {
       if (r.procurement_line_id) grnLineIdMap[r.material_name] = r;
     });
-    await sb.from('pu_grn_items').insert(entries.map(e => {
+    const itemsPayload = entries.map(e => {
       const resolved = grnLineIdMap[e.material_name];
       return {
         ...e,
-        grn_number:          grnNumber,
         procurement_line_id: resolved?.procurement_line_id || crypto.randomUUID(),
         procurement_source:  resolved?.procurement_source  || 'legacy_unmatched',
       };
-    }));
-    // Update PO status
-    const {data:allGRNs}=await sb.from('pu_grn').select('grn_number').eq('po_number',poNum).not('status','in','("Rejected","Rejected - Correction")');
-    const allNums=(allGRNs||[]).map(g=>g.grn_number);
-    let totalRecvd=entries.reduce((s,e)=>s+e.this_grn_qty,0);
-    if(allNums.length>1){
-      const {data:prevItems}=await sb.from('pu_grn_items').select('this_grn_qty').in('grn_number',allNums.filter(n=>n!==grnNumber));
-      if(prevItems) totalRecvd+=(prevItems||[]).reduce((s,r)=>s+num(r.this_grn_qty),0);
+    });
+
+    // PO status recompute — client computes from other active GRNs + THIS
+    // GRN's in-memory entries (revise replaces its own previous items, so
+    // they are excluded from the prior sum).
+    const {data:activeGRNs} = await sb.from('pu_grn').select('grn_number')
+      .eq('po_number',poNum).not('status','in','("Rejected","Rejected - Correction")');
+    const otherNums = (activeGRNs||[]).map(g=>g.grn_number).filter(n=>n!==revisingGRN);
+    let totalRecvd = entries.reduce((s,e)=>s+num(e.this_grn_qty),0);
+    if (otherNums.length) {
+      const {data:prevItems} = await sb.from('pu_grn_items')
+        .select('this_grn_qty').in('grn_number', otherNums);
+      totalRecvd += (prevItems||[]).reduce((s,r)=>s+num(r.this_grn_qty),0);
     }
-    const {data:allPoItems}=await sb.from('pu_po_items').select('qty').eq('po_number',poNum);
-    const poTotalQty=(allPoItems||[]).reduce((s,r)=>s+num(r.qty),0);
-    const newStatus=totalRecvd>=poTotalQty-0.005?'Fully Received':'Partial Receipt';
-    await sb.from('pu_po_orders').update({status:newStatus}).eq('po_number',poNum);
-    // After GRN save, check if PO has a MIR reference and update item statuses
-    // Note: final 'Received' status set only after Site Manager verifies (verifyGRN)
-    flashSuccess('GRN '+grnNumber+' saved — pending Site Manager verification');
+    const poTotalQty = (poLineIds||[]).reduce((s,r)=>s+num(r.qty),0);
+    const newStatus = revisingGRN && totalRecvd<=0 ? 'Open'
+                    : totalRecvd>=poTotalQty-0.005 ? 'Fully Received'
+                    : 'Partial Receipt';
+
+    const payload = {
+      fin_year: currentFY(),
+      mode: revisingGRN ? 'revise' : 'create',
+      header: revisingGRN ? {
+        grn_date: date, vendor_name: vendor,
+        vehicle_challan: challan, invoice_no: invNo, invoice_date: invDate||null,
+        remarks: document.getElementById('grn_remarks').value||null,
+        status: 'Pending Verification', rejection_reason: null,
+        updated_at: new Date().toISOString(),
+      } : {
+        grn_date:date, po_number:poNum, vendor_name:vendor,
+        vehicle_challan:challan, invoice_no:invNo, invoice_date:invDate||null,
+        received_by:state.userName, received_by_id:state.userId,
+        remarks:document.getElementById('grn_remarks').value||null,
+        status:'Pending Verification',
+      },
+      items: itemsPayload,
+      po_status: { po_number: poNum, status: newStatus },
+    };
+    if (revisingGRN) payload.doc_number = revisingGRN;
+
+    const res = await puRPC('rpc_save_grn', payload);
+    if (revisingGRN) {
+      delete document.getElementById('grnForm').dataset.revisingGRN;
+      flashSuccess('GRN '+revisingGRN+' revised — pending Site Manager verification');
+    } else {
+      flashSuccess('GRN '+res.doc_number+' saved — pending Site Manager verification');
+    }
     closeGRNForm(); loadGRNList(); loadPOList();
   } catch(e){toast('Error: '+e.message,'error');}
   finally{pbDone();}
@@ -18756,32 +18667,29 @@ async function saveCashGRN() {
 
   pbShow('Saving Direct Purchase GRN…');
   try {
-    const grnNumber = await nextPUGRNNumber();
-    const { error: hErr } = await sb.from('pu_grn').insert({
-      grn_number: grnNumber, grn_date: date,
-      po_number: null,                          // no PO for cash
-      is_cash_purchase: true,
-      cash_purchase_ref: cashRef,
-      vendor_name: vendor,
-      vehicle_challan: challan, invoice_no: invNo, invoice_date: invDate,
-      received_by: state.userName, received_by_id: state.userId,
-      remarks: document.getElementById('cgrn_remarks').value || null,
-      status: 'Pending Verification',
-    });
-    if (hErr) throw new Error(hErr.message);
-    // v73: Cash/Direct Purchase — UUID originates here (no PO upstream)
+    // v90: atomic create via RPC
     const isCashOS = (document.getElementById('cgrn_cashRef')?.value?.trim() === 'Opening Stock');
-    const { error: iErr } = await sb.from('pu_grn_items').insert(
-      entries.map(e => ({
+    const res = await puRPC('rpc_save_grn', {
+      fin_year: currentFY(),
+      header: {
+        grn_date: date,
+        po_number: null,                          // no PO for cash
+        is_cash_purchase: true,
+        cash_purchase_ref: cashRef,
+        vendor_name: vendor,
+        vehicle_challan: challan, invoice_no: invNo, invoice_date: invDate,
+        received_by: state.userName, received_by_id: state.userId,
+        remarks: document.getElementById('cgrn_remarks').value || null,
+        status: 'Pending Verification',
+      },
+      // v73: Cash/Direct Purchase — UUID originates here (no PO upstream)
+      items: entries.map(e => ({
         ...e,
-        grn_number:          grnNumber,
         procurement_line_id: crypto.randomUUID(),
         procurement_source:  isCashOS ? 'opening_stock' : 'cash_purchase',
-      }))
-    );
-    if (iErr) throw new Error(iErr.message);
-
-    flashSuccess('Direct Purchase GRN ' + grnNumber + ' saved — pending Site Manager verification');
+      })),
+    });
+    flashSuccess('Direct Purchase GRN ' + res.doc_number + ' saved — pending Site Manager verification');
     closeCashGRNForm();
     loadGRNList();
   } catch (e) {
@@ -19409,35 +19317,12 @@ async function savePOB() {
   const vendor =document.getElementById('pob_vendor').value;
   pbShow('Saving POB…');
   try {
-    const billNumber=await nextPUDocNumber('POB');
-    const {error}=await sb.from('pu_po_bills').insert({
-      bill_number:billNumber, bill_date:date, po_number:poNum, vendor_name:vendor,
-      vendor_inv_no:invNo, vendor_inv_date:invDate,
-      credit_period:num(document.getElementById('pob_creditPeriod').value)||30,
-      inv_pay_due:document.getElementById('pob_invPayDue').value||null,
-      grn_numbers:_pobSelectedGRNs.join(', '),
-      gst_mode:_pobGSTInfo.mode||'overall',
-      gross_amount:gross,
-      cgst_pct:_pobGSTInfo.mode==='per_line'?0:(_pobGSTInfo.cgst||0),
-      sgst_pct:_pobGSTInfo.mode==='per_line'?0:(_pobGSTInfo.sgst||0),
-      igst_pct:_pobGSTInfo.mode==='per_line'?0:(_pobGSTInfo.igst||0),
-      cgst_amount:cgstAmt, sgst_amount:sgstAmt, igst_amount:igstAmt,
-      tds_pct:0, tds_amount:0,
-      hold_amount:num(document.getElementById('pob_holdAmt').value),
-      hold_description:document.getElementById('pob_holdDesc')?.value||null,
-      invoice_value:invoice, net_payable:net,
-      prepared_by:state.userName, prepared_by_id:state.userId,
-      remarks:document.getElementById('pob_remarks').value||null,
-      status:'Pending Approval',
-    });
-    if(error) throw new Error(error.message);
-
-    // Build all items (material rows + extra lines) for single insert
+    // v90: atomic create via RPC — header + items + GRN flips in one txn
     const allItems = [];
     // v73: _pobLineItems came from pu_grn_items select('*') so procurement_line_id is already on each item
     _pobLineItems.forEach((it,i)=>{
       allItems.push({
-        bill_number:billNumber, sno:i+1, row_type:'material',
+        sno:i+1, row_type:'material',
         grn_number:it.grn_number, material_name:it.material_name,
         material_code:it.material_code||null, uom:it.uom,
         qty:it.this_grn_qty, unit_rate:it.unit_rate, base_amount:it.base_amount,
@@ -19452,17 +19337,40 @@ async function savePOB() {
     document.querySelectorAll('#pob_extraBody tr').forEach((tr,i)=>{
       const cells=tr.cells;
       allItems.push({
-        bill_number:billNumber, sno:matCount+i+1, row_type:'extra',
+        sno:matCount+i+1, row_type:'extra',
         description:cells[0]?.querySelector('input')?.value||null,
         line_type:cells[1]?.querySelector('select')?.value,
         timing:cells[2]?.querySelector('select')?.value,
         extra_amount:num(cells[3]?.querySelector('input')?.value),
       });
     });
-    if(allItems.length) await sb.from('pu_po_bill_items').insert(allItems);
 
-    await sb.from('pu_grn').update({status:'Partially Billed'}).in('grn_number',_pobSelectedGRNs);
-    flashSuccess('POB '+billNumber+' submitted for PM approval');
+    const res = await puRPC('rpc_save_pob', {
+      fin_year: currentFY(),
+      header: {
+        bill_date:date, po_number:poNum, vendor_name:vendor,
+        vendor_inv_no:invNo, vendor_inv_date:invDate,
+        credit_period:num(document.getElementById('pob_creditPeriod').value)||30,
+        inv_pay_due:document.getElementById('pob_invPayDue').value||null,
+        grn_numbers:_pobSelectedGRNs.join(', '),
+        gst_mode:_pobGSTInfo.mode||'overall',
+        gross_amount:gross,
+        cgst_pct:_pobGSTInfo.mode==='per_line'?0:(_pobGSTInfo.cgst||0),
+        sgst_pct:_pobGSTInfo.mode==='per_line'?0:(_pobGSTInfo.sgst||0),
+        igst_pct:_pobGSTInfo.mode==='per_line'?0:(_pobGSTInfo.igst||0),
+        cgst_amount:cgstAmt, sgst_amount:sgstAmt, igst_amount:igstAmt,
+        tds_pct:0, tds_amount:0,
+        hold_amount:num(document.getElementById('pob_holdAmt').value),
+        hold_description:document.getElementById('pob_holdDesc')?.value||null,
+        invoice_value:invoice, net_payable:net,
+        prepared_by:state.userName, prepared_by_id:state.userId,
+        remarks:document.getElementById('pob_remarks').value||null,
+        status:'Pending Approval',
+      },
+      items: allItems,
+      grn_status: { grn_numbers: _pobSelectedGRNs, status: 'Partially Billed' },
+    });
+    flashSuccess('POB '+res.doc_number+' submitted for PM approval');
     closePOBForm(); loadPOBList();
   } catch(e){toast('Error: '+e.message,'error');}
   finally{pbDone();}
@@ -20250,18 +20158,16 @@ async function addMISItem() {
       <div id="misMat_${i}_pill" style="display:none;margin-top:3px;"></div>
     </div></td>
     <td><input id="misUom_${i}" class="pu_uom" style="width:60px;" readonly></td>
-    <td style="min-width:180px;"><div style="position:relative;">
-      <input id="misWbs_${i}" placeholder="Type WBS activity…" autocomplete="off" style="width:100%;font-size:12px;"
-        oninput="misWbsTypeahead(${i})" onblur="setTimeout(()=>misWbsHide(${i}),200)">
-      <div id="misWbsRes_${i}" style="display:none;position:absolute;top:100%;left:0;right:0;background:var(--input-bg);border:1px solid var(--accent);border-radius:4px;max-height:180px;overflow-y:auto;z-index:9999;box-shadow:0 4px 12px rgba(0,0,0,.15);font-size:12px;"></div>
-      <div id="misWbs_${i}_pill" style="display:none;margin-top:3px;"></div>
-    </div></td>
-    <td style="min-width:160px;"><div style="position:relative;">
-      <input id="misCsh_${i}" placeholder="Type subhead…" autocomplete="off" style="width:100%;font-size:12px;"
-        oninput="misCshTypeahead(${i})" onblur="setTimeout(()=>misCshHide(${i}),200)">
-      <div id="misCshRes_${i}" style="display:none;position:absolute;top:100%;left:0;right:0;background:var(--input-bg);border:1px solid var(--accent);border-radius:4px;max-height:180px;overflow-y:auto;z-index:9999;box-shadow:0 4px 12px rgba(0,0,0,.15);font-size:12px;"></div>
-      <div id="misCsh_${i}_pill" style="display:none;margin-top:3px;"></div>
-    </div></td>
+    <td style="min-width:200px;">
+      <select id="misPkg_${i}" style="width:100%;font-size:12px;" onchange="misPkgChanged(${i})" title="Work package (WBS)">
+        <option value="">— package —</option>
+      </select>
+    </td>
+    <td style="min-width:180px;">
+      <select id="misLoc_${i}" style="width:100%;font-size:12px;" disabled title="Location unit (rule-eligible)">
+        <option value="">— select package first —</option>
+      </select>
+    </td>
     <td class="num" id="misBalance_${i}" style="font-weight:600;color:var(--accent);">—</td>
     <td><input type="number" id="misQty_${i}" class="num" style="width:90px;" step="0.001" oninput="recalcMISRow(${i})" onwheel="this.blur()" onkeydown="if(event.key==='ArrowUp'||event.key==='ArrowDown')event.preventDefault()"></td>
     <td style="min-width:160px;"><div style="position:relative;"></div></td>
@@ -20269,6 +20175,58 @@ async function addMISItem() {
     <td class="num" id="misAmt_${i}">—</td>
     <td><button class="btn btn-ghost btn-sm" onclick="this.closest('tr').remove()">✕</button></td>`;
   document.getElementById('misItemsBody').appendChild(tr);
+  _misFillPackageSelect(i);
+}
+
+// ── v90: MIS package/location pickers (Phase 4) ─────────────────────
+let _misPackages = null;                 // [{id,name,path}]
+const _misPkgLocCache = {};              // pkgId → [{loc_node_id,loc_name,loc_path}]
+async function _misLoadPackages(){
+  if (_misPackages) return _misPackages;
+  const {data,error} = await sb.from('wbs_nodes')
+    .select('id,name,parent_id,node_type').eq('node_type','package').order('name');
+  if (error) { toast('Package load: '+error.message,'error'); _misPackages=[]; return _misPackages; }
+  // breadcrumb via parent walk (full tree fetch for names)
+  const {data:allN} = await sb.from('wbs_nodes').select('id,name,parent_id');
+  const map = Object.fromEntries((allN||[]).map(n=>[n.id,n]));
+  _misPackages = (data||[]).map(p=>{
+    const parts=[]; let cur=map[p.id], g=0;
+    while(cur && g++<50){parts.unshift(cur.name); cur=cur.parent_id?map[cur.parent_id]:null;}
+    return {id:p.id, name:p.name, path:parts.join(' › ')};
+  });
+  return _misPackages;
+}
+async function _misFillPackageSelect(i){
+  const sel=document.getElementById('misPkg_'+i); if(!sel) return;
+  const pkgs=await _misLoadPackages();
+  sel.innerHTML='<option value="">— package —</option>'+
+    pkgs.map(p=>`<option value="${p.id}" title="${esc(p.path)}">${esc(p.name)}</option>`).join('');
+}
+async function misPkgChanged(i){
+  const pkgSel=document.getElementById('misPkg_'+i);
+  const locSel=document.getElementById('misLoc_'+i);
+  if(!pkgSel||!locSel) return;
+  const pkgId=pkgSel.value;
+  if(!pkgId){locSel.innerHTML='<option value="">— select package first —</option>';locSel.disabled=true;return;}
+  locSel.disabled=true; locSel.innerHTML='<option value="">loading…</option>';
+  try{
+    if(!_misPkgLocCache[pkgId]){
+      const {data,error}=await sb.rpc('fn_package_effective_locations',{p_package:Number(pkgId)});
+      if(error) throw error;
+      _misPkgLocCache[pkgId]=data||[];
+    }
+    const locs=_misPkgLocCache[pkgId];
+    if(!locs.length){
+      locSel.innerHTML='<option value="">no eligible units — check Allocation Rules</option>';
+      return;
+    }
+    locSel.innerHTML='<option value="">— unit —</option>'+
+      locs.map(l=>`<option value="${l.loc_node_id}" title="${esc(l.loc_path||'')}">${esc(l.loc_name)}</option>`).join('');
+    locSel.disabled=false;
+  }catch(e){
+    locSel.innerHTML='<option value="">load failed</option>';
+    toast('Location load: '+e.message,'error');
+  }
 }
 
 // Fuzzy-search material master and render typeahead options for an MIS row.
@@ -20449,15 +20407,17 @@ async function saveMIS() {
     const uom     = ri!=null ? (document.getElementById('misUom_'+ri)?.value || '') : '';
     const balance = ri!=null ? parseFloat(document.getElementById('misMatBal_'+ri)?.value || 0) : 0;
     const rate    = ri!=null ? parseFloat(document.getElementById('misMatRate_'+ri)?.value || 0) : 0;
-    const wbsCode  = document.getElementById('misWbs_'+ri)?.dataset?.wbsCode||null;
-    const wbsAct   = document.getElementById('misWbs_'+ri)?.value?.trim()||null;
-    const csh      = document.getElementById('misCsh_'+ri)?.dataset?.cshVal||null;
+    const pkgSel = document.getElementById('misPkg_'+ri);
+    const locSel = document.getElementById('misLoc_'+ri);
+    const wbsNodeId = pkgSel?.value ? Number(pkgSel.value) : null;
+    const locNodeId = locSel?.value || null;
     const matCode  = matInp?.dataset?.matCode||null;
     items.push({sno:items.length+1, material_code:matCode, material_name:mat, uom:uom,
       qty_issued:qty, stock_before:balance,
       stock_after:Math.max(0, balance - qty),
       unit_rate:rate, amount:qty*rate,
-      wbs_code:wbsCode||null, wbs_activity:wbsAct||null, cost_subhead:csh||null});
+      wbs_node_id:wbsNodeId, loc_node_id:locNodeId,
+      wbs_activity:wbsNodeId ? (pkgSel.options[pkgSel.selectedIndex]?.text||null) : null});
   });
   if(!items.length){toast('Add at least one item','error');return;}
 
@@ -20558,52 +20518,45 @@ async function saveMIS() {
         });
     }
     const revisingMIS = document.getElementById('misForm')?.dataset?.revisingMIS || '';
-    if (revisingMIS) {
-      // Revision mode — update header and replace items
-      const misTotal = items.reduce((s,it)=>s+num(it.amount),0);
-      const {error:hErr} = await sb.from('pu_mis').update({
+    // v90: atomic save via RPC; tags optional-with-nag (hard flip lives server-side)
+    const misTotal = items.reduce((s,it)=>s+num(it.amount),0);
+    const itemsPayload = items.map(it => {
+      const fifo = fifoLayerMap[it.material_name];
+      return {
+        ...it,
+        is_cash_purchase:    cashMatSet.has(it.material_name),
+        procurement_line_id: fifo?.procurement_line_id || crypto.randomUUID(),  // v73: FIFO UUID
+        procurement_source:  fifo?.procurement_source  || 'legacy_unmatched',
+      };
+    });
+    const payload = {
+      fin_year: currentFY(),
+      mode: revisingMIS ? 'revise' : 'create',
+      header: revisingMIS ? {
         issue_date:date, issued_to:issuedTo,
         issued_by:state.userName, issued_by_id:state.userId,
         remarks:document.getElementById('mis_remarks').value||null,
         status:'Pending Approval', rejection_reason:null,
         total_value: misTotal,
-      }).eq('mis_number', revisingMIS);
-      if (hErr) throw new Error(hErr.message);
-      await sb.from('pu_mis_items').delete().eq('mis_number', revisingMIS);
-      await sb.from('pu_mis_items').insert(items.map(it => {
-        const fifo = fifoLayerMap[it.material_name];
-        return {
-          ...it,
-          mis_number:          revisingMIS,
-          is_cash_purchase:    cashMatSet.has(it.material_name),
-          procurement_line_id: fifo?.procurement_line_id || crypto.randomUUID(),  // v73: FIFO UUID
-          procurement_source:  fifo?.procurement_source  || 'legacy_unmatched',
-        };
-      }));
-      delete document.getElementById('misForm').dataset.revisingMIS;
-      flashSuccess('MIS '+revisingMIS+' revised and resubmitted for approval');
-    } else {
-      const misNumber=await nextPUMISNumber();
-      const misTotal = items.reduce((s,it)=>s+num(it.amount),0);
-      const {error}=await sb.from('pu_mis').insert({
-        mis_number:misNumber, issue_date:date, issued_to:issuedTo,
+      } : {
+        issue_date:date, issued_to:issuedTo,
         issued_by:state.userName, issued_by_id:state.userId,
         remarks:document.getElementById('mis_remarks').value||null,
         status:'Pending Approval',
         total_value: misTotal,
-      });
-      if(error) throw new Error(error.message);
-      await sb.from('pu_mis_items').insert(items.map((it,idx2)=>{
-        const fifo = fifoLayerMap[it.material_name];
-        return {
-          ...it,
-          mis_number:          misNumber,
-          is_cash_purchase:    cashMatSet.has(it.material_name),
-          procurement_line_id: fifo?.procurement_line_id || crypto.randomUUID(),  // v73: FIFO UUID
-          procurement_source:  fifo?.procurement_source  || 'legacy_unmatched',
-        };
-      }));
-      flashSuccess('MIS '+misNumber+' saved — pending Site Manager approval');
+      },
+      items: itemsPayload,
+    };
+    if (revisingMIS) payload.doc_number = revisingMIS;
+    const res = await puRPC('rpc_save_mis', payload);
+    if (res.untagged_count > 0) {
+      toast(`⚠ ${res.untagged_count} line(s) have no WBS package/location — they will be invisible to budget tracking`,'warn',6000);
+    }
+    if (revisingMIS) {
+      delete document.getElementById('misForm').dataset.revisingMIS;
+      flashSuccess('MIS '+revisingMIS+' revised and resubmitted for approval');
+    } else {
+      flashSuccess('MIS '+res.doc_number+' saved — pending Site Manager approval');
     }
     closeMISForm(); loadMISList(); loadStockBalance();
   } catch(e){toast('Error: '+e.message,'error');}
@@ -21020,25 +20973,10 @@ async function confirmPostStockAudit() {
 
   pbShow('Posting audit entry…');
   try {
-    // 1. Generate MIS number
-    const misNumber = await nextPUMISNumber();
-
-    // 2. Build MIS header — status = 'Audit Entry' (auto-approved, no workflow)
-    const { error: hErr } = await sb.from('pu_mis').insert({
-      mis_number:   misNumber,
-      issue_date:   auditDate,
-      issued_to:    auditPerson,
-      issued_by:    state.userName,
-      issued_by_id: state.userId,
-      remarks:      [auditRef, auditRmks].filter(Boolean).join(' | ') || 'Stock Audit Corrective Entry',
-      status:       'Audit Entry',
-    });
-    if (hErr) throw new Error('MIS header: ' + hErr.message);
-
-    // 3. Build MIS items — each diff row becomes one line
+    // v90: MIS header + items atomically via RPC (audit log stays a
+    // deliberate non-fatal follow-up, matching prior semantics)
     const misItems = diff.map((r, idx) => ({
       sno:              idx + 1,
-      mis_number:       misNumber,
       material_name:    r.material_name,
       uom:              r.uom,
       qty_issued:       r.delta,          // positive = surplus (stock increase), negative = shortage
@@ -21049,12 +20987,20 @@ async function confirmPostStockAudit() {
       is_cash_purchase: false,
       procurement_line_id: crypto.randomUUID(),
       procurement_source:  'audit_adjustment',
-      wbs_code:         null,
-      wbs_activity:     null,
-      cost_subhead:     null,
     }));
-    const { error: iErr } = await sb.from('pu_mis_items').insert(misItems);
-    if (iErr) throw new Error('MIS items: ' + iErr.message);
+    const res = await puRPC('rpc_save_mis', {
+      fin_year: currentFY(),
+      header: {
+        issue_date:   auditDate,
+        issued_to:    auditPerson,
+        issued_by:    state.userName,
+        issued_by_id: state.userId,
+        remarks:      [auditRef, auditRmks].filter(Boolean).join(' | ') || 'Stock Audit Corrective Entry',
+        status:       'Audit Entry',
+      },
+      items: misItems,
+    });
+    const misNumber = res.doc_number;
 
     // 4. Write to pu_stock_audit_log
     const { error: aErr } = await sb.from('pu_stock_audit_log').insert({
@@ -21438,6 +21384,20 @@ function ssdTab(tab) {
 // ============================================================
 // SEQUENCE HELPERS
 // ============================================================
+// ── v90: single entry point for atomic write RPCs ───────────────────
+// Idempotency key per invocation; replayed requests return the original
+// doc_number instead of double-creating.
+async function puRPC(name, payload, extra={}) {
+  const {data, error} = await sb.rpc(name, {
+    p: payload,
+    p_client_request_id: crypto.randomUUID(),
+    p_user: state.userName,
+    ...extra,
+  });
+  if (error) throw new Error(error.message);
+  return data || {};
+}
+
 async function nextPUDocNumber(type) {
   const fy=currentFY();
   const {data,error}=await sb.rpc('next_doc_number',{p_doc_type:type,p_fin_year:fy});
@@ -22247,36 +22207,13 @@ async function saveCashPOB() {
 
   pbShow('Saving Direct Purchase Bill…');
   try {
-    const billNumber = await nextPUDocNumber('POB');
     calcCashPobPayDue();
-    const { error } = await sb.from('pu_po_bills').insert({
-      bill_number: billNumber, bill_date: date,
-      po_number: null, is_cash_purchase: true,
-      vendor_name: vendor,
-      vendor_inv_no: invNo, vendor_inv_date: invDate,
-      credit_period: num(document.getElementById('cpob_creditPeriod').value) || 0,
-      inv_pay_due: document.getElementById('cpob_invPayDue').value || null,
-      grn_numbers: _cpobSelectedGRNs.join(', '),
-      gst_mode: 'overall',
-      gross_amount: gross,
-      cgst_pct: cgst, sgst_pct: sgst, igst_pct: igst,
-      cgst_amount: cgstAmt, sgst_amount: sgstAmt, igst_amount: igstAmt,
-      tds_pct: 0, tds_amount: 0,
-      hold_amount: num(document.getElementById('cpob_holdAmt').value),
-      hold_description: document.getElementById('cpob_holdDesc')?.value || null,
-      invoice_value: invoice, net_payable: net,
-      prepared_by: state.userName, prepared_by_id: state.userId,
-      remarks: document.getElementById('cpob_remarks').value || null,
-      status: 'Pending Approval',
-    });
-    if (error) throw new Error(error.message);
-
-    // Build all items (material rows + extra lines) for single insert
+    // v90: atomic create via RPC — header + items + GRN flips in one txn
     const allItems = [];
     _cpobLineItems.forEach((it, i) => {
       const base = num(it.base_amount);
       allItems.push({
-        bill_number: billNumber, sno: i+1, row_type: 'material',
+        sno: i+1, row_type: 'material',
         grn_number: it.grn_number, material_name: it.material_name,
         material_code: it.material_code||null, uom: it.uom,
         qty: it.this_grn_qty, unit_rate: it.unit_rate, base_amount: base,
@@ -22291,17 +22228,40 @@ async function saveCashPOB() {
     document.querySelectorAll('#cpob_extraBody tr').forEach((tr, i) => {
       const cells = tr.cells;
       allItems.push({
-        bill_number: billNumber, sno: matCount+i+1, row_type: 'extra',
+        sno: matCount+i+1, row_type: 'extra',
         description: cells[0]?.querySelector('input')?.value || null,
         line_type: cells[1]?.querySelector('select')?.value,
         timing: cells[2]?.querySelector('select')?.value,
         extra_amount: num(cells[3]?.querySelector('input')?.value),
       });
     });
-    if (allItems.length) await sb.from('pu_po_bill_items').insert(allItems);
 
-    await sb.from('pu_grn').update({ status: 'Partially Billed' }).in('grn_number', _cpobSelectedGRNs);
-    flashSuccess('Direct Purchase Bill ' + billNumber + ' submitted for PM approval');
+    const res = await puRPC('rpc_save_pob', {
+      fin_year: currentFY(),
+      header: {
+        bill_date: date,
+        po_number: null, is_cash_purchase: true,
+        vendor_name: vendor,
+        vendor_inv_no: invNo, vendor_inv_date: invDate,
+        credit_period: num(document.getElementById('cpob_creditPeriod').value) || 0,
+        inv_pay_due: document.getElementById('cpob_invPayDue').value || null,
+        grn_numbers: _cpobSelectedGRNs.join(', '),
+        gst_mode: 'overall',
+        gross_amount: gross,
+        cgst_pct: cgst, sgst_pct: sgst, igst_pct: igst,
+        cgst_amount: cgstAmt, sgst_amount: sgstAmt, igst_amount: igstAmt,
+        tds_pct: 0, tds_amount: 0,
+        hold_amount: num(document.getElementById('cpob_holdAmt').value),
+        hold_description: document.getElementById('cpob_holdDesc')?.value || null,
+        invoice_value: invoice, net_payable: net,
+        prepared_by: state.userName, prepared_by_id: state.userId,
+        remarks: document.getElementById('cpob_remarks').value || null,
+        status: 'Pending Approval',
+      },
+      items: allItems,
+      grn_status: { grn_numbers: _cpobSelectedGRNs, status: 'Partially Billed' },
+    });
+    flashSuccess('Direct Purchase Bill ' + res.doc_number + ' submitted for PM approval');
     _cpobInvalidateCache();
     closeCashPOBForm();
     loadPOBList();
