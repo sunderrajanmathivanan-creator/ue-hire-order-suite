@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Penguin-Procurement Suite v90 — Urban Excellence LLP · Poetry of Earth</title>
+<title>Penguin-Procurement Suite v91 — Urban Excellence LLP · Poetry of Earth</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <style>
@@ -4610,36 +4610,29 @@ async function apiSaveHO(data) {
   _cacheBust('hoList','openHOs');
   pbShow('Saving HO\u2026');
   try {
-    // Generate number at save time — never on form open
-    const hoNumber = await nextDocNumber('HO');
-    data.hoNumber = hoNumber;
-    // Update the form field so user sees the assigned number
+    const res = await puRPC('rpc_save_ho', {
+      fin_year: currentFY(),
+      header: {
+        ho_date: data.hoDate, project: data.project,
+        vendor_code: data.vendorCode||null, vendor_name: data.vendor, scope: data.scope,
+        location: data.location||null, start_date: data.startDate||null,
+        end_date: data.endDate||null, gst_pct: data.gstPct,
+        gross_amount: data.grossAmount, gst_amount: data.gstAmount, total_amount: data.totalAmount,
+        remarks: data.remarks||null, contact_person: data.contactPerson||null,
+        status: 'Pending Approval',
+        created_by: state.userId, created_by_name: state.userName
+      },
+      items: (data.items||[]).map(it => ({
+        sno: it.sno, activity_code: it.activity_code||null,
+        description: it.description, uom: it.uom||null, qty: it.qty,
+        unit_rate: it.rate, amount: it.amount
+      })),
+    });
+    data.hoNumber = res.doc_number;
     const numEl = document.getElementById('ho_number');
-    if (numEl) numEl.value = hoNumber;
-
-    const row = {
-      ho_number: hoNumber, ho_date: data.hoDate, project: data.project,
-      vendor_code: data.vendorCode||null, vendor_name: data.vendor, scope: data.scope,
-      location: data.location||null, start_date: data.startDate||null,
-      end_date: data.endDate||null, gst_pct: data.gstPct,
-      gross_amount: data.grossAmount, gst_amount: data.gstAmount, total_amount: data.totalAmount,
-      remarks: data.remarks||null, contact_person: data.contactPerson||null,
-      status: 'Pending Approval',
-      created_by: state.userId, created_by_name: state.userName
-    };
-    const { error: he } = await sb.from('ho_orders').insert(row);
-    if (he) return { ok: false, error: he.message };
-
-    const items = (data.items||[]).map(it => ({
-      ho_number: hoNumber, sno: it.sno, activity_code: it.activity_code||null,
-      description: it.description, uom: it.uom||null, qty: it.qty, unit_rate: it.rate, amount: it.amount
-    }));
-    if (items.length) {
-      const { error: ie } = await sb.from('ho_order_items').insert(items);
-      if (ie) return { ok: false, error: ie.message };
-    }
+    if (numEl) numEl.value = res.doc_number;
     _cacheBust('hoList','openHOs');
-    return { ok: true, hoNumber };
+    return { ok: true, hoNumber: res.doc_number };
   } catch(e) {
     return { ok: false, error: e.message };
   } finally {
@@ -4657,27 +4650,25 @@ async function apiReviseHO(hoNumber, data) {
   _cacheBust('hoList','openHOs');
   pbShow('Saving revised HO\u2026');
   try {
-    const { error: he } = await sb.from('ho_orders').update({
-      ho_date: data.hoDate, scope: data.scope,
-      vendor_code: data.vendorCode||null, vendor_name: data.vendor,
-      location: data.location||null, start_date: data.startDate||null,
-      end_date: data.endDate||null, gst_pct: data.gstPct,
-      gross_amount: data.grossAmount, gst_amount: data.gstAmount,
-      total_amount: data.totalAmount, remarks: data.remarks||null,
-      contact_person: data.contactPerson||null,
-      project: data.project, status: 'Pending Approval',
-      rejection_reason: null, updated_at: new Date().toISOString()
-    }).eq('ho_number', hoNumber);
-    if (he) return { ok: false, error: he.message };
-    await sb.from('ho_order_items').delete().eq('ho_number', hoNumber);
-    const items = (data.items||[]).map(it => ({
-      ho_number: hoNumber, sno: it.sno, activity_code: it.activity_code||null,
-      description: it.description, uom: it.uom||null, qty: it.qty, unit_rate: it.rate, amount: it.amount
-    }));
-    if (items.length) {
-      const { error: ie } = await sb.from('ho_order_items').insert(items);
-      if (ie) return { ok: false, error: ie.message };
-    }
+    await puRPC('rpc_save_ho', {
+      mode: 'revise', doc_number: hoNumber, fin_year: currentFY(),
+      header: {
+        ho_date: data.hoDate, scope: data.scope,
+        vendor_code: data.vendorCode||null, vendor_name: data.vendor,
+        location: data.location||null, start_date: data.startDate||null,
+        end_date: data.endDate||null, gst_pct: data.gstPct,
+        gross_amount: data.grossAmount, gst_amount: data.gstAmount,
+        total_amount: data.totalAmount, remarks: data.remarks||null,
+        contact_person: data.contactPerson||null,
+        project: data.project, status: 'Pending Approval',
+        rejection_reason: null, updated_at: new Date().toISOString()
+      },
+      items: (data.items||[]).map(it => ({
+        sno: it.sno, activity_code: it.activity_code||null,
+        description: it.description, uom: it.uom||null, qty: it.qty,
+        unit_rate: it.rate, amount: it.amount
+      })),
+    });
     _cacheBust('hoList','openHOs');
     return { ok: true };
   } catch(e) {
@@ -4735,48 +4726,34 @@ async function apiSaveHOC(data) {
   _cacheBust('hocList','unbilledHOCs');
   pbShow('Saving certification\u2026');
   try {
-    if (!data.isRevision) {
-      // Generate HOC number: HOC/HO-007/001 (cert seq for this HO)
-      data.hocNumber = await nextHOCNumber(data.hoNumber);
-      const numEl = document.getElementById('hoc_number');
-      if (numEl) numEl.value = data.hocNumber;
-    }
-
-    if (data.isRevision) {
-      const { error: ue } = await sb.from('ho_certifications').update({
-        hoc_date: data.hocDate, period_from: data.periodFrom||null,
-        period_to: data.periodTo||null, gross_value: data.grossValue,
-        remarks: data.remarks||null, status: 'Pending Approval', rejection_reason: null,
-        certified_by: data.certifiedBy, certified_by_id: state.userId
-      }).eq('hoc_number', data.hocNumber);
-      if (ue) return { ok: false, error: ue.message };
-      await sb.from('ho_certification_items').delete().eq('hoc_number', data.hocNumber);
-    } else {
-      const { error: ie } = await sb.from('ho_certifications').insert({
-        hoc_number: data.hocNumber, hoc_date: data.hocDate, ho_number: data.hoNumber,
-        vendor_name: data.vendor, period_from: data.periodFrom||null,
-        period_to: data.periodTo||null, certified_by: data.certifiedBy,
-        certified_by_id: state.userId, gross_value: data.grossValue,
-        remarks: data.remarks||null, status: 'Pending Approval', rejection_reason: null
-      });
-      if (ie) return { ok: false, error: ie.message };
-      const { data: ho } = await sb.from('ho_orders').select('status').eq('ho_number', data.hoNumber).single();
-      if (ho && ho.status === 'Open') {
-        await sb.from('ho_orders').update({ status: 'Active', updated_at: new Date().toISOString() }).eq('ho_number', data.hoNumber);
-      }
-    }
     const items = (data.items||[]).filter(it => it.thisPeriodQty > 0).map(it => ({
-      hoc_number: data.hocNumber, sno: it.sno, description: it.description, uom: it.uom||null,
+      sno: it.sno, description: it.description, uom: it.uom||null,
       ho_qty: it.hoQty, prev_cumulative_qty: it.prevCumulativeQty, this_period_qty: it.thisPeriodQty,
       cumulative_qty: it.cumulativeQty, unit_rate: it.unitRate, cert_value: it.certValue,
       wbs_code: it.wbs_code||null, wbs_activity: it.wbs_activity||null, cost_subhead: it.cost_subhead||null,
     }));
-    if (items.length) {
-      const { error: cite } = await sb.from('ho_certification_items').insert(items);
-      if (cite) return { ok: false, error: cite.message };
-    }
+    const payload = data.isRevision
+      ? { mode:'revise', doc_number:data.hocNumber, parent:data.hoNumber,
+          header:{
+            hoc_date: data.hocDate, period_from: data.periodFrom||null,
+            period_to: data.periodTo||null, gross_value: data.grossValue,
+            remarks: data.remarks||null, status: 'Pending Approval', rejection_reason: null,
+            certified_by: data.certifiedBy, certified_by_id: state.userId
+          }, items }
+      : { parent:data.hoNumber,
+          header:{
+            hoc_date: data.hocDate,
+            vendor_name: data.vendor, period_from: data.periodFrom||null,
+            period_to: data.periodTo||null, certified_by: data.certifiedBy,
+            certified_by_id: state.userId, gross_value: data.grossValue,
+            remarks: data.remarks||null, status: 'Pending Approval', rejection_reason: null
+          }, items };
+    const res = await puRPC('rpc_save_hoc', payload);
+    data.hocNumber = res.doc_number;
+    const numEl = document.getElementById('hoc_number');
+    if (numEl) numEl.value = res.doc_number;
     _cacheBust('hocList','unbilledHOCs','hoList');
-    return { ok: true, hocNumber: data.hocNumber };
+    return { ok: true, hocNumber: res.doc_number };
   } catch(e) {
     return { ok: false, error: e.message };
   } finally {
@@ -4848,16 +4825,9 @@ async function apiSaveHOB(data) {
   _cacheBust('hobList','unpaidBills','hocList');
   pbShow('Saving bill\u2026');
   try {
-    if (!data.isRevision) {
-      // Generate HOB number: HOB/HO-007/001 (bill seq for this HO)
-      data.billNumber = await nextHOBNumber(data.hoNumber);
-      const numEl = document.getElementById('hob_number');
-      if (numEl) numEl.value = data.billNumber;
-    }
-
-    const billRow = {
-      bill_number: data.billNumber, bill_date: data.billDate,
-      hoc_number: data.hocNumber, ho_number: data.hoNumber, vendor_name: data.vendor,
+    const header = {
+      bill_date: data.billDate,
+      vendor_name: data.vendor,
       vendor_inv_no: data.vendorInvNo||null, vendor_inv_date: data.vendorInvDate||null,
       credit_period: data.creditPeriod||30, inv_pay_due: data.invPayDue||null,
       gross_amount: data.grossAmount, extra_before_gst: data.extraBefore||0,
@@ -4873,37 +4843,26 @@ async function apiSaveHOB(data) {
       amc_start_month: data.amcStartMonth||null,
       amc_end_month: data.amcEndMonth||null
     };
-
-    if (data.isRevision) {
-      const { error: ue } = await sb.from('ho_bills').update({ ...billRow, rejection_reason: null }).eq('bill_number', data.billNumber);
-      if (ue) return { ok: false, error: ue.message };
-      await sb.from('ho_bill_items').delete().eq('bill_number', data.billNumber);
-      await sb.from('ho_bill_extra_lines').delete().eq('bill_number', data.billNumber);
-    } else {
-      const { error: ie } = await sb.from('ho_bills').insert(billRow);
-      if (ie) return { ok: false, error: ie.message };
-    }
-
-    if ((data.items||[]).length) {
-      await sb.from('ho_bill_items').insert(data.items.map(it => ({
-        bill_number: data.billNumber, sno: it.sno, description: it.description,
-        uom: it.uom||null, this_period_qty: it.thisPeriodQty, wbs_code: it.wbs_code||null, wbs_activity: it.wbs_activity||null, cost_subhead: it.cost_subhead||null, unit_rate: it.unitRate, amount: it.amount,
-      })));
-    }
-    if ((data.extraLines||[]).length) {
-      await sb.from('ho_bill_extra_lines').insert(data.extraLines.map(el => ({
-        bill_number: data.billNumber, sno: el.sno, description: el.description||null,
-        line_type: el.type, timing: el.timing, amount: el.amount
-      })));
-    }
+    const items = (data.items||[]).map(it => ({
+      sno: it.sno, description: it.description,
+      uom: it.uom||null, this_period_qty: it.thisPeriodQty,
+      wbs_code: it.wbs_code||null, wbs_activity: it.wbs_activity||null, cost_subhead: it.cost_subhead||null,
+      unit_rate: it.unitRate, amount: it.amount,
+    }));
+    const extra_lines = (data.extraLines||[]).map(el => ({
+      sno: el.sno, description: el.description||null,
+      line_type: el.type, timing: el.timing, amount: el.amount
+    }));
+    const payload = data.isRevision
+      ? { mode:'revise', doc_number:data.billNumber, parent:data.hoNumber, cert:data.hocNumber,
+          header, items, extra_lines }
+      : { parent:data.hoNumber, cert:data.hocNumber, header, items, extra_lines };
+    const res = await puRPC('rpc_save_hob', payload);
+    data.billNumber = res.doc_number;
+    const numEl = document.getElementById('hob_number');
+    if (numEl) numEl.value = res.doc_number;
     _cacheBust('hobList','unpaidBills','hocList');
-    // Immediately lock the certification so it can't be billed again until this bill is resolved
-    if (!data.isRevision) {
-      await sb.from('ho_certifications')
-        .update({ status: 'Pending Billing' })
-        .eq('hoc_number', data.hocNumber);
-    }
-    return { ok: true, billNumber: data.billNumber };
+    return { ok: true, billNumber: res.doc_number };
   } catch(e) {
     return { ok: false, error: e.message };
   } finally {
@@ -5374,33 +5333,31 @@ async function apiSaveWO(data) {
   _cacheBust('woList','openWOs');
   pbShow('Saving Work Order\u2026');
   try {
-    const woNumber = await nextDocNumber('WO');
-    data.woNumber = woNumber;
-    const numEl = document.getElementById('wo_number');
-    if (numEl) numEl.value = woNumber;
-    const { error: we } = await sb.from('wo_orders').insert({
-      wo_number: woNumber, wo_date: data.woDate, project: data.project,
-      vendor_code: data.vendorCode||null, vendor_name: data.vendor, scope: data.scope,
-      start_date: data.startDate||null, end_date: data.endDate||null,
-      gst_pct: data.gstPct, gross_amount: data.grossAmount,
-      gst_amount: data.gstAmount, total_amount: data.totalAmount,
-      remarks: data.remarks||null, contact_person: data.contactPerson||null,
-      cert_mode: data.certMode||'QTY',
-      retention_pct: data.retentionPct??0,
-      mob_advance_pct: data.mobAdvPct||null, mob_advance_amount: data.mobAdvAmt||null,
-      status: 'Pending Approval', created_by: state.userId, created_by_name: state.userName
+    const res = await puRPC('rpc_save_wo', {
+      fin_year: currentFY(),
+      header: {
+        wo_date: data.woDate, project: data.project,
+        vendor_code: data.vendorCode||null, vendor_name: data.vendor, scope: data.scope,
+        start_date: data.startDate||null, end_date: data.endDate||null,
+        gst_pct: data.gstPct, gross_amount: data.grossAmount,
+        gst_amount: data.gstAmount, total_amount: data.totalAmount,
+        remarks: data.remarks||null, contact_person: data.contactPerson||null,
+        cert_mode: data.certMode||'QTY',
+        retention_pct: data.retentionPct??0,
+        mob_advance_pct: data.mobAdvPct||null, mob_advance_amount: data.mobAdvAmt||null,
+        status: 'Pending Approval', created_by: state.userId, created_by_name: state.userName
+      },
+      items: (data.items||[]).map(it => ({
+        sno: it.sno, activity_code: it.activity_code||null,
+        description: it.description, uom: it.uom||null, qty: it.qty,
+        unit_rate: it.rate, amount: it.amount
+      })),
     });
-    if (we) return { ok: false, error: we.message };
-    const items = (data.items||[]).map(it => ({
-      wo_number: woNumber, sno: it.sno, activity_code: it.activity_code||null,
-      description: it.description, uom: it.uom||null, qty: it.qty, unit_rate: it.rate, amount: it.amount
-    }));
-    if (items.length) {
-      const { error: ie } = await sb.from('wo_order_items').insert(items);
-      if (ie) return { ok: false, error: ie.message };
-    }
+    data.woNumber = res.doc_number;
+    const numEl = document.getElementById('wo_number');
+    if (numEl) numEl.value = res.doc_number;
     _cacheBust('woList','openWOs');
-    return { ok: true, woNumber };
+    return { ok: true, woNumber: res.doc_number };
   } catch(e) { return { ok: false, error: e.message }; }
   finally { pbDone(); }
 }
@@ -5409,28 +5366,26 @@ async function apiReviseWO(woNumber, data) {
   _cacheBust('woList','openWOs');
   pbShow('Saving revised WO\u2026');
   try {
-    const { error: he } = await sb.from('wo_orders').update({
-      wo_date: data.woDate, scope: data.scope,
-      vendor_code: data.vendorCode||null, vendor_name: data.vendor,
-      start_date: data.startDate||null, end_date: data.endDate||null,
-      gst_pct: data.gstPct, gross_amount: data.grossAmount,
-      gst_amount: data.gstAmount, total_amount: data.totalAmount,
-      remarks: data.remarks||null, contact_person: data.contactPerson||null,
-      project: data.project,
-      mob_advance_pct: data.mobAdvPct||null, mob_advance_amount: data.mobAdvAmt||null,
-      status: 'Pending Approval', rejection_reason: null,
-      updated_at: new Date().toISOString()
-    }).eq('wo_number', woNumber);
-    if (he) return { ok: false, error: he.message };
-    await sb.from('wo_order_items').delete().eq('wo_number', woNumber);
-    const items = (data.items||[]).map(it => ({
-      wo_number: woNumber, sno: it.sno, activity_code: it.activity_code||null,
-      description: it.description, uom: it.uom||null, qty: it.qty, unit_rate: it.rate, amount: it.amount
-    }));
-    if (items.length) {
-      const { error: ie } = await sb.from('wo_order_items').insert(items);
-      if (ie) return { ok: false, error: ie.message };
-    }
+    await puRPC('rpc_save_wo', {
+      mode: 'revise', doc_number: woNumber, fin_year: currentFY(),
+      header: {
+        wo_date: data.woDate, scope: data.scope,
+        vendor_code: data.vendorCode||null, vendor_name: data.vendor,
+        start_date: data.startDate||null, end_date: data.endDate||null,
+        gst_pct: data.gstPct, gross_amount: data.grossAmount,
+        gst_amount: data.gstAmount, total_amount: data.totalAmount,
+        remarks: data.remarks||null, contact_person: data.contactPerson||null,
+        project: data.project,
+        mob_advance_pct: data.mobAdvPct||null, mob_advance_amount: data.mobAdvAmt||null,
+        status: 'Pending Approval', rejection_reason: null,
+        updated_at: new Date().toISOString()
+      },
+      items: (data.items||[]).map(it => ({
+        sno: it.sno, activity_code: it.activity_code||null,
+        description: it.description, uom: it.uom||null, qty: it.qty,
+        unit_rate: it.rate, amount: it.amount
+      })),
+    });
     _cacheBust('woList','openWOs');
     return { ok: true };
   } catch(e) { return { ok: false, error: e.message }; }
@@ -5507,46 +5462,36 @@ async function apiSaveWOC(data) {
   _cacheBust('wocList','unbilledWOCs');
   pbShow('Saving WO certification\u2026');
   try {
-    if (!data.isRevision) {
-      data.wocNumber = await nextWOCNumber(data.woNumber);
-      const numEl = document.getElementById('woc_number');
-      if (numEl) numEl.value = data.wocNumber;
-    }
-    if (data.isRevision) {
-      const { error: ue } = await sb.from('wo_certifications').update({
-        woc_date: data.wocDate, period_from: data.periodFrom||null,
-        period_to: data.periodTo||null, gross_value: data.grossValue,
-        remarks: data.remarks||null, status: 'Pending Approval', rejection_reason: null,
-        certified_by: data.certifiedBy, certified_by_id: state.userId
-      }).eq('woc_number', data.wocNumber);
-      if (ue) return { ok: false, error: ue.message };
-      await sb.from('wo_certification_items').delete().eq('woc_number', data.wocNumber);
-    } else {
-      const { error: ie } = await sb.from('wo_certifications').insert({
-        woc_number: data.wocNumber, woc_date: data.wocDate, wo_number: data.woNumber,
-        vendor_name: data.vendor, period_from: data.periodFrom||null,
-        period_to: data.periodTo||null, certified_by: data.certifiedBy,
-        certified_by_id: state.userId, gross_value: data.grossValue,
-        remarks: data.remarks||null, status: 'Pending Approval', rejection_reason: null
-      });
-      if (ie) return { ok: false, error: ie.message };
-      const { data: wo } = await sb.from('wo_orders').select('status').eq('wo_number', data.woNumber).single();
-      if (wo && wo.status === 'Open') {
-        await sb.from('wo_orders').update({ status: 'Active', updated_at: new Date().toISOString() }).eq('wo_number', data.woNumber);
-      }
-    }
-    if ((data.items||[]).length) {
-      await sb.from('wo_certification_items').insert(data.items.filter(it => it.certValue > 0).map(it => ({
-        woc_number: data.wocNumber, sno: it.sno, description: it.description, uom: it.uom||null,
-        wo_qty: it.woQty, prev_cumulative_qty: it.prevCumulativeQty||0,
-        this_period_qty: it.thisPeriodQty||0, cumulative_qty: it.cumulativeQty||0,
-        prev_cumulative_pct: it.prevCumulativePct||0, this_period_pct: it.thisPeriodPct||0,
-        cumulative_pct: it.cumulativePct||0, unit_rate: it.unitRate, cert_value: it.certValue,
-        wbs_code: it.wbs_code||null, wbs_activity: it.wbs_activity||null, cost_subhead: it.cost_subhead||null,
-        })));
-    }
+    const items = (data.items||[]).filter(it => it.certValue > 0).map(it => ({
+      sno: it.sno, description: it.description, uom: it.uom||null,
+      wo_qty: it.woQty, prev_cumulative_qty: it.prevCumulativeQty||0,
+      this_period_qty: it.thisPeriodQty||0, cumulative_qty: it.cumulativeQty||0,
+      prev_cumulative_pct: it.prevCumulativePct||0, this_period_pct: it.thisPeriodPct||0,
+      cumulative_pct: it.cumulativePct||0, unit_rate: it.unitRate, cert_value: it.certValue,
+      wbs_code: it.wbs_code||null, wbs_activity: it.wbs_activity||null, cost_subhead: it.cost_subhead||null,
+    }));
+    const payload = data.isRevision
+      ? { mode:'revise', doc_number:data.wocNumber, parent:data.woNumber,
+          header:{
+            woc_date: data.wocDate, period_from: data.periodFrom||null,
+            period_to: data.periodTo||null, gross_value: data.grossValue,
+            remarks: data.remarks||null, status: 'Pending Approval', rejection_reason: null,
+            certified_by: data.certifiedBy, certified_by_id: state.userId
+          }, items }
+      : { parent:data.woNumber,
+          header:{
+            woc_date: data.wocDate,
+            vendor_name: data.vendor, period_from: data.periodFrom||null,
+            period_to: data.periodTo||null, certified_by: data.certifiedBy,
+            certified_by_id: state.userId, gross_value: data.grossValue,
+            remarks: data.remarks||null, status: 'Pending Approval', rejection_reason: null
+          }, items };
+    const res = await puRPC('rpc_save_woc', payload);
+    data.wocNumber = res.doc_number;
+    const numEl = document.getElementById('woc_number');
+    if (numEl) numEl.value = res.doc_number;
     _cacheBust('wocList','unbilledWOCs','woList');
-    return { ok: true, wocNumber: data.wocNumber };
+    return { ok: true, wocNumber: res.doc_number };
   } catch(e) { return { ok: false, error: e.message }; }
   finally { pbDone(); }
 }
@@ -5622,14 +5567,9 @@ async function apiSaveWOB(data) {
   _cacheBust('wobList','unpaidBills','wocList');
   pbShow('Saving WO bill\u2026');
   try {
-    if (!data.isRevision) {
-      data.billNumber = await nextWOBNumber(data.woNumber);
-      const numEl = document.getElementById('wob_number');
-      if (numEl) numEl.value = data.billNumber;
-    }
-    const billRow = {
-      bill_number: data.billNumber, bill_date: data.billDate,
-      woc_number: data.wocNumber, wo_number: data.woNumber, vendor_name: data.vendor,
+    const header = {
+      bill_date: data.billDate,
+      vendor_name: data.vendor,
       vendor_inv_no: data.vendorInvNo||null, vendor_inv_date: data.vendorInvDate||null,
       credit_period: data.creditPeriod||30, inv_pay_due: data.invPayDue||null,
       gross_amount: data.grossAmount, extra_before_gst: data.extraBefore||0,
@@ -5645,34 +5585,26 @@ async function apiSaveWOB(data) {
       amc_start_month: data.amcStartMonth||null,
       amc_end_month: data.amcEndMonth||null
     };
-    if (data.isRevision) {
-      const { error: ue } = await sb.from('wo_bills').update({ ...billRow, rejection_reason: null }).eq('bill_number', data.billNumber);
-      if (ue) return { ok: false, error: ue.message };
-      await sb.from('wo_bill_items').delete().eq('bill_number', data.billNumber);
-      await sb.from('wo_bill_extra_lines').delete().eq('bill_number', data.billNumber);
-    } else {
-      const { error: ie } = await sb.from('wo_bills').insert(billRow);
-      if (ie) return { ok: false, error: ie.message };
-    }
-    if ((data.items||[]).length) {
-      await sb.from('wo_bill_items').insert(data.items.map(it => ({
-        bill_number: data.billNumber, sno: it.sno, description: it.description,
-        uom: it.uom||null, this_period_qty: it.thisPeriodQty, unit_rate: it.unitRate,
-        amount: it.amount,
-        wbs_code: it.wbs_code||null, wbs_activity: it.wbs_activity||null, cost_subhead: it.cost_subhead||null
-      })));
-    }
-    if ((data.extraLines||[]).length) {
-      await sb.from('wo_bill_extra_lines').insert(data.extraLines.map(el => ({
-        bill_number: data.billNumber, sno: el.sno, description: el.description||null,
-        line_type: el.type, timing: el.timing, amount: el.amount
-      })));
-    }
-    if (!data.isRevision) {
-      await sb.from('wo_certifications').update({ status: 'Pending Billing' }).eq('woc_number', data.wocNumber);
-    }
+    const items = (data.items||[]).map(it => ({
+      sno: it.sno, description: it.description,
+      uom: it.uom||null, this_period_qty: it.thisPeriodQty, unit_rate: it.unitRate,
+      amount: it.amount,
+      wbs_code: it.wbs_code||null, wbs_activity: it.wbs_activity||null, cost_subhead: it.cost_subhead||null
+    }));
+    const extra_lines = (data.extraLines||[]).map(el => ({
+      sno: el.sno, description: el.description||null,
+      line_type: el.type, timing: el.timing, amount: el.amount
+    }));
+    const payload = data.isRevision
+      ? { mode:'revise', doc_number:data.billNumber, parent:data.woNumber, cert:data.wocNumber,
+          header, items, extra_lines }
+      : { parent:data.woNumber, cert:data.wocNumber, header, items, extra_lines };
+    const res = await puRPC('rpc_save_wob', payload);
+    data.billNumber = res.doc_number;
+    const numEl = document.getElementById('wob_number');
+    if (numEl) numEl.value = res.doc_number;
     _cacheBust('wobList','unpaidBills','wocList');
-    return { ok: true, billNumber: data.billNumber };
+    return { ok: true, billNumber: res.doc_number };
   } catch(e) { return { ok: false, error: e.message }; }
   finally { pbDone(); }
 }
@@ -20393,6 +20325,22 @@ async function saveMIS() {
         matInp.focus();
         return;
       }
+      // v90: WBS package + location are MANDATORY for every issued line.
+      // UI save-blocker (RPC backstop p_require_tags flips on after WBS build-out).
+      const idM = matInp.id.match(/^misMat_(\d+)$/);
+      const ri2 = idM ? idM[1] : null;
+      const pkgV = ri2!=null ? document.getElementById('misPkg_'+ri2)?.value : '';
+      const locV = ri2!=null ? document.getElementById('misLoc_'+ri2)?.value : '';
+      if (!pkgV) {
+        toast(`Line ${i+1} (${mat}): select a Work Package — WBS tagging is mandatory`,'error');
+        document.getElementById('misPkg_'+ri2)?.focus();
+        return;
+      }
+      if (!locV) {
+        toast(`Line ${i+1} (${mat}): select a Location Unit — location tagging is mandatory`,'error');
+        document.getElementById('misLoc_'+ri2)?.focus();
+        return;
+      }
     }
   }
   document.querySelectorAll('#misItemsBody tr').forEach((tr,i)=>{
@@ -20549,14 +20497,17 @@ async function saveMIS() {
     };
     if (revisingMIS) payload.doc_number = revisingMIS;
     const res = await puRPC('rpc_save_mis', payload);
+    // v90 fix2: single shared toast element — the nag and the success
+    // message must be ONE toast or the success overwrites the warning.
+    const misRef = revisingMIS || res.doc_number;
+    const okMsg = revisingMIS
+      ? 'MIS '+misRef+' revised and resubmitted for approval'
+      : 'MIS '+misRef+' saved — pending Site Manager approval';
+    if (revisingMIS) delete document.getElementById('misForm').dataset.revisingMIS;
     if (res.untagged_count > 0) {
-      toast(`⚠ ${res.untagged_count} line(s) have no WBS package/location — they will be invisible to budget tracking`,'warn',6000);
-    }
-    if (revisingMIS) {
-      delete document.getElementById('misForm').dataset.revisingMIS;
-      flashSuccess('MIS '+revisingMIS+' revised and resubmitted for approval');
+      toast('⚠ '+okMsg+' — but '+res.untagged_count+' line(s) have no WBS package/location and will be INVISIBLE to budget tracking','warn',8000);
     } else {
-      flashSuccess('MIS '+res.doc_number+' saved — pending Site Manager approval');
+      flashSuccess(okMsg);
     }
     closeMISForm(); loadMISList(); loadStockBalance();
   } catch(e){toast('Error: '+e.message,'error');}
