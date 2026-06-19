@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Penguin-Procurement Suite v107 — Urban Excellence LLP · Poetry of Earth</title>
+<title>Penguin-Procurement Suite v108 — Urban Excellence LLP · Poetry of Earth</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <style>
@@ -796,13 +796,6 @@ input[type="number"] {
       <label>Terms &amp; Conditions / Remarks</label>
       <div id="ho_tc_editor" class="tc-editor"></div>
       <input type="hidden" id="ho_remarks">
-      <div class="tc-toolbar" style="margin-top:6px;display:flex;gap:6px;flex-wrap:wrap;">
-        <button type="button" class="btn btn-ghost btn-sm" onclick="tcAddRow('ho_tc_editor')">+ Row</button>
-        <button type="button" class="btn btn-ghost btn-sm" onclick="tcAddSubRow('ho_tc_editor')">+ Sub-row</button>
-        <button type="button" class="btn btn-ghost btn-sm" onclick="tcIndent('ho_tc_editor')">→ Indent</button>
-        <button type="button" class="btn btn-ghost btn-sm" onclick="tcOutdent('ho_tc_editor')">← Outdent</button>
-        <button type="button" class="btn btn-ghost btn-sm" onclick="tcDeleteRow('ho_tc_editor')">✕ Delete</button>
-      </div>
       <small style="color:var(--muted);">Tab = indent · Shift+Tab = outdent · Enter = new row · Backspace on empty = delete</small>
     </div>
 
@@ -1279,13 +1272,6 @@ input[type="number"] {
       <label>Terms &amp; Conditions / Remarks</label>
       <div id="wo_tc_editor" class="tc-editor"></div>
       <input type="hidden" id="wo_remarks">
-      <div class="tc-toolbar" style="margin-top:6px;display:flex;gap:6px;flex-wrap:wrap;">
-        <button type="button" class="btn btn-ghost btn-sm" onclick="tcAddRow('wo_tc_editor')">+ Row</button>
-        <button type="button" class="btn btn-ghost btn-sm" onclick="tcAddSubRow('wo_tc_editor')">+ Sub-row</button>
-        <button type="button" class="btn btn-ghost btn-sm" onclick="tcIndent('wo_tc_editor')">→ Indent</button>
-        <button type="button" class="btn btn-ghost btn-sm" onclick="tcOutdent('wo_tc_editor')">← Outdent</button>
-        <button type="button" class="btn btn-ghost btn-sm" onclick="tcDeleteRow('wo_tc_editor')">✕ Delete</button>
-      </div>
       <small style="color:var(--muted);">Tab = indent · Shift+Tab = outdent · Enter = new row · Backspace on empty = delete</small>
     </div>
 
@@ -8670,7 +8656,7 @@ async function viewHO(hoNum) {
         <div style="color:var(--accent);font-size:15px;margin-top:4px;">Total: <strong>${fmtINRSym(h['Total Amount'])}</strong></div>
       </div>
     </div>
-    ${h['Remarks'] ? `<div style="margin-top:10px;padding:8px 12px;background:var(--panel-2);border-radius:4px;font-size:12px;"><strong>Remarks:</strong> ${esc(h['Remarks'])}</div>` : ''}
+    ${h['Remarks'] ? `<div style="margin-top:10px;padding:10px 12px;background:var(--panel-2);border-radius:4px;"><strong style="font-size:12px;">Terms &amp; Conditions / Remarks</strong><div style="margin-top:6px;">${tcToHTML(h['Remarks'])}</div></div>` : ''}
     <div class="actions-row">
       ${actionBtns}
       <button class="btn btn-secondary" onclick="closeModal();printHOById('${esc(hoNum)}')">🖨 Print HO</button>
@@ -10432,11 +10418,7 @@ function renderWOList() {
     const st = o['Status']||'';
     const stClass = st === 'Rejected - Correction' ? 'rejected-correction' : st.toLowerCase().replace(/[\s-]+/g,'-');
     let ab = `<button class="btn btn-ghost btn-sm" onclick="viewWO('${esc(o['WO Number'])}')">View</button>`;
-    if (perms.canApproveWO && st === 'Pending Approval') {
-      ab += `<button class="btn btn-primary btn-sm" onclick="approveWO('${esc(o['WO Number'])}')">Approve</button>
-        <button class="btn btn-warn btn-sm" onclick="promptRejectWO('${esc(o['WO Number'])}','correction')">↩ Return</button>
-        <button class="btn btn-danger btn-sm" onclick="promptRejectWO('${esc(o['WO Number'])}','reject')">✕ Reject</button>`;
-    }
+    // v108: Approve / Return / Reject live in the View modal only
     if (perms.canCreateWO && st === 'Rejected - Correction') {
       ab += `<button class="btn btn-warn btn-sm" onclick="reviseWO('${esc(o['WO Number'])}')">✎ Revise</button>`;
     }
@@ -11499,7 +11481,7 @@ async function viewWO(woNum) {
         <div style="color:var(--accent);font-size:15px;margin-top:4px;">Total: <strong>${fmtINRSym(h['Total Amount'])}</strong></div>
       </div>
     </div>
-    ${h['Remarks'] ? `<div style="margin-top:10px;padding:8px 12px;background:var(--panel-2);border-radius:4px;font-size:12px;"><strong>Remarks:</strong> ${esc(h['Remarks'])}</div>` : ''}
+    ${h['Remarks'] ? `<div style="margin-top:10px;padding:10px 12px;background:var(--panel-2);border-radius:4px;"><strong style="font-size:12px;">Terms &amp; Conditions / Remarks</strong><div style="margin-top:6px;">${tcToHTML(h['Remarks'])}</div></div>` : ''}
     <div class="actions-row">
       ${actionBtns}
       <button class="btn btn-secondary" onclick="closeModal();printWOById('${esc(woNum)}')">🖨 Print WO</button>
@@ -11585,6 +11567,7 @@ async function _woViewBuildTreeHTML(items) {
       <div class="hoi-subtotal woi-summary">
         <span><span class="lbl">Total Qty:</span> <span class="val">${subTotalQty.toLocaleString('en-IN')} ${esc(unit)}</span></span>
         <span><span class="lbl">Total Amount:</span> <span class="val">₹${subTotalAmt.toLocaleString('en-IN',{minimumFractionDigits:2,maximumFractionDigits:2})}</span></span>
+        <span><span class="lbl">Rate:</span> <span class="val">₹${(subTotalQty?subTotalAmt/subTotalQty:0).toLocaleString('en-IN',{minimumFractionDigits:2,maximumFractionDigits:2})}</span></span>
         <span style="margin-left:auto;color:var(--muted);font-size:11px;">${locCount} location(s)</span>
       </div>
       <div class="hoi-body">
@@ -26743,6 +26726,20 @@ setInterval(function() {
 // Data model: [{level:0,text:''}, {level:1,text:''}, ...]
 // Serialised as JSON in the hidden #ho_remarks / #wo_remarks input
 
+function tcToHTML(val){
+  if(val==null||val==='') return '';
+  let rows;
+  try{ rows = JSON.parse(val); }catch(e){ return esc(String(val)).replace(/\n/g,'<br>'); }
+  if(!Array.isArray(rows)) return esc(String(val)).replace(/\n/g,'<br>');
+  const c=[0,0,0,0,0]; let out='';
+  rows.forEach(function(r){
+    const lvl=Math.max(0,Math.min(4,parseInt(r&&r.level)||0));
+    c[lvl]++; for(let i=lvl+1;i<5;i++)c[i]=0;
+    const num = lvl===0 ? c[0]+'.' : Array.from({length:lvl},function(_,i){return c[i];}).join('.')+'.'+c[lvl];
+    out += '<div style="margin-left:'+(lvl*18)+'px;font-size:12px;line-height:1.55;margin-top:3px;'+(lvl===0?'font-weight:600;':'')+'"><span style="color:var(--muted);margin-right:7px;">'+num+'</span>'+esc((r&&r.text)||'')+'</div>';
+  });
+  return '<div class="tc-view">'+out+'</div>';
+}
 function tcGetRows(editorId) {
   return [...document.querySelectorAll('#'+editorId+' .tc-row')];
 }
