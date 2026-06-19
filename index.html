@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Penguin-Procurement Suite v105 — Urban Excellence LLP · Poetry of Earth</title>
+<title>Penguin-Procurement Suite v107 — Urban Excellence LLP · Poetry of Earth</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <style>
@@ -10391,13 +10391,14 @@ let wob_boq_locked   = false;
 // One WO line item is emitted per selected (activity × location) leaf.
 // ════════════════════════════════════════════════════════════════════════
 let _woTree     = null;  // { pkgId, pkgName, items:[{id,name,uom,wbsNodeId,tier,groups:[{grp,path,leaves:[{id,name,path,rem,est_rate,approved}]}]}] }
+let _woActRate  = {};   // itemId -> activity header rate (bulk-fill source; new selections inherit it)
 let _woSel      = {};    // locId → { qty, rate }
 let _woStages   = {};    // itemId → [ { id, name, pct } ]
 let _woOpenItem = {};    // itemId → bool
 let _woOpenGrp  = {};    // 'itemId::grp' → bool
 
 function _woResetTreeState() {
-  _woTree = null; _woSel = {}; _woStages = {}; _woOpenItem = {}; _woOpenGrp = {};
+  _woTree = null; _woSel = {}; _woStages = {}; _woOpenItem = {}; _woOpenGrp = {}; _woActRate = {};
   const tree = document.getElementById('woItemTree'); if (tree) tree.innerHTML = '';
   const foot = document.getElementById('woItemFoot'); if (foot) foot.style.display = 'none';
   ['wo_refreshRemBtn','wo_expandAllBtn','wo_collapseAllBtn','wo_printBtn'].forEach(id => {
@@ -10669,7 +10670,7 @@ async function woSelectPackage(pkgId, pkgName) {
     });
 
     _woTree = { pkgId, pkgName, items };
-    _woSel = {}; _woStages = {}; _woOpenItem = {}; _woOpenGrp = {};
+    _woSel = {}; _woStages = {}; _woOpenItem = {}; _woOpenGrp = {}; _woActRate = {};
     ['wo_refreshRemBtn','wo_expandAllBtn','wo_collapseAllBtn','wo_printBtn'].forEach(id => { const el = document.getElementById(id); if (el) el.style.display = ''; });
     document.getElementById('woItemFoot').style.display = 'block';
     woRenderTree();
@@ -10708,13 +10709,15 @@ async function _woLoadIssued(actNodeIds){
   // 1) ordered lines for these activities
   const oItems = await _page('wo_order_items', 'wo_number, wbs_node_id, loc_node_id, qty', 'wbs_node_id', actNodeIds);
   // 2) cert lines for these activities
-  const cItems = await _page('wo_certification_items', 'woc_number, wo_number, wbs_node_id, loc_node_id, cumulative_qty', 'wbs_node_id', actNodeIds);
+  const cItems = await _page('wo_certification_items', 'woc_number, wbs_node_id, loc_node_id, cumulative_qty', 'wbs_node_id', actNodeIds);
 
-  const woNums  = [...new Set([...oItems.map(r=>r.wo_number), ...cItems.map(r=>r.wo_number)].filter(Boolean))];
   const wocNums = [...new Set(cItems.map(r=>r.woc_number).filter(Boolean))];
-  const woMap = {}, wocMap = {};
-  if (woNums.length)  (await _page('wo_orders','wo_number, status, vendor_name, vendor_code','wo_number', woNums)).forEach(w => woMap[w.wo_number]=w);
+  const wocMap = {};
   if (wocNums.length) (await _page('wo_certifications','woc_number, wo_number, status','woc_number', wocNums)).forEach(w => wocMap[w.woc_number]=w);
+  // wo_number lives on the certification parent, not the cert item — derive it from wocMap
+  const woNums = [...new Set([...oItems.map(r=>r.wo_number), ...Object.values(wocMap).map(w=>w.wo_number)].filter(Boolean))];
+  const woMap = {};
+  if (woNums.length) (await _page('wo_orders','wo_number, status, vendor_name, vendor_code','wo_number', woNums)).forEach(w => woMap[w.wo_number]=w);
 
   const act = (wbs) => (out.byAct[wbs] = out.byAct[wbs] || { cols:{}, byLoc:{}, colSum:{} });
 
@@ -10768,6 +10771,24 @@ function _woTierBadge(t) {
   const [c,l] = m[t]||m.none; return `<span class="hoi-tier ${c}">${l}</span>`;
 }
 
+function _woRateFor(itemId, leaf){
+  const hr = _woActRate[itemId];
+  return (hr!=null && hr!=='' && Number(hr)>0) ? Number(hr) : leaf.est_rate;
+}
+function applyActivityRate(itemId){
+  const inp = document.getElementById('woiRate_'+itemId);
+  if(!inp) return;
+  const v = inp.value;
+  if(v===''||!(Number(v)>0)){ toast('Enter a valid rate to apply','warn'); inp.focus(); return; }
+  const item = _woFindItem(itemId); if(!item) return;
+  const allLeaves = item.groups.flatMap(g=>[].concat(g.leaves||[], (g.subGroups||[]).flatMap(function(sg){return sg.leaves||[];})));
+  let n=0;
+  allLeaves.forEach(function(l){ if(_woSel[l.selKey]){ _woSel[l.selKey].rate = Number(v); n++; } });
+  _woActRate[itemId] = v;
+  woRenderTree();
+  if(!n) toast('Rate saved \u2014 it will fill locations as you select them','warn');
+  else toast('Rate \u20b9'+v+' applied to '+n+' location'+(n===1?'':'s'),'info');
+}
 function woRenderTree() {
   const root = document.getElementById('woItemTree');
   if (!root || !_woTree) return;
@@ -10782,6 +10803,8 @@ function woRenderTree() {
     const stages = _woStages[item.id]||[];
     const stagesPct = stages.reduce((s,x) => s+(Number(x.pct)||0), 0);
     const stagesOk  = stages.length===0 || Math.abs(stagesPct-100)<0.01;
+    const _actEstRate = (allLeaves.find(l=>Number(l.est_rate)>0)||{}).est_rate || '';
+    const _hdrRate = (_woActRate[item.id]!=null && _woActRate[item.id]!=='')?_woActRate[item.id]:_actEstRate;
     return `
     <div class="hoi-item ${open?'open':''}" id="woiItem_${item.id}">
       <div class="hoi-head" onclick="woToggleItem(${item.id})">
@@ -10795,6 +10818,11 @@ function woRenderTree() {
         <span><span class="lbl">Total Qty:</span> <span id="woiSubQty_${item.id}" class="${subQty?'val':'muted-val'}">${subQty?subQty.toLocaleString('en-IN')+' '+esc(_woUnit(item.uom)):'\u2014'}</span></span>
         <span><span class="lbl">Total Amount:</span> <span id="woiSubAmt_${item.id}" class="${subAmt?'val':'muted-val'}">\u20b9${subAmt.toLocaleString('en-IN')}</span></span>
         <span style="margin-left:auto;color:var(--muted);font-size:11px;" id="woiSubLoc_${item.id}">${selLeaves.length} of ${approvableN} approved location(s) selected</span>
+        <span class="woi-ratebulk" style="display:inline-flex;align-items:center;gap:6px;margin-left:14px;">
+          <span style="font-size:11px;color:var(--muted);">Rate \u20b9</span>
+          <input id="woiRate_${item.id}" type="number" value="${_hdrRate}" placeholder="${_actEstRate||'rate'}" onwheel="this.blur()" onkeydown="if(event.key==='Enter'){event.preventDefault();applyActivityRate(${item.id});}else if(event.key==='ArrowUp'||event.key==='ArrowDown')event.preventDefault();" onclick="event.stopPropagation();" style="width:66px;padding:3px 6px;font-size:12px;text-align:right;border:1px solid var(--accent);border-radius:4px;font-weight:600;" title="Rate for this activity">
+          <button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();applyActivityRate(${item.id})" style="padding:2px 9px;font-size:11px;" title="Fill this rate into every selected location in this activity">Apply to selected \u2192</button>
+        </span>
       </div>
       <div class="hoi-body">
         ${item.groups.length
@@ -10945,7 +10973,7 @@ async function woToggleLeaf(itemId, leafId) {
   if (!leaf || !leaf.approved) return;
   const selKey = leaf.selKey;
   if (_woSel[selKey]) { delete _woSel[selKey]; woRenderTree(); return; }
-  _woSel[selKey] = { qty: leaf.rem, rate: leaf.est_rate };
+  _woSel[selKey] = { qty: leaf.rem, rate: _woRateFor(itemId, leaf) };
   woRenderTree();
   try {
     const revisingWO = document.getElementById('woForm').dataset.revisingWO || null;
@@ -10969,7 +10997,7 @@ function woToggleGrpSel(itemId, grpName, e) {
   const allSel = approvable.every(l => _woSel[l.selKey]);
   approvable.forEach(l => {
     if (allSel) delete _woSel[l.selKey];
-    else if (!_woSel[l.selKey]) _woSel[l.selKey] = { qty: l.rem, rate: l.est_rate };
+    else if (!_woSel[l.selKey]) _woSel[l.selKey] = { qty: l.rem, rate: _woRateFor(itemId, l) };
   });
   woRenderTree();
 }
@@ -10984,7 +11012,7 @@ function woToggleSubGrpSel(itemId, grpName, subGrpName, e) {
   const allSel = approvable.every(l => _woSel[l.selKey]);
   approvable.forEach(l => {
     if (allSel) delete _woSel[l.selKey];
-    else if (!_woSel[l.selKey]) _woSel[l.selKey] = { qty: l.rem, rate: l.est_rate };
+    else if (!_woSel[l.selKey]) _woSel[l.selKey] = { qty: l.rem, rate: _woRateFor(itemId, l) };
   });
   woRenderTree();
 }
