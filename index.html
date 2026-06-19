@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Penguin-Procurement Suite v108 — Urban Excellence LLP · Poetry of Earth</title>
+<title>Penguin-Procurement Suite v111 — Urban Excellence LLP · Poetry of Earth</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <style>
@@ -484,11 +484,11 @@ input[type="number"] {
 .hoi-grp-head{display:flex;align-items:center;gap:8px;padding:5px 6px;border-radius:5px;cursor:pointer;user-select:none;}
 .hoi-grp-head:hover{background:#f8fafc;}
 .hoi-grp-head .hoi-chev{width:11px;font-size:10px;}
-.hoi-grp.open .hoi-grp-head .hoi-chev{transform:rotate(90deg);}
+.hoi-grp.open > .hoi-grp-head .hoi-chev{transform:rotate(90deg);}
 .hoi-grp-name{font-weight:500;}
 .hoi-grp-state{font-size:10px;color:var(--muted);margin-left:auto;}
 .hoi-grp-children{display:none;padding-left:22px;}
-.hoi-grp.open .hoi-grp-children{display:block;}
+.hoi-grp.open > .hoi-grp-children{display:block;}
 .hoi-leaf{display:grid;grid-template-columns:22px 1fr 96px 96px 96px;align-items:center;gap:8px;padding:5px 6px;border-radius:5px;border:1px solid transparent;}
 .hoi-leaf.sel{background:#ecfdf5;border-color:#0d948855;}
 .hoi-leaf.locked{opacity:.55;}
@@ -1399,8 +1399,10 @@ input[type="number"] {
     <div class="hdr-row" style="display:flex;align-items:center;justify-content:space-between;margin-top:20px;">
       <h3 style="margin:0;">Certification Line Items</h3>
       <div style="display:flex;gap:8px;">
-        <button class="btn btn-ghost btn-sm" onclick="wocExpandAll()"   id="woc_expandAllBtn"   style="display:none;">⊞ Expand all</button>
         <button class="btn btn-ghost btn-sm" onclick="wocCollapseAll()" id="woc_collapseAllBtn" style="display:none;">⊟ Collapse all</button>
+        <button class="btn btn-ghost btn-sm" onclick="wocExpandLineItems()" id="woc_expandLinesBtn" style="display:none;">Expand line items</button>
+        <button class="btn btn-ghost btn-sm" onclick="wocExpandTowers()" id="woc_expandTowersBtn" style="display:none;">Expand towers</button>
+        <button class="btn btn-ghost btn-sm" onclick="wocExpandAll()"   id="woc_expandAllBtn"   style="display:none;">⊞ Expand all</button>
       </div>
     </div>
     <div id="wocItemTree" style="margin-top:12px;"><div class="hoi-empty">Select a Work Order above to load its certifiable lines.</div></div>
@@ -11693,7 +11695,7 @@ async function newWOC() {
   const r = await apiGetOpenWOs();
   const sel = document.getElementById('woc_woSelect');
   sel.innerHTML = '<option value="">— Select WO —</option>' +
-    (r.ok ? r.orders : []).map(o => `<option value="${esc(o['WO Number'])}">${esc(o['WO Number'])} — ${esc(o['Vendor Name'])}</option>`).join('');
+    (r.ok ? r.orders : []).map(o => `<option value="${esc(o['WO Number'])}">${esc(o['WO Number'])} — ${esc(o['Vendor Name'])}${(o['Scope']||'').trim()?' — '+esc(o['Scope'].length>50?o['Scope'].slice(0,50)+'…':o['Scope']):''}</option>`).join('');
   document.getElementById('woc_number').value = '— select WO first —';
   document.getElementById('wocForm').dataset.revising = '';
   window.scrollTo(0,0);
@@ -11717,13 +11719,14 @@ let _wocTree = null;        // { items:[{ id(oiid-group=wbs), name, uom, rate, g
 let _wocThis = {};          // keyed by cellKey → entered this-period qty
 let _wocStageSel = {};      // keyed by stageCellKey → bool (stage chosen this WOC)
 let _wocOpenItem = {}, _wocOpenGrp = {};
+let _wocFloorArm = {};      // floor key -> armed for entry
 let _wocCarry = {};         // oiid → { wbs_code, wbs_activity, cost_subhead }
 
 function _wocResetTree() {
-  _wocTree=null; _wocThis={}; _wocStageSel={}; _wocOpenItem={}; _wocOpenGrp={}; _wocCarry={};
+  _wocTree=null; _wocThis={}; _wocStageSel={}; _wocOpenItem={}; _wocOpenGrp={}; _wocCarry={}; _wocFloorArm={};
   const t=document.getElementById('wocItemTree'); if(t) t.innerHTML='<div class="hoi-empty">Select a Work Order above to load its certifiable lines.</div>';
   const f=document.getElementById('wocItemFoot'); if(f) f.style.display='none';
-  ['woc_expandAllBtn','woc_collapseAllBtn'].forEach(id=>{const e=document.getElementById(id); if(e) e.style.display='none';});
+  ['woc_expandAllBtn','woc_collapseAllBtn','woc_expandLinesBtn','woc_expandTowersBtn'].forEach(id=>{const e=document.getElementById(id); if(e) e.style.display='none';});
 }
 
 // cellKey: non-staged → oiid ; staged → oiid + '#' + stage_id
@@ -11778,8 +11781,9 @@ async function onWOCWOChange() {
   try {
     _wocTree = await _wocBuildTree(woNum, null);
     if (!_wocTree) return;
-    ['woc_expandAllBtn','woc_collapseAllBtn'].forEach(id=>{const e=document.getElementById(id); if(e) e.style.display='';});
+    ['woc_expandAllBtn','woc_collapseAllBtn','woc_expandLinesBtn','woc_expandTowersBtn'].forEach(id=>{const e=document.getElementById(id); if(e) e.style.display='';});
     document.getElementById('wocItemFoot').style.display = 'block';
+    _wocTree.items.forEach(it=>{ _wocOpenItem[it.id]=true; });  // v109: open to towers; floors collapsed & locked until armed
     wocRenderTree();
   } finally { pbDone(); }
 }
@@ -11909,16 +11913,20 @@ function _wocGrpHTML(item, g) {
   const hasSub = (g.subGroups||[]).length>0;
   const leavesHere = [...(g.leaves||[]), ...((g.subGroups||[]).flatMap(sg=>sg.leaves||[]))];
   const activeN = leavesHere.filter(l => _wocLeafThisQty(l)>0).length;
+  const groupArmed = !!_wocFloorArm[key];
+  const _directOnly = (!hasSub && (g.leaves||[]).length);
+  const armCb = _directOnly ? `<label onclick="event.stopPropagation();" style="display:inline-flex;align-items:center;margin-right:6px;cursor:pointer;" title="Arm for entry"><input type="checkbox" ${groupArmed?'checked':''} onchange="wocArmFloor('${esc(key)}',this.checked,event)" style="width:15px;height:15px;accent-color:var(--accent);cursor:pointer;"></label>` : '';
+  const armTag = _directOnly ? `<span style="font-size:10px;font-weight:700;padding:1px 7px;border-radius:8px;margin-left:8px;${groupArmed?'background:#d1fae5;color:#065f46;':'background:#e2e8f0;color:#64748b;'}">${groupArmed?'entry unlocked':'\ud83d\udd12 locked'}</span>` : '';
   return `
   <div class="hoi-grp ${open?'open':''}">
     <div class="hoi-grp-head" onclick="wocToggleGrp('${esc(key)}')">
       <span class="hoi-chev">\u25b6</span>
-      <span class="hoi-grp-name">${esc(g.grp)}</span>
+      ${armCb}<span class="hoi-grp-name">${esc(g.grp)}</span>${armTag}
       <span class="hoi-grp-state">${activeN?activeN+' certified':''}</span>
     </div>
     <div class="hoi-grp-children">
       ${hasSub ? (g.subGroups||[]).map(sg => _wocSubGrpHTML(item,g,sg)).join('') : ''}
-      ${(g.leaves||[]).map(l => _wocLeafHTML(item,l)).join('')}
+      ${(g.leaves||[]).map(l => _wocLeafHTML(item,l,groupArmed)).join('')}
     </div>
   </div>`;
 }
@@ -11926,19 +11934,22 @@ function _wocGrpHTML(item, g) {
 function _wocSubGrpHTML(item, g, sg) {
   const key = item.id + '::' + g.grp + '::' + sg.subGrp;
   const open = _wocOpenGrp[key];
+  const armed = !!_wocFloorArm[key];
   const activeN = sg.leaves.filter(l => _wocLeafThisQty(l)>0).length;
   return `
   <div class="hoi-grp ${open?'open':''}" style="margin-left:16px;">
     <div class="hoi-grp-head" onclick="wocToggleGrp('${esc(key)}')">
       <span class="hoi-chev">\u25b6</span>
+      <label onclick="event.stopPropagation();" style="display:inline-flex;align-items:center;margin-right:6px;cursor:pointer;" title="Arm this floor for entry"><input type="checkbox" ${armed?'checked':''} onchange="wocArmFloor('${esc(key)}',this.checked,event)" style="width:15px;height:15px;accent-color:var(--accent);cursor:pointer;"></label>
       <span class="hoi-grp-name">${esc(sg.subGrp)}</span>
+      <span style="font-size:10px;font-weight:700;padding:1px 7px;border-radius:8px;margin-left:8px;${armed?'background:#d1fae5;color:#065f46;':'background:#e2e8f0;color:#64748b;'}">${armed?'entry unlocked':'\ud83d\udd12 locked'}</span>
       <span class="hoi-grp-state">${activeN?activeN+' certified':''}</span>
     </div>
-    <div class="hoi-grp-children">${sg.leaves.map(l => _wocLeafHTML(item,l)).join('')}</div>
+    <div class="hoi-grp-children">${sg.leaves.map(l => _wocLeafHTML(item,l,armed)).join('')}</div>
   </div>`;
 }
 
-function _wocLeafHTML(item, l) {
+function _wocLeafHTML(item, l, armed) {
   const staged = l.stages && l.stages.length;
   const tqn = _wocLeafThisQty(l);
   const active = tqn>0;
@@ -11953,11 +11964,12 @@ function _wocLeafHTML(item, l) {
       <div class="ro">${l.woQty.toLocaleString('en-IN')}</div>
       <div class="ro dim">${l.prevQty.toLocaleString('en-IN')}</div>
       <div>
-        <input type="number" data-oiid="${esc(String(l.oiid))}" min="0" max="${remaining}" step="0.001"
+        ${armed ? `<input type="number" data-oiid="${esc(String(l.oiid))}" min="0" max="${remaining}" step="0.001"
           value="${tq!==undefined&&tq!==''?tq:''}" placeholder="0"
           oninput="wocSetThis('${esc(String(l.oiid))}',this.value)" onwheel="this.blur()"
           onkeydown="if(event.key==='ArrowUp'||event.key==='ArrowDown')event.preventDefault()">
-        <span class="rem-hint">\u2264 ${remaining.toLocaleString('en-IN')} left</span>
+        <span class="rem-hint">\u2264 ${remaining.toLocaleString('en-IN')} left</span>`
+        : `<span title="Arm this floor to enter" style="color:#cbd5e1;font-size:13px;">\ud83d\udd12</span>`}
       </div>
       <div class="ro ${active?'':'dim'}" data-cell="cum">${cumQty.toLocaleString('en-IN')}</div>
       <div class="ro dim">${item.rate.toLocaleString('en-IN')}</div>
@@ -11967,7 +11979,7 @@ function _wocLeafHTML(item, l) {
     </div>`;
   }
   // staged leaf: header row (location) + one row per stage (all stages shown)
-  const stageRows = l.stages.map((st,si) => _wocStageRowHTML(item, l, st, si)).join('');
+  const stageRows = l.stages.map((st,si) => _wocStageRowHTML(item, l, st, si, armed)).join('');
   return `
   <div class="hoi-raleaf ${active?'active':''}" data-oiid="${esc(String(l.oiid))}" style="${grid}">
     <div><div class="hoi-leaf-name">${esc(l.name)}</div><div class="hoi-leaf-path">${esc(l.path)} \u00b7 <em style="color:var(--muted);">${l.stages.length} stages</em></div></div>
@@ -11994,7 +12006,7 @@ function _wocStageUnlocked(l, idx) {
   return true;
 }
 
-function _wocStageRowHTML(item, l, st, si) {
+function _wocStageRowHTML(item, l, st, si, armed) {
   const cellKey = _wocCellKey(l.oiid, st.id);
   const done = st.certified;                       // certified in a prior WOC
   const selectedNow = !!_wocStageSel[cellKey];     // chosen in this WOC
@@ -12010,6 +12022,9 @@ function _wocStageRowHTML(item, l, st, si) {
   if (done) {
     icon='\u2705'; tag='<span class="woc-stage-tag done">certified</span>'; rowCls='done';
     cb=`<span class="woc-stage-cb disabled" title="Already certified">\u2705</span>`;
+  } else if (!armed) {
+    icon='\ud83d\udd12'; tag='<span class="woc-stage-tag locked">floor locked</span>'; rowCls='locked';
+    cb=`<span class="woc-stage-cb disabled" title="Arm this floor to certify">\u2610</span>`;
   } else if (!unlocked) {
     icon='\ud83d\udd12'; tag='<span class="woc-stage-tag locked">locked</span>'; rowCls='locked';
     cb=`<span class="woc-stage-cb disabled" title="Prior stage must be certified first">\u2610</span>`;
@@ -12044,6 +12059,44 @@ function wocToggleItem(id){ _wocOpenItem[id]=!_wocOpenItem[id]; wocRenderTree();
 function wocToggleGrp(key){ _wocOpenGrp[key]=!_wocOpenGrp[key]; wocRenderTree(); }
 function wocExpandAll(){ if(!_wocTree) return; _wocTree.items.forEach(it=>{ _wocOpenItem[it.id]=true; it.groups.forEach(g=>{ _wocOpenGrp[it.id+'::'+g.grp]=true; (g.subGroups||[]).forEach(sg=>_wocOpenGrp[it.id+'::'+g.grp+'::'+sg.subGrp]=true); }); }); wocRenderTree(); }
 function wocCollapseAll(){ if(!_wocTree) return; _wocTree.items.forEach(it=>{ _wocOpenItem[it.id]=false; it.groups.forEach(g=>{ _wocOpenGrp[it.id+'::'+g.grp]=false; (g.subGroups||[]).forEach(sg=>_wocOpenGrp[it.id+'::'+g.grp+'::'+sg.subGrp]=false); }); }); wocRenderTree(); }
+
+// v109: progressive depth + per-floor entry arming
+function wocExpandLineItems(){ if(!_wocTree) return; _wocTree.items.forEach(it=>{ _wocOpenItem[it.id]=true; it.groups.forEach(g=>{ _wocOpenGrp[it.id+'::'+g.grp]=false; (g.subGroups||[]).forEach(sg=>{ _wocOpenGrp[it.id+'::'+g.grp+'::'+sg.subGrp]=!!_wocFloorArm[it.id+'::'+g.grp+'::'+sg.subGrp]; }); }); }); wocRenderTree(); }
+function wocExpandTowers(){ if(!_wocTree) return; _wocTree.items.forEach(it=>{ _wocOpenItem[it.id]=true; it.groups.forEach(g=>{ _wocOpenGrp[it.id+'::'+g.grp]=true; (g.subGroups||[]).forEach(sg=>{ _wocOpenGrp[it.id+'::'+g.grp+'::'+sg.subGrp]=!!_wocFloorArm[it.id+'::'+g.grp+'::'+sg.subGrp]; }); }); }); wocRenderTree(); }
+function _wocFloorLeaves(key){
+  if(!_wocTree) return [];
+  for(const it of _wocTree.items){
+    for(const g of it.groups){
+      const gk=it.id+'::'+g.grp;
+      if(gk===key && !(g.subGroups||[]).length) return g.leaves||[];
+      for(const sg of (g.subGroups||[])){ if(gk+'::'+sg.subGrp===key) return sg.leaves||[]; }
+    }
+  }
+  return [];
+}
+function _wocClearLeafEntry(l){
+  if(l.stages && l.stages.length){ l.stages.forEach(st=>{ delete _wocStageSel[_wocCellKey(l.oiid, st.id)]; }); }
+  else { delete _wocThis[_wocCellKey(l.oiid, null)]; }
+}
+function wocArmFloor(key, on, ev){
+  if(ev && ev.stopPropagation) ev.stopPropagation();
+  if(on){ _wocFloorArm[key]=true; _wocOpenGrp[key]=true; }
+  else {
+    const leaves=_wocFloorLeaves(key);
+    if(leaves.some(l=>_wocLeafThisQty(l)>0) && !confirm('Un-checking this floor clears the quantities entered for its units. Continue?')){ wocRenderTree(); return; }
+    leaves.forEach(_wocClearLeafEntry);
+    _wocFloorArm[key]=false; _wocOpenGrp[key]=false;
+  }
+  wocRenderTree();
+}
+function _wocAutoArmFilledFloors(){
+  if(!_wocTree) return;
+  _wocTree.items.forEach(it=>{ it.groups.forEach(g=>{
+    const gk=it.id+'::'+g.grp; const subs=(g.subGroups||[]);
+    if(subs.length){ subs.forEach(sg=>{ const fk=gk+'::'+sg.subGrp; if((sg.leaves||[]).some(l=>_wocLeafThisQty(l)>0)){ _wocFloorArm[fk]=true; _wocOpenGrp[fk]=true; _wocOpenGrp[gk]=true; _wocOpenItem[it.id]=true; } }); }
+    else if((g.leaves||[]).some(l=>_wocLeafThisQty(l)>0)){ _wocFloorArm[gk]=true; _wocOpenGrp[gk]=true; _wocOpenItem[it.id]=true; }
+  }); });
+}
 
 // Non-staged qty entry (focus-preserving + cap at remaining)
 function wocSetThis(oiid, v) {
@@ -12214,7 +12267,7 @@ async function reviseWOC(wocNum) {
   try {
     _wocTree = await _wocBuildTree(r.header['WO Number'], null);
     if (!_wocTree) return;
-    ['woc_expandAllBtn','woc_collapseAllBtn'].forEach(id=>{const e=document.getElementById(id); if(e) e.style.display='';});
+    ['woc_expandAllBtn','woc_collapseAllBtn','woc_expandLinesBtn','woc_expandTowersBtn'].forEach(id=>{const e=document.getElementById(id); if(e) e.style.display='';});
     document.getElementById('wocItemFoot').style.display = 'block';
 
     // Prefill from the rejected cert items, matched by order-item id (+ stage_id when staged)
@@ -12230,6 +12283,7 @@ async function reviseWOC(wocNum) {
       }
       _wocOpenItem[f.item.id] = true;
     });
+    _wocAutoArmFilledFloors();   // v109: arm floors carrying pre-filled entries
     wocRenderTree();
   } finally { pbDone(); }
 
