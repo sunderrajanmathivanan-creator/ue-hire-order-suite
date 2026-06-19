@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Penguin-Procurement Suite v104 — Urban Excellence LLP · Poetry of Earth</title>
+<title>Penguin-Procurement Suite v105 — Urban Excellence LLP · Poetry of Earth</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <style>
@@ -501,6 +501,18 @@ input[type="number"] {
 .hoi-lock-note{font-size:10px;color:var(--warn);}
 .hoi-colh{display:grid;grid-template-columns:22px 1fr 96px 96px 96px;gap:8px;padding:4px 6px 6px;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.03em;border-bottom:1px solid var(--border);margin-bottom:4px;}
 .hoi-colh span:nth-child(3),.hoi-colh span:nth-child(4),.hoi-colh span:nth-child(5){text-align:center;}
+.hoi-colh>span{text-align:center;}
+.hoi-colh .woi-wocol{display:flex;flex-direction:column;align-items:center;line-height:1.15;text-transform:none;letter-spacing:0;gap:1px;}
+.woi-won{font-family:ui-monospace,Menlo,monospace;font-size:9px;color:#6d28d9;}
+.woi-wovn{font-size:9px;font-weight:700;color:var(--text);max-width:74px;white-space:normal;text-align:center;}
+.woi-wost{font-size:8px;font-weight:700;padding:0 5px;border-radius:8px;}
+.woi-wost.active{background:#dcfce7;color:#166534;}.woi-wost.open{background:#f1f5f9;color:#475569;}.woi-wost.completed{background:#dbeafe;color:#1e40af;}.woi-wost.sclosed{background:#fef3c7;color:#92400e;}.woi-wost.term{background:#fee2e2;color:#991b1b;}
+.hoi-leaf-est{font-size:11px;text-align:center;font-variant-numeric:tabular-nums;color:var(--muted);}
+.woi-wocell{font-size:11px;text-align:center;font-variant-numeric:tabular-nums;color:#6d28d9;font-weight:600;}
+.woi-wocell.empty{color:#cbd5e1;font-weight:400;}
+.woi-sumrow{background:#f0fdfa!important;border:1px solid var(--accent)!important;font-weight:700;margin:2px 0 6px;}
+.woi-sumlbl{font-size:11px;color:#0f766e;font-weight:700;}
+.woi-num{font-size:11px;text-align:center;font-variant-numeric:tabular-nums;}
 .hoi-cbx{width:16px;height:16px;border:1.5px solid var(--border);border-radius:4px;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;background:#fff;flex-shrink:0;}
 .hoi-cbx.on{background:var(--accent);border-color:var(--accent);color:#fff;}
 .hoi-cbx.on::after{content:'✓';font-size:11px;}
@@ -10590,6 +10602,9 @@ async function woSelectPackage(pkgId, pkgName) {
     const remByPair = {};   // `${wbs}|${loc}` -> { remaining, est_qty }
     (remRows||[]).forEach(r => { remByPair[`${r.wbs_node_id}|${r.loc_node_id}`] = { remaining: num(r.remaining), est_qty: num(r.est_qty) }; });
 
+    // v105: per-activity issued WO pivot data (ordered/certified by WO status)
+    const _woIssued = await _woLoadIssued(actNodeIds);
+
     // est_rate isn't returned by fn_package_remaining — fetch scope rows for rate + status.
     let scopeRows = [];
     { const PAGE = 1000; let from = 0;
@@ -10632,7 +10647,7 @@ async function woSelectPackage(pkgId, pkgName) {
         const remVal  = hasLive ? remEntry.remaining : (Number(r.est_qty)||0);
         const leafData = { id: String(r.loc_node_id), selKey: act.id + '|' + String(r.loc_node_id),
           name: leafNode.name, path: leafNode.path||leafNode.name,
-          rem: remVal, remLive: hasLive, est_rate: Number(r.est_rate)||0, approved };
+          rem: remVal, remLive: hasLive, est: (remEntry? num(remEntry.est_qty) : (Number(r.est_qty)||0)), est_rate: Number(r.est_rate)||0, approved };
         const outerKey = String(outerNode.id);
         if (!groups[outerKey]) groups[outerKey] = { grp: outerNode.name, path: outerNode.path||outerNode.name, subGroups: {}, leaves: [] };
         if (innerNode) {
@@ -10648,7 +10663,9 @@ async function woSelectPackage(pkgId, pkgName) {
         .map(g => ({ ...g, subGroups: Object.values(g.subGroups).sort((a,b)=>_siteOrder(a.subGrp,b.subGrp)), leaves: (g.leaves||[]).sort((a,b)=>_siteOrder(a.name,b.name)) }))
         .sort((a,b)=>_siteOrder(a.grp,b.grp));
       sortedGroups.forEach(g => (g.subGroups||[]).forEach(sg => sg.leaves.sort((a,b)=>_siteOrder(a.name,b.name))));
-      return { id: act.id, name: act.name, uom: act.uom||'', wbsNodeId: Number(act.id), tier: bestTier, groups: sortedGroups };
+      const _ai = _woIssued.byAct[act.id] || {};
+      return { id: act.id, name: act.name, uom: act.uom||'', wbsNodeId: Number(act.id), tier: bestTier, groups: sortedGroups,
+        woCols: _ai.colsArr||[], issuedByLoc: _ai.byLoc||{}, woColSum: _ai.colSum||{} };
     });
 
     _woTree = { pkgId, pkgName, items };
@@ -10660,6 +10677,91 @@ async function woSelectPackage(pkgId, pkgName) {
 }
 
 // ── Tree render ───────────────────────────────────────────────
+// ===== WO-prep issued pivot data (v105) =====
+// Per activity (wbs node): build the WO column roster + per-location cell qty.
+// Status-driven source:  Active/Open -> ordered qty ; Completed/Short-Closed/Terminated -> certified qty.
+const _WO_SRC_ORDERED   = ['Active','Open'];
+const _WO_SRC_CERTIFIED = ['Completed','Short-Closed','Terminated'];
+// Certified WOC status set (approved certs incl. Pending Billing). CONFIRM matches fn_package_remaining.
+const _WOC_CERT_SET     = ['Unbilled','Pending Billing','Billed'];
+function _woSrcOf(status){
+  if (_WO_SRC_ORDERED.includes(status))   return 'ordered';
+  if (_WO_SRC_CERTIFIED.includes(status)) return 'certified';
+  return null;   // Pending Approval / Cancelled / Rejected / Needs Correction -> no column
+}
+
+async function _woLoadIssued(actNodeIds){
+  const out = { byAct: {} };               // wbsId -> { cols:[], byLoc:{loc:{wo:qty}}, colSum:{wo:qty} }
+  if (!actNodeIds || !actNodeIds.length) return out;
+  const _page = async (tbl, cols, col, vals) => {
+    let rows = [], from = 0; const P = 1000;
+    for (let g = 0; g < 100; g++) {
+      const { data, error } = await sb.from(tbl).select(cols).in(col, vals).range(from, from + P - 1);
+      if (error) throw error;
+      rows = rows.concat(data || []);
+      if (!data || data.length < P) break;
+      from += P;
+    }
+    return rows;
+  };
+
+  // 1) ordered lines for these activities
+  const oItems = await _page('wo_order_items', 'wo_number, wbs_node_id, loc_node_id, qty', 'wbs_node_id', actNodeIds);
+  // 2) cert lines for these activities
+  const cItems = await _page('wo_certification_items', 'woc_number, wo_number, wbs_node_id, loc_node_id, cumulative_qty', 'wbs_node_id', actNodeIds);
+
+  const woNums  = [...new Set([...oItems.map(r=>r.wo_number), ...cItems.map(r=>r.wo_number)].filter(Boolean))];
+  const wocNums = [...new Set(cItems.map(r=>r.woc_number).filter(Boolean))];
+  const woMap = {}, wocMap = {};
+  if (woNums.length)  (await _page('wo_orders','wo_number, status, vendor_name, vendor_code','wo_number', woNums)).forEach(w => woMap[w.wo_number]=w);
+  if (wocNums.length) (await _page('wo_certifications','woc_number, wo_number, status','woc_number', wocNums)).forEach(w => wocMap[w.woc_number]=w);
+
+  const act = (wbs) => (out.byAct[wbs] = out.byAct[wbs] || { cols:{}, byLoc:{}, colSum:{} });
+
+  // ordered: create column for any included WO; fill cells only for ordered-source
+  oItems.forEach(oi => {
+    const wo = woMap[oi.wo_number]; if (!wo) return;
+    const src = _woSrcOf(wo.status); if (!src) return;
+    const a = act(oi.wbs_node_id);
+    a.cols[oi.wo_number] = a.cols[oi.wo_number] || { wo_number:oi.wo_number, contractor:wo.vendor_name||'', status:wo.status, source:src };
+    if (src === 'ordered') {
+      const q = num(oi.qty);
+      (a.byLoc[oi.loc_node_id] = a.byLoc[oi.loc_node_id] || {});
+      a.byLoc[oi.loc_node_id][oi.wo_number] = (a.byLoc[oi.loc_node_id][oi.wo_number] || 0) + q;
+      a.colSum[oi.wo_number] = (a.colSum[oi.wo_number] || 0) + q;
+    }
+  });
+
+  // certified: only for finalized WOs; cell = MAX(cumulative) per (wo,loc) across certified-status WOCs
+  cItems.forEach(ci => {
+    const woc = wocMap[ci.woc_number]; if (!woc) return;
+    if (!_WOC_CERT_SET.includes(woc.status)) return;
+    const wo = woMap[woc.wo_number]; if (!wo) return;
+    if (_woSrcOf(wo.status) !== 'certified') return;
+    const a = act(ci.wbs_node_id);
+    a.cols[woc.wo_number] = a.cols[woc.wo_number] || { wo_number:woc.wo_number, contractor:wo.vendor_name||'', status:wo.status, source:'certified' };
+    (a.byLoc[ci.loc_node_id] = a.byLoc[ci.loc_node_id] || {});
+    const cur = a.byLoc[ci.loc_node_id][woc.wo_number] || 0;
+    a.byLoc[ci.loc_node_id][woc.wo_number] = Math.max(cur, num(ci.cumulative_qty));
+  });
+
+  // finalize: certified colSum = sum over locs (cells are MAX, not additive); sort cols
+  Object.values(out.byAct).forEach(a => {
+    Object.values(a.cols).forEach(c => {
+      if (c.source === 'certified') {
+        let s = 0; Object.values(a.byLoc).forEach(lm => { s += lm[c.wo_number] || 0; });
+        a.colSum[c.wo_number] = s;
+      }
+    });
+    a.colsArr = Object.values(a.cols).sort((x,y) => x.wo_number < y.wo_number ? -1 : 1);
+  });
+  return out;
+}
+
+function _woFmtQ(n){ n=Number(n)||0; return n%1===0? n.toLocaleString('en-IN') : n.toLocaleString('en-IN',{maximumFractionDigits:3}); }
+function _woGridCols(n){ return '22px minmax(0,1fr) 58px 80px '+(n?('repeat('+n+', 76px) '):'')+'70px 62px'; }
+function _woStatusCls(s){ return ({'Active':'active','Open':'open','Completed':'completed','Short-Closed':'sclosed','Terminated':'term'})[s]||'open'; }
+
 function _woUnit(uom) { return (uom||'').replace(/^Per\s+/i,''); }
 function _woTierBadge(t) {
   const m = { approved:['hoi-tier-app','approved'], draft:['hoi-tier-draft','draft \u2014 not approved'], none:['hoi-tier-none','no estimate'] };
@@ -10696,7 +10798,8 @@ function woRenderTree() {
       </div>
       <div class="hoi-body">
         ${item.groups.length
-          ? `<div class="hoi-colh"><span></span><span>Location</span><span>Remaining</span><span>Qty</span><span>Rate \u20b9</span></div>
+          ? `<div class="hoi-colh" style="grid-template-columns:${_woGridCols((item.woCols||[]).length)};"><span></span><span style="text-align:left;">Location</span><span>Est</span><span>Remaining</span>${(item.woCols||[]).map(c=>`<span class="woi-wocol" title="${esc(c.contractor)} \u00b7 ${esc(c.status)} \u00b7 ${c.source==='certified'?'certified':'ordered'}"><span class="woi-won">${esc(c.wo_number)}</span><span class="woi-wovn">${esc(c.contractor)}</span><span class="woi-wost ${_woStatusCls(c.status)}">${esc(c.status)}</span></span>`).join('')}<span>Qty</span><span>Rate \u20b9</span></div>
+             ${(function(){ var _al=item.groups.flatMap(function(g){return [].concat(g.leaves||[], (g.subGroups||[]).flatMap(function(sg){return sg.leaves||[];}));}); var _et=_al.reduce(function(t,l){return t+(Number(l.est)||0);},0); var _rt=_al.reduce(function(t,l){return t+(Number(l.rem)||0);},0); var _wc=item.woCols||[]; return `<div class="hoi-leaf woi-sumrow" style="grid-template-columns:${_woGridCols(_wc.length)};"><span></span><span class="woi-sumlbl">Activity \u03a3</span><span class="woi-num">${_woFmtQ(_et)}</span><span class="woi-num">${_woFmtQ(_rt)}</span>${_wc.map(function(c){return `<span class="woi-num woi-wocell">${_woFmtQ((item.woColSum&&item.woColSum[c.wo_number])||0)}</span>`;}).join('')}<span class="woi-num">${subQty?_woFmtQ(subQty):'\u2014'}</span><span></span></div>`; })()}
              <div class="hoi-loctree">${item.groups.map(g => _woGrpHTML(item,g)).join('')}</div>`
           : `<div class="hoi-empty">No approved locations \u2014 estimate this activity in Planning &amp; QS first.</div>`}
         <div class="woi-stages-wrap">
@@ -10788,14 +10891,19 @@ function _woLeafHTML(item, g, l) {
   const cbx = locked
     ? `<span class="hoi-cbx disabled" title="Not approved \u2014 approve in Planning &amp; QS"></span>`
     : `<span class="hoi-cbx ${sel?'on':''}" onclick="woToggleLeaf(${item.id},'${esc(l.id)}')"></span>`;
+  const _wc = item.woCols||[];
+  const _wi = (item.issuedByLoc&&item.issuedByLoc[l.id])||{};
+  const _wcells = _wc.map(function(c){ var q=_wi[c.wo_number]; return (q!=null)? `<span class="woi-wocell">${_woFmtQ(q)}</span>` : `<span class="woi-wocell empty">\u2014</span>`; }).join('');
   return `
-  <div class="hoi-leaf ${sel?'sel':''} ${locked?'locked':''}">
+  <div class="hoi-leaf ${sel?'sel':''} ${locked?'locked':''}" style="grid-template-columns:${_woGridCols(_wc.length)};">
     ${cbx}
     <div>
       <div class="hoi-leaf-name">${esc(l.name)}${locked?' <span class="hoi-lock-note">\u00b7 draft, not approved</span>':''}</div>
       <div class="hoi-leaf-path">${esc(l.path)}</div>
     </div>
+    <div class="hoi-leaf-est">${l.est!=null?_woFmtQ(l.est):'\u2014'}</div>
     <div class="hoi-leaf-rem">${l.remLive === false ? `<span title="Live remaining unavailable — showing estimate. Click ↻ Refresh remaining." style="color:var(--warn);">${l.rem} ${esc(_woUnit(item.uom))} ⚠</span>` : `${l.rem} ${esc(_woUnit(item.uom))}`}</div>
+    ${_wcells}
     <input type="number" data-leaf="${esc(l.selKey)}" data-fld="qty" max="${l.rem}" class="${qtyErr?'err':''}" ${sel?'':'disabled'} value="${sel?sel.qty:''}"
        oninput="woSetField('${esc(l.selKey)}','qty',this.value)" onwheel="this.blur()"
        onkeydown="if(event.key==='ArrowUp'||event.key==='ArrowDown')event.preventDefault()" placeholder="\u2014">
