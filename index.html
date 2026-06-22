@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Penguin-Procurement Suite v111 — Urban Excellence LLP · Poetry of Earth</title>
+<title>Penguin-Procurement Suite v113 — Urban Excellence LLP · Poetry of Earth</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <style>
@@ -801,6 +801,8 @@ input[type="number"] {
 
     <div class="actions-row">
       <button class="btn btn-primary" onclick="guardedSave(saveHO_direct, this)" style="font-size:14px;padding:11px 22px;">💾 Save Hire Order</button>
+      <button class="btn btn-ghost" onclick="saveDraft('HO')">💾 Save Draft</button>
+      <button class="btn btn-ghost" id="btn_form_discard_HO" onclick="discardDraft('HO')" style="display:none;color:#b91c1c;" title="Delete this draft">✕ Discard Draft</button>
       <button class="btn btn-ghost" onclick="closeHOForm()">Close</button>
     </div>
   </div>
@@ -808,6 +810,7 @@ input[type="number"] {
   <!-- HO List -->
   <div class="card" id="hoListCard">
     <h3>Hire Orders <span class="badge-count" id="ho_listBadge">0</span></h3>
+    <div id="draftsPanel_HO" style="display:none;"></div>
       <div id="hoLegendCard" style="border:1px solid var(--border);border-radius:6px;margin-bottom:14px;overflow:hidden;">
         <div onclick="toggleLegend('hoLegend')" style="display:flex;align-items:center;justify-content:space-between;padding:8px 14px;cursor:pointer;background:var(--input-bg);user-select:none;">
           <span style="font-size:12px;font-weight:600;color:var(--text-muted);letter-spacing:.03em;">STATUS REFERENCE</span>
@@ -914,6 +917,8 @@ input[type="number"] {
 
     <div class="actions-row">
       <button class="btn btn-primary" onclick="guardedSave(saveHOC_direct, this)" style="font-size:14px;padding:11px 22px;">💾 Save Certification</button>
+      <button class="btn btn-ghost" onclick="saveDraft('HOC')">💾 Save Draft</button>
+      <button class="btn btn-ghost" id="btn_form_discard_HOC" onclick="discardDraft('HOC')" style="display:none;color:#b91c1c;" title="Delete this draft">✕ Discard Draft</button>
       <button class="btn btn-ghost" onclick="closeHOCForm()">Close</button>
     </div>
   </div>
@@ -921,6 +926,7 @@ input[type="number"] {
   <!-- HOC List -->
   <div class="card" id="hocListCard">
     <h3>Hire Order Certifications <span class="badge-count" id="hoc_listBadge">0</span></h3>
+    <div id="draftsPanel_HOC" style="display:none;"></div>
       <div id="hocLegendCard" style="border:1px solid var(--border);border-radius:6px;margin-bottom:14px;overflow:hidden;">
         <div onclick="toggleLegend('hocLegend')" style="display:flex;align-items:center;justify-content:space-between;padding:8px 14px;cursor:pointer;background:var(--input-bg);user-select:none;">
           <span style="font-size:12px;font-weight:600;color:var(--text-muted);letter-spacing:.03em;">STATUS REFERENCE</span>
@@ -1317,6 +1323,8 @@ input[type="number"] {
 
     <div class="actions-row" style="margin-top:16px;">
       <button class="btn btn-primary" onclick="guardedSave(saveWO_direct, this)" style="font-size:14px;padding:11px 22px;">💾 Save Work Order</button>
+      <button class="btn btn-ghost" onclick="saveDraft('WO')">💾 Save Draft</button>
+      <button class="btn btn-ghost" id="btn_form_discard_WO" onclick="discardDraft('WO')" style="display:none;color:#b91c1c;" title="Delete this draft">✕ Discard Draft</button>
       <button class="btn btn-ghost" onclick="closeWOForm()">Close</button>
     </div>
   </div>
@@ -1324,6 +1332,7 @@ input[type="number"] {
   <!-- WO List -->
   <div class="card" id="woListCard">
     <h3>Work Orders <span class="badge-count" id="wo_listBadge">0</span></h3>
+    <div id="draftsPanel_WO" style="display:none;"></div>
       <div id="woLegendCard" style="border:1px solid var(--border);border-radius:6px;margin-bottom:14px;overflow:hidden;">
         <div onclick="toggleLegend('woLegend')" style="display:flex;align-items:center;justify-content:space-between;padding:8px 14px;cursor:pointer;background:var(--input-bg);user-select:none;">
           <span style="font-size:12px;font-weight:600;color:var(--text-muted);letter-spacing:.03em;">STATUS REFERENCE</span>
@@ -1414,6 +1423,8 @@ input[type="number"] {
     </div>
     <div class="actions-row">
       <button class="btn btn-primary" onclick="guardedSave(saveWOC_direct, this)" style="font-size:14px;padding:11px 22px;">💾 Save Certification</button>
+      <button class="btn btn-ghost" onclick="saveDraft('WOC')">💾 Save Draft</button>
+      <button class="btn btn-ghost" id="btn_form_discard_WOC" onclick="discardDraft('WOC')" style="display:none;color:#b91c1c;" title="Delete this draft">✕ Discard Draft</button>
       <button class="btn btn-ghost" onclick="closeWOCForm()">Close</button>
     </div>
   </div>
@@ -1421,6 +1432,7 @@ input[type="number"] {
   <!-- WOC List -->
   <div class="card" id="wocListCard">
     <h3>WO Certifications <span class="badge-count" id="woc_listBadge">0</span></h3>
+    <div id="draftsPanel_WOC" style="display:none;"></div>
       <div id="wocLegendCard" style="border:1px solid var(--border);border-radius:6px;margin-bottom:14px;overflow:hidden;">
         <div onclick="toggleLegend('wocLegend')" style="display:flex;align-items:center;justify-content:space-between;padding:8px 14px;cursor:pointer;background:var(--input-bg);user-select:none;">
           <span style="font-size:12px;font-weight:600;color:var(--text-muted);letter-spacing:.03em;">STATUS REFERENCE</span>
@@ -2395,11 +2407,15 @@ input[type="number"] {
       <div class="field" style="margin-top:8px;max-width:300px;"><label>Raised By</label><input id="mir_raisedBy" readonly style="opacity:.6;"></div>
       <div class="actions-row">
         <button class="btn btn-primary" onclick="guardedSave(saveMIR, this)">Submit MIR</button>
+        <button class="btn btn-ghost" onclick="saveDraft('MIR')">💾 Save Draft</button>
+        <button class="btn btn-ghost" id="btn_form_discard_MIR" onclick="discardDraft('MIR')" style="display:none;color:#b91c1c;" title="Delete this draft">✕ Discard Draft</button>
         <button class="btn btn-ghost" onclick="closeMIRForm()">Cancel</button>
       </div>
     </div>
     <!-- MIR List -->
     <div id="mirListCard" class="card">
+
+      <div id="draftsPanel_MIR" style="display:none;"></div>
 
       <!-- Status Legend Card (collapsible) -->
       <div id="mirLegendCard" style="border:1px solid var(--border);border-radius:6px;margin-bottom:14px;overflow:hidden;">
@@ -2668,11 +2684,14 @@ input[type="number"] {
       <div class="actions-row">
         <button class="btn btn-primary" onclick="guardedSave(savePO, this)">Submit PO for Approval</button>
 
+        <button class="btn btn-ghost" onclick="saveDraft('PO')">💾 Save Draft</button>
+        <button class="btn btn-ghost" id="btn_form_discard_PO" onclick="discardDraft('PO')" style="display:none;color:#b91c1c;" title="Delete this draft">✕ Discard Draft</button>
         <button class="btn btn-ghost" onclick="closePOForm()">Cancel</button>
       </div>
     </div>
     <!-- PO List -->
     <div id="poListCard" class="card">
+      <div id="draftsPanel_PO" style="display:none;"></div>
       <div id="poLegendCard" style="border:1px solid var(--border);border-radius:6px;margin-bottom:14px;overflow:hidden;">
         <div onclick="toggleLegend('poLegend')" style="display:flex;align-items:center;justify-content:space-between;padding:8px 14px;cursor:pointer;background:var(--input-bg);user-select:none;">
           <span style="font-size:12px;font-weight:600;color:var(--text-muted);letter-spacing:.03em;">STATUS REFERENCE</span>
@@ -2821,11 +2840,12 @@ input[type="number"] {
             <thead><tr>
               <th>#</th><th>Material</th><th>UOM</th>
               <th class="num">Qty</th><th class="num">Unit Rate (₹)</th><th class="num">Amount (₹)</th>
+              <th style="min-width:200px;">Location / WBS <span style="color:#dc2626;">*</span></th>
               <th>Remarks</th><th></th>
             </tr></thead>
-            <tbody id="cgrnItemsBody"><tr><td colspan="8" class="center muted">Click "+ Add Material" to start</td></tr></tbody>
+            <tbody id="cgrnItemsBody"><tr><td colspan="9" class="center muted">Click "+ Add Material" to start</td></tr></tbody>
             <tfoot><tr>
-              <td colspan="5" class="num" style="font-weight:600;">Total</td>
+              <td colspan="6" class="num" style="font-weight:600;">Total</td>
               <td class="num" style="font-weight:600;" id="cgrn_totalAmt">₹0.00</td>
               <td colspan="2"></td>
             </tr></tfoot>
@@ -7843,6 +7863,7 @@ function numToWordsINR(amount) {
 // HIRE ORDER — LIST & FORM
 // ============================================================
 async function loadHOList() {
+  _renderDraftsPanel('HO');
   const r = await apiGetHOList();
   if (r.ok) {
     state.hireOrders = r.orders || [];
@@ -7894,6 +7915,7 @@ async function newHO() {
   _wbsTreeCache = null; _approvedWbsScopeCache = null; _wbsScopeTierCache = null;
   document.getElementById('hoForm').style.display = 'block';
   document.getElementById('hoListCard').style.display = 'none';
+  (function(){ const f=document.getElementById('hoForm'); if(f) delete f.dataset.draftId; const d=document.getElementById('btn_form_discard_HO'); if(d) d.style.display='none'; })();
   document.getElementById('ho_date').value = today();
   document.getElementById('ho_vendor').value = '';
   document.getElementById('ho_vendorCode').value = '';
@@ -8408,6 +8430,7 @@ async function saveHO_direct() {
     const r = await apiSaveHO(data);
     if (r.ok) {
       flashSuccess('Hire Order ' + (r.hoNumber||data.hoNumber) + ' saved — pending PM approval.');
+      await _draftClearAfterSubmit('hoForm', 'HO');
       state.hireOrders = [];
       closeHOForm(); loadHOList();
     } else toast(r.error || 'Save failed','error');
@@ -8676,6 +8699,7 @@ async function printHOById(hoNum) {
 // HO CERTIFICATION
 // ============================================================
 async function loadHOCList() {
+  _renderDraftsPanel('HOC');
   const r = await apiGetHOCList();
   if (r.ok) {
     state.certifications = r.certs || [];
@@ -8727,6 +8751,7 @@ async function newHOC() {
   if (!hasPerm('canCreateHOC')) { toast('Only Site Manager can create certifications','error'); return; }
   document.getElementById('hocForm').style.display = 'block';
   document.getElementById('hocListCard').style.display = 'none';
+  (function(){ const f=document.getElementById('hocForm'); if(f) delete f.dataset.draftId; const d=document.getElementById('btn_form_discard_HOC'); if(d) d.style.display='none'; })();
   document.getElementById('hoc_date').value = today();
   document.getElementById('hoc_certifiedBy').value = state.userName;
   document.getElementById('hoc_remarks').value = '';
@@ -9053,6 +9078,7 @@ async function saveHOC_direct() {
   const r = await apiSaveHOC(data);
   if (r.ok) {
     flashSuccess((isRevision ? 'Revised certification' : 'Certification') + ' ' + data.hocNumber + ' saved — sent for review.');
+    if (!isRevision) await _draftClearAfterSubmit('hocForm','HOC');
     state.certifications = [];
     closeHOCForm(); loadHOCList(); loadHOList();
   } else toast(r.error || 'Save failed','error');
@@ -10398,6 +10424,7 @@ function _woResetTreeState() {
 }
 
 async function loadWOList() {
+  _renderDraftsPanel('WO');
   const r = await apiGetWOList();
   if (r.ok) { state.workOrders = r.orders || []; document.getElementById('wo_listBadge').textContent = state.workOrders.length; }
   renderWOList();
@@ -10447,6 +10474,7 @@ async function newWO() {
   _wbsTreeCache = null; _approvedWbsScopeCache = null; _wbsScopeTierCache = null;
   document.getElementById('woForm').style.display = 'block';
   document.getElementById('woListCard').style.display = 'none';
+  (function(){ const f=document.getElementById('woForm'); if(f) delete f.dataset.draftId; const d=document.getElementById('btn_form_discard_WO'); if(d) d.style.display='none'; })();
   document.getElementById('wo_formTitle').textContent = 'Work Order \u2014 New';
   document.getElementById('wo_number').value = 'WO/' + currentFY() + '/\u2014\u2014\u2014 (auto)';
   document.getElementById('wo_date').value = today();
@@ -11244,7 +11272,7 @@ async function saveWO_direct() {
     else toast(r.error||'Save failed','error');
   } else {
     const r = await apiSaveWO(data);
-    if (r.ok) { flashSuccess('Work Order ' + r.woNumber + ' saved \u2014 pending approval.'); state.workOrders=[]; closeWOForm(); loadWOList(); }
+    if (r.ok) { flashSuccess('Work Order ' + r.woNumber + ' saved \u2014 pending approval.'); await _draftClearAfterSubmit('woForm','WO'); state.workOrders=[]; closeWOForm(); loadWOList(); }
     else toast(r.error||'Save failed','error');
   }
 }
@@ -11639,6 +11667,7 @@ async function printWOById(woNum) {
 
 // ── WO CERTIFICATION UI ───────────────────────────────────────
 async function loadWOCList() {
+  _renderDraftsPanel('WOC');
   const r = await apiGetWOCList();
   if (r.ok) { state.woCertifications = r.certs||[]; document.getElementById('woc_listBadge').textContent = state.woCertifications.length; }
   renderWOCList();
@@ -11686,6 +11715,7 @@ async function newWOC() {
   if (!hasPerm('canCreateWOC')) { toast('Only Site Manager can create WO certifications','error'); return; }
   document.getElementById('wocForm').style.display = 'block';
   document.getElementById('wocListCard').style.display = 'none';
+  (function(){ const f=document.getElementById('wocForm'); if(f) delete f.dataset.draftId; const d=document.getElementById('btn_form_discard_WOC'); if(d) d.style.display='none'; })();
   document.getElementById('woc_date').value = today();
   document.getElementById('woc_certifiedBy').value = state.userName;
   document.getElementById('woc_remarks').value = '';
@@ -12240,6 +12270,7 @@ async function saveWOC_direct() {
   const r = await apiSaveWOC(data);
   if (r.ok) {
     flashSuccess((isRevision?'Revised certification':'Certification')+' '+data.wocNumber+' saved — sent for review.');
+    if (!isRevision) await _draftClearAfterSubmit('wocForm','WOC');
     state.woCertifications=[]; closeWOCForm(); loadWOCList(); loadWOList();
   } else toast(r.error||'Save failed','error');
 }
@@ -17014,11 +17045,631 @@ function findDupMaterial(items) {
 }
 
 // ============================================================
+// DRAFT ENGINE (v113) — save-and-resume only. A draft is the form's
+// payload stored as JSON in pu_drafts. It never enters the real tables
+// until Submit, which runs the existing gated save path unchanged.
+// One draft per user per doc type. No budget reservation.
+// ============================================================
+// Registry: each doc type provides capture()->payload, restore(payload),
+// and a title() for the Drafts list. open() opens a blank form first.
+const DRAFT_ADAPTERS = {
+  MIR: {
+    label: 'Material Indent (MIR)',
+    formId: 'mirForm',
+    title: () => (document.getElementById('mir_purpose')?.value?.trim()
+                  || document.getElementById('mir_project')?.value || 'Untitled MIR'),
+    open:  async () => { await newMIR(); },
+    close: () => { closeMIRForm(); loadMIRList(); },
+    capture: () => _draftCaptureMIR(),
+    restore: (pl) => _draftRestoreMIR(pl),
+  },
+  PO: {
+    label: 'Purchase Order (PO)',
+    formId: 'poForm',
+    title: () => (document.getElementById('po_vendor')?.value?.trim() || 'Untitled PO'),
+    open:  async () => { await newPO(); },
+    close: () => { closePOForm(); loadPOList(); },
+    capture: () => _draftCapturePO(),
+    restore: (pl) => _draftRestorePO(pl),
+  },
+  HO: {
+    label: 'Hire Order (HO)',
+    formId: 'hoForm',
+    title: () => (document.getElementById('ho_vendor')?.value?.trim() || 'Untitled HO'),
+    open:  async () => { await newHO(); },
+    close: () => { closeHOForm(); loadHOList(); },
+    capture: () => _draftCaptureHO(),
+    restore: (pl) => _draftRestoreHO(pl),
+  },
+  WO: {
+    label: 'Work Order (WO)',
+    formId: 'woForm',
+    title: () => (document.getElementById('wo_vendor')?.value?.trim() || 'Untitled WO'),
+    open:  async () => { await newWO(); },
+    close: () => { closeWOForm(); loadWOList(); },
+    capture: () => _draftCaptureWO(),
+    restore: (pl) => _draftRestoreWO(pl),
+  },
+  HOC: {
+    label: 'Hire Order Certification (HOC)',
+    formId: 'hocForm',
+    title: () => { const s=document.getElementById('hoc_hoSelect'); const t=s?.options[s.selectedIndex]?.textContent;
+                   return (t && t!=='— Select HO —') ? ('Cert: '+t) : 'Untitled HOC'; },
+    open:  async () => { await newHOC(); },
+    close: () => { closeHOCForm(); loadHOCList(); },
+    capture: () => _draftCaptureHOC(),
+    restore: (pl) => _draftRestoreHOC(pl),
+  },
+  WOC: {
+    label: 'Work Order Certification (WOC)',
+    formId: 'wocForm',
+    title: () => { const s=document.getElementById('woc_woSelect'); const t=s?.options[s.selectedIndex]?.textContent;
+                   return (t && t!=='— Select WO —') ? ('Cert: '+t) : 'Untitled WOC'; },
+    open:  async () => { await newWOC(); },
+    close: () => { closeWOCForm(); loadWOCList(); },
+    capture: () => _draftCaptureWOC(),
+    restore: (pl) => _draftRestoreWOC(pl),
+  },
+};
+
+// ---- generic store (MULTIPLE drafts per user per doc type) ----
+// Each draft is its own row (id uuid). The open form tracks the id it is
+// editing via form.dataset.draftId. Save = update that id, or insert a new
+// row when none is set (fresh form). After save/submit/discard the screen
+// returns to the doc-type list.
+
+function _draftFormId(docType) { return (DRAFT_ADAPTERS[docType] || {}).formId; }
+function _draftCurrentId(docType) {
+  const f = document.getElementById(_draftFormId(docType));
+  return (f && f.dataset.draftId) ? f.dataset.draftId : null;
+}
+function _draftSetCurrentId(docType, id) {
+  const f = document.getElementById(_draftFormId(docType));
+  if (!f) return;
+  if (id) f.dataset.draftId = id; else delete f.dataset.draftId;
+}
+
+async function _draftListMine(docType) {
+  const { data, error } = await sb.from('pu_drafts')
+    .select('id,title,updated_at,created_by')
+    .eq('doc_type', docType).eq('created_by_id', state.userId)
+    .order('updated_at', { ascending: false });
+  if (error) { console.warn('draft list:', error.message); return []; }
+  return data || [];
+}
+
+async function _draftFetchOne(id) {
+  const { data, error } = await sb.from('pu_drafts').select('*').eq('id', id).maybeSingle();
+  if (error) { console.warn('draft fetch:', error.message); return null; }
+  return data || null;
+}
+
+async function _draftDeleteId(id) {
+  const { error } = await sb.from('pu_drafts').delete().eq('id', id);
+  if (error) console.warn('draft delete:', error.message);
+}
+
+// Save Draft — persist current form (update open draft or insert new), exit to list.
+async function saveDraft(docType) {
+  const a = DRAFT_ADAPTERS[docType]; if (!a) return;
+  try {
+    const payload = a.capture();
+    if (!payload || !(payload.items && payload.items.length)) {
+      toast('Nothing to save yet — add at least one line first.', 'warn'); return;
+    }
+    pbShow('Saving draft…');
+    const existingId = _draftCurrentId(docType);
+    if (existingId) {
+      const { error } = await sb.from('pu_drafts')
+        .update({ title: a.title(), payload, updated_at: new Date().toISOString() })
+        .eq('id', existingId);
+      if (error) throw error;
+    } else {
+      const { error } = await sb.from('pu_drafts').insert({
+        doc_type: docType, created_by: state.userName, created_by_id: state.userId,
+        title: a.title(), payload,
+      });
+      if (error) throw error;
+    }
+    pbDone();
+    flashSuccess('Draft saved.');
+    // Exit to the default list screen.
+    if (a.close) a.close();
+  } catch (e) { pbDone(); toast('Draft save failed: ' + e.message, 'error'); }
+}
+
+// Resume a specific draft by id.
+async function resumeDraftId(docType, id) {
+  const a = DRAFT_ADAPTERS[docType]; if (!a) return;
+  const d = await _draftFetchOne(id);
+  if (!d) { toast('Draft not found (it may have been discarded).', 'info'); return; }
+  await a.open();
+  try { await Promise.all([_loadLocTree(), _loadWbsTree()]); } catch (e) { /* names cosmetic */ }
+  try { a.restore(d.payload); }
+  catch (e) { toast('Could not fully restore the draft: ' + e.message, 'error'); }
+  _draftSetCurrentId(docType, id);                 // track which draft is open
+  const fd = document.getElementById('btn_form_discard_' + docType);
+  if (fd) fd.style.display = '';                    // in-form Discard now meaningful
+  toast('Draft resumed. Review, then Submit to file it (the estimate check runs on submit).', 'info', 6000);
+}
+
+// Discard the currently-open draft, exit to list.
+async function discardDraft(docType) {
+  const a = DRAFT_ADAPTERS[docType]; if (!a) return;
+  const id = _draftCurrentId(docType);
+  if (!id) { // not editing a saved draft — nothing to discard
+    if (a.close) a.close();
+    return;
+  }
+  if (!confirm('Discard this ' + docType + ' draft? This cannot be undone.')) return;
+  await _draftDeleteId(id);
+  _draftSetCurrentId(docType, null);
+  const fd = document.getElementById('btn_form_discard_' + docType);
+  if (fd) fd.style.display = 'none';
+  flashSuccess(docType + ' draft discarded.');
+  if (a.close) a.close();
+}
+
+// Admin force-discard (any user's draft) from the panel.
+async function adminDiscardDraft(docType, id) {
+  if (!hasRole('Admin')) { toast('Admin only.', 'error'); return; }
+  if (!confirm('Force-discard this draft? (admin)')) return;
+  await _draftDeleteId(id);
+  flashSuccess('Draft force-discarded.');
+  _renderDraftsPanel(docType);
+}
+
+// After a successful submit, delete the backing draft (if this was a resume).
+async function _draftClearAfterSubmit(formId, docType) {
+  const id = _draftCurrentId(docType);
+  if (id) { await _draftDeleteId(id); _draftSetCurrentId(docType, null); }
+}
+
+// Render the Drafts panel at the top of the doc-type list.
+async function _renderDraftsPanel(docType) {
+  const host = document.getElementById('draftsPanel_' + docType);
+  if (!host) return;
+  const drafts = await _draftListMine(docType);
+  const admin = hasRole('Admin');
+  if (!drafts.length) { host.style.display = 'none'; host.innerHTML = ''; return; }
+  const rows = drafts.map(d => {
+    const when = d.updated_at ? new Date(d.updated_at).toLocaleString() : '';
+    const adminBtn = admin
+      ? `<button class="btn btn-ghost btn-sm" style="color:#b91c1c;" onclick="adminDiscardDraft('${docType}','${d.id}')" title="Force-discard (admin)">✕</button>`
+      : '';
+    return `<div style="display:flex;align-items:center;gap:10px;padding:7px 10px;border:1px solid var(--border);border-radius:6px;background:var(--bg);margin-bottom:6px;">
+      <span style="font-size:16px;">📝</span>
+      <div style="flex:1;min-width:0;">
+        <div style="font-size:13px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${esc(d.title || 'Untitled ' + docType + ' draft')}</div>
+        <div style="font-size:11px;color:var(--text-muted);">Saved ${esc(when)}</div>
+      </div>
+      <button class="btn btn-primary btn-sm" onclick="resumeDraftId('${docType}','${d.id}')">↻ Resume</button>
+      ${adminBtn}
+    </div>`;
+  }).join('');
+  host.innerHTML = `
+    <div style="border:1px solid #fde68a;background:#fffbeb;border-radius:8px;padding:10px 12px;margin-bottom:14px;">
+      <div style="font-size:12px;font-weight:700;letter-spacing:.04em;color:#92400e;margin-bottom:8px;">
+        YOUR SAVED DRAFTS (${drafts.length})
+      </div>
+      ${rows}
+    </div>`;
+  host.style.display = 'block';
+}
+
+// ---- MIR adapter ----
+function _draftCaptureMIR() {
+  const header = {
+    mir_date:     document.getElementById('mir_date')?.value || null,
+    required_by:  document.getElementById('mir_requiredBy')?.value || null,
+    project:      document.getElementById('mir_project')?.value || null,
+    purpose:      document.getElementById('mir_purpose')?.value || null,
+    remarks:      document.getElementById('mir_remarks')?.value || null,
+  };
+  const items = [];
+  document.querySelectorAll('#mirItemsBody tr').forEach(tr => {
+    const matEl = tr.querySelector('.pu_material');
+    items.push({
+      material_code: tr.dataset.matCode || matEl?.dataset?.matCode || '',
+      material_name: matEl?.value || '',
+      uom:           tr.querySelector('.pu_uom')?.value || '',
+      qty_required:  parseFloat(tr.querySelector('.mir_qty')?.value) || 0,
+      specification: tr.querySelector('.mir_spec')?.value || '',
+      remarks:       tr.querySelector('.mir_rmk')?.value || '',
+      wbs_node_id:   tr.dataset.wbsNode || '',
+      loc_node_id:   tr.dataset.locNode || '',
+      loc_name:      tr.dataset.locName || '',
+      loc_path:      tr.dataset.locPath || '',
+      leaf_name:     tr.dataset.leafName || '',
+      status:        tr.dataset.status || 'draft',
+    });
+  });
+  return { header, items };
+}
+
+function _draftRestoreMIR(pl) {
+  const h = pl.header || {};
+  if (h.mir_date)    document.getElementById('mir_date').value      = h.mir_date;
+  if (h.required_by) document.getElementById('mir_requiredBy').value = h.required_by;
+  if (h.project)     document.getElementById('mir_project').value    = h.project;
+  if (h.purpose)     document.getElementById('mir_purpose').value    = h.purpose;
+  if (h.remarks)     document.getElementById('mir_remarks').value    = h.remarks;
+  document.getElementById('mirItemsBody').innerHTML = '';
+  _mirItemC = 0;
+  // Resolve loc/wbs display names from the cached trees (the row builder needs them
+  // for the location pill; addMIRItemFromEstimate does not persist them to dataset).
+  const locMap = Object.fromEntries((_locTreeCache || []).map(n => [String(n.id), n]));
+  const wbsMap = Object.fromEntries((_wbsTreeCache || []).map(n => [String(n.id), n]));
+  (pl.items || []).forEach(it => {
+    const ln = locMap[String(it.loc_node_id)];
+    const wn = wbsMap[String(it.wbs_node_id)];
+    addMIRItemFromEstimate({
+      code: it.material_code, name: it.material_name, uom: it.uom,
+      leafId: it.wbs_node_id, leaf: (wn ? wn.name : (it.leaf_name || '')),
+      locId: it.loc_node_id,
+      locName: (ln ? ln.name : (it.loc_name || '')),
+      locPath: (ln ? ln.path : (it.loc_path || '')),
+      status: it.status, est: 0, remaining: it.qty_required,
+    });
+    const i = _mirItemC - 1;
+    const tr = document.getElementById('mirItem_' + i);
+    if (!tr) return;
+    const q = tr.querySelector('.mir_qty'); if (q) q.value = it.qty_required;
+    const sp = tr.querySelector('.mir_spec'); if (sp) sp.value = it.specification || '';
+    const rm = tr.querySelector('.mir_rmk');  if (rm) rm.value = it.remarks || '';
+  });
+}
+
+// ---- PO adapter ----
+function _draftCapturePO() {
+  const header = {
+    po_date:        document.getElementById('po_date')?.value || null,
+    project:        document.getElementById('po_project')?.value || null,
+    vendor:         document.getElementById('po_vendor')?.value || null,
+    vendor_code:    document.getElementById('po_vendorCode')?.value || null,
+    vendor_address: document.getElementById('po_vendorAddress')?.value || null,
+    vendor_gstin:   document.getElementById('po_vendorGSTIN')?.value || null,
+    contact_person: document.getElementById('po_contactPerson')?.value || null,
+    payment_terms:  document.getElementById('po_paymentTerms')?.value || null,
+    transport:      document.getElementById('po_transport')?.value || null,
+    delivery_addr:  document.getElementById('po_deliveryAddr')?.value || null,
+    billing_addr:   document.getElementById('po_billingAddr')?.value || null,
+    delivery_date:  document.getElementById('po_deliveryDate')?.value || null,
+    remarks:        document.getElementById('po_remarks')?.value || null,
+    cgst_pct:       document.getElementById('po_cgstPct')?.value || '0',
+    sgst_pct:       document.getElementById('po_sgstPct')?.value || '0',
+    igst_pct:       document.getElementById('po_igstPct')?.value || '0',
+    round_off:      document.getElementById('po_roundOff')?.value || '0',
+    gst_mode:       _gstMode,
+    qc_ref:         document.getElementById('po_qcRef')?.value || null,
+    mir_ref:        document.getElementById('po_mirRef')?.value || null,
+    vendor_locked:  !!_poVendorLocked,
+    mir_dataset:    { ...(document.getElementById('poForm')?.dataset || {}) },
+  };
+  const items = [];
+  document.querySelectorAll('#poItemsBody tr').forEach(tr => {
+    if (!/^poItem_/.test(tr.id || '')) return;   // skip alloc-detail rows
+    const rn = tr.id.split('_')[1];
+    const matEl = tr.querySelector('.po_material');
+    items.push({
+      rn,
+      material_code: tr.dataset.matCode || matEl?.dataset?.matCode || '',
+      material_name: matEl?.value || '',
+      uom:           tr.querySelector('.po_uom')?.value || '',
+      qty:           tr.querySelector('.po_qty')?.value || '',
+      rate:          tr.querySelector('.po_rate')?.value || '',
+      remarks:       document.getElementById('poRmk_' + rn)?.value || '',
+      wbs_node_id:   tr.dataset.wbsNode || '',
+      loc_node_id:   tr.dataset.locNode || '',
+      plid:          tr.dataset.plid || '',
+      cgst:          document.getElementById('poCGST_' + rn)?.value || '',
+      sgst:          document.getElementById('poSGST_' + rn)?.value || '',
+      igst:          document.getElementById('poIGST_' + rn)?.value || '',
+    });
+  });
+  return { header, items, alloc: _poAlloc };
+}
+
+function _draftRestorePO(pl) {
+  const h = pl.header || {};
+  const setv = (id, v) => { const e = document.getElementById(id); if (e && v != null) e.value = v; };
+  setv('po_date', h.po_date); setv('po_project', h.project);
+  setv('po_vendor', h.vendor); setv('po_vendorCode', h.vendor_code);
+  setv('po_vendorAddress', h.vendor_address); setv('po_vendorGSTIN', h.vendor_gstin);
+  setv('po_contactPerson', h.contact_person); setv('po_paymentTerms', h.payment_terms);
+  setv('po_transport', h.transport); setv('po_deliveryAddr', h.delivery_addr);
+  setv('po_billingAddr', h.billing_addr); setv('po_deliveryDate', h.delivery_date);
+  setv('po_remarks', h.remarks); setv('po_qcRef', h.qc_ref); setv('po_mirRef', h.mir_ref);
+  setv('po_cgstPct', h.cgst_pct); setv('po_sgstPct', h.sgst_pct);
+  setv('po_igstPct', h.igst_pct); setv('po_roundOff', h.round_off);
+  if (h.gst_mode) {
+    _gstMode = h.gst_mode;
+    const radio = document.querySelector('input[name="po_gstMode"][value="' + h.gst_mode + '"]');
+    if (radio) { radio.checked = true; onPOGSTModeChange(); }
+  }
+  if (h.mir_dataset) {
+    Object.entries(h.mir_dataset).forEach(([k, v]) => {
+      if (k !== 'resumingDraft') document.getElementById('poForm').dataset[k] = v;
+    });
+  }
+  // Rebuild line rows.
+  document.getElementById('poItemsBody').innerHTML = '';
+  _poItemCount = 0; _poAlloc = {};
+  (pl.items || []).forEach(it => {
+    addPOItem();
+    const i = _poItemCount - 1;
+    const row = document.getElementById('poItem_' + i);
+    if (!row) return;
+    if (it.material_code) row.dataset.matCode = it.material_code;
+    if (it.wbs_node_id)   row.dataset.wbsNode = it.wbs_node_id;
+    if (it.loc_node_id)   row.dataset.locNode = it.loc_node_id;
+    if (it.plid)          row.dataset.plid    = it.plid;
+    const matEl = row.querySelector('.po_material'); if (matEl) matEl.value = it.material_name || '';
+    const uomEl = row.querySelector('.po_uom');      if (uomEl) uomEl.value = it.uom || '';
+    const qEl   = row.querySelector('.po_qty');       if (qEl) qEl.value = it.qty || '';
+    const rEl   = row.querySelector('.po_rate');      if (rEl) rEl.value = it.rate || '';
+    const rmk   = document.getElementById('poRmk_' + i); if (rmk) rmk.value = it.remarks || '';
+    if (it.cgst) { const e = document.getElementById('poCGST_' + i); if (e) e.value = it.cgst; }
+    if (it.sgst) { const e = document.getElementById('poSGST_' + i); if (e) e.value = it.sgst; }
+    if (it.igst) { const e = document.getElementById('poIGST_' + i); if (e) e.value = it.igst; }
+    // Remap stored alloc (keyed by old rn) onto the new row index.
+    if (pl.alloc && pl.alloc[it.rn]) _poAlloc[String(i)] = pl.alloc[it.rn];
+    row.querySelector('.po_qty')?.dispatchEvent(new Event('input'));
+  });
+  recalcPOTotals();
+}
+
+// ---- HO adapter (estimate-sourced tree: _hoTree + _hoSel + _hoSpec) ----
+function _draftCaptureHO() {
+  const header = {
+    ho_date:    document.getElementById('ho_date')?.value || null,
+    vendor:     document.getElementById('ho_vendor')?.value || null,
+    vendorCode: document.getElementById('ho_vendorCode')?.value || null,
+    scope:      document.getElementById('ho_scope')?.value || null,
+    startDate:  document.getElementById('ho_startDate')?.value || null,
+    endDate:    document.getElementById('ho_endDate')?.value || null,
+    gstPct:     document.getElementById('ho_gstPct')?.value || '18',
+    project:    document.getElementById('ho_project')?.value || null,
+    contactPerson: document.getElementById('ho_contactPerson')?.value || null,
+    remarks:    tcSerialize('ho_tc_editor'),
+  };
+  // One entry per selected leaf, tagged with its owning package + equipment item.
+  const items = [];
+  if (_hoTree) {
+    _hoTree.items.forEach(item => {
+      item.groups.flatMap(g => g.leaves).forEach(l => {
+        const s = _hoSel[l.id]; if (!s) return;
+        items.push({
+          pkgId:   _hoTree.pkgId, pkgName: _hoTree.pkgName,
+          itemId:  Number(item.id), itemName: item.name, uom: item.uom || null,
+          leafId:  l.id, qty: Number(s.qty)||0, rate: Number(s.rate)||0,
+          spec:    (_hoSpec[item.id] ?? item.spec ?? ''),
+        });
+      });
+    });
+  }
+  return { header, items };
+}
+
+async function _draftRestoreHO(pl) {
+  const h = pl.header || {};
+  const setv = (id,v) => { const e=document.getElementById(id); if(e&&v!=null) e.value=v; };
+  setv('ho_date', h.ho_date); setv('ho_vendor', h.vendor); setv('ho_vendorCode', h.vendorCode);
+  setv('ho_scope', h.scope); setv('ho_startDate', h.startDate); setv('ho_endDate', h.endDate);
+  setv('ho_gstPct', h.gstPct); setv('ho_project', h.project); setv('ho_contactPerson', h.contactPerson);
+  if (h.remarks) tcDeserialize('ho_tc_editor', h.remarks);
+  if (h.vendor) { try { ho_vendor_locked = true; lockMasterField('ho_vendor','ho_vendor_clear'); } catch(e){} }
+
+  _hoResetTreeState();
+  // Group draft items by package; load each package then re-apply its selections.
+  const byPkg = {};
+  (pl.items||[]).forEach(it => { (byPkg[it.pkgId] = byPkg[it.pkgId] || { name: it.pkgName, items: [] }).items.push(it); });
+  const pkgIds = Object.keys(byPkg);
+  if (!pkgIds.length) return;
+  if (pkgIds.length > 1)
+    toast('This draft spans ' + pkgIds.length + ' packages — only the first is reloaded into the tree (HO entry is one package at a time).', 'warn', 7000);
+
+  const firstId = pkgIds[0];
+  const grp = byPkg[firstId];
+  // Pre-seed selections BEFORE building the tree (hoSelectPackage preserves _hoSel).
+  grp.items.forEach(it => {
+    _hoSel[String(it.leafId)] = { qty: it.qty, rate: it.rate };
+    if (it.spec) _hoSpec[it.itemId] = it.spec;
+    _hoOpenItem[it.itemId] = true;
+  });
+  await hoSelectPackage(Number(firstId), grp.name);
+  // Open the groups that own a selected leaf.
+  grp.items.forEach(it => {
+    const item = _hoFindItem(it.itemId);
+    if (item) item.groups.forEach(g => { if (g.leaves.some(l => String(l.id) === String(it.leafId))) _hoOpenGrp[it.itemId+'::'+g.grp] = true; });
+  });
+  hoRenderTree();
+}
+
+// ---- WO adapter (estimate-sourced tree: _woTree + _woSel + _woStages) ----
+function _draftCaptureWO() {
+  const header = {
+    wo_date:   document.getElementById('wo_date')?.value || null,
+    vendor:    document.getElementById('wo_vendor')?.value || null,
+    vendorCode:document.getElementById('wo_vendorCode')?.value || null,
+    scope:     document.getElementById('wo_scope')?.value || null,
+    gstPct:    document.getElementById('wo_gstPct')?.value || '18',
+    retentionPct: document.getElementById('wo_retentionPct')?.value || null,
+    mobAdvPct: document.getElementById('wo_mobAdvPct')?.value || null,
+    mobAdvAmt: document.getElementById('wo_mobAdvAmt')?.value || null,
+    project:   document.getElementById('wo_project')?.value || null,
+    startDate: document.getElementById('wo_startDate')?.value || null,
+    endDate:   document.getElementById('wo_endDate')?.value || null,
+    contactPerson: document.getElementById('wo_contactPerson')?.value || null,
+    remarks:   tcSerialize('wo_tc_editor'),
+  };
+  const items = [];
+  if (_woTree) {
+    _woTree.items.forEach(item => {
+      const leaves = item.groups.flatMap(g => [...(g.leaves||[]), ...((g.subGroups||[]).flatMap(sg => sg.leaves||[]))]);
+      leaves.forEach(l => {
+        const s = _woSel[l.selKey]; if (!s) return;
+        items.push({
+          pkgId: _woTree.pkgId, pkgName: _woTree.pkgName,
+          itemId: Number(item.id), itemName: item.name, uom: item.uom || null,
+          selKey: l.selKey, leafId: l.id, qty: Number(s.qty)||0, rate: Number(s.rate)||0,
+          stages: (_woStages[item.id]||[]).map(st => ({ name: st.name, pct: st.pct })),
+        });
+      });
+    });
+  }
+  return { header, items };
+}
+
+async function _draftRestoreWO(pl) {
+  const h = pl.header || {};
+  const setv = (id,v) => { const e=document.getElementById(id); if(e&&v!=null) e.value=v; };
+  setv('wo_date', h.wo_date); setv('wo_vendor', h.vendor); setv('wo_vendorCode', h.vendorCode);
+  setv('wo_scope', h.scope); setv('wo_gstPct', h.gstPct); setv('wo_retentionPct', h.retentionPct);
+  setv('wo_mobAdvPct', h.mobAdvPct); setv('wo_mobAdvAmt', h.mobAdvAmt); setv('wo_project', h.project);
+  setv('wo_startDate', h.startDate); setv('wo_endDate', h.endDate); setv('wo_contactPerson', h.contactPerson);
+  if (h.remarks) tcDeserialize('wo_tc_editor', h.remarks);
+  if (h.vendor) { try { wo_vendor_locked = true; lockMasterField('wo_vendor','wo_vendor_clear'); } catch(e){} }
+
+  _woResetTreeState();
+  const byPkg = {};
+  (pl.items||[]).forEach(it => { (byPkg[it.pkgId] = byPkg[it.pkgId] || { name: it.pkgName, items: [] }).items.push(it); });
+  const pkgIds = Object.keys(byPkg);
+  if (!pkgIds.length) return;
+  if (pkgIds.length > 1)
+    toast('This draft spans ' + pkgIds.length + ' packages — only the first is reloaded (WO entry is one package at a time).', 'warn', 7000);
+
+  const firstId = pkgIds[0];
+  const grp = byPkg[firstId];
+  grp.items.forEach(it => {
+    _woSel[it.selKey] = { qty: it.qty, rate: it.rate };
+    if (it.stages && it.stages.length)
+      _woStages[it.itemId] = it.stages.map((st,i) => ({ id: 'st'+i, name: st.name, pct: st.pct }));
+    _woOpenItem[it.itemId] = true;
+  });
+  await woSelectPackage(Number(firstId), grp.name);
+  grp.items.forEach(it => {
+    const item = _woTree && _woTree.items.find(x => Number(x.id) === Number(it.itemId));
+    if (item) item.groups.forEach(g => {
+      const all = [...(g.leaves||[]), ...((g.subGroups||[]).flatMap(sg => sg.leaves||[]))];
+      if (all.some(l => l.selKey === it.selKey)) _woOpenGrp[it.itemId+'::'+g.grp] = true;
+    });
+  });
+  woRenderTree();
+}
+
+// ---- HOC adapter (parent-sourced: _hocTree from parent HO + _hocThis qty map) ----
+function _draftCaptureHOC() {
+  const header = {
+    hoNumber:   document.getElementById('hoc_hoSelect')?.value || null,
+    hoc_date:   document.getElementById('hoc_date')?.value || null,
+    periodFrom: document.getElementById('hoc_periodFrom')?.value || null,
+    periodTo:   document.getElementById('hoc_periodTo')?.value || null,
+    certifiedBy:document.getElementById('hoc_certifiedBy')?.value || null,
+    remarks:    document.getElementById('hoc_remarks')?.value || null,
+  };
+  // qty map keyed by HO order-item id (oiid) — what _hocBuildTree pre-fills from.
+  const qtyByOiid = {};
+  if (_hocTree) _hocTree.items.forEach(item => item.groups.forEach(g => g.leaves.forEach(l => {
+    const q = Number(_hocThis[l.oiid]) || 0; if (q > 0) qtyByOiid[l.oiid] = q;
+  })));
+  return { header, qtyByOiid };
+}
+
+async function _draftRestoreHOC(pl) {
+  const h = pl.header || {};
+  const setv = (id,v) => { const e=document.getElementById(id); if(e&&v!=null) e.value=v; };
+  setv('hoc_date', h.hoc_date); setv('hoc_periodFrom', h.periodFrom); setv('hoc_periodTo', h.periodTo);
+  setv('hoc_certifiedBy', h.certifiedBy); setv('hoc_remarks', h.remarks);
+  if (!h.hoNumber) return;
+  // Re-load the open-HO dropdown and check the parent is still certifiable.
+  const openR = await apiGetOpenHOs();
+  const sel = document.getElementById('hoc_hoSelect');
+  sel.innerHTML = '<option value="">— Select HO —</option>' +
+    ((openR.ok ? openR.orders : []).map(o => `<option value="${esc(o['HO Number'])}">${esc(o['HO Number'])} — ${esc(o['Vendor Name'])}</option>`).join(''));
+  const stillOpen = (openR.ok ? openR.orders : []).some(o => o['HO Number'] === h.hoNumber);
+  if (!stillOpen) {
+    toast('Parent ' + h.hoNumber + ' is no longer open for certification — this draft cannot be resumed. Discard it and start fresh.', 'error', 9000);
+    return;
+  }
+  sel.value = h.hoNumber;
+  _hocResetTree();
+  _hocThis = {};
+  _hocTree = await _hocBuildTree(h.hoNumber, pl.qtyByOiid || {});
+  if (_hocTree) {
+    ['hoc_expandAllBtn','hoc_collapseAllBtn','hoc_printBtn'].forEach(id => { const e=document.getElementById(id); if(e) e.style.display=''; });
+    const foot = document.getElementById('hocItemFoot'); if (foot) foot.style.display = 'block';
+    _hocTree.items.forEach(it => it.groups.forEach(g => g.leaves.forEach(l => {
+      if (Number(_hocThis[l.oiid]) > 0) { _hocOpenItem[it.id] = true; _hocOpenGrp[it.id+'::'+g.grp] = true; }
+    })));
+    hocRenderTree();
+  }
+}
+
+// ---- WOC adapter (parent-sourced: _wocTree from parent WO; non-staged qty + staged selections) ----
+function _draftCaptureWOC() {
+  const header = {
+    woNumber:   document.getElementById('woc_woSelect')?.value || null,
+    woc_date:   document.getElementById('woc_date')?.value || null,
+    periodFrom: document.getElementById('woc_periodFrom')?.value || null,
+    periodTo:   document.getElementById('woc_periodTo')?.value || null,
+    certifiedBy:document.getElementById('woc_certifiedBy')?.value || null,
+    remarks:    document.getElementById('woc_remarks')?.value || null,
+  };
+  // Non-staged this-period qty: _wocThis keyed by cellKey(oiid, null) = String(oiid).
+  // Staged selections: _wocStageSel keyed by cellKey(oiid, stageId) = oiid#stageId.
+  // Both maps are captured verbatim — restore replays them after the tree builds.
+  const wocThis = { ..._wocThis };
+  const stageSel = { ..._wocStageSel };
+  return { header, wocThis, stageSel };
+}
+
+async function _draftRestoreWOC(pl) {
+  const h = pl.header || {};
+  const setv = (id,v) => { const e=document.getElementById(id); if(e&&v!=null) e.value=v; };
+  setv('woc_date', h.woc_date); setv('woc_periodFrom', h.periodFrom); setv('woc_periodTo', h.periodTo);
+  setv('woc_certifiedBy', h.certifiedBy); setv('woc_remarks', h.remarks);
+  if (!h.woNumber) return;
+  // Parent must still be open for certification.
+  const openR = await apiGetOpenWOs();
+  const sel = document.getElementById('woc_woSelect');
+  sel.innerHTML = '<option value="">— Select WO —</option>' +
+    ((openR.ok ? openR.orders : []).map(o => `<option value="${esc(o['WO Number'])}">${esc(o['WO Number'])} — ${esc(o['Vendor Name'])}</option>`).join(''));
+  const stillOpen = (openR.ok ? openR.orders : []).some(o => o['WO Number'] === h.woNumber);
+  if (!stillOpen) {
+    toast('Parent ' + h.woNumber + ' is no longer open for certification — this draft cannot be resumed. Discard it and start fresh.', 'error', 9000);
+    return;
+  }
+  sel.value = h.woNumber;
+  _wocResetTree();
+  pbShow('Loading certifiable lines…');
+  try {
+    // Build with null (matches revise), then replay saved qty/stage maps onto the tree.
+    _wocTree = await _wocBuildTree(h.woNumber, null);
+    if (!_wocTree) return;
+    ['woc_expandAllBtn','woc_collapseAllBtn','woc_expandLinesBtn','woc_expandTowersBtn','woc_printBtn'].forEach(id => { const e=document.getElementById(id); if(e) e.style.display=''; });
+    const foot = document.getElementById('wocItemFoot'); if (foot) foot.style.display = 'block';
+    // Replay non-staged this-period quantities.
+    Object.entries(pl.wocThis || {}).forEach(([k,v]) => { _wocThis[k] = v; });
+    // Replay staged selections.
+    Object.entries(pl.stageSel || {}).forEach(([k,v]) => { if (v) _wocStageSel[k] = true; });
+    // Open the items that carry any prefilled entry (find by oiid via _wocFindLeaf).
+    const touchedOiids = new Set();
+    Object.keys(pl.wocThis || {}).forEach(k => touchedOiids.add(k.split('#')[0]));
+    Object.keys(pl.stageSel || {}).forEach(k => touchedOiids.add(k.split('#')[0]));
+    touchedOiids.forEach(oiid => { const f = _wocFindLeaf(oiid); if (f) _wocOpenItem[f.item.id] = true; });
+    if (typeof _wocAutoArmFilledFloors === 'function') _wocAutoArmFilledFloors();
+    wocRenderTree();
+  } finally { pbDone(); }
+}
+
+// ============================================================
 // MIR — MATERIAL INDENT REQUEST
 // ============================================================
 let _mirItemC = 0;
 
 async function loadMIRList() {
+  _renderDraftsPanel('MIR');
   // v74: fetch mir_items + po_links + po_orders status in one shot.
   // mirPOMap is built from pu_mir_item_po_links filtered by approvedPOs —
   // same source-of-truth the View modal uses, so cancelled POs never appear
@@ -17304,6 +17955,9 @@ async function newMIR() {
   if (!hasPerm('canCreateMIR')) { toast('Only Site Manager can raise MIR','error'); return; }
   if (!puState.materials.length) await apiLoadMaterials();
   document.getElementById('mirForm').style.display = 'block';
+  // Draft UI defaults: a freshly opened form is NOT editing a saved draft.
+  (function(){ const f=document.getElementById('mirForm'); if(f){ delete f.dataset.resumingDraft; delete f.dataset.draftId; }
+    const fd=document.getElementById('btn_form_discard_MIR'); if(fd) fd.style.display='none'; })();
   document.getElementById('mirListCard').style.display = 'none';
   document.getElementById('mir_date').value = today();
   document.getElementById('mir_raisedBy').value = state.userName;
@@ -17558,6 +18212,12 @@ async function saveMIR() {
   // (material_code x loc) duplicate gate — same material at the SAME location is the dup;
   // the same material at DIFFERENT locations is a legitimate split.
   if (_mirDup) { toast(`"${_mirDup.name}" appears twice for the same location (rows ${_mirDup.rows.join(' and ')}) — merge into one line`,'error',6000); return; }
+  // v112: hard block — every MIR line must come from the estimate picker (carries loc_node_id)
+  const _unlocated = items.filter(it => !it.loc_node_id);
+  if (_unlocated.length) {
+    toast(`${_unlocated.map(it=>'"'+it.material_name+'"').join(', ')} ${_unlocated.length===1?'has':'have'} no location — use "＋ Add from estimate" so each line is tied to an approved estimate cell.`,'error',7000);
+    return;
+  }
   pbShow('Saving MIR…');
   try {
     // v90: atomic create via RPC — number allocated in-transaction, all-or-nothing
@@ -17582,6 +18242,7 @@ async function saveMIR() {
       })),
     });
     flashSuccess('MIR ' + res.doc_number + ' submitted for PM approval');
+    await _draftClearAfterSubmit('mirForm', 'MIR');
     closeMIRForm(); loadMIRList();
   } catch(e) { toast('Error: '+e.message,'error'); }
   finally { pbDone(); }
@@ -19665,6 +20326,7 @@ async function confirmApproveQC(qcNum) {
 let _poItemCount=0, _poVendorLocked=false, _gstMode='overall';
 
 async function loadPOList() {
+  _renderDraftsPanel('PO');
   const {data}=await sb.from('pu_po_orders').select('*').order('created_at',{ascending:false});
   puState.poList=data||[];
   renderPOList();
@@ -19727,6 +20389,9 @@ async function newPO() {
   document.getElementById('po_roundOff').value='0';
   document.getElementById('poItemsBody').innerHTML='';
   _poItemCount=0; _poVendorLocked=false; _gstMode='overall'; _poAlloc={};
+  // Draft UI defaults: a freshly opened form is NOT editing a saved draft.
+  (function(){ const f=document.getElementById('poForm'); if(f){ delete f.dataset.resumingDraft; delete f.dataset.draftId; }
+    const fd=document.getElementById('btn_form_discard_PO'); if(fd) fd.style.display='none'; })();
   const po_vendor_el=document.getElementById('po_vendor');
   if(po_vendor_el) po_vendor_el.readOnly=false;
   const po_vendor_clear=document.getElementById('po_vendor_clear');
@@ -20212,6 +20877,13 @@ async function savePO() {
     return;
   }
   // ── New PO path ────────────────────────────────────────────
+  // v112: hard block — direct PO lines must carry a location (from estimate or MIR inheritance).
+  // MIR-sourced lines get loc from the (now-located) MIR; direct lines from the estimate picker.
+  const _nullLocLines = items.filter(it => !it.loc_node_id);
+  if (_nullLocLines.length) {
+    toast(`${_nullLocLines.map(it=>'"'+it.material_name+'"').join(', ')} ${_nullLocLines.length===1?'has':'have'} no location — add lines via "＋ Add from estimate" or ensure the source MIR carries location.`,'error',7000);
+    return;
+  }
   // v99: frontend commitment cap (per (material_code, loc)). DB gate is the backstop;
   // this gives a clear per-line message before the round-trip. Tagged lines only.
   const _capItems = items.filter(it=>it.material_code && it.loc_node_id);
@@ -20399,6 +21071,7 @@ async function savePO() {
       delete document.getElementById('poForm').dataset.poMirNum;
     }
     flashSuccess('PO '+poNumber+' submitted for PM approval');
+    await _draftClearAfterSubmit('poForm', 'PO');
     closePOForm(); loadPOList();
   } catch(e){toast('Error: '+e.message,'error');}
   finally{pbDone();}
@@ -21640,7 +22313,7 @@ async function newCashGRN() {
   document.getElementById('cgrn_invoiceDate').value = '';
   document.getElementById('cgrn_receivedBy').value = state.userName || '';
   document.getElementById('cgrn_remarks').value = '';
-  document.getElementById('cgrnItemsBody').innerHTML = '<tr><td colspan="8" class="center muted">Click "+ Add Material" to start</td></tr>';
+  document.getElementById('cgrnItemsBody').innerHTML = '<tr><td colspan="9" class="center muted">Click "+ Add Material" to start</td></tr>';
   document.getElementById('cgrn_totalAmt').textContent = '₹0.00';
   _cgrnItemCount = 0;
   // Make sure material master is loaded
@@ -21728,6 +22401,16 @@ async function addCashGRNItem() {
     <td><input type="number" step="0.001" id="cgrnQty_${i}" class="num" style="width:90px;" oninput="cgrnRecalcRow(${i})" onwheel="this.blur()" onkeydown="if(event.key==='ArrowUp'||event.key==='ArrowDown')event.preventDefault()"></td>
     <td><input type="number" step="0.01" id="cgrnRate_${i}" class="num" style="width:110px;" oninput="cgrnRecalcRow(${i})" onwheel="this.blur()" onkeydown="if(event.key==='ArrowUp'||event.key==='ArrowDown')event.preventDefault()"></td>
     <td class="num" id="cgrnAmt_${i}" style="font-weight:600;">₹0.00</td>
+    <td style="min-width:200px;">
+      <div style="position:relative;">
+        <input id="cgrnLoc_${i}" placeholder="Type location…" autocomplete="off" style="width:100%;"
+          oninput="cgrnLocTypeahead(${i})" onblur="setTimeout(()=>{ const r=document.getElementById('cgrnLocRes_${i}'); if(r) r.classList.remove('show'); },180)">
+        <input type="hidden" id="cgrnLocNode_${i}">
+        <input type="hidden" id="cgrnWbsNode_${i}">
+        <div class="typeahead-results" id="cgrnLocRes_${i}" style="position:fixed;min-width:260px;max-width:440px;z-index:9999;"></div>
+      </div>
+      <div id="cgrnLocBreadcrumb_${i}" style="font-size:10px;color:var(--muted);margin-top:3px;line-height:1.4;display:none;"></div>
+    </td>
     <td><input id="cgrnRmk_${i}" placeholder="Remarks" style="width:140px;"></td>
     <td><button type="button" class="btn btn-ghost btn-sm" onclick="removeCashGRNItem(${i})" title="Remove">✕</button></td>
   `;
@@ -21741,7 +22424,7 @@ function removeCashGRNItem(i) {
   // If all rows removed, restore placeholder
   if (!document.querySelectorAll('#cgrnItemsBody tr').length) {
     document.getElementById('cgrnItemsBody').innerHTML =
-      '<tr><td colspan="8" class="center muted">Click "+ Add Material" to start</td></tr>';
+      '<tr><td colspan="9" class="center muted">Click "+ Add Material" to start</td></tr>';
     _cgrnItemCount = 0;
   }
 }
@@ -21789,6 +22472,83 @@ function cgrnPickMat(i, code, name, uom) {
   document.getElementById('cgrnUOM_' + i).value = uom;
   document.getElementById('cgrnMatRes_' + i)?.classList.remove('show');
   document.getElementById('cgrnQty_' + i).focus();
+}
+
+// v112: location typeahead for cash GRN — leaf nodes only, fuzzy, with WBS breadcrumb
+async function cgrnLocTypeahead(i) {
+  const inp = document.getElementById('cgrnLoc_' + i);
+  const res = document.getElementById('cgrnLocRes_' + i);
+  if (!inp || !res) return;
+  // Clear stored node when user edits the text (forces re-pick)
+  document.getElementById('cgrnLocNode_' + i).value = '';
+  document.getElementById('cgrnWbsNode_' + i).value = '';
+  const bcDiv = document.getElementById('cgrnLocBreadcrumb_' + i);
+  if (bcDiv) bcDiv.style.display = 'none';
+  const q = (inp.value || '').toLowerCase().trim();
+  if (!q) { res.classList.remove('show'); return; }
+  const tree = await _loadLocTree();
+  const tokens = _fuzzyTokens(q);
+  // Leaf-only: gate keys on leaf loc_node_id (wbs_material_buildup → wbs_scope → loc_node_id)
+  const matches = tree.filter(n =>
+    n.is_leaf && COALESCE_active(n) &&
+    _fuzzyMatch((n.path || n.name).toLowerCase(), tokens)
+  ).slice(0, 14);
+  if (!matches.length) {
+    res.innerHTML = '<div style="padding:10px;color:var(--muted);font-size:12px;">No leaf locations found — only assignable location leaves are shown.</div>';
+    _anchorDropdown(inp, res);
+    res.classList.add('show');
+    return;
+  }
+  res.innerHTML = matches.map(n =>
+    `<div class="typeahead-item" onmousedown="event.preventDefault();cgrnPickLoc(${i},'${n.id}','${esc(n.name).replace(/'/g,"\\'")}','${esc(n.path).replace(/'/g,"\\'")}')">
+      <div style="font-size:12px;font-weight:600;">📍 ${esc(n.name)}</div>
+      <div class="muted" style="font-size:11px;">${esc(n.path)}</div>
+    </div>`
+  ).join('');
+  _anchorDropdown(inp, res);
+  res.classList.add('show');
+}
+
+function cgrnPickLoc(i, nodeId, name, path) {
+  // Stamp hidden inputs
+  document.getElementById('cgrnLoc_' + i).value = name;
+  document.getElementById('cgrnLocNode_' + i).value = nodeId;
+  document.getElementById('cgrnLocRes_' + i)?.classList.remove('show');
+  // Look up WBS from estimate tree: find any material buildup entry at this location
+  // to show the WBS breadcrumb. Uses _mirEstTreeCache (loaded by addMIRItem/PO pickers).
+  const matCode = document.getElementById('cgrnMatCode_' + i)?.value || '';
+  let wbsNodeId = '', wbsPath = '', wbsName = '';
+  const tree = _mirEstTreeCache || [];
+  outer: for (const L of tree) {
+    for (const LO of (L.locArr || [])) {
+      if (String(LO.locId) === String(nodeId)) {
+        for (const S of (LO.skuArr || [])) {
+          if (!matCode || S.code === matCode) {
+            wbsNodeId = String(L.leafId);
+            wbsPath   = L.wbsPath || L.leaf || '';
+            wbsName   = L.leaf || '';
+            break outer;
+          }
+        }
+        // Location matched but no material match — still grab WBS for breadcrumb
+        if (!wbsNodeId) {
+          wbsNodeId = String(L.leafId);
+          wbsPath   = L.wbsPath || L.leaf || '';
+        }
+      }
+    }
+  }
+  document.getElementById('cgrnWbsNode_' + i).value = wbsNodeId;
+  // Render breadcrumb
+  const bcDiv = document.getElementById('cgrnLocBreadcrumb_' + i);
+  if (bcDiv) {
+    const locLine = `<span style="color:var(--accent);">📍</span> ${esc(path)}`;
+    const wbsLine = wbsPath
+      ? `<br><span style="color:var(--muted);">📋</span> ${esc(wbsPath)}`
+      : (wbsNodeId ? '' : ' <span style="color:#d97706;">⚠ not in estimate at this location</span>');
+    bcDiv.innerHTML = locLine + wbsLine;
+    bcDiv.style.display = 'block';
+  }
 }
 
 function cgrnRecalcRow(i) {
@@ -21848,6 +22608,9 @@ async function saveCashGRN() {
     // Verify material is from master (matCode hidden input must be set)
     const matCode = document.getElementById('cgrnMatCode_'+i)?.value;
     if (!matCode) { toast('Select "' + matName + '" from the material dropdown','error'); return; }
+    // v112: read location (mandatory for estimate gate)
+    const locNodeId = document.getElementById('cgrnLocNode_'+i)?.value || null;
+    const wbsNodeId = document.getElementById('cgrnWbsNode_'+i)?.value || null;
     entries.push({
       sno: entries.length + 1,
       material_code: matCode || null,
@@ -21862,10 +22625,17 @@ async function saveCashGRN() {
       base_amount: qty * rate,
       remarks: document.getElementById('cgrnRmk_'+i)?.value || null,
       is_cash_purchase: true,
+      loc_node_id: locNodeId || null,
+      wbs_node_id: wbsNodeId ? Number(wbsNodeId) : null,
     });
   }
   if (!entries.length) { toast('Add at least one material','error'); return; }
-
+  // v112: every cash GRN line must have a location for the estimate gate
+  const _cgrnUnloc = entries.filter(e => !e.loc_node_id);
+  if (_cgrnUnloc.length) {
+    toast(`${_cgrnUnloc.map(e=>'"'+e.material_name+'"').join(', ')} ${_cgrnUnloc.length===1?'has':'have'} no location selected — pick a location for each material row.`,'error',7000);
+    return;
+  }
   pbShow('Saving Direct Purchase GRN…');
   try {
     // v90: atomic create via RPC
