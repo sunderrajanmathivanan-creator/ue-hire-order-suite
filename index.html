@@ -21440,7 +21440,28 @@ async function printPO(poNum) {
   ]);
   pbDone();
   if(!h){ toast('PO not found','error'); return; }
-  await _printOrderDoc('PO', poNum, h, items||[], null);
+  // v113: club per-location allocations of the same material into one printed line,
+  // matching the view modal. Totals come from the header (basic_value/grand_total),
+  // so summing qty + base_amount + total_amount per material is display-only and
+  // does not change tax math. Rate shown is the first allocation's rate (the
+  // allocation model uses one rate per material, same assumption as the view).
+  const _pGroups = {};
+  (items||[]).forEach(it => {
+    const k = (it.material_code != null ? ('c'+it.material_code) : ('n'+it.material_name));
+    (_pGroups[k] = _pGroups[k] || []).push(it);
+  });
+  let _pSno = 0;
+  const clubbed = Object.values(_pGroups).map(group => {
+    const first = group[0];
+    return {
+      ...first,
+      sno: ++_pSno,
+      qty:          group.reduce((t,x)=>t+num(x.qty),0),
+      base_amount:  group.reduce((t,x)=>t+num(x.base_amount),0),
+      total_amount: group.reduce((t,x)=>t+num(x.total_amount),0),
+    };
+  });
+  await _printOrderDoc('PO', poNum, h, clubbed, null);
 }
 
 
