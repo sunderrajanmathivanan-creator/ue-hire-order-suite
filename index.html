@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Penguin-Procurement Suite v113 — Urban Excellence LLP · Poetry of Earth</title>
+<title>Penguin-Procurement Suite v116 — Urban Excellence LLP · Poetry of Earth</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <style>
@@ -2429,33 +2429,40 @@ input[type="number"] {
               <div style="padding-right:14px;">
               <div style="font-size:10px;font-weight:600;letter-spacing:.05em;color:var(--text-muted);margin-bottom:8px;">MIR HEADER STATUS</div>
               <div style="display:flex;flex-direction:column;gap:5px;">
-                <div style="display:flex;align-items:flex-start;gap:8px;"><span style="font-size:11px;font-weight:500;padding:2px 8px;border-radius:20px;background:#fef9c3;color:#854d0e;white-space:nowrap;min-width:130px;text-align:center;flex-shrink:0;">Pending Approval</span><span style="font-size:11px;color:var(--text-muted);line-height:1.4;">Newly raised, awaiting PM sign-off</span></div>
-                <div style="display:flex;align-items:flex-start;gap:8px;"><span style="font-size:11px;font-weight:500;padding:2px 8px;border-radius:20px;background:#fee2e2;color:#991b1b;white-space:nowrap;min-width:130px;text-align:center;flex-shrink:0;">Rejected</span><span style="font-size:11px;color:var(--text-muted);line-height:1.4;">Rejected by approver; cannot proceed</span></div>
-                <div style="display:flex;align-items:flex-start;gap:8px;"><span style="font-size:11px;font-weight:500;padding:2px 8px;border-radius:20px;background:#f1f5f9;color:#475569;white-space:nowrap;min-width:130px;text-align:center;flex-shrink:0;">PO Pending</span><span style="font-size:11px;color:var(--text-muted);line-height:1.4;">Approved; all items awaiting PO — no PO raised yet</span></div>
-                <div style="display:flex;align-items:flex-start;gap:8px;"><span style="font-size:11px;font-weight:500;padding:2px 8px;border-radius:20px;background:#f3e8ff;color:#6b21a8;white-space:nowrap;min-width:130px;text-align:center;flex-shrink:0;">Partial PO</span><span style="font-size:11px;color:var(--text-muted);line-height:1.4;">Some items have PO raised; rest still pending</span></div>
-                <div style="display:flex;align-items:flex-start;gap:8px;"><span style="font-size:11px;font-weight:500;padding:2px 8px;border-radius:20px;background:#ede9fe;color:#4c1d95;white-space:nowrap;min-width:130px;text-align:center;flex-shrink:0;">PO Issued</span><span style="font-size:11px;color:var(--text-muted);line-height:1.4;">All items have approved PO; awaiting GRN</span></div>
-                <div style="display:flex;align-items:flex-start;gap:8px;"><span style="font-size:11px;font-weight:500;padding:2px 8px;border-radius:20px;background:#bbf7d0;color:#065f46;white-space:nowrap;min-width:130px;text-align:center;flex-shrink:0;">Partial Received</span><span style="font-size:11px;color:var(--text-muted);line-height:1.4;">Some items received via GRN; others still pending</span></div>
-                <div style="display:flex;align-items:flex-start;gap:8px;"><span style="font-size:11px;font-weight:500;padding:2px 8px;border-radius:20px;background:#d1fae5;color:#065f46;white-space:nowrap;min-width:130px;text-align:center;flex-shrink:0;">Closed</span><span style="font-size:11px;color:var(--text-muted);line-height:1.4;">All items fully received via GRN</span></div>
-                <div style="display:flex;align-items:flex-start;gap:8px;"><span style="font-size:11px;font-weight:500;padding:2px 8px;border-radius:20px;background:#f3f4f6;color:#374151;white-space:nowrap;min-width:130px;text-align:center;flex-shrink:0;">Cancelled</span><span style="font-size:11px;color:var(--text-muted);line-height:1.4;">All POs cancelled; no active items remain</span></div>
+                <div style="display:flex;align-items:flex-start;gap:8px;"><span style="font-size:11px;font-weight:500;padding:2px 8px;border-radius:20px;background:#fef9c3;color:#854d0e;white-space:nowrap;min-width:148px;text-align:center;flex-shrink:0;">Pending Approval</span><span style="font-size:11px;color:var(--text-muted);line-height:1.4;">Newly raised, awaiting PM sign-off</span></div>
+                <div style="display:flex;align-items:flex-start;gap:8px;"><span style="font-size:11px;font-weight:500;padding:2px 8px;border-radius:20px;background:#fee2e2;color:#991b1b;white-space:nowrap;min-width:148px;text-align:center;flex-shrink:0;">Rejected</span><span style="font-size:11px;color:var(--text-muted);line-height:1.4;">Rejected by approver; cannot proceed</span></div>
+                <div style="display:flex;align-items:flex-start;gap:8px;"><span style="font-size:11px;font-weight:500;padding:2px 8px;border-radius:20px;background:#e6f1fb;color:#185FA5;white-space:nowrap;min-width:148px;text-align:center;flex-shrink:0;">PO Pending</span><span style="font-size:11px;color:var(--text-muted);line-height:1.4;">Approved; no PO raised on any line yet</span></div>
+                <div style="display:flex;align-items:flex-start;gap:8px;"><span style="font-size:11px;font-weight:500;padding:2px 8px;border-radius:20px;background:#faeeda;color:#854F0B;white-space:nowrap;min-width:148px;text-align:center;flex-shrink:0;">Partial PO Raised</span><span style="font-size:11px;color:var(--text-muted);line-height:1.4;">Some lines have a PO in approval (not yet approved); balance still open</span></div>
+                <div style="display:flex;align-items:flex-start;gap:8px;"><span style="font-size:11px;font-weight:500;padding:2px 8px;border-radius:20px;background:#faeeda;color:#854F0B;white-space:nowrap;min-width:148px;text-align:center;flex-shrink:0;">Full PO Raised</span><span style="font-size:11px;color:var(--text-muted);line-height:1.4;">All lines fully covered by POs in approval; awaiting PM approval</span></div>
+                <div style="display:flex;align-items:flex-start;gap:8px;"><span style="font-size:11px;font-weight:500;padding:2px 8px;border-radius:20px;background:#eaf3de;color:#3B6D11;white-space:nowrap;min-width:148px;text-align:center;flex-shrink:0;">Partial PO Approved</span><span style="font-size:11px;color:var(--text-muted);line-height:1.4;">Some lines have an approved PO; rest open or in approval</span></div>
+                <div style="display:flex;align-items:flex-start;gap:8px;"><span style="font-size:11px;font-weight:500;padding:2px 8px;border-radius:20px;background:#eaf3de;color:#3B6D11;white-space:nowrap;min-width:148px;text-align:center;flex-shrink:0;">Full PO Approved</span><span style="font-size:11px;color:var(--text-muted);line-height:1.4;">All lines fully covered by approved POs; awaiting GRN</span></div>
+                <div style="display:flex;align-items:flex-start;gap:8px;"><span style="font-size:11px;font-weight:500;padding:2px 8px;border-radius:20px;background:#e0f2fe;color:#0369a1;white-space:nowrap;min-width:148px;text-align:center;flex-shrink:0;">Partially Received</span><span style="font-size:11px;color:var(--text-muted);line-height:1.4;">Some lines received via approved GRN; others pending</span></div>
+                <div style="display:flex;align-items:flex-start;gap:8px;"><span style="font-size:11px;font-weight:500;padding:2px 8px;border-radius:20px;background:#d1fae5;color:#065f46;white-space:nowrap;min-width:148px;text-align:center;flex-shrink:0;">Fully Received</span><span style="font-size:11px;color:var(--text-muted);line-height:1.4;">All lines fully received via GRN</span></div>
               </div>
             </div>
             <!-- Divider -->
             <div style="background:var(--border);"></div>
             <!-- Item statuses -->
             <div style="padding-left:14px;">
-              <div style="font-size:10px;font-weight:600;letter-spacing:.05em;color:var(--text-muted);margin-bottom:8px;">MIR ITEM STATUS</div>
+              <div style="font-size:10px;font-weight:600;letter-spacing:.05em;color:var(--text-muted);margin-bottom:8px;">MIR LINE-ITEM STATUS</div>
               <div style="display:flex;flex-direction:column;gap:5px;">
-                <div style="display:flex;align-items:flex-start;gap:8px;"><span style="font-size:11px;font-weight:500;padding:2px 8px;border-radius:20px;background:#f1f5f9;color:#475569;white-space:nowrap;min-width:120px;text-align:center;flex-shrink:0;">PO Pending</span><span style="font-size:11px;color:var(--text-muted);line-height:1.4;">No PO raised yet for this item</span></div>
-                <div style="display:flex;align-items:flex-start;gap:8px;"><span style="font-size:11px;font-weight:500;padding:2px 8px;border-radius:20px;background:#e0e7ff;color:#3730a3;white-space:nowrap;min-width:120px;text-align:center;flex-shrink:0;">Partial PO Issued</span><span style="font-size:11px;color:var(--text-muted);line-height:1.4;">PO qty &lt; required qty; balance still open</span></div>
-                <div style="display:flex;align-items:flex-start;gap:8px;"><span style="font-size:11px;font-weight:500;padding:2px 8px;border-radius:20px;background:#ede9fe;color:#4c1d95;white-space:nowrap;min-width:120px;text-align:center;flex-shrink:0;">PO Issued</span><span style="font-size:11px;color:var(--text-muted);line-height:1.4;">Full qty covered by PO(s); awaiting GRN receipt</span></div>
-                <div style="display:flex;align-items:flex-start;gap:8px;"><span style="font-size:11px;font-weight:500;padding:2px 8px;border-radius:20px;background:#bbf7d0;color:#065f46;white-space:nowrap;min-width:120px;text-align:center;flex-shrink:0;">Partial Received</span><span style="font-size:11px;color:var(--text-muted);line-height:1.4;">GRN qty &lt; required qty; balance still pending</span></div>
-                <div style="display:flex;align-items:flex-start;gap:8px;"><span style="font-size:11px;font-weight:500;padding:2px 8px;border-radius:20px;background:#d1fae5;color:#065f46;white-space:nowrap;min-width:120px;text-align:center;flex-shrink:0;">Received</span><span style="font-size:11px;color:var(--text-muted);line-height:1.4;">GRN qty &ge; required qty; fully received at site</span></div>
-                <div style="display:flex;align-items:flex-start;gap:8px;"><span style="font-size:11px;font-weight:500;padding:2px 8px;border-radius:20px;background:#a7f3d0;color:#065f46;white-space:nowrap;min-width:120px;text-align:center;flex-shrink:0;">Closed</span><span style="font-size:11px;color:var(--text-muted);line-height:1.4;">Fully received and MIR closed</span></div>
+                <div style="display:flex;align-items:flex-start;gap:8px;"><span style="font-size:11px;font-weight:500;padding:2px 8px;border-radius:20px;background:#e6f1fb;color:#185FA5;white-space:nowrap;min-width:150px;text-align:center;flex-shrink:0;">PO Pending</span><span style="font-size:11px;color:var(--text-muted);line-height:1.4;">Approved line; no PO raised yet</span></div>
+                <div style="display:flex;align-items:flex-start;gap:8px;"><span style="font-size:11px;font-weight:500;padding:2px 8px;border-radius:20px;background:#faeeda;color:#854F0B;white-space:nowrap;min-width:150px;text-align:center;flex-shrink:0;">Partial PO Raised</span><span style="font-size:11px;color:var(--text-muted);line-height:1.4;">PO raised (in approval) for part of the qty; balance open. Line locked from new PO.</span></div>
+                <div style="display:flex;align-items:flex-start;gap:8px;"><span style="font-size:11px;font-weight:500;padding:2px 8px;border-radius:20px;background:#faeeda;color:#854F0B;white-space:nowrap;min-width:150px;text-align:center;flex-shrink:0;">Full PO Raised</span><span style="font-size:11px;color:var(--text-muted);line-height:1.4;">Full qty PO raised but not yet approved (incl. returned-for-correction). Line locked.</span></div>
+                <div style="display:flex;align-items:flex-start;gap:8px;"><span style="font-size:11px;font-weight:500;padding:2px 8px;border-radius:20px;background:#eaf3de;color:#3B6D11;white-space:nowrap;min-width:150px;text-align:center;flex-shrink:0;">Partial PO Approved</span><span style="font-size:11px;color:var(--text-muted);line-height:1.4;">Approved PO covers part of the qty; balance still open</span></div>
+                <div style="display:flex;align-items:flex-start;gap:8px;"><span style="font-size:11px;font-weight:500;padding:2px 8px;border-radius:20px;background:#eaf3de;color:#3B6D11;white-space:nowrap;min-width:150px;text-align:center;flex-shrink:0;">Full PO Approved</span><span style="font-size:11px;color:var(--text-muted);line-height:1.4;">Full qty covered by approved PO(s); awaiting GRN</span></div>
+                <div style="display:flex;align-items:flex-start;gap:8px;"><span style="font-size:11px;font-weight:500;padding:2px 8px;border-radius:20px;background:#e0f2fe;color:#0369a1;white-space:nowrap;min-width:150px;text-align:center;flex-shrink:0;">Partially Received</span><span style="font-size:11px;color:var(--text-muted);line-height:1.4;">Approved GRN qty &lt; required; balance pending</span></div>
+                <div style="display:flex;align-items:flex-start;gap:8px;"><span style="font-size:11px;font-weight:500;padding:2px 8px;border-radius:20px;background:#d1fae5;color:#065f46;white-space:nowrap;min-width:150px;text-align:center;flex-shrink:0;">Fully Received</span><span style="font-size:11px;color:var(--text-muted);line-height:1.4;">Approved GRN qty &ge; required; fully received</span></div>
               </div>
 
-              <div style="margin-top:10px;padding:8px 10px;background:#f0fdf4;border-radius:6px;border:1px solid #bbf7d0;">
+              <div style="margin-top:10px;padding:8px 10px;background:#fffbeb;border-radius:6px;border:1px solid #fde68a;">
+                <div style="font-size:10px;font-weight:700;color:#854F0B;margin-bottom:3px;">⏳ PO in process (line lock)</div>
+                <div style="font-size:11px;color:var(--text-muted);line-height:1.4;">A line showing a dashed amber PO number has a PO awaiting approval — it is locked from raising another PO until that PO is approved, or outright rejected/cancelled (which unlocks it). Solid green = approved.</div>
+              </div>
+
+              <div style="margin-top:8px;padding:8px 10px;background:#f0fdf4;border-radius:6px;border:1px solid #bbf7d0;">
                 <div style="font-size:10px;font-weight:700;color:#15803d;margin-bottom:3px;">Qty Available</div>
-                <div style="font-size:11px;color:var(--text-muted);line-height:1.4;">Shown when any item has uncovered balance qty — procurement action still needed</div>
+                <div style="font-size:11px;color:var(--text-muted);line-height:1.4;">Shown when any line has uncovered balance qty — procurement action still needed</div>
               </div>
             </div>
           </div>
@@ -2490,11 +2497,12 @@ input[type="number"] {
                   <option value="Pending Approval">Pending Approval</option>
                   <option value="Rejected">Rejected</option>
                   <option value="PO Pending">PO Pending</option>
-                  <option value="Partial PO">Partial PO</option>
-                  <option value="PO Issued">PO Issued</option>
-                  <option value="Partial Received">Partial Received</option>
-                  <option value="Closed">Closed</option>
-                  <option value="Cancelled">Cancelled</option>
+                  <option value="Partial PO Raised">Partial PO Raised</option>
+                  <option value="Full PO Raised">Full PO Raised</option>
+                  <option value="Partial PO Approved">Partial PO Approved</option>
+                  <option value="Full PO Approved">Full PO Approved</option>
+                  <option value="Partially Received">Partially Received</option>
+                  <option value="Fully Received">Fully Received</option>
                   <option value="__qty_available__">Qty Available only</option>
                 </select>
               </td>
@@ -4170,7 +4178,7 @@ const ROLE_PERMS = {
                        canCancelPO: true, canShortClosePO: true,
                        canCreatePOB: true, canApprovePOB: true,
                        canCreateMIS: true, canApproveMIS: true, canManageMasters: true,
-                       canAuditStock: true }
+                       canAuditStock: true, canShortCloseMIR: true }
 };
 
 // ── Purchase module state (defined early so initApp can call apiLoadMaterials) ──
@@ -17678,7 +17686,7 @@ async function loadMIRList() {
   const [mirRes, itemsRes, poLinksRes] = await Promise.all([
     sb.from('pu_mir').select('*').order('created_at', { ascending: false }),
     sb.from('pu_mir_items').select(
-      'mir_number,sno,material_name,uom,qty_required,rfq_number,po_number,specification,procurement_line_id,is_locked,locked_qty,locked_by,locked_at'
+      'mir_number,sno,material_name,uom,qty_required,rfq_number,po_number,specification,procurement_line_id,is_balance_closed'
     ).order('sno'),
     sb.from('pu_mir_item_po_links').select('mir_number,sno,po_number'),
   ]);
@@ -17745,11 +17753,14 @@ async function loadMIRList() {
   const poQtyMap  = {};  // -> raw SUM(qty)
   const scQtyMap  = {};  // -> SUM(short_closed_qty)
   const grnQtyMap = {};  // -> SUM(this_grn_qty) verified only
+  // v114: split PO coverage by approval state
+  const apprPoQtyMap = {};  // -> SUM(qty) from APPROVED POs
+  const pendPoQtyMap = {};  // -> SUM(qty) from PENDING POs (raised, not approved)
 
   if (allPlIds.length) {
     const [poItemsRes, grnItemsRes, grnHdrRes] = await Promise.all([
       sb.from('pu_po_items')
-        .select('procurement_line_id,qty,short_closed_qty')
+        .select('procurement_line_id,qty,short_closed_qty,po_number')
         .in('procurement_line_id', allPlIds),
       sb.from('pu_grn_items')
         .select('procurement_line_id,this_grn_qty,grn_number')
@@ -17759,10 +17770,22 @@ async function loadMIRList() {
         .in('status', ['Verified','Partially Billed','Billed']),
     ]);
     const validGRNs = new Set((grnHdrRes.data||[]).map(g => g.grn_number));
+    // v114: fetch status of every PO referenced, to split approved vs pending.
+    const _poNums = [...new Set((poItemsRes.data||[]).map(r=>r.po_number).filter(Boolean))];
+    const poStatusMap = {};
+    if (_poNums.length) {
+      const {data:poSt} = await sb.from('pu_po_orders').select('po_number,status').in('po_number', _poNums);
+      (poSt||[]).forEach(p => { poStatusMap[p.po_number] = p.status; });
+    }
     (poItemsRes.data||[]).forEach(r => {
       if (!r.procurement_line_id) return;
+      const bucket = _poStatusBucket(poStatusMap[r.po_number]);
+      if (bucket === 'dead') return;   // rejected/cancelled PO neither covers nor counts
+      const eff = Math.max(0, (r.qty||0) - (r.short_closed_qty||0));
       poQtyMap[r.procurement_line_id] = (poQtyMap[r.procurement_line_id]||0) + (r.qty||0);
       scQtyMap[r.procurement_line_id] = (scQtyMap[r.procurement_line_id]||0) + (r.short_closed_qty||0);
+      if (bucket === 'approved') apprPoQtyMap[r.procurement_line_id] = (apprPoQtyMap[r.procurement_line_id]||0) + eff;
+      else                       pendPoQtyMap[r.procurement_line_id] = (pendPoQtyMap[r.procurement_line_id]||0) + eff;
     });
     (grnItemsRes.data||[]).forEach(r => {
       if (r.procurement_line_id && validGRNs.has(r.grn_number))
@@ -17783,6 +17806,11 @@ async function loadMIRList() {
     it._effPoQty = effPoQty;
     it._grnQty   = grnQty;
     it._ist      = _computeItemStatusV73(qtyReq, effPoQty, grnQty);
+    // v114: 9-label display status (approved/pending split)
+    it._apprPo   = plid ? (apprPoQtyMap[plid]||0) : 0;
+    it._pendPo   = plid ? (pendPoQtyMap[plid]||0) : 0;
+    it._label9   = _mirLineLabel9(qtyReq, it._apprPo, it._pendPo, grnQty);
+    it._poLocked = it._pendPo > 0;   // derived PO-pending lock (separate from admin is_locked)
 
     if (!puState.mirItemsMap[it.mir_number]) puState.mirItemsMap[it.mir_number] = [];
     puState.mirItemsMap[it.mir_number].push(it);
@@ -17790,10 +17818,15 @@ async function loadMIRList() {
     if (!puState.mirItemStatusSummary[it.mir_number]) puState.mirItemStatusSummary[it.mir_number] = {};
     puState.mirItemStatusSummary[it.mir_number][it._ist] =
       (puState.mirItemStatusSummary[it.mir_number][it._ist]||0) + 1;
+    // v114: parallel 9-label summary for the new STATUS display
+    if (!puState.mirLabel9Summary) puState.mirLabel9Summary = {};
+    if (!puState.mirLabel9Summary[it.mir_number]) puState.mirLabel9Summary[it.mir_number] = {};
+    puState.mirLabel9Summary[it.mir_number][it._label9] =
+      (puState.mirLabel9Summary[it.mir_number][it._label9]||0) + 1;
 
-    // Qty Available: line has uncovered balance AND is not locked
+    // Qty Available: line has uncovered balance AND is not balance-closed
     // (effective PO < qty_required means balance exists and no active PO covers it)
-    if (effPoQty < qtyReq && !it.is_locked)
+    if (effPoQty < qtyReq && !it.is_balance_closed)
       puState.mirBalanceSet.add(it.mir_number);
   });
 
@@ -17806,7 +17839,7 @@ async function loadMIRList() {
   puState.mirList.forEach(m => {
     const items = puState.mirItemsMap[m.mir_number] || [];
     if (['Pending Approval','Rejected'].includes(m.status)) return; // preserve only pre-approval states
-    m._liveStatus = _rollupMIRHeaderV73(items);
+    m._liveStatus = _rollupMIRHeader9(items);
   });
 
   renderMIRList();
@@ -17897,19 +17930,21 @@ function renderMIRList() {
     m=>m.raised_by||'', m=>_mirLiveSt(m),
   ]);
   const perms = mergedPerms();
-  // v73 status display — item pills use new status set (no RFQ statuses)
+  // v114: 9-label status display (approved/pending split, "newest action wins")
   const _istMeta = [
-    { key:'PO Pending',        bg:'#f1f5f9', col:'#64748b' },
-    { key:'Partial PO Issued', bg:'#eff6ff', col:'#1d4ed8' },
-    { key:'PO Issued',         bg:'#ede9fe', col:'#7c3aed' },
-    { key:'Partial Received',  bg:'#dcfce7', col:'#15803d' },
-    { key:'Received',          bg:'#d1fae5', col:'#065f46' },
-    { key:'Closed',            bg:'#d1fae5', col:'#065f46' },
+    { key:'PO Pending',          bg:'#e6f1fb', col:'#185FA5' },
+    { key:'Partial PO Raised',   bg:'#faeeda', col:'#854F0B' },
+    { key:'Full PO Raised',      bg:'#faeeda', col:'#854F0B' },
+    { key:'Partial PO Approved', bg:'#eaf3de', col:'#3B6D11' },
+    { key:'Full PO Approved',    bg:'#eaf3de', col:'#3B6D11' },
+    { key:'Partially Received',  bg:'#e0f2fe', col:'#0369a1' },
+    { key:'Fully Received',      bg:'#d1fae5', col:'#15803d' },
   ];
   document.getElementById('mir_listBody').innerHTML = rows.map(m => {
     const st = _mirLiveSt(m);  // v73: uses shared helper defined above
     const stCls = st.toLowerCase().replace(/[\s/()]+/g,'-');
-    const summary = puState.mirItemStatusSummary?.[m.mir_number] || {};
+    const summary = puState.mirLabel9Summary?.[m.mir_number] || {};
+    const _lineCount = (puState.mirItemsMap?.[m.mir_number]||[]).length;
     const hasBalance = puState.mirBalanceSet?.has(m.mir_number);
     // PO numbers for this MIR — approved (purple) + cancelled (red, struck-through)
     const poNums      = puState.mirPOMap?.[m.mir_number]          ? [...puState.mirPOMap[m.mir_number]]          : [];
@@ -17925,9 +17960,10 @@ function renderMIRList() {
       : '<span style="color:var(--muted);">—</span>';
     // Build item count summary pills — suppressed entirely for Rejected MIRs
     const summaryPills = st !== 'Rejected'
-      ? _istMeta
+      ? `<span style="display:inline-block;padding:1px 6px;background:#f1efe8;color:#5f5e5a;border-radius:8px;font-size:10px;font-weight:600;white-space:nowrap;margin-right:3px;">Lines: ${_lineCount}</span>`
+        + _istMeta
           .filter(s => summary[s.key] > 0)
-          .map(s => `<span style="display:inline-block;padding:1px 6px;background:${s.bg};color:${s.col};border-radius:8px;font-size:10px;font-weight:600;white-space:nowrap;">${s.key}: ${summary[s.key]}</span>`)
+          .map(s => `<span style="display:inline-block;padding:1px 6px;background:${s.bg};color:${s.col};border-radius:8px;font-size:10px;font-weight:600;white-space:nowrap;">${s.key} (${summary[s.key]})</span>`)
           .join(' ')
       : '';
     let acts = `<button class="btn btn-ghost btn-sm" onclick="viewMIR('${esc(m.mir_number)}')">View</button>`;
@@ -18264,7 +18300,7 @@ async function viewMIR(mirNum) {
   const [{data:h},{data:items}] = await Promise.all([
     sb.from('pu_mir').select('*').eq('mir_number',mirNum).single(),
     sb.from('pu_mir_items')
-      .select('sno,material_name,uom,qty_required,rfq_number,po_number,specification,procurement_line_id,is_locked,locked_qty,locked_by,locked_at,loc_node_id')
+      .select('sno,material_name,uom,qty_required,rfq_number,po_number,specification,procurement_line_id,is_balance_closed,loc_node_id')
       .eq('mir_number',mirNum).order('sno'),
   ]);
   pbDone();
@@ -18272,6 +18308,7 @@ async function viewMIR(mirNum) {
 
   const plids = (items||[]).map(it=>it.procurement_line_id).filter(Boolean);
   const poQtyMap = {}, scQtyMap = {}, grnQtyMap = {}, poNumMap = {};
+  const apprPoQtyMap = {}, pendPoQtyMap = {}, poStatusMap = {};   // v114
 
   if (plids.length) {
     const [poItemsRes, grnItemsRes, grnHdrRes] = await Promise.all([
@@ -18286,10 +18323,21 @@ async function viewMIR(mirNum) {
         .in('status',['Verified','Partially Billed','Billed']),
     ]);
     const validGRNs = new Set((grnHdrRes.data||[]).map(g=>g.grn_number));
+    // v114: status of every referenced PO → split approved vs pending
+    const _poNums = [...new Set((poItemsRes.data||[]).map(r=>r.po_number).filter(Boolean))];
+    if (_poNums.length) {
+      const {data:poSt} = await sb.from('pu_po_orders').select('po_number,status').in('po_number', _poNums);
+      (poSt||[]).forEach(p => { poStatusMap[p.po_number] = p.status; });
+    }
     (poItemsRes.data||[]).forEach(r => {
       if (!r.procurement_line_id) return;
+      const bucket = _poStatusBucket(poStatusMap[r.po_number]);
+      if (bucket === 'dead') return;
+      const eff = Math.max(0, (r.qty||0) - (r.short_closed_qty||0));
       poQtyMap[r.procurement_line_id] = (poQtyMap[r.procurement_line_id]||0) + (r.qty||0);
       scQtyMap[r.procurement_line_id] = (scQtyMap[r.procurement_line_id]||0) + (r.short_closed_qty||0);
+      if (bucket === 'approved') apprPoQtyMap[r.procurement_line_id] = (apprPoQtyMap[r.procurement_line_id]||0) + eff;
+      else                       pendPoQtyMap[r.procurement_line_id] = (pendPoQtyMap[r.procurement_line_id]||0) + eff;
       if (r.po_number) {
         if (!poNumMap[r.procurement_line_id]) poNumMap[r.procurement_line_id] = new Set();
         poNumMap[r.procurement_line_id].add(r.po_number);
@@ -18319,12 +18367,12 @@ async function viewMIR(mirNum) {
   const total = (items||[]).length;
   let pendCount=0, poPartCount=0, poCount=0, recPartCount=0, recCount=0;
 
-  // Qty Available: any unlocked line where effectivePoQty < qty_required
+  // Qty Available: any non-balance-closed line where effectivePoQty < qty_required
   // Not applicable for Rejected MIRs — the MIR is dead, balance is irrelevant
   const hasBalance = mirSt !== 'Rejected' && (items||[]).some(it => {
     const plid     = it.procurement_line_id;
     const effPoQty = Math.max(0, (plid?(poQtyMap[plid]||0):0) - (plid?(scQtyMap[plid]||0):0));
-    return effPoQty < (it.qty_required||0) && !it.is_locked;
+    return effPoQty < (it.qty_required||0) && !it.is_balance_closed;
   });
 
   let _mirLocMap={};
@@ -18340,6 +18388,12 @@ async function viewMIR(mirNum) {
     const qtyReq    = it.qty_required||0;
     const ist       = _computeItemStatusV73(qtyReq, effPoQty, grnQty);
     const stCol     = statusColor[ist]||'#64748b';
+    // v114: 9-label + approved/pending split
+    const _apprPo   = plid ? (apprPoQtyMap[plid]||0) : 0;
+    const _pendPo   = plid ? (pendPoQtyMap[plid]||0) : 0;
+    const label9    = _mirLineLabel9(qtyReq, _apprPo, _pendPo, grnQty);
+    const label9Col = MIR_LABEL9_COLOR[label9] || '#64748b';
+    const poPendingLock = _pendPo > 0;   // derived lock — a PO is in approval
 
     // Tally summary badges
     if      (ist==='PO Pending')                    pendCount++;
@@ -18354,25 +18408,14 @@ async function viewMIR(mirNum) {
       ? 'color:#15803d;font-weight:600;'
       : effPoQty>0 ? 'color:#b45309;font-weight:600;' : 'color:#64748b;';
 
-    // Locked line: checkbox disabled, show lock pill + audit info
-    const locked   = !!it.is_locked;
-    const lockInfo = locked
-      ? `<span style="margin-left:5px;padding:1px 7px;background:#fef3c7;color:#92400e;border:1px solid #fcd34d;border-radius:10px;font-size:10px;font-weight:700;">
-           🔒 Locked${it.locked_qty!=null?' ('+fmtINR(it.locked_qty)+' '+esc(it.uom)+')':''}</span>
-         <div style="font-size:9px;color:var(--muted);margin-top:2px;">${it.locked_by?'by '+esc(it.locked_by):''} ${it.locked_at?'on '+fmtDate(it.locked_at):''}</div>`
+    // Balance-closed line: checkbox suppressed, show SC pill
+    const balClosed  = !!it.is_balance_closed;
+    const scPill     = balClosed
+      ? `<span style="margin-left:5px;padding:1px 7px;background:#fce7f3;color:#9d174d;border:1px solid #f9a8d4;border-radius:10px;font-size:10px;font-weight:700;">✂ Balance Closed</span>`
       : '';
 
-    // Lock / Unlock button — Admin only, visible when MIR is active (not Rejected)
-    const lockable   = !locked && effPoQty < qtyReq && !['Received','Closed'].includes(ist);
-    const unlockable = locked;
-    const lockBtn    = '';  // v101: Lock removed — unused MIR qty stays available via balance (Qty Available)
-    const unlockBtn  = isAdmin && unlockable && mirSt !== 'Rejected'
-      ? `<button class="btn btn-ghost btn-sm" style="padding:2px 7px;font-size:10px;"
-           onclick="unlockMIRItem('${esc(mirNum)}',${it.sno},'${esc(it.material_name)}')">🔓 Unlock</button>`
-      : '';
-
-    // Checkbox: disabled if locked OR not actionable
-    const isActionable = !locked && balance > 0 && !['Received','Closed'].includes(ist);
+    // Checkbox: suppressed if balance-closed OR PO-pending-locked OR not actionable
+    const isActionable = !balClosed && !poPendingLock && balance > 0 && !['Received','Closed'].includes(ist);
     const chkCell = canAct && isActionable
       ? `<td style="width:32px;"><input type="checkbox" class="mir_item_chk"
            value="${it.sno}"
@@ -18383,14 +18426,21 @@ async function viewMIR(mirNum) {
            data-qty-covered="${effPoQty}"
            data-spec="${esc(it.specification||'')}"
            style="width:16px;height:16px;cursor:pointer;" checked></td>`
-      : `<td style="width:32px;">${locked?'<span title="Locked" style="color:#92400e;font-size:14px;">🔒</span>':''}</td>`;
+      : `<td style="width:32px;">${balClosed?'<span title="Balance short-closed" style="color:#9d174d;font-size:14px;">✂</span>':poPendingLock?'<span title="PO in approval" style="color:#854F0B;font-size:13px;">⏳</span>':''}</td>`;
 
     const poNums = plid ? [...(poNumMap[plid]||new Set())] : (it.po_number ? [it.po_number] : []);
     const poCell = poNums.length
-      ? poNums.map(p=>`<span class="mono" style="color:#7c3aed;font-size:11px;">${esc(p)}</span>`).join('<br>')
+      ? '<div style="display:flex;flex-wrap:wrap;gap:3px;">' + poNums.map(p=>{
+          const bucket = _poStatusBucket(poStatusMap[p]);
+          if (bucket === 'pending')
+            return `<span class="mono" title="PO in approval — not yet approved" style="display:inline-block;font-size:11px;color:#854F0B;background:#faeeda;border:1px dashed #BA7517;border-radius:10px;padding:1px 7px;white-space:nowrap;">⏳ ${esc(p)}</span>`;
+          if (bucket === 'approved')
+            return `<span class="mono" title="PO approved" style="display:inline-block;font-size:11px;color:#3B6D11;background:#eaf3de;border:1px solid #639922;border-radius:10px;padding:1px 7px;white-space:nowrap;">✓ ${esc(p)}</span>`;
+          return `<span class="mono" title="PO rejected/cancelled" style="display:inline-block;font-size:11px;color:#991b1b;background:#fff1f2;border:1px solid #fecaca;text-decoration:line-through;border-radius:10px;padding:1px 7px;white-space:nowrap;">${esc(p)}</span>`;
+        }).join('') + '</div>'
       : '—';
 
-    return `<tr style="${locked?'background:#fffbeb;':''}" >
+    return `<tr style="${balClosed?'background:#fdf2f8;opacity:0.85;':''}" >
       ${chkCell}
       <td>${it.sno}</td>
       <td>${esc(it.material_name)}${_locLine}</td>
@@ -18402,9 +18452,11 @@ async function viewMIR(mirNum) {
       <td class="num" style="${balStyle}">${balance===0?'✓ Full':fmtINR(balance)}</td>
       <td style="font-size:11px;">${esc(it.specification||'—')}</td>
       <td>
-        ${!(mirSt==='Rejected' && ist==='PO Pending') ? `<span style="padding:2px 8px;border-radius:10px;font-size:11px;font-weight:600;background:${stCol}20;color:${stCol};border:1px solid ${stCol}40;">${ist}</span>` : ''}
-        ${lockInfo}
-        <div style="margin-top:3px;">${lockBtn}${unlockBtn}</div>
+        <div style="display:flex;flex-wrap:wrap;gap:4px;align-items:center;">
+        ${!(mirSt==='Rejected' && label9==='PO Pending') ? `<span style="padding:2px 8px;border-radius:10px;font-size:11px;font-weight:600;background:${label9Col}20;color:${label9Col};border:1px solid ${label9Col}40;white-space:nowrap;">${label9}</span>` : ''}
+        ${poPendingLock ? `<span title="A PO is in approval for this line — locked from new PO" style="padding:1px 7px;background:#faeeda;color:#854F0B;border:1px solid #BA7517;border-radius:10px;font-size:10px;font-weight:600;white-space:nowrap;">⏳ PO in process</span>` : ''}
+        ${scPill}
+        </div>
       </td>
       <td style="font-size:11px;">${poCell}</td>
     </tr>`;
@@ -18418,13 +18470,15 @@ async function viewMIR(mirNum) {
       <td colspan="10" style="font-size:11px;color:var(--muted);padding:6px 8px;">Select / Deselect All Actionable Items</td>
     </tr>` : '';
 
-  // Live header status
+  // Live header status — v115: 9-aware display vocabulary (DB column stays old vocab)
   const liveHdrStatus = (['Pending Approval','Rejected'].includes(mirSt))
     ? mirSt
-    : _rollupMIRHeaderV73((items||[]).map(it => {
-        const plid     = it.procurement_line_id;
-        const effPoQty = Math.max(0, (plid?(poQtyMap[plid]||0):0) - (plid?(scQtyMap[plid]||0):0));
-        return { _ist: _computeItemStatusV73(it.qty_required||0, effPoQty, plid?(grnQtyMap[plid]||0):0) };
+    : _rollupMIRHeader9((items||[]).map(it => {
+        const plid   = it.procurement_line_id;
+        const apprPo = plid ? (apprPoQtyMap[plid]||0) : 0;
+        const pendPo = plid ? (pendPoQtyMap[plid]||0) : 0;
+        const grnQ   = plid ? (grnQtyMap[plid]||0) : 0;
+        return { _label9: _mirLineLabel9(it.qty_required||0, apprPo, pendPo, grnQ) };
       }));
 
   const actionBtns = canAct ? `
@@ -18469,6 +18523,9 @@ async function viewMIR(mirNum) {
     ${h.remarks?'<div style="margin-top:8px;font-size:11px;color:var(--muted);">Remarks: '+esc(h.remarks)+'</div>':''}
     ${actionBtns}
     <div class="actions-row" style="margin-top:14px;">
+      ${isAdmin && hasPerm('canShortCloseMIR') && hasBalance && !['Rejected','Cancelled','Closed'].includes(mirSt)
+        ? `<button class="btn btn-warn btn-sm" onclick="openMIRShortCloseModal('${esc(mirNum)}')">✂ Short-Close Balance</button>`
+        : ''}
       <button class="btn btn-ghost" onclick="closeModal()">Close</button>
     </div>`, 'large');
 }
@@ -18579,6 +18636,81 @@ function _computeItemStatusV73(qtyRequired, effectivePoQty, grnQty) {
   return 'PO Pending';
 }
 
+// ── v114: 9-label MIR line status (display-only; DB item_status CHECK untouched) ──
+// Splits PO coverage into APPROVED vs PENDING(raised-but-not-approved) and applies
+// "newest action wins": any pending coverage surfaces a *Raised* label over an
+// *Approved* one for the same line. GRN (approved) always dominates when present.
+//   approvedPoQty = Σ qty from POs in Open/Partial Receipt/Fully Received/Short-Closed/Closed
+//   pendingPoQty  = Σ qty from POs in Pending Approval / Rejected - Correction
+//   grnQty        = Σ this_grn_qty from Verified/Partially Billed/Billed GRNs
+// Returns one of:
+//   PO Pending · Partial PO Raised · Full PO Raised · Partial PO Approved ·
+//   Full PO Approved · Partially Received · Fully Received
+function _mirLineLabel9(qtyReq, approvedPoQty, pendingPoQty, grnQty) {
+  const req = qtyReq||0, appr = Math.max(0,approvedPoQty||0), pend = Math.max(0,pendingPoQty||0), grn = grnQty||0;
+  if (req <= 0) return 'PO Pending';
+  // Receipt is an approved-side fact and dominates.
+  if (grn >= req - 0.0001) return 'Fully Received';
+  if (grn > 0)             return 'Partially Received';
+  // Newest action wins: pending coverage shows as Raised.
+  if (pend > 0) {
+    const coveredByPending = appr + pend;
+    return (coveredByPending >= req - 0.0001) ? 'Full PO Raised' : 'Partial PO Raised';
+  }
+  if (appr >= req - 0.0001) return 'Full PO Approved';
+  if (appr > 0)             return 'Partial PO Approved';
+  return 'PO Pending';
+}
+
+// Bucket a PO status into 'approved' | 'pending' | 'dead' (rejected/cancelled).
+function _poStatusBucket(status) {
+  if (['Open','Partial Receipt','Fully Received','Short-Closed','Closed'].includes(status)) return 'approved';
+  if (['Pending Approval','Rejected - Correction'].includes(status))                        return 'pending';
+  return 'dead';   // Rejected / Cancelled — does not cover or lock
+}
+
+// Visual colour for the 9 labels (display pills).
+const MIR_LABEL9_COLOR = {
+  'PO Pending':          '#185FA5',   // blue — approved MIR, no PO yet
+  'Partial PO Raised':   '#854F0B',   // amber — pending PO in process
+  'Full PO Raised':      '#854F0B',
+  'Partial PO Approved': '#3B6D11',   // green — approved PO
+  'Full PO Approved':    '#3B6D11',
+  'Partially Received':  '#0369a1',   // cyan — GRN in
+  'Fully Received':      '#15803d',
+  'Pending Approval':    '#64748b',   // header pre-approval
+  'Rejected':            '#A32D2D',
+};
+
+// ── v115: 9-aware MIR HEADER rollup from line labels ──────────────────────
+// Single rolled-up word matching the new line vocabulary. Precedence (most to
+// least advanced): all lines at the same state → that state; otherwise the mix
+// rule below. "Raised/in-process" outranks "Approved" so a header never claims
+// approval while a line is still pending (newest action wins, same as lines).
+//   Order of dominance for the header word:
+//     Fully Received  > Partially Received > (any Raised) > (any Approved) > PO Pending
+function _rollupMIRHeader9(items) {
+  if (!items || !items.length) return 'PO Pending';
+  const ss = items.map(it => it._label9 || 'PO Pending');
+  if (ss.every(s => s === 'Fully Received'))                       return 'Fully Received';
+  if (ss.some(s  => ['Fully Received','Partially Received'].includes(s)))
+                                                                   return 'Partially Received';
+  // Any line with a pending/raised PO keeps the header in the Raised family.
+  const anyRaised = ss.some(s => ['Full PO Raised','Partial PO Raised'].includes(s));
+  if (anyRaised) {
+    const allFull = ss.every(s => ['Full PO Raised','Full PO Approved'].includes(s));
+    return allFull ? 'Full PO Raised' : 'Partial PO Raised';
+  }
+  // No pending POs: pure approved family.
+  const anyApproved = ss.some(s => ['Full PO Approved','Partial PO Approved'].includes(s));
+  if (anyApproved) {
+    const allFull = ss.every(s => s === 'Full PO Approved');
+    return allFull ? 'Full PO Approved' : 'Partial PO Approved';
+  }
+  if (ss.every(s => s === 'PO Pending')) return 'PO Pending';
+  return 'Partial PO Approved';
+}
+
 // ── v73: Header status rollup from live item statuses ────────────────────
 // Header statuses (post-approval):
 //   All Received/Closed          → Closed
@@ -18606,42 +18738,181 @@ function _rollupMIRHeaderV73(items) {
 // lockQty = balance at time of locking (qty_required - effectivePoQty)
 // Lock is a snapshot — does not auto-update if PO SC happens later.
 // Admin must manually unlock to re-open procurement for that line.
-async function lockMIRItem(mirNum, sno, lockQty, matName) {
-  if (!hasRole('Admin')) { toast('Admin only','error'); return; }
-  if (!confirm(`Lock line ${sno} (${matName})?
-
-This will freeze ${fmtINR(lockQty)} units from further PO or RFQ.
-Lock stays even if PO is short-closed — Admin must manually unlock.`)) return;
-  pbShow('Locking…');
-  const { error } = await sb.from('pu_mir_items').update({
-    is_locked:  true,
-    locked_qty: lockQty,
-    locked_by:  state.userName,
-    locked_at:  new Date().toISOString(),
-  }).eq('mir_number', mirNum).eq('sno', sno);
+// ── v116: MIR Short-Close Balance (Admin only) ────────────────────────────────────────────
+// Sets is_balance_closed=true + item_status='Closed' on selected balance lines.
+// fn_material_mir_used must be updated in DB to also filter:
+//   AND (mi.is_balance_closed IS NULL OR mi.is_balance_closed = false)
+// _refreshAllMIRItems is patched to honour is_balance_closed and not overwrite Closed.
+async function openMIRShortCloseModal(mirNum) {
+  if (!hasPerm('canShortCloseMIR')) { toast('Not permitted','error'); return; }
+  pbShow('Loading MIR…');
+  const [{data:h},{data:items}] = await Promise.all([
+    sb.from('pu_mir').select('mir_number,status').eq('mir_number',mirNum).single(),
+    sb.from('pu_mir_items')
+      .select('sno,material_name,uom,qty_required,procurement_line_id,is_balance_closed,loc_node_id')
+      .eq('mir_number',mirNum).order('sno'),
+  ]);
   pbDone();
-  if (error) { toast('Lock failed: '+error.message,'error'); return; }
-  flashSuccess(`Line ${sno} locked — ${fmtINR(lockQty)} units frozen`);
-  // Refresh list balance set and reopen modal
-  await loadMIRList();
-  viewMIR(mirNum);
+  if (!h) { toast('MIR not found','error'); return; }
+
+  const plids = (items||[]).map(it=>it.procurement_line_id).filter(Boolean);
+  const poQtyMap={}, scQtyMap={}, poStatusMap={};
+  if (plids.length) {
+    const {data:poItems} = await sb.from('pu_po_items')
+      .select('procurement_line_id,qty,short_closed_qty,po_number')
+      .in('procurement_line_id', plids);
+    const _poNums = [...new Set((poItems||[]).map(r=>r.po_number).filter(Boolean))];
+    if (_poNums.length) {
+      const {data:poSt} = await sb.from('pu_po_orders').select('po_number,status').in('po_number',_poNums);
+      (poSt||[]).forEach(p => { poStatusMap[p.po_number] = p.status; });
+    }
+    (poItems||[]).forEach(r => {
+      if (!r.procurement_line_id) return;
+      const bucket = _poStatusBucket(poStatusMap[r.po_number]);
+      if (bucket === 'dead') return;
+      poQtyMap[r.procurement_line_id] = (poQtyMap[r.procurement_line_id]||0) + (r.qty||0);
+      scQtyMap[r.procurement_line_id] = (scQtyMap[r.procurement_line_id]||0) + (r.short_closed_qty||0);
+    });
+  }
+
+  // Only lines with balance > 0 and not already balance-closed
+  const balanceLines = (items||[])
+    .filter(it => {
+      if (it.is_balance_closed) return false;
+      const plid  = it.procurement_line_id;
+      const effPo = Math.max(0, (plid?poQtyMap[plid]||0:0) - (plid?scQtyMap[plid]||0:0));
+      return Math.max(0, (it.qty_required||0) - effPo) > 0;
+    })
+    .map(it => {
+      const plid  = it.procurement_line_id;
+      const effPo = Math.max(0, (plid?poQtyMap[plid]||0:0) - (plid?scQtyMap[plid]||0:0));
+      return { ...it, effPo, balance: Math.max(0, (it.qty_required||0) - effPo) };
+    });
+
+  if (!balanceLines.length) { toast('No open balance lines to short-close','error'); return; }
+
+  let _locMap={};
+  try{ const _lt=await _loadLocTree(); _locMap=Object.fromEntries((_lt||[]).map(n=>[String(n.id),n])); }catch(e){}
+
+  const rows = balanceLines.map((it,i) => {
+    const _ln   = it.loc_node_id ? _locMap[String(it.loc_node_id)] : null;
+    const locTxt= _ln ? `<div style="font-size:10px;color:var(--muted);">\u{1F4CD} ${esc(_ln.path||_ln.name)}</div>` : '';
+    return `<tr>
+      <td style="width:36px;text-align:center;">
+        <input type="checkbox" class="mir_sc_chk" data-idx="${i}" checked
+          style="width:16px;height:16px;cursor:pointer;" onchange="_mirSCUpdateSelectAll()">
+      </td>
+      <td style="font-size:12px;">${it.sno}</td>
+      <td style="font-size:12px;">${esc(it.material_name)}${locTxt}</td>
+      <td style="font-size:12px;">${esc(it.uom)}</td>
+      <td class="num" style="font-size:12px;color:#7c3aed;">${it.effPo>0?fmtINR(it.effPo):'—'}</td>
+      <td class="num" style="font-size:12px;font-weight:700;color:#b45309;">${fmtINR(it.balance)}</td>
+    </tr>`;
+  }).join('');
+
+  window._mirSCLines  = balanceLines;
+  window._mirSCMirNum = mirNum;
+
+  closeModal();
+  setTimeout(() => {
+    openModal(`
+      <h3 style="margin-bottom:4px;">Short-Close Balance — <span class="mono">${esc(mirNum)}</span></h3>
+      <p style="font-size:12px;color:#92400e;background:#fef3c7;border:1px solid #fcd34d;border-radius:5px;padding:7px 10px;margin-bottom:10px;">
+        ⚠ Selected balance quantities will be permanently sealed and returned to the estimation ceiling. Lines with an active PO keep their PO — only the uncovered balance is closed. A new MIR can be raised for the same materials.
+      </p>
+      <div class="table-wrap" style="max-height:300px;overflow-y:auto;">
+        <table>
+          <thead>
+            <tr style="background:#f8fafc;">
+              <th style="width:36px;text-align:center;">
+                <input type="checkbox" id="mir_sc_all" checked
+                  style="width:16px;height:16px;cursor:pointer;"
+                  onchange="document.querySelectorAll('.mir_sc_chk').forEach(c=>c.checked=this.checked);_mirSCUpdateSelectAll()">
+              </th>
+              <th style="font-size:12px;">#</th>
+              <th style="font-size:12px;">Material</th>
+              <th style="font-size:12px;">UOM</th>
+              <th class="num" style="font-size:12px;color:#7c3aed;">Active PO Qty</th>
+              <th class="num" style="font-size:12px;color:#b45309;">Balance to Close</th>
+            </tr>
+          </thead>
+          <tbody>${rows}</tbody>
+        </table>
+      </div>
+      <div style="margin:10px 0 3px;">
+        <label for="mirSCReason" style="font-size:12px;font-weight:600;">Reason <span style="color:#dc2626;">*</span></label>
+      </div>
+      <textarea id="mirSCReason" rows="2"
+        placeholder="Why is this balance being closed? (mandatory)"
+        style="width:100%;padding:8px;border:1px solid var(--border);border-radius:4px;font-family:inherit;font-size:13px;resize:vertical;box-sizing:border-box;"></textarea>
+      <div id="mir_sc_none_warn" style="display:none;margin-top:5px;font-size:12px;color:#dc2626;">⚠ Select at least one line.</div>
+      <div class="actions-row" style="margin-top:12px;">
+        <button class="btn btn-warn" onclick="confirmMIRShortClose()">✂ Confirm Short-Close</button>
+        <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+      </div>`, 'large');
+    setTimeout(() => document.getElementById('mirSCReason')?.focus(), 80);
+  }, 50);
 }
 
-async function unlockMIRItem(mirNum, sno, matName) {
-  if (!hasRole('Admin')) { toast('Admin only','error'); return; }
-  if (!confirm(`Unlock line ${sno} (${matName})?
+function _mirSCUpdateSelectAll() {
+  const boxes = [...document.querySelectorAll('.mir_sc_chk')];
+  const anyChecked = boxes.some(c=>c.checked);
+  const allChecked = boxes.every(c=>c.checked);
+  const hdr = document.getElementById('mir_sc_all');
+  if (hdr) { hdr.checked = allChecked; hdr.indeterminate = !allChecked && anyChecked; }
+  const warn = document.getElementById('mir_sc_none_warn');
+  if (warn) warn.style.display = anyChecked ? 'none' : 'block';
+}
 
-The balance qty will become available for PO or RFQ again.`)) return;
-  pbShow('Unlocking…');
-  const { error } = await sb.from('pu_mir_items').update({
-    is_locked:  false,
-    locked_qty: null,
-    locked_by:  null,
-    locked_at:  null,
-  }).eq('mir_number', mirNum).eq('sno', sno);
+async function confirmMIRShortClose() {
+  if (!hasPerm('canShortCloseMIR')) { toast('Not permitted','error'); return; }
+  const reason = (document.getElementById('mirSCReason')?.value||'').trim();
+  if (!reason) { toast('Enter a reason','error'); document.getElementById('mirSCReason')?.focus(); return; }
+
+  const selected = [...document.querySelectorAll('.mir_sc_chk')]
+    .map((c,i) => ({ checked: c.checked, line: (window._mirSCLines||[])[i] }))
+    .filter(x => x.checked && x.line)
+    .map(x => x.line);
+
+  if (!selected.length) {
+    const w = document.getElementById('mir_sc_none_warn');
+    if (w) w.style.display = 'block';
+    toast('Select at least one line','error'); return;
+  }
+
+  const mirNum = window._mirSCMirNum;
+  closeModal();
+  pbShow(`Short-closing ${selected.length} line${selected.length>1?'s':''}…`);
+
+  // Write is_balance_closed=true + item_status='Closed' on each selected line.
+  // item_status='Closed' drives _rollupMIRHeaderFromItems correctly (PO Issued when mixed).
+  // is_balance_closed=true prevents _refreshAllMIRItems from overwriting Closed status,
+  // and (after DB fn update) gates fn_material_mir_used from counting this line.
+  const writes = selected.map(it =>
+    sb.from('pu_mir_items').update({
+      is_balance_closed: true,
+      item_status:       'Closed',
+    }).eq('mir_number', mirNum).eq('sno', it.sno)
+  );
+  const results = await Promise.all(writes);
+  const failed  = results.find(r => r.error);
+  if (failed) {
+    pbDone();
+    toast('Short-close failed: ' + failed.error.message + ' — ensure DB migration has run', 'error');
+    return;
+  }
+
+  // Re-roll MIR header from current item_status values
+  const {data:allItems} = await sb.from('pu_mir_items')
+    .select('item_status').eq('mir_number', mirNum);
+  const newHeader = _rollupMIRHeaderFromItems(allItems||[]);
+  await sb.from('pu_mir').update({ status: newHeader }).eq('mir_number', mirNum);
+
   pbDone();
-  if (error) { toast('Unlock failed: '+error.message,'error'); return; }
-  flashSuccess(`Line ${sno} unlocked — balance qty available for procurement`);
+  const n = selected.length;
+  flashSuccess(`${n} balance line${n>1?'s':''} short-closed on ${mirNum} — qty returned to estimation ceiling`);
+  window._mirSCLines  = null;
+  window._mirSCMirNum = null;
   await loadMIRList();
   viewMIR(mirNum);
 }
@@ -18662,7 +18933,8 @@ async function _refreshAllMIRItems(mirNum) {
   if (!mirNum) return;
   const [itemsRes, rfqRes, poRes] = await Promise.all([
     // Include material_name + po_number so we can handle legacy POs (no po_links row)
-    sb.from('pu_mir_items').select('sno,qty_required,material_name,po_number').eq('mir_number',mirNum),
+    // is_balance_closed included so we never overwrite a short-closed line's Closed status
+    sb.from('pu_mir_items').select('sno,qty_required,material_name,po_number,is_balance_closed').eq('mir_number',mirNum),
     sb.from('pu_mir_item_rfq_links').select('sno,qty_assigned').eq('mir_number',mirNum),
     sb.from('pu_mir_item_po_links').select('sno,po_number,qty_linked,qty_received,qty_short_closed,is_short_closed').eq('mir_number',mirNum),
   ]);
@@ -18810,7 +19082,11 @@ async function _refreshAllMIRItems(mirNum) {
     const qty_covered      = covMap[it.sno]||0;
     const qty_received     = recMap[it.sno]||0;
     const qty_short_closed = scMap[it.sno]||0;
-    const item_status = _computeItemStatus(it.qty_required, qty_rfq, qty_covered, qty_received);
+    // v116: balance-closed lines keep item_status='Closed' — do not let _computeItemStatus overwrite it.
+    // These lines have no uncovered procurement intent; recomputing would set them back to 'Pending'.
+    const item_status = it.is_balance_closed
+      ? 'Closed'
+      : _computeItemStatus(it.qty_required, qty_rfq, qty_covered, qty_received);
     return sb.from('pu_mir_items').update({qty_rfq,qty_covered,qty_received,qty_short_closed,item_status})
       .eq('mir_number',mirNum).eq('sno',it.sno);
   }));
