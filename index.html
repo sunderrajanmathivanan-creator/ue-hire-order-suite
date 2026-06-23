@@ -126,6 +126,8 @@ td input, td select { padding: 5px 6px; background: var(--input-bg); color: var(
 .status.unpaid { background: #fef3c7; color: #92400e; border: 1px solid #fcd34d; }
 .status.partial { background: #e0f2fe; color: #075985; border: 1px solid #7dd3fc; }
 .status.partial-received { background: #dcfce7; color: #15803d; border: 1px solid #86efac; }
+.status.closed { background: #d1fae5; color: #065f46; border: 1px solid #6ee7b7; }
+.status.fully-received { background: #d1fae5; color: #15803d; border: 1px solid #6ee7b7; }
 
 /* Summary bar */
 .summary-bar { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; margin: 16px 0; }
@@ -17805,11 +17807,12 @@ async function loadMIRList() {
     it._scQty    = scQty;
     it._effPoQty = effPoQty;
     it._grnQty   = grnQty;
-    it._ist      = _computeItemStatusV73(qtyReq, effPoQty, grnQty);
+    it._ist      = it.is_balance_closed ? 'Closed' : _computeItemStatusV73(qtyReq, effPoQty, grnQty);
     // v114: 9-label display status (approved/pending split)
     it._apprPo   = plid ? (apprPoQtyMap[plid]||0) : 0;
     it._pendPo   = plid ? (pendPoQtyMap[plid]||0) : 0;
-    it._label9   = _mirLineLabel9(qtyReq, it._apprPo, it._pendPo, grnQty);
+    // v116: balance-closed lines report as 'Balance Closed' in the 9-label system
+    it._label9   = it.is_balance_closed ? 'Balance Closed' : _mirLineLabel9(qtyReq, it._apprPo, it._pendPo, grnQty);
     it._poLocked = it._pendPo > 0;   // derived PO-pending lock (separate from admin is_locked)
 
     if (!puState.mirItemsMap[it.mir_number]) puState.mirItemsMap[it.mir_number] = [];
@@ -17939,6 +17942,8 @@ function renderMIRList() {
     { key:'Full PO Approved',    bg:'#eaf3de', col:'#3B6D11' },
     { key:'Partially Received',  bg:'#e0f2fe', col:'#0369a1' },
     { key:'Fully Received',      bg:'#d1fae5', col:'#15803d' },
+    { key:'Balance Closed',      bg:'#fce7f3', col:'#9d174d' },
+    { key:'Closed',              bg:'#f0fdf4', col:'#15803d' },
   ];
   document.getElementById('mir_listBody').innerHTML = rows.map(m => {
     const st = _mirLiveSt(m);  // v73: uses shared helper defined above
@@ -17959,10 +17964,12 @@ function renderMIRList() {
       ? [...approvedPills, ...cancelledPills].join('')
       : '<span style="color:var(--muted);">—</span>';
     // Build item count summary pills — suppressed entirely for Rejected MIRs
+    // v116: also suppress any pill whose label matches the rolled-up header at full count
+    // (avoids showing "Full PO Raised" as both header badge AND as the only pill)
     const summaryPills = st !== 'Rejected'
       ? `<span style="display:inline-block;padding:1px 6px;background:#f1efe8;color:#5f5e5a;border-radius:8px;font-size:10px;font-weight:600;white-space:nowrap;margin-right:3px;">Lines: ${_lineCount}</span>`
         + _istMeta
-          .filter(s => summary[s.key] > 0)
+          .filter(s => summary[s.key] > 0 && !(s.key === st && summary[s.key] === _lineCount))
           .map(s => `<span style="display:inline-block;padding:1px 6px;background:${s.bg};color:${s.col};border-radius:8px;font-size:10px;font-weight:600;white-space:nowrap;">${s.key} (${summary[s.key]})</span>`)
           .join(' ')
       : '';
@@ -18030,7 +18037,7 @@ async function _loadMirEstimateTree(force){
     const [buildup, scopes, mirItems, mirHdrs, wbsTree, locTree] = await Promise.all([
       _fetchAllRows('wbs_material_buildup','scope_id,material_code,material_name,uom,qty_total'),
       _fetchAllRows('wbs_scope','id,wbs_node_id,loc_node_id,scope_status,is_active'),
-      _fetchAllRows('pu_mir_items','mir_number,material_code,loc_node_id,qty_required'),
+      _fetchAllRows('pu_mir_items','mir_number,material_code,loc_node_id,qty_required,is_balance_closed'),
       _fetchAllRows('pu_mir','mir_number,status'),
       _loadWbsTree(), _loadLocTree()
     ]);
@@ -18045,6 +18052,7 @@ async function _loadMirEstimateTree(force){
     mirItems.forEach(it=>{
       const st = mirStatus[it.mir_number];
       if (st==='Rejected' || st==='Cancelled') return;
+      if (it.is_balance_closed) return;   // v116: balance-closed lines released back to estimation
       if (!it.material_code || !it.loc_node_id) return;
       const k = it.material_code+'|'+it.loc_node_id;
       mirUsed[k] = (mirUsed[k]||0) + (parseFloat(it.qty_required)||0);
@@ -18470,10 +18478,11 @@ async function viewMIR(mirNum) {
       <td colspan="10" style="font-size:11px;color:var(--muted);padding:6px 8px;">Select / Deselect All Actionable Items</td>
     </tr>` : '';
 
-  // Live header status — v115: 9-aware display vocabulary (DB column stays old vocab)
+  // Live header status — v116: 9-aware vocabulary; balance-closed lines pin to 'Balance Closed'
   const liveHdrStatus = (['Pending Approval','Rejected'].includes(mirSt))
     ? mirSt
     : _rollupMIRHeader9((items||[]).map(it => {
+        if (it.is_balance_closed) return { _label9: 'Balance Closed' };
         const plid   = it.procurement_line_id;
         const apprPo = plid ? (apprPoQtyMap[plid]||0) : 0;
         const pendPo = plid ? (pendPoQtyMap[plid]||0) : 0;
@@ -18692,22 +18701,25 @@ const MIR_LABEL9_COLOR = {
 function _rollupMIRHeader9(items) {
   if (!items || !items.length) return 'PO Pending';
   const ss = items.map(it => it._label9 || 'PO Pending');
-  if (ss.every(s => s === 'Fully Received'))                       return 'Fully Received';
+  // v116: all lines either fully received or balance-closed => Closed
+  if (ss.every(s => ['Fully Received','Balance Closed'].includes(s))) return 'Closed';
+  if (ss.every(s => s === 'Fully Received'))                          return 'Fully Received';
   if (ss.some(s  => ['Fully Received','Partially Received'].includes(s)))
-                                                                   return 'Partially Received';
-  // Any line with a pending/raised PO keeps the header in the Raised family.
-  const anyRaised = ss.some(s => ['Full PO Raised','Partial PO Raised'].includes(s));
+                                                                      return 'Partially Received';
+  // Exclude balance-closed lines from active rollup — they are resolved
+  const activeSs = ss.filter(s => s !== 'Balance Closed');
+  if (!activeSs.length) return 'Closed';
+  const anyRaised = activeSs.some(s => ['Full PO Raised','Partial PO Raised'].includes(s));
   if (anyRaised) {
-    const allFull = ss.every(s => ['Full PO Raised','Full PO Approved'].includes(s));
+    const allFull = activeSs.every(s => ['Full PO Raised','Full PO Approved'].includes(s));
     return allFull ? 'Full PO Raised' : 'Partial PO Raised';
   }
-  // No pending POs: pure approved family.
-  const anyApproved = ss.some(s => ['Full PO Approved','Partial PO Approved'].includes(s));
+  const anyApproved = activeSs.some(s => ['Full PO Approved','Partial PO Approved'].includes(s));
   if (anyApproved) {
-    const allFull = ss.every(s => s === 'Full PO Approved');
+    const allFull = activeSs.every(s => s === 'Full PO Approved');
     return allFull ? 'Full PO Approved' : 'Partial PO Approved';
   }
-  if (ss.every(s => s === 'PO Pending')) return 'PO Pending';
+  if (activeSs.every(s => s === 'PO Pending')) return 'PO Pending';
   return 'Partial PO Approved';
 }
 
@@ -18913,6 +18925,7 @@ async function confirmMIRShortClose() {
   flashSuccess(`${n} balance line${n>1?'s':''} short-closed on ${mirNum} — qty returned to estimation ceiling`);
   window._mirSCLines  = null;
   window._mirSCMirNum = null;
+  _mirEstTreeCache = null;   // v116: bust picker cache so remaining recalculates immediately
   await loadMIRList();
   viewMIR(mirNum);
 }
