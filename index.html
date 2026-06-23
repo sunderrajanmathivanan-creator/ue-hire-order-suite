@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Penguin-Procurement Suite v116 — Urban Excellence LLP · Poetry of Earth</title>
+<title>Penguin-Procurement Suite v117 — Urban Excellence LLP · Poetry of Earth</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <style>
@@ -18075,7 +18075,7 @@ async function _loadMirEstimateTree(force){
         LO.skuArr = Object.values(LO.skus).map(S=>{
           const k = (S.code||'')+'|'+LO.locId;
           S.mir = mirUsed[k]||0;
-          S.remaining = S.est - S.mir;
+          S.remaining = Math.round((S.est - S.mir) * 1e6) / 1e6;
           return S;
         }).sort((a,b)=>(a.name||'').localeCompare(b.name||''));
         return LO;
