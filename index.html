@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Penguin-Procurement Suite v117 — Urban Excellence LLP · Poetry of Earth</title>
+<title>Penguin-Procurement Suite v118 — Urban Excellence LLP · Poetry of Earth</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <style>
@@ -22604,6 +22604,7 @@ function closeGRNForm() {
 // =====================================================================
 
 let _cgrnItemCount = 0;
+let _cgrnRowEst = {};   // v118: row index -> { matCode, name, uom, locs:[{locId,locName,locPath,est,consumed,remaining,wbs:[{id,name,path,est}],shared}] }
 
 async function newCashGRN() {
   if (!hasPerm('canCreateGRN')) { toast('Not permitted to create GRNs','error'); return; }
@@ -22626,8 +22627,10 @@ async function newCashGRN() {
   document.getElementById('cgrnItemsBody').innerHTML = '<tr><td colspan="9" class="center muted">Click "+ Add Material" to start</td></tr>';
   document.getElementById('cgrn_totalAmt').textContent = '₹0.00';
   _cgrnItemCount = 0;
-  // Make sure material master is loaded
-  if (!(puState.materials||[]).length) await apiLoadMaterials();
+  _cgrnRowEst = {};   // v118: clear per-row estimate cache
+  // v118: Direct GRN now sources materials from the approved estimate (not the
+  // material master), so warm the estimate tree instead of apiLoadMaterials().
+  try { await _loadMirEstimateTree(); } catch(e){ /* picker will surface load errors */ }
   window.scrollTo(0, 0);
 }
 
@@ -22691,8 +22694,8 @@ function cgrnClearVendor() {
 
 // ── Item row management ────────────────────────────────────────────────
 async function addCashGRNItem() {
-  // Lazy-load materials if not yet cached
-  if (!(puState.materials||[]).length) await apiLoadMaterials();
+  // v118: estimate-sourced picker — ensure the estimate tree is loaded (no longer the material master)
+  if (!_mirEstTreeCache) { try { await _loadMirEstimateTree(); } catch(e){} }
   const tbody = document.getElementById('cgrnItemsBody');
   // Clear placeholder row on first add
   if (_cgrnItemCount === 0) tbody.innerHTML = '';
@@ -22702,8 +22705,8 @@ async function addCashGRNItem() {
   tr.innerHTML = `
     <td>${i+1}</td>
     <td class="typeahead" style="min-width:220px;">
-      <input id="cgrnMat_${i}" placeholder="Type material…" autocomplete="off" style="width:100%;"
-        oninput="cgrnMatTypeahead(${i})">
+      <input id="cgrnMat_${i}" placeholder="Type estimated material…" autocomplete="off" style="width:100%;"
+        oninput="cgrnMatTypeahead(${i})" onblur="setTimeout(()=>{ const r=document.getElementById('cgrnMatRes_${i}'); if(r) r.classList.remove('show'); },180)">
       <input type="hidden" id="cgrnMatCode_${i}">
       <div class="typeahead-results" id="cgrnMatRes_${i}" style="position:fixed;min-width:280px;max-width:420px;z-index:9999;"></div>
     </td>
@@ -22713,13 +22716,13 @@ async function addCashGRNItem() {
     <td class="num" id="cgrnAmt_${i}" style="font-weight:600;">₹0.00</td>
     <td style="min-width:200px;">
       <div style="position:relative;">
-        <input id="cgrnLoc_${i}" placeholder="Type location…" autocomplete="off" style="width:100%;"
-          oninput="cgrnLocTypeahead(${i})" onblur="setTimeout(()=>{ const r=document.getElementById('cgrnLocRes_${i}'); if(r) r.classList.remove('show'); },180)">
+        <input id="cgrnLoc_${i}" placeholder="Pick material first…" autocomplete="off" disabled style="width:100%;background:#f1f5f9;opacity:.6;"
+          oninput="cgrnLocTypeahead(${i})" onfocus="cgrnLocTypeahead(${i})" onblur="setTimeout(()=>{ const r=document.getElementById('cgrnLocRes_${i}'); if(r) r.classList.remove('show'); },180)">
         <input type="hidden" id="cgrnLocNode_${i}">
         <input type="hidden" id="cgrnWbsNode_${i}">
         <div class="typeahead-results" id="cgrnLocRes_${i}" style="position:fixed;min-width:260px;max-width:440px;z-index:9999;"></div>
       </div>
-      <div id="cgrnLocBreadcrumb_${i}" style="font-size:10px;color:var(--muted);margin-top:3px;line-height:1.4;display:none;"></div>
+      <div id="cgrnLocBreadcrumb_${i}" style="font-size:10px;color:var(--muted);margin-top:3px;line-height:1.45;display:none;"></div>
     </td>
     <td><input id="cgrnRmk_${i}" placeholder="Remarks" style="width:140px;"></td>
     <td><button type="button" class="btn btn-ghost btn-sm" onclick="removeCashGRNItem(${i})" title="Remove">✕</button></td>
@@ -22730,6 +22733,7 @@ async function addCashGRNItem() {
 function removeCashGRNItem(i) {
   const tr = document.getElementById('cgrnItem_' + i);
   if (tr) tr.remove();
+  delete _cgrnRowEst[i];   // v118: drop cached estimate for this row
   cgrnRecalcTotal();
   // If all rows removed, restore placeholder
   if (!document.querySelectorAll('#cgrnItemsBody tr').length) {
@@ -22739,126 +22743,212 @@ function removeCashGRNItem(i) {
   }
 }
 
+// ── v118: estimate-driven Direct GRN picker ────────────────────────────────
+// Cash purchase must be against an APPROVED estimate. The material picker is
+// sourced from the estimate (wbs_material_buildup → approved wbs_scope, via
+// _mirEstTreeCache), NOT the material master. Picking a material narrows the
+// location list to that material's estimated locations. Live remaining per
+// (material, loc) comes from the same DB gate that blocks at save:
+//   remaining = fn_material_estimate(code, loc) − fn_material_consumed(code, loc)
+
+// Material-indexed view of the estimate tree (memoised on tree identity).
+let _cgrnMatIdxCache = null, _cgrnMatIdxSrc = null;
+function _cgrnEstIndex() {
+  const tree = _mirEstTreeCache || [];
+  if (_cgrnMatIdxCache && _cgrnMatIdxSrc === tree) return _cgrnMatIdxCache;
+  const mats = {};
+  for (const L of tree) {
+    for (const LO of (L.locArr || [])) {
+      for (const S of (LO.skuArr || [])) {
+        if (!S.code) continue;   // null material_code can't be gated → not cash-purchasable
+        const m = mats[S.code] || (mats[S.code] = { code: S.code, name: S.name, uom: S.uom, locs: {} });
+        const loc = m.locs[LO.locId] || (m.locs[LO.locId] =
+          { locId: LO.locId, locName: LO.locName, locPath: LO.locPath, est: 0, wbs: [] });
+        loc.est += (S.est || 0);   // summed across WBS at this (material, loc), mirrors fn_material_estimate
+        loc.wbs.push({ id: L.leafId, name: L.leaf, path: L.wbsPath, est: (S.est || 0) });
+      }
+    }
+  }
+  _cgrnMatIdxCache = mats; _cgrnMatIdxSrc = tree;
+  return mats;
+}
+
+// Live ceiling for one (material, loc) from the DB gate.
+async function _cgrnFetchRemaining(code, locId) {
+  try {
+    const [er, cr] = await Promise.all([
+      sb.rpc('fn_material_estimate', { p_material_code: code, p_loc_node_id: locId }),
+      sb.rpc('fn_material_consumed', { p_material_code: code, p_loc_node_id: locId })
+    ]);
+    if (er.error) throw er.error;
+    if (cr.error) throw cr.error;
+    const est = num(er.data), con = num(cr.data);
+    return { est, consumed: con, remaining: Math.round((est - con) * 1e6) / 1e6 };
+  } catch (e) {
+    return { est: null, consumed: null, remaining: null, err: e.message };
+  }
+}
+
 function cgrnMatTypeahead(i) {
   const inp = document.getElementById('cgrnMat_' + i);
   const res = document.getElementById('cgrnMatRes_' + i);
   if (!inp || !res) return;
-  const q = (inp.value||'').toLowerCase();
-  const mats = puState.materials || [];
+  // Editing the material clears downstream location + WBS + cache (forces re-pick)
+  document.getElementById('cgrnMatCode_' + i).value = '';
+  delete _cgrnRowEst[i];
+  const locInp = document.getElementById('cgrnLoc_' + i);
+  if (locInp) { locInp.value = ''; locInp.disabled = true; locInp.placeholder = 'Pick material first…';
+    locInp.style.background = '#f1f5f9'; locInp.style.opacity = '.6'; }
+  document.getElementById('cgrnLocNode_' + i).value = '';
+  document.getElementById('cgrnWbsNode_' + i).value = '';
+  const bc = document.getElementById('cgrnLocBreadcrumb_' + i); if (bc) bc.style.display = 'none';
+
+  const q = (inp.value || '').toLowerCase().trim();
+  const idx = _cgrnEstIndex();
+  const all = Object.values(idx);
   const tokens = _fuzzyTokens(q);
-  let list;
-  if (!q) {
-    list = mats.slice(0, 12);
-  } else {
-    list = mats.filter(m => {
-      const hay = ((m.material_name||'')+'|'+(m.material_group||'')+'|'+(m.sub_head||'')+'|'+(m.uom||'')).toLowerCase();
-      return _fuzzyMatch(hay, tokens);
-    }).slice(0, 15);
-  }
-  if (!list.length) {
-    res.innerHTML = '<div style="padding:10px;color:var(--muted);font-size:12px;">No matching material. (Add via Master → Material first.)</div>';
+  const list = (!q ? all
+    : all.filter(m => _fuzzyMatch(((m.name||'')+'|'+(m.code||'')+'|'+(m.uom||'')).toLowerCase(), tokens))
+  ).sort((a,b)=>(a.name||'').localeCompare(b.name||'')).slice(0, 18);
+
+  if (!all.length) {
+    res.innerHTML = '<div style="padding:10px;color:var(--muted);font-size:12px;">No approved estimate found. A Direct Purchase must be against an approved estimate.</div>';
+  } else if (!list.length) {
+    res.innerHTML = '<div style="padding:10px;color:var(--muted);font-size:12px;">No estimated material matches — cash purchase must be against an approved estimate.</div>';
   } else {
     res.innerHTML = list.map(m => {
-      const name = esc(m.material_name).replace(/'/g,"\\'");
-      const uom  = esc(m.uom||'').replace(/'/g,"\\'");
-      const code = esc(m.material_code).replace(/'/g,"\\'");
-      return `<div class="typeahead-item" onmousedown="event.preventDefault();cgrnPickMat(${i},'${code}','${name}','${uom}')">
-        <strong>${esc(m.material_name)}</strong>
-        <div class="muted">${esc(m.material_code)} · ${esc(m.uom||'—')}${m.material_group ? ' · ' + esc(m.material_group) : ''}</div>
+      const nLoc = Object.keys(m.locs).length;
+      return `<div class="typeahead-item" onmousedown="event.preventDefault();cgrnPickMat(${i},'${esc(m.code).replace(/'/g,"\\'")}')">
+        <strong>${esc(m.name)}</strong>
+        <div class="muted" style="font-size:11px;">${esc(m.code)} · ${esc(m.uom||'—')} · estimated at ${nLoc} location${nLoc>1?'s':''}</div>
       </div>`;
     }).join('');
   }
-  // Position the dropdown using fixed coords to escape table-wrap overflow clipping
-  const rect = inp.getBoundingClientRect();
-  res.style.top   = (rect.bottom + 2) + 'px';
-  res.style.left  = rect.left + 'px';
-  res.style.width = Math.max(rect.width, 280) + 'px';
+  _anchorDropdown(inp, res);
   res.classList.add('show');
 }
 
-function cgrnPickMat(i, code, name, uom) {
-  document.getElementById('cgrnMat_' + i).value = name;
+async function cgrnPickMat(i, code) {
+  const idx = _cgrnEstIndex();
+  const m = idx[code];
+  if (!m) { toast('Material not in estimate','error'); return; }
+  document.getElementById('cgrnMat_' + i).value = m.name;
   document.getElementById('cgrnMatCode_' + i).value = code;
-  document.getElementById('cgrnUOM_' + i).value = uom;
+  document.getElementById('cgrnUOM_' + i).value = m.uom || '';
   document.getElementById('cgrnMatRes_' + i)?.classList.remove('show');
-  document.getElementById('cgrnQty_' + i).focus();
+
+  // Build candidate locations, then fetch live remaining for each (parallel)
+  const locInp = document.getElementById('cgrnLoc_' + i);
+  locInp.disabled = false; locInp.style.background = ''; locInp.style.opacity = '';
+  locInp.placeholder = 'Loading estimated locations…'; locInp.value = '';
+
+  const locs = Object.values(m.locs).map(l => ({
+    locId: l.locId, locName: l.locName, locPath: l.locPath, est: l.est,
+    wbs: (l.wbs || []).map(w => ({ ...w }))
+  }));
+  const live = await Promise.all(locs.map(l => _cgrnFetchRemaining(code, l.locId)));
+  locs.forEach((l, k) => {
+    const r = live[k];
+    l.est = (r && r.est != null) ? r.est : l.est;   // prefer authoritative gate estimate
+    l.consumed = r ? r.consumed : null;
+    l.remaining = r ? r.remaining : null;
+    l.remErr = r ? r.err : null;
+    l.shared = (l.wbs && l.wbs.length > 1);
+  });
+  // Available (remaining > 0) first, then by path
+  locs.sort((a,b) => {
+    const ax = (a.remaining != null && a.remaining <= 0) ? 1 : 0;
+    const bx = (b.remaining != null && b.remaining <= 0) ? 1 : 0;
+    if (ax !== bx) return ax - bx;
+    return (a.locPath||'').localeCompare(b.locPath||'');
+  });
+  _cgrnRowEst[i] = { matCode: code, name: m.name, uom: m.uom, locs };
+
+  locInp.placeholder = 'Type location…';
+  locInp.focus();
+  cgrnLocTypeahead(i);   // open the narrowed list immediately
 }
 
-// v112: location typeahead for cash GRN — leaf nodes only, fuzzy, with WBS breadcrumb
-async function cgrnLocTypeahead(i) {
+// Location typeahead — only the picked material's estimated locations; greys ≤0.
+function cgrnLocTypeahead(i) {
   const inp = document.getElementById('cgrnLoc_' + i);
   const res = document.getElementById('cgrnLocRes_' + i);
   if (!inp || !res) return;
+  const row = _cgrnRowEst[i];
+  if (!row) { res.classList.remove('show'); return; }
   // Clear stored node when user edits the text (forces re-pick)
   document.getElementById('cgrnLocNode_' + i).value = '';
   document.getElementById('cgrnWbsNode_' + i).value = '';
   const bcDiv = document.getElementById('cgrnLocBreadcrumb_' + i);
   if (bcDiv) bcDiv.style.display = 'none';
+
   const q = (inp.value || '').toLowerCase().trim();
-  if (!q) { res.classList.remove('show'); return; }
-  const tree = await _loadLocTree();
-  const tokens = _fuzzyTokens(q);
-  // Leaf-only: gate keys on leaf loc_node_id (wbs_material_buildup → wbs_scope → loc_node_id)
-  const matches = tree.filter(n =>
-    n.is_leaf && COALESCE_active(n) &&
-    _fuzzyMatch((n.path || n.name).toLowerCase(), tokens)
-  ).slice(0, 14);
+  const matches = (row.locs || []).filter(l =>
+    !q || (l.locPath||'').toLowerCase().includes(q) || (l.locName||'').toLowerCase().includes(q)
+  ).slice(0, 20);
+
   if (!matches.length) {
-    res.innerHTML = '<div style="padding:10px;color:var(--muted);font-size:12px;">No leaf locations found — only assignable location leaves are shown.</div>';
-    _anchorDropdown(inp, res);
-    res.classList.add('show');
-    return;
+    res.innerHTML = '<div style="padding:10px;color:var(--muted);font-size:12px;">No estimated location for this material matches.</div>';
+    _anchorDropdown(inp, res); res.classList.add('show'); return;
   }
-  res.innerHTML = matches.map(n =>
-    `<div class="typeahead-item" onmousedown="event.preventDefault();cgrnPickLoc(${i},'${n.id}','${esc(n.name).replace(/'/g,"\\'")}','${esc(n.path).replace(/'/g,"\\'")}')">
-      <div style="font-size:12px;font-weight:600;">📍 ${esc(n.name)}</div>
-      <div class="muted" style="font-size:11px;">${esc(n.path)}</div>
-    </div>`
-  ).join('');
+  res.innerHTML = matches.map(l => {
+    const spent = (l.remaining != null && l.remaining <= 0);
+    const remTxt = (l.remaining == null)
+      ? '<span style="color:#d97706;">remaining unavailable</span>'
+      : (spent ? `<span style="color:#dc2626;font-weight:600;">0 remaining — gate will block</span>`
+               : `<span style="color:var(--accent);font-weight:600;">${_fmtQ(l.remaining)} ${esc(row.uom||'')} remaining</span>`);
+    return `<div class="typeahead-item" style="${spent?'opacity:.55;':''}" onmousedown="event.preventDefault();cgrnPickLoc(${i},'${esc(l.locId).replace(/'/g,"\\'")}')">
+      <div style="font-size:12px;font-weight:600;">📍 ${esc(l.locName)}${l.shared?' <span style="color:#d97706;font-weight:500;font-size:10px;">· shared</span>':''}</div>
+      <div class="muted" style="font-size:11px;">${esc(l.locPath)}</div>
+      <div style="font-size:11px;">est ${_fmtQ(l.est)} · ${remTxt}</div>
+    </div>`;
+  }).join('');
   _anchorDropdown(inp, res);
   res.classList.add('show');
 }
 
-function cgrnPickLoc(i, nodeId, name, path) {
-  // Stamp hidden inputs
-  document.getElementById('cgrnLoc_' + i).value = name;
-  document.getElementById('cgrnLocNode_' + i).value = nodeId;
+function cgrnPickLoc(i, locId) {
+  const row = _cgrnRowEst[i]; if (!row) return;
+  const l = (row.locs || []).find(x => String(x.locId) === String(locId));
+  if (!l) return;
+  document.getElementById('cgrnLoc_' + i).value = l.locName;
+  document.getElementById('cgrnLocNode_' + i).value = l.locId;
   document.getElementById('cgrnLocRes_' + i)?.classList.remove('show');
-  // Look up WBS from estimate tree: find any material buildup entry at this location
-  // to show the WBS breadcrumb. Uses _mirEstTreeCache (loaded by addMIRItem/PO pickers).
-  const matCode = document.getElementById('cgrnMatCode_' + i)?.value || '';
-  let wbsNodeId = '', wbsPath = '', wbsName = '';
-  const tree = _mirEstTreeCache || [];
-  outer: for (const L of tree) {
-    for (const LO of (L.locArr || [])) {
-      if (String(LO.locId) === String(nodeId)) {
-        for (const S of (LO.skuArr || [])) {
-          if (!matCode || S.code === matCode) {
-            wbsNodeId = String(L.leafId);
-            wbsPath   = L.wbsPath || L.leaf || '';
-            wbsName   = L.leaf || '';
-            break outer;
-          }
-        }
-        // Location matched but no material match — still grab WBS for breadcrumb
-        if (!wbsNodeId) {
-          wbsNodeId = String(L.leafId);
-          wbsPath   = L.wbsPath || L.leaf || '';
-        }
-      }
-    }
-  }
-  document.getElementById('cgrnWbsNode_' + i).value = wbsNodeId;
-  // Render breadcrumb
+  // Auto-WBS: attribute the activity with the largest estimate at this (material, loc).
+  // Cosmetic only — the material gate keys on (material, loc), not WBS.
+  const topWbs = [...(l.wbs || [])].sort((a,b)=>(b.est||0)-(a.est||0))[0] || null;
+  document.getElementById('cgrnWbsNode_' + i).value = topWbs ? String(topWbs.id) : '';
+  _cgrnRenderBc(i);
+}
+
+// Render the location/WBS breadcrumb + live remaining + qty advisory for a row.
+function _cgrnRenderBc(i) {
   const bcDiv = document.getElementById('cgrnLocBreadcrumb_' + i);
-  if (bcDiv) {
-    const locLine = `<span style="color:var(--accent);">📍</span> ${esc(path)}`;
-    const wbsLine = wbsPath
-      ? `<br><span style="color:var(--muted);">📋</span> ${esc(wbsPath)}`
-      : (wbsNodeId ? '' : ' <span style="color:#d97706;">⚠ not in estimate at this location</span>');
-    bcDiv.innerHTML = locLine + wbsLine;
-    bcDiv.style.display = 'block';
+  const row = _cgrnRowEst[i];
+  const locId = document.getElementById('cgrnLocNode_' + i)?.value;
+  if (!bcDiv || !row || !locId) { if (bcDiv) bcDiv.style.display = 'none'; return; }
+  const l = (row.locs || []).find(x => String(x.locId) === String(locId));
+  if (!l) { bcDiv.style.display = 'none'; return; }
+  const topWbs = [...(l.wbs || [])].sort((a,b)=>(b.est||0)-(a.est||0))[0] || null;
+
+  let html = `<span style="color:var(--accent);">📍</span> ${esc(l.locPath)}`;
+  if (topWbs) html += `<br><span style="color:var(--muted);">📋</span> ${esc(topWbs.path || topWbs.name || '')}`;
+  if (l.shared) {
+    const names = (l.wbs || []).map(w => esc(w.name)).join(', ');
+    html += `<br><span style="color:#d97706;">⚠ budget shared across activities: ${names} — attributed to “${esc(topWbs ? topWbs.name : '')}”</span>`;
   }
+  // Live remaining + qty advisory (hard block stays server-side at save)
+  const qty = parseFloat(document.getElementById('cgrnQty_' + i)?.value) || 0;
+  if (l.remaining == null) {
+    html += `<br><span style="color:#d97706;">remaining unavailable — server gate still enforces at save</span>`;
+  } else if (l.remaining <= 0) {
+    html += `<br><span style="color:#dc2626;font-weight:600;">⚠ 0 remaining — this material/location is fully consumed; save will be blocked</span>`;
+  } else {
+    const cls = (qty > l.remaining + 0.001) ? 'color:#dc2626;font-weight:600;' : 'color:var(--accent);';
+    html += `<br><span style="${cls}">${qty > l.remaining + 0.001 ? '⚠ ' : ''}${_fmtQ(l.remaining)} ${esc(row.uom||'')} remaining${qty > l.remaining + 0.001 ? ' — qty exceeds, save will be blocked' : ''}</span>`;
+  }
+  bcDiv.innerHTML = html;
+  bcDiv.style.display = 'block';
 }
 
 function cgrnRecalcRow(i) {
@@ -22867,6 +22957,7 @@ function cgrnRecalcRow(i) {
   const amt  = qty * rate;
   const cell = document.getElementById('cgrnAmt_'+i);
   if (cell) cell.textContent = fmtINR(amt);
+  if (typeof _cgrnRenderBc === 'function') _cgrnRenderBc(i);   // v118: live qty-vs-remaining advisory
   cgrnRecalcTotal();
 }
 
@@ -22946,6 +23037,31 @@ async function saveCashGRN() {
     toast(`${_cgrnUnloc.map(e=>'"'+e.material_name+'"').join(', ')} ${_cgrnUnloc.length===1?'has':'have'} no location selected — pick a location for each material row.`,'error',7000);
     return;
   }
+  // v118: client-side estimate-ceiling pre-check (UX). Aggregates per (material, loc)
+  // across all rows so two lines on the same pair can't both pass individually.
+  // The server gate in rpc_save_grn is the authoritative, race-safe block.
+  try {
+    pbShow('Checking estimate ceiling…');
+    const need = {};
+    for (const e of entries) {
+      const k = e.material_code + '|' + e.loc_node_id;
+      (need[k] = need[k] || { code: e.material_code, loc: e.loc_node_id, name: e.material_name, qty: 0 }).qty += num(e.this_grn_qty);
+    }
+    const keys = Object.keys(need);
+    const rems = await Promise.all(keys.map(k => _cgrnFetchRemaining(need[k].code, need[k].loc)));
+    const over = [];
+    keys.forEach((k, idx) => {
+      const r = rems[idx], nrow = need[k];
+      if (r && r.remaining != null && nrow.qty > r.remaining + 0.001) {
+        over.push(`“${nrow.name}”: need ${_fmtQ(nrow.qty)}, remaining ${_fmtQ(r.remaining)}`);
+      }
+    });
+    if (over.length) {
+      pbDone();
+      toast('Estimate ceiling exceeded — reduce qty:\n' + over.join('\n'), 'error', 9000);
+      return;
+    }
+  } catch (e) { /* pre-check failure is non-fatal — server gate still enforces */ }
   pbShow('Saving Direct Purchase GRN…');
   try {
     // v90: atomic create via RPC
