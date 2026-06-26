@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Penguin-Procurement Suite v118 — Urban Excellence LLP · Poetry of Earth</title>
+<title>Penguin-Procurement Suite v126 — Urban Excellence LLP · Poetry of Earth</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <style>
@@ -139,6 +139,29 @@ td input, td select { padding: 5px 6px; background: var(--input-bg); color: var(
 .typeahead { position: relative; }
 .typeahead-results { position: absolute; top: 100%; left: 0; right: 0; background: #fff; border: 1px solid var(--border); border-radius: 4px; max-height: 240px; overflow-y: auto; z-index: 50; display: none; box-shadow: 0 8px 20px rgba(30,58,95,0.15); }
 .typeahead-results.show { display: block; }
+.mis-wl-panel { display: none; }
+.mis-wl-panel.show { display: block; }
+.g-dist{display:flex;flex-direction:column;gap:4px;max-width:360px;}
+.g-chip{display:inline-flex;flex-wrap:wrap;align-items:center;gap:4px 5px;font-size:11px;padding:3px 8px;border-radius:11px;background:#f1f5f9;border:1px solid var(--border);white-space:normal;max-width:100%;}
+.g-chip.g-full{background:#ecfdf5;border-color:#a7f3d0;}
+.g-chip.g-part{background:#fffbeb;border-color:#fde68a;}
+.g-chip.g-none{opacity:.6;}
+.g-chip .g-lf{font-weight:600;}
+.g-chip .g-q{font-weight:700;}
+.g-chip .g-okc{color:#0d9488;font-weight:600;}
+.g-chip .g-prev{font-size:10px;color:var(--muted);background:#fff;border:1px solid var(--border);border-radius:8px;padding:0 5px;}
+.g-chip .g-sc{color:#dc2626;font-weight:600;}
+.g-chip .g-of{font-size:10px;color:var(--muted);}
+.g-loctog{display:inline-flex;align-items:center;gap:6px;cursor:pointer;font-size:12px;font-weight:600;color:#334155;background:#f1f5f9;border:1px solid var(--border);border-radius:8px;padding:5px 10px;user-select:none;white-space:nowrap;}
+.g-loctog:hover{background:#e2e8f0;}
+.g-chev{font-size:10px;color:var(--muted);transition:transform .15s;}
+.g-locpanel{display:none;margin-top:8px;border:1px solid var(--border);border-radius:8px;overflow:hidden;max-width:380px;}
+.g-locpanel.show{display:block;}
+.g-lhdr{background:#ecfdf5;color:#065f46;font-size:10px;font-weight:700;padding:5px 10px;border-bottom:1px solid #a7f3d0;text-transform:uppercase;letter-spacing:.03em;}
+.g-lrow{display:flex;justify-content:space-between;gap:10px;align-items:center;padding:6px 10px;border-bottom:1px solid #f1f5f9;font-size:11.5px;}
+.g-lrow:last-child{border-bottom:none;}
+.g-lq{font-weight:700;color:#334155;white-space:nowrap;}
+.g-lfoot{font-size:10px;color:#b45309;padding:5px 10px;border-top:1px solid #f1f5f9;background:#fffbeb;}
 .typeahead-item { padding: 8px 10px; cursor: pointer; border-bottom: 1px solid #f1f5f9; font-size: 12.5px; }
 .typeahead-item:hover { background: #f0fdfa; }
 .typeahead-item .muted { color: var(--muted); font-size: 11px; }
@@ -2799,9 +2822,10 @@ input[type="number"] {
               <th>#</th><th>Material</th><th>UOM</th>
               <th class="num">PO Qty</th><th class="num">Prev. Received</th>
               <th class="num">Balance</th><th class="num">This GRN Qty</th>
+              <th>Locations</th>
               <th class="num">Unit Rate</th><th class="num">Amount</th><th>Remarks</th>
             </tr></thead>
-            <tbody id="grnItemsBody"><tr><td colspan="10" class="center muted">Select a PO to load items</td></tr></tbody>
+            <tbody id="grnItemsBody"><tr><td colspan="11" class="center muted">Select a PO to load items</td></tr></tbody>
           </table>
         </div>
       </div>
@@ -3239,7 +3263,7 @@ input[type="number"] {
         <div class="table-wrap">
           <table>
             <thead><tr>
-              <th>#</th><th>Material</th><th>UOM</th><th>📦 Work Package</th><th>📍 Location Unit</th>
+              <th>#</th><th>Material</th><th>UOM</th><th style="min-width:300px;">📦 WBS Package &amp; 📍 Location <span style="color:#dc2626;">*</span></th>
               <th class="num">Stock Available</th><th class="num">Qty to Issue</th>
               <th class="num">Latest Rate</th><th class="num">Amount</th><th></th>
             </tr></thead>
@@ -3248,8 +3272,13 @@ input[type="number"] {
         </div>
         <button class="btn btn-ghost btn-sm" style="margin-top:8px;" onclick="addMISItem()">+ Add Row</button>
       </div>
+      <div id="misOverrideBox" style="display:none;background:#fef2f2;border:1px solid #fca5a5;border-radius:8px;padding:10px 12px;margin:6px 0 12px;font-size:12px;color:#7f1d1d;">
+        <div id="misOverrideSummary" style="font-weight:600;margin-bottom:6px;"></div>
+        <label style="font-size:11px;font-weight:600;display:block;margin-bottom:3px;">Reason for over-issue (mandatory — entered by store)</label>
+        <textarea id="mis_overrideReason" rows="2" style="width:100%;border:1px solid #dc2626;border-radius:6px;padding:7px;font-size:12px;" placeholder="Why is issuing above the approved estimate necessary?"></textarea>
+      </div>
       <div class="actions-row">
-        <button class="btn btn-primary" onclick="guardedSave(saveMIS, this)">Save &amp; Issue</button>
+        <button id="mis_saveBtn" class="btn btn-primary" onclick="guardedSave(saveMIS, this)">Save &amp; Issue</button>
         <button class="btn btn-ghost" onclick="closeMISForm()">Cancel</button>
       </div>
     </div>
@@ -3296,7 +3325,7 @@ input[type="number"] {
               <td style="padding:4px 6px;"><input id="misF_issuedTo" placeholder="Filter&#8230;" oninput="renderMISList()" style="width:100%;padding:4px 6px;font-size:11px;background:var(--bg);color:var(--text);border:1px solid var(--border);border-radius:4px;"></td>
               <td style="padding:4px 6px;"><input id="misF_issuedBy" placeholder="Filter&#8230;" oninput="renderMISList()" style="width:100%;padding:4px 6px;font-size:11px;background:var(--bg);color:var(--text);border:1px solid var(--border);border-radius:4px;"></td>
               <td style="padding:4px 6px;"></td>
-              <td style="padding:4px 6px;"><select id="misF_status" onchange="renderMISList()" style="width:100%;padding:4px 5px;font-size:11px;background:var(--bg);color:var(--text);border:1px solid var(--border);border-radius:4px;"><option value="">All</option><option>Pending Approval</option><option value="Rejected - Correction">Needs Correction</option><option>Approved</option><option>Rejected</option><option>Audit Entry</option></select></td>
+              <td style="padding:4px 6px;"><select id="misF_status" onchange="renderMISList()" style="width:100%;padding:4px 5px;font-size:11px;background:var(--bg);color:var(--text);border:1px solid var(--border);border-radius:4px;"><option value="">All</option><option>Pending Approval</option><option value="__override__">Pending Override</option><option value="Rejected - Correction">Needs Correction</option><option>Approved</option><option>Rejected</option><option>Audit Entry</option></select></td>
               <td style="padding:4px 6px;text-align:center;"><button onclick="clearColFilters('misF_number','misF_issuedTo','misF_issuedBy','misF_dateFrom','misF_dateTo','misF_status','renderMISList')" title="Clear" style="font-size:10px;padding:3px 8px;background:var(--input-bg);color:var(--text-muted);border:1px solid var(--border);border-radius:4px;cursor:pointer;">&#10005; Clear</button></td>
             </tr>
           </thead>
@@ -4179,7 +4208,7 @@ const ROLE_PERMS = {
                        canApprovePO: true, canCreateGRN: true, canApproveGRN: true,
                        canCancelPO: true, canShortClosePO: true,
                        canCreatePOB: true, canApprovePOB: true,
-                       canCreateMIS: true, canApproveMIS: true, canManageMasters: true,
+                       canCreateMIS: true, canApproveMIS: true, canOverrideMIS: true, canManageMasters: true,
                        canAuditStock: true, canShortCloseMIR: true }
 };
 
@@ -6632,7 +6661,7 @@ function applyRoleUI() {
   // Purchase tab visibility
   const puPerms = ['canCreateMIR','canApproveMIR','canCreateRFQ','canCreateQC','canApproveQC',
     'canCreatePO','canApprovePO','canCreateGRN','canApproveGRN',
-    'canCreatePOB','canApprovePOB','canCreateMIS','canApproveMIS'];
+    'canCreatePOB','canApprovePOB','canCreateMIS','canApproveMIS','canOverrideMIS'];
   const hasPU = puPerms.some(p => perms[p]) || perms.canManageMasters;
   const puTab = document.getElementById('tab-purchase');
   if (puTab) puTab.style.display = hasPU ? '' : 'none';
@@ -21772,69 +21801,67 @@ async function _rollupMIRAfterPOTermination(mirNum, terminatedPONum, action /* '
   }
 
   if (action === 'short-close') {
-    // Get GRNs for this PO to determine actual received qty per material
+    // received per (material, location) from this PO's GRNs; legacy null-loc bucketed per material
     const {data:grns} = await sb.from('pu_grn')
       .select('grn_number').eq('po_number',terminatedPONum).neq('status','Rejected');
-    const receivedByMat = {};
+    const locatedByMatLoc={}, unlocByMat={};
     if ((grns||[]).length) {
       const {data:grnItems} = await sb.from('pu_grn_items')
-        .select('material_name,this_grn_qty').in('grn_number',(grns||[]).map(g=>g.grn_number));
+        .select('material_name,material_code,loc_node_id,this_grn_qty').in('grn_number',(grns||[]).map(g=>g.grn_number));
       (grnItems||[]).forEach(it => {
-        receivedByMat[it.material_name] = (receivedByMat[it.material_name]||0) + (it.this_grn_qty||0);
+        const mk=(it.material_code!=null?('c'+it.material_code):('n'+it.material_name));
+        if(it.loc_node_id){ (locatedByMatLoc[mk]=locatedByMatLoc[mk]||{})[String(it.loc_node_id)]=(locatedByMatLoc[mk][String(it.loc_node_id)]||0)+num(it.this_grn_qty); }
+        else unlocByMat[mk]=(unlocByMat[mk]||0)+num(it.this_grn_qty);
       });
     }
+    // MIR lines: sno -> loc, and plid/material -> sno (to resolve link sno)
+    const {data:mirLines} = await sb.from('pu_mir_items')
+      .select('sno,material_name,material_code,loc_node_id,procurement_line_id').eq('mir_number',mirNum);
+    const snoToLoc={}, plidToSno={}, matToSno={};
+    (mirLines||[]).forEach(it=>{
+      snoToLoc[it.sno]=String(it.loc_node_id||'');
+      if(it.procurement_line_id) plidToSno[it.procurement_line_id]=it.sno;
+      matToSno[(it.material_code!=null?('c'+it.material_code):('n'+it.material_name))]=it.sno;
+    });
 
-    // Check if po_links exist for this PO (they won't for legacy POs approved before schema migration)
     const {data:existingLinks, error:elErr} = await sb.from('pu_mir_item_po_links')
-      .select('id,material_name,qty_linked').eq('po_number',terminatedPONum).eq('mir_number',mirNum);
-    // GUARD: a failed SELECT must NOT be read as "no links" — that is exactly how a
-    // duplicate bootstrap insert happened on 2026-05-27. Abort and let the user retry.
-    if (elErr) {
-      toast('Short-close link check failed: '+elErr.message+' — please retry','error');
-      return;
-    }
+      .select('id,sno,material_name,material_code,qty_linked').eq('po_number',terminatedPONum).eq('mir_number',mirNum);
+    // GUARD: a failed SELECT must NOT be read as "no links".
+    if (elErr) { toast('Short-close link check failed: '+elErr.message+' — please retry','error'); return; }
 
     if (!(existingLinks||[]).length) {
-      // Legacy PO — bootstrap po_links from pu_po_items
-      // v82: plid-first sno resolution; material_name fallback for legacy null plids
-      const [{data:poItems},{data:mirItemRecs}] = await Promise.all([
-        sb.from('pu_po_items').select('material_name,qty,procurement_line_id').eq('po_number',terminatedPONum),
-        sb.from('pu_mir_items').select('sno,material_name,procurement_line_id').eq('mir_number',mirNum),
-      ]);
-      const plidToSno = {}; const matToSno = {};
-      (mirItemRecs||[]).forEach(it => {
-        if (it.procurement_line_id) plidToSno[it.procurement_line_id] = it.sno;
-        matToSno[it.material_name] = it.sno;
+      // Legacy PO — bootstrap po_links from pu_po_items (per-location received)
+      const {data:poItems} = await sb.from('pu_po_items')
+        .select('material_name,material_code,qty,loc_node_id,procurement_line_id,sno').eq('po_number',terminatedPONum);
+      const byMat={};
+      (poItems||[]).forEach(it=>{ const mk=(it.material_code!=null?('c'+it.material_code):('n'+it.material_name)); (byMat[mk]=byMat[mk]||[]).push(it); });
+      const bootstrapLinks=[];
+      Object.keys(byMat).forEach(mk=>{
+        _grnReceivedPerLine(byMat[mk], locatedByMatLoc[mk]||{}, unlocByMat[mk]||0).forEach(it=>{
+          const sno=(it.procurement_line_id && plidToSno[it.procurement_line_id]!=null) ? plidToSno[it.procurement_line_id] : matToSno[mk];
+          if (sno==null) return;
+          const rec=num(it.received); const sc=Math.max(0, num(it.qty)-rec);
+          bootstrapLinks.push({ mir_number:mirNum, sno, material_name:it.material_name, po_number:terminatedPONum,
+            qty_linked:num(it.qty), qty_received:rec, qty_short_closed:sc, is_short_closed:true });
+        });
       });
-      const bootstrapLinks = (poItems||[])
-        .map(it => {
-          const sno = (it.procurement_line_id && plidToSno[it.procurement_line_id] != null)
-            ? plidToSno[it.procurement_line_id] : matToSno[it.material_name];
-          if (sno == null) return null;
-          const rec = receivedByMat[it.material_name]||0;
-          const sc  = Math.max(0, (it.qty||0) - rec);
-          return {
-            mir_number: mirNum, sno,
-            material_name: it.material_name, po_number: terminatedPONum,
-            qty_linked: it.qty||0, qty_received: rec,
-            qty_short_closed: sc, is_short_closed: true
-          };
-        })
-        .filter(Boolean);
       if (bootstrapLinks.length) {
         const {error:bErr} = await sb.from('pu_mir_item_po_links').insert(bootstrapLinks);
         if (bErr) toast('Short-close link insert failed: '+bErr.message,'error');
       }
     } else {
-      // Links exist — update with actual received qty and SC flag
-      const updResults = await Promise.all((existingLinks||[]).map(l => {
-        const rec = receivedByMat[l.material_name]||0;
-        const sc  = Math.max(0, (l.qty_linked||0) - rec);
-        return sb.from('pu_mir_item_po_links').update({
-          qty_received:rec, qty_short_closed:sc, is_short_closed:true
-        }).eq('id',l.id);
-      }));
-      const updErr = updResults.find(r => r.error);
+      // Links exist — received per link uses the link's MIR-line location (sno -> loc)
+      const byMat={};
+      (existingLinks||[]).forEach(l=>{ const mk=(l.material_code!=null?('c'+l.material_code):('n'+l.material_name)); (byMat[mk]=byMat[mk]||[]).push(Object.assign({}, l, {loc_node_id:snoToLoc[l.sno], qty:l.qty_linked})); });
+      const updates=[];
+      Object.keys(byMat).forEach(mk=>{
+        _grnReceivedPerLine(byMat[mk], locatedByMatLoc[mk]||{}, unlocByMat[mk]||0).forEach(l=>{
+          const rec=num(l.received); const sc=Math.max(0, num(l.qty_linked)-rec);
+          updates.push(sb.from('pu_mir_item_po_links').update({ qty_received:rec, qty_short_closed:sc, is_short_closed:true }).eq('id',l.id));
+        });
+      });
+      const updResults=await Promise.all(updates);
+      const updErr=updResults.find(r=>r.error);
       if (updErr) toast('Short-close link update failed: '+updErr.error.message,'error');
     }
   }
@@ -21953,25 +21980,28 @@ async function confirmShortClosePO(poNum) {
   // SC qty per material = po_items.qty - actual received via GRN
   try {
     const [{data:poItems},{data:grnData}] = await Promise.all([
-      sb.from('pu_po_items').select('material_name,qty,procurement_line_id').eq('po_number',poNum),
-      sb.from('pu_grn_items').select('material_name,this_grn_qty')
+      sb.from('pu_po_items').select('id,material_name,material_code,qty,loc_node_id,sno').eq('po_number',poNum),
+      sb.from('pu_grn_items').select('material_name,material_code,loc_node_id,this_grn_qty')
         .in('grn_number', (grns||[]).map(g=>g.grn_number)),
     ]);
-    // Sum received qty per material across all GRNs for this PO
-    const receivedByMat = {};
+    // v122: received per (material, location); legacy null-loc receipts bucketed per material
+    const locatedByMatLoc={}, unlocByMat={};
     (grnData||[]).forEach(r => {
-      receivedByMat[r.material_name] = (receivedByMat[r.material_name]||0) + (r.this_grn_qty||0);
+      const mk=(r.material_code!=null?('c'+r.material_code):('n'+r.material_name));
+      if(r.loc_node_id){ (locatedByMatLoc[mk]=locatedByMatLoc[mk]||{})[String(r.loc_node_id)]=(locatedByMatLoc[mk][String(r.loc_node_id)]||0)+num(r.this_grn_qty); }
+      else unlocByMat[mk]=(unlocByMat[mk]||0)+num(r.this_grn_qty);
     });
-    // Update each po_item row with its short_closed_qty
-    await Promise.all((poItems||[]).map(pi => {
-      const received = receivedByMat[pi.material_name]||0;
-      const scQty    = Math.max(0, (pi.qty||0) - received);
-      if (scQty <= 0) return Promise.resolve(); // nothing short-closed for this line
-      return sb.from('pu_po_items')
-        .update({ short_closed_qty: scQty })
-        .eq('po_number', poNum)
-        .eq('material_name', pi.material_name);
-    }));
+    // group PO lines by material -> received-per-line (located + progressive unlocated) -> SC per line, written BY ID
+    const byMat={};
+    (poItems||[]).forEach(pi=>{ const mk=(pi.material_code!=null?('c'+pi.material_code):('n'+pi.material_name)); (byMat[mk]=byMat[mk]||[]).push(pi); });
+    const updates=[];
+    Object.keys(byMat).forEach(mk=>{
+      _grnReceivedPerLine(byMat[mk], locatedByMatLoc[mk]||{}, unlocByMat[mk]||0).forEach(pi=>{
+        const sc=Math.max(0, num(pi.qty)-num(pi.received));
+        if(sc>0) updates.push(sb.from('pu_po_items').update({short_closed_qty:sc}).eq('id',pi.id));
+      });
+    });
+    await Promise.all(updates);
   } catch(e) { console.error('SC qty write error:', e.message); }
 
   // Resolve MIR number and run legacy rollup (keeps pu_mir_item_po_links in sync)
@@ -22382,7 +22412,7 @@ async function newGRN() {
   document.getElementById('grn_receivedBy').value=state.userName;
   document.getElementById('grn_number').value='GRN/'+currentFY()+'/—— (auto)';
   ['grn_challan','grn_invoiceNo','grn_vendor','grn_remarks'].forEach(id=>{const e=document.getElementById(id);if(e)e.value='';});
-  document.getElementById('grnItemsBody').innerHTML='<tr><td colspan="10" class="center muted">Select a PO to load items</td></tr>';
+  document.getElementById('grnItemsBody').innerHTML='<tr><td colspan="11" class="center muted">Select a PO to load items</td></tr>';
   const {data:pos}=await sb.from('pu_po_orders').select('po_number,vendor_name')
     .in('status',['Open','Partial Receipt']).order('po_number');
   const sel=document.getElementById('grn_poSelect');
@@ -22392,89 +22422,142 @@ async function newGRN() {
   window.scrollTo(0,0);
 }
 
+// ── v122: GRN per-location distribution (progressive, first location first) ──
+let _grnLocs = {};   // rowIdx -> [{po_item_id,loc_node_id,wbs_node_id,procurement_line_id,procurement_source,ordered,prev,label,path,sno}]
+let _grnMeta = {};   // rowIdx -> {matCode,matName,uom,rate}
+const _qf = v => { v=num(v); return Number.isInteger(v) ? String(v) : String(Math.round(v*1000)/1000); };
+const _grnLabel3 = p => (p||'').split(' \u203a ').slice(-3).join(' \u00b7 ');
+function _grnProgressiveFill(locs, total){
+  let left = num(total);
+  return (locs||[]).map(l=>{
+    const bal = Math.max(0, num(l.ordered) - num(l.prev));
+    const put = Math.max(0, Math.min(bal, left));
+    left -= put;
+    return Object.assign({}, l, { bal, put });
+  });
+}
+// received-per-line = located receipts at its loc + progressive top-up of unlocated (legacy) receipts, sno order
+function _grnReceivedPerLine(lines, locatedByLoc, unlocatedTotal){
+  let leftUnloc = num(unlocatedTotal);
+  return [...(lines||[])].sort((a,b)=>num(a.sno)-num(b.sno)).map(pi=>{
+    const loc = String(pi.loc_node_id||'');
+    const cap = num(pi.qty!=null?pi.qty:pi.ordered);
+    const located = num((locatedByLoc||{})[loc]||0);
+    const room = Math.max(0, cap - located);
+    const topUp = Math.max(0, Math.min(room, leftUnloc));
+    leftUnloc -= topUp;
+    return Object.assign({}, pi, { received: located + topUp });
+  });
+}
+function _grnRenderDist(i, qty){
+  const cont=document.getElementById('grnDist_'+i); if(!cont) return;
+  const locs=_grnLocs[i]||[];
+  if(!locs.length){ cont.innerHTML=''; return; }
+  cont.innerHTML = _grnProgressiveFill(locs, qty).map(d=>{
+    const done=d.bal<=0;
+    const cls=done?'g-none g-done':(d.put<=0?'g-none':(d.put>=d.bal?'g-full':'g-part'));
+    const prevB=d.prev>0?'<span class="g-prev">prev '+_qf(d.prev)+'</span>':'';
+    let now;
+    if(done) now='<span class="g-q g-okc">\u2713 '+_qf(d.prev)+'/'+_qf(d.ordered)+' done</span>';
+    else if(d.put>0) now='<span class="g-q">+'+_qf(d.put)+'</span>'+(d.put<d.bal?' <span class="g-sc">\u21a9 '+_qf(d.bal-d.put)+' bal</span>':'');
+    else now='<span class="g-of">0 of '+_qf(d.bal)+'</span>';
+    return '<span class="g-chip '+cls+'" title="'+esc(d.path||'')+'"><span class="g-lf">'+esc(_grnLabel3(d.path))+'</span> '+prevB+' '+now+'</span>';
+  }).join('');
+}
+
 async function onGRNPOChange() {
   const poNum=document.getElementById('grn_poSelect').value;
   const opt=document.querySelector('#grn_poSelect option:checked');
   document.getElementById('grn_vendor').value=opt?.dataset?.vendor||'';
-  if(!poNum){document.getElementById('grnItemsBody').innerHTML='<tr><td colspan="10" class="center muted">Select a PO</td></tr>';return;}
+  _grnLocs={}; _grnMeta={};
+  if(!poNum){document.getElementById('grnItemsBody').innerHTML='<tr><td colspan="11" class="center muted">Select a PO</td></tr>';return;}
   pbShow('Loading PO items…');
   const {data:poItems}=await sb.from('pu_po_items').select('*').eq('po_number',poNum).order('sno');
-  // Build prev received map from verified GRNs
-  const prevMap={};
+  // location breadcrumbs
+  let locMap={};
+  try{ const lt=await _loadLocTree(); locMap=Object.fromEntries((lt||[]).map(n=>[String(n.id),n])); }catch(e){}
+  // prev received per (material, location) from verified GRNs; legacy null-loc receipts bucketed per material
+  const prevByMatLoc={}, prevUnloc={};
   const {data:doneGRNs}=await sb.from('pu_grn').select('grn_number')
     .eq('po_number',poNum).in('status',['Verified','Partially Billed','Billed']);
   if(doneGRNs?.length){
-    const {data:prevItems}=await sb.from('pu_grn_items').select('material_name,this_grn_qty')
+    const {data:prevItems}=await sb.from('pu_grn_items').select('material_name,material_code,loc_node_id,this_grn_qty')
       .in('grn_number',doneGRNs.map(g=>g.grn_number));
-    (prevItems||[]).forEach(it=>{prevMap[it.material_name]=(prevMap[it.material_name]||0)+num(it.this_grn_qty);});
+    (prevItems||[]).forEach(it=>{
+      const mk=(it.material_code!=null?('c'+it.material_code):('n'+it.material_name));
+      if(it.loc_node_id){ (prevByMatLoc[mk]=prevByMatLoc[mk]||{})[String(it.loc_node_id)]=(prevByMatLoc[mk][String(it.loc_node_id)]||0)+num(it.this_grn_qty); }
+      else prevUnloc[mk]=(prevUnloc[mk]||0)+num(it.this_grn_qty);
+    });
   }
   pbDone();
-  document.getElementById('grnItemsBody').innerHTML=(poItems||[]).map((it,i)=>{
-    const prev=prevMap[it.material_name]||0;
-    const balance=Math.max(0,num(it.qty)-prev);
+  // group PO lines by material (code, fallback name); keep per-location lines for progressive distribution
+  const _grnGroups={};
+  (poItems||[]).forEach(it=>{
+    const key=(it.material_code!=null?('c'+it.material_code):('n'+it.material_name));
+    if(!_grnGroups[key]) _grnGroups[key]={first:it,key,locs:[]};
+    const lk=String(it.loc_node_id||''); const node=locMap[lk];
+    _grnGroups[key].locs.push({
+      po_item_id:it.id, loc_node_id:it.loc_node_id||null, wbs_node_id:it.wbs_node_id!=null?Number(it.wbs_node_id):null,
+      procurement_line_id:it.procurement_line_id||null, procurement_source:it.procurement_source||null,
+      ordered:num(it.qty), prev:(prevByMatLoc[key]&&prevByMatLoc[key][lk])||0,
+      path:node?node.path:'', label:node?node.name:'', sno:num(it.sno),
+    });
+  });
+  const _grnRows=Object.values(_grnGroups);
+  document.getElementById('grnItemsBody').innerHTML=_grnRows.map((g,i)=>{
+    const it=g.first; g.locs.sort((a,b)=>a.sno-b.sno);
+    const poQty=g.locs.reduce((s,l)=>s+l.ordered,0);
+    const prevLoc=g.locs.reduce((s,l)=>s+l.prev,0);
+    const unloc=prevUnloc[g.key]||0;
+    const prevTotal=prevLoc+unloc;
+    const balance=Math.max(0,poQty-prevTotal);
     const exhausted=balance<=0;
+    _grnLocs[i]=g.locs;
+    _grnMeta[i]={matCode:it.material_code||'',matName:it.material_name,uom:it.uom,rate:num(it.unit_rate)};
+    const _locRows = g.locs.map(l=>`<div class="g-lrow"><span class="g-lf2">${esc(_grnLabel3(l.path))}</span><span class="g-lq">${_qf(l.ordered)} ${esc(it.uom)}</span></div>`).join('');
+    const _unlocFoot = unloc>0?`<div class="g-lfoot">⚠ ${_qf(unloc)} ${esc(it.uom)} received earlier without location (legacy)</div>`:'';
+    const _locCell = g.locs.length
+      ? `<div class="g-loctog" onclick="grnLocTog(${i})"><span>📍 ${g.locs.length} location${g.locs.length>1?'s':''}</span><span class="g-chev" id="grnChev_${i}">▸</span></div>`
+        + `<div class="g-locpanel" id="grnLocPanel_${i}"><div class="g-lhdr">Ordered across (reference)</div>${_locRows}${_unlocFoot}</div>`
+      : '<span class="muted">—</span>';
     return `<tr id="grnRow_${i}">
-      <td>${it.sno}</td><td>${esc(it.material_name)}</td><td>${esc(it.uom)}</td>
-      <td class="num">${fmtINR(it.qty)}</td>
-      <td class="num">${fmtINR(prev)}</td>
+      <td>${i+1}</td><td>${esc(it.material_name)}</td><td>${esc(it.uom)}</td>
+      <td class="num">${fmtINR(poQty)}</td>
+      <td class="num">${fmtINR(prevTotal)}</td>
       <td class="num" style="color:${exhausted?'var(--danger)':'inherit'};font-weight:600;">${fmtINR(balance)}</td>
       <td>
-        <input type="number" id="grnRecv_${i}" class="num" style="width:90px;" step="0.001"
-          min="0" placeholder="0"
-          data-mat="${esc(it.material_name)}" data-uom="${esc(it.uom)}"
-          data-matcode="${esc(it.material_code||'')}"
-          data-poqty="${num(it.qty)}" data-prev="${prev}" data-balance="${balance}"
-          data-rate="${num(it.unit_rate)}" data-sno="${it.sno}"
+        <input type="number" id="grnRecv_${i}" class="num" style="width:90px;" step="0.001" min="0" placeholder="0"
+          data-mat="${esc(it.material_name)}" data-uom="${esc(it.uom)}" data-matcode="${esc(it.material_code||'')}"
+          data-poqty="${poQty}" data-prev="${prevTotal}" data-balance="${balance}" data-rate="${num(it.unit_rate)}"
           oninput="recalcGRNRow(${i})" ${exhausted?'disabled title="PO balance fully received — cannot enter quantity"':''} onwheel="this.blur()" onkeydown="if(event.key==='ArrowUp'||event.key==='ArrowDown')event.preventDefault()">
-        <div id="grnOverWarn_${i}" style="display:none;font-size:10px;color:#92400e;font-weight:600;margin-top:2px;white-space:nowrap;"></div>
+      </td>
+      <td style="vertical-align:top;">
+        ${_locCell}
       </td>
       <td class="num">${fmtINR(it.unit_rate)}</td>
       <td class="num" id="grnAmt_${i}">—</td>
       <td><input id="grnRmk_${i}" style="width:100px;" placeholder="Remarks"></td>
     </tr>`;
-  }).join('')||'<tr><td colspan="10" class="center muted">No items on this PO.</td></tr>';
+  }).join('')||'<tr><td colspan="11" class="center muted">No items on this PO.</td></tr>';
 }
 
 function recalcGRNRow(i) {
   const inp=document.getElementById('grnRecv_'+i);
   if(!inp) return;
   const bal=parseFloat(inp.dataset.balance)||0;
-  const qty=parseFloat(inp.value)||0;
+  let qty=parseFloat(inp.value)||0;
   const uom=inp.dataset.uom||'';
+  // hard clamp — cannot receive more than the (summed) PO balance for this material
+  if(bal>0 && qty>bal){ qty=bal; inp.value=(Math.round(bal*1000)/1000); toast('Cannot receive more than PO balance ('+fmtINR(bal)+' '+uom+')','warn'); }
   const amt=qty*(parseFloat(inp.dataset.rate)||0);
   const amtEl=document.getElementById('grnAmt_'+i); if(amtEl) amtEl.textContent=fmtINR(amt);
-  // Row-level over-receipt warning
-  const row=document.getElementById('grnRow_'+i);
-  const warnEl=document.getElementById('grnOverWarn_'+i);
-  if(qty>bal && bal>0){
-    if(row) row.style.background='#fffbeb';
-    if(warnEl){ warnEl.style.display=''; warnEl.textContent='⚠ Excess: +'+(qty-bal).toFixed(3)+' '+uom; }
-  } else {
-    if(row) row.style.background='';
-    if(warnEl){ warnEl.style.display='none'; warnEl.textContent=''; }
-  }
-  // Rebuild summary warning card
-  const warnCard=document.getElementById('grnOverReceiptWarn');
-  const warnList=document.getElementById('grnOverReceiptList');
-  if(!warnCard||!warnList) return;
-  const lines=[];
-  document.querySelectorAll('#grnItemsBody tr').forEach((_,j)=>{
-    const inp2=document.getElementById('grnRecv_'+j); if(!inp2) return;
-    const b=parseFloat(inp2.dataset.balance)||0;
-    const q=parseFloat(inp2.value)||0;
-    if(q>b && b>0){
-      const mat=inp2.dataset.mat||('Item '+(j+1));
-      const u=inp2.dataset.uom||'';
-      lines.push(`<strong>${esc(mat)}</strong>: received ${q.toFixed(3)} vs balance ${b.toFixed(3)} ${u} (<span style="color:#dc2626;">+${(q-b).toFixed(3)} ${u} excess</span>)`);
-    }
-  });
-  if(lines.length){
-    warnCard.style.display='';
-    warnList.innerHTML=lines.join('<br>');
-  } else {
-    warnCard.style.display='none';
-    warnList.innerHTML='';
-  }
+  // v126: per-location split is computed silently at save; nothing rendered live
+}
+
+function grnLocTog(i){
+  const p=document.getElementById('grnLocPanel_'+i), c=document.getElementById('grnChev_'+i);
+  if(!p) return;
+  const open=p.classList.toggle('show'); if(c) c.style.transform=open?'rotate(90deg)':'';
 }
 
 async function saveGRN() {
@@ -22489,6 +22572,7 @@ async function saveGRN() {
   if(!challan){toast('Vehicle / Challan No. required','error');return;}
   if(!invNo){toast('Invoice No. required','error');return;}
   const entries=[];
+  let _grnSaveBlocked=false;
   document.querySelectorAll('#grnItemsBody tr').forEach((tr,i)=>{
     const inp=document.getElementById('grnRecv_'+i);
     if(!inp) return;
@@ -22496,25 +22580,41 @@ async function saveGRN() {
     if(qty<=0) return;
     const bal=parseFloat(inp.dataset.balance)||0;
     const uom=inp.dataset.uom||'';
+    const rate=parseFloat(inp.dataset.rate)||0;
     let remarks=document.getElementById('grnRmk_'+i)?.value||null;
-    // Auto-append over-receipt flag if qty exceeds PO balance
+    // hard block — never accept more than the (summed) PO balance for a material
     if(qty>bal && bal>0){
-      const excess=(qty-bal).toFixed(3);
-      const overNote=`⚠ Over-receipt: GRN qty ${qty} exceeds PO balance ${bal} by ${excess} ${uom}`;
-      remarks=remarks?`${remarks} | ${overNote}`:overNote;
+      toast(`${inp.dataset.mat}: GRN qty ${qty} exceeds PO balance ${bal} ${uom} — reduce to ${bal} or less`,'error',6000);
+      inp.focus(); _grnSaveBlocked=true; return;
     }
-    entries.push({
-      sno:entries.length+1, material_code:inp.dataset.matcode||null, material_name:inp.dataset.mat, uom,
-      po_qty:parseFloat(inp.dataset.poqty)||0,
-      prev_received_qty:parseFloat(inp.dataset.prev)||0,
-      this_grn_qty:qty,
-      total_received_qty:(parseFloat(inp.dataset.prev)||0)+qty,
-      balance_qty:(parseFloat(inp.dataset.balance)||0)-qty,
-      unit_rate:parseFloat(inp.dataset.rate)||0,
-      base_amount:qty*(parseFloat(inp.dataset.rate)||0),
-      remarks,
+    // v122: split the received total across the PO's locations progressively (first location first)
+    const splits=_grnProgressiveFill(_grnLocs[i]||[], qty).filter(d=>d.put>0);
+    if(!splits.length){
+      // no per-location lines resolved — single material-level row (location null)
+      entries.push({
+        sno:entries.length+1, material_code:inp.dataset.matcode||null, material_name:inp.dataset.mat, uom,
+        po_qty:parseFloat(inp.dataset.poqty)||0, prev_received_qty:parseFloat(inp.dataset.prev)||0,
+        this_grn_qty:qty, total_received_qty:(parseFloat(inp.dataset.prev)||0)+qty, balance_qty:bal-qty,
+        unit_rate:rate, base_amount:qty*rate, remarks,
+        loc_node_id:null, wbs_node_id:null, po_item_id:null,
+        procurement_line_id:crypto.randomUUID(), procurement_source:'legacy_unmatched',
+      });
+      return;
+    }
+    splits.forEach((d,di)=>{
+      entries.push({
+        sno:entries.length+1, material_code:inp.dataset.matcode||null, material_name:inp.dataset.mat, uom,
+        po_qty:num(d.ordered), prev_received_qty:num(d.prev), this_grn_qty:num(d.put),
+        total_received_qty:num(d.prev)+num(d.put), balance_qty:num(d.ordered)-(num(d.prev)+num(d.put)),
+        unit_rate:rate, base_amount:num(d.put)*rate, remarks: di===0?remarks:null,
+        loc_node_id:d.loc_node_id||null, wbs_node_id:d.wbs_node_id!=null?Number(d.wbs_node_id):null,
+        po_item_id:d.po_item_id||null,
+        procurement_line_id:d.procurement_line_id||crypto.randomUUID(),
+        procurement_source:d.procurement_source||'legacy_unmatched',
+      });
     });
   });
+  if(_grnSaveBlocked) return;
   if(!entries.length){toast('Enter quantity for at least one item','error');return;}
 
   // ── REVISE MODE: resubmitting a Rejected-Correction GRN ──────────────────
@@ -22527,18 +22627,8 @@ async function saveGRN() {
     const {data:poLineIds} = await sb.from('pu_po_items')
       .select('material_name,procurement_line_id,procurement_source,qty')
       .eq('po_number', poNum);
-    const grnLineIdMap = {};
-    (poLineIds||[]).forEach(r => {
-      if (r.procurement_line_id) grnLineIdMap[r.material_name] = r;
-    });
-    const itemsPayload = entries.map(e => {
-      const resolved = grnLineIdMap[e.material_name];
-      return {
-        ...e,
-        procurement_line_id: resolved?.procurement_line_id || crypto.randomUUID(),
-        procurement_source:  resolved?.procurement_source  || 'legacy_unmatched',
-      };
-    });
+    // v122: entries already carry per-location procurement_line_id/source from the PO-line split
+    const itemsPayload = entries;
 
     // PO status recompute — client computes from other active GRNs + THIS
     // GRN's in-memory entries (revise replaces its own previous items, so
@@ -24359,7 +24449,8 @@ function renderMISList() {
   if(fNum)  rows=rows.filter(m=>(m.mis_number||'').toLowerCase().includes(fNum));
   if(fTo2)  rows=rows.filter(m=>(m.issued_to||'').toLowerCase().includes(fTo2));
   if(fBy)   rows=rows.filter(m=>(m.issued_by||'').toLowerCase().includes(fBy));
-  if(fSt)   rows=rows.filter(m=>m.status===fSt);
+  if(fSt==='__override__') rows=rows.filter(m=>m.requires_override && m.status==='Pending Approval');
+  else if(fSt) rows=rows.filter(m=>m.status===fSt);
   if(fFrom) rows=rows.filter(m=>m.mis_date&&m.mis_date>=fFrom);
   if(fToD)  rows=rows.filter(m=>m.mis_date&&m.mis_date<=fToD);
   rows = _applyTableSort('mis_listBody', rows, [
@@ -24389,8 +24480,10 @@ function renderMISList() {
           : '');
     const rmcBadge = (m.issued_to||'').toLowerCase().includes('rmc plant')
       ? ' <span class="rmc-badge">RMC</span>' : '';
+    const ovrBadge = (m.requires_override && m.status==='Pending Approval')
+      ? ' <span style="font-size:10px;background:#dc2626;color:#fff;padding:1px 6px;border-radius:3px;font-weight:600;vertical-align:middle;" title="Over-issue — needs Admin override approval">OVERRIDE</span>' : '';
     return `<tr>
-      <td class="mono">${esc(m.mis_number)}${cashBadge}${rmcBadge}${auditBadge}</td><td>${fmtDate(m.issue_date)}</td>
+      <td class="mono">${esc(m.mis_number)}${cashBadge}${rmcBadge}${auditBadge}${ovrBadge}</td><td>${fmtDate(m.issue_date)}</td>
       <td>${esc(m.issued_to)}</td>
       <td>${esc(m.issued_by||'—')}</td>
       <td class="num">${fmtINR(totalVal)}</td>
@@ -24555,15 +24648,15 @@ async function addMISItem() {
       <div id="misMat_${i}_pill" style="display:none;margin-top:3px;"></div>
     </div></td>
     <td><input id="misUom_${i}" class="pu_uom" style="width:60px;" readonly></td>
-    <td style="min-width:200px;">
-      <select id="misPkg_${i}" style="width:100%;font-size:12px;" onchange="misPkgChanged(${i})" title="Work package (WBS)">
-        <option value="">— package —</option>
-      </select>
-    </td>
-    <td style="min-width:180px;">
-      <select id="misLoc_${i}" style="width:100%;font-size:12px;" disabled title="Location unit (rule-eligible)">
-        <option value="">— select package first —</option>
-      </select>
+    <td style="min-width:300px;">
+      <div class="mis-wl" style="position:relative;">
+        <input id="misWL_${i}" placeholder="Select material first…" autocomplete="off" disabled
+          style="width:100%;font-size:12px;" title="WBS package & location (type to search)"
+          oninput="misWLFilter(${i})" onfocus="misWLOpen(${i})" onkeydown="misWLKey(event,${i})">
+        <div class="mis-wl-panel" id="misWLPanel_${i}" style="display:none;position:absolute;top:100%;left:0;right:0;z-index:9999;background:#fff;border:1px solid var(--border);border-radius:8px;box-shadow:0 6px 20px rgba(0,0,0,.15);max-height:300px;overflow-y:auto;"></div>
+      </div>
+      <input type="hidden" id="misPkg_${i}"><input type="hidden" id="misLoc_${i}">
+      <div id="misWLPill_${i}" style="display:none;margin-top:3px;"></div>
     </td>
     <td class="num" id="misBalance_${i}" style="font-weight:600;color:var(--accent);">—</td>
     <td><input type="number" id="misQty_${i}" class="num" style="width:90px;" step="0.001" oninput="recalcMISRow(${i})" onwheel="this.blur()" onkeydown="if(event.key==='ArrowUp'||event.key==='ArrowDown')event.preventDefault()"></td>
@@ -24572,12 +24665,12 @@ async function addMISItem() {
     <td class="num" id="misAmt_${i}">—</td>
     <td><button class="btn btn-ghost btn-sm" onclick="this.closest('tr').remove()">✕</button></td>`;
   document.getElementById('misItemsBody').appendChild(tr);
-  _misFillPackageSelect(i);
 }
 
 // ── v90: MIS package/location pickers (Phase 4) ─────────────────────
 let _misPackages = null;                 // [{id,name,path}]
-const _misPkgLocCache = {};              // pkgId → [{loc_node_id,loc_name,loc_path}]
+const _misPkgLocCache = {};
+let _misIssueRem = {};   // rowIdx -> {rem,est,issued}  issue-remaining captured at pick              // pkgId → [{loc_node_id,loc_name,loc_path}]
 async function _misLoadPackages(){
   if (_misPackages) return _misPackages;
   const {data,error} = await sb.from('wbs_nodes')
@@ -24809,7 +24902,7 @@ function misMaterialTypeahead(i) {
       ? `<span style="color:var(--accent);font-weight:600;">Bal: ${fmtINR(bal)} ${esc(m.uom||'')}</span>`
       : `<span class="muted" style="color:#dc2626;">No stock</span>`;
     return `<div class="typeahead-item"
-      onmousedown="event.preventDefault();selectMISMaterial(${i},'${esc(m.material_name).replace(/'/g,"\\'")}','${esc(m.uom||'').replace(/'/g,"\\'")}',${bal},${rate})">
+      onmousedown="event.preventDefault();selectMISMaterial(${i},'${esc(m.material_name).replace(/'/g,"\\'")}','${esc(m.uom||'').replace(/'/g,"\\'")}',${bal},${rate},'${esc(m.material_code||'').replace(/'/g,"\\'")}')">
       <strong>${esc(m.material_name)}</strong>
       <div class="muted" style="font-size:10px;">${esc(m.material_group||'')}${m.sub_head?' · '+esc(m.sub_head):''} · ${esc(m.uom||'')} · ${balBadge}</div>
     </div>`;
@@ -24868,6 +24961,7 @@ function selectMISMaterial(i, name, uom, balance, rate, matCode) {
     btn.onclick = (ev) => { ev.preventDefault(); ev.stopPropagation(); clearMISMaterial(i); };
     if (inp.parentNode) inp.parentNode.appendChild(btn);
   }
+  _misMaterialPicked(i);   // v120: load material-aware WBS+location options
   recalcMISRow(i);
 }
 
@@ -24887,7 +24981,150 @@ function clearMISMaterial(i) {
   if (btn && btn.parentNode) btn.parentNode.removeChild(btn);
   const res = document.getElementById('misMatRes_'+i);
   if (res) res.classList.remove('show');
+  _misWLReset(i);   // v120: clear WBS+location picker
 }
+
+// ── v120: material-aware merged WBS + location picker ─────────────────
+// On material pick, fn_material_wbs_locations(code) returns every eligible
+// (package › location) pair for that material with full breadcrumb + remaining.
+// One searchable field; results grouped by WBS package. Picking one option sets
+// BOTH the hidden wbs_node_id (misPkg_i, package level) and loc_node_id (misLoc_i).
+const _misWL = {};       // rowIdx → rows from RPC
+const _misWLFlat = {};   // rowIdx → flat list matching rendered options (for kbd nav)
+const _misWLActive = {}; // rowIdx → active option index
+
+function _misWLReset(i){
+  _misWL[i]=[]; _misWLFlat[i]=[]; _misWLActive[i]=-1;
+  const inp=document.getElementById('misWL_'+i);
+  if(inp){ inp.value=''; inp.disabled=true; inp.placeholder='Select material first…'; }
+  const pk=document.getElementById('misPkg_'+i), lc=document.getElementById('misLoc_'+i);
+  if(pk){ pk.value=''; delete pk.dataset.pkgName; }
+  if(lc) lc.value='';
+  const pill=document.getElementById('misWLPill_'+i); if(pill){ pill.style.display='none'; pill.innerHTML=''; }
+  const panel=document.getElementById('misWLPanel_'+i); if(panel) panel.classList.remove('show');
+}
+
+async function _misMaterialPicked(i){
+  // clear any prior selection whenever the material (re)changes
+  const pk=document.getElementById('misPkg_'+i), lc=document.getElementById('misLoc_'+i);
+  if(pk){ pk.value=''; delete pk.dataset.pkgName; }
+  if(lc) lc.value='';
+  delete _misIssueRem[i];
+  const pill=document.getElementById('misWLPill_'+i); if(pill){ pill.style.display='none'; pill.innerHTML=''; }
+  _misWLActive[i]=-1;
+  const inp=document.getElementById('misWL_'+i);
+  const matCode = document.getElementById('misMat_'+i)?.dataset?.matCode || '';
+  if(inp) inp.value='';
+  if(!matCode){ if(inp){ inp.disabled=true; inp.placeholder='Select material first…'; } return; }
+  if(inp){ inp.disabled=true; inp.placeholder='Loading WBS / locations…'; }
+  const {data,error} = await sb.rpc('fn_material_wbs_locations',{p_material_code:matCode});
+  if(error){ toast('WBS/location load failed: '+error.message,'error'); if(inp){ inp.disabled=false; inp.placeholder='(load failed — click to retry)'; } return; }
+  const rows = data||[];
+  // merge issue-remaining (estimate − issued) = the figure the DB gate actually enforces
+  try{
+    const {data:irem} = await sb.rpc('fn_material_issue_remaining',{p_material_code:matCode});
+    const irMap=Object.fromEntries((irem||[]).map(x=>[String(x.loc_node_id),x]));
+    rows.forEach(r=>{ const x=irMap[String(r.loc_node_id)];
+      if(x){ r.issue_remaining=num(x.issue_remaining); r.est_issue=num(x.estimate); r.issued=num(x.issued); }
+      else { r.issue_remaining=num(r.remaining); } });
+  }catch(e){ rows.forEach(r=>{ if(r.issue_remaining==null) r.issue_remaining=num(r.remaining); }); }
+  _misWL[i]=rows;
+  if(inp){
+    inp.disabled=false;
+    const pkgs=[...new Set(rows.map(r=>r.package_id))];
+    inp.placeholder = !rows.length ? 'No WBS estimate for this material'
+      : pkgs.length===1 ? ('Location in '+rows[0].package_name+'…')
+      : 'Search WBS / tower / location…';
+  }
+}
+
+function misWLOpen(i){
+  misWLFilter(i);
+  const inp=document.getElementById('misWL_'+i), p=document.getElementById('misWLPanel_'+i);
+  if(inp && p) _anchorDropdown(inp, p);   // v120.1: portal to <body> so table overflow can't clip it
+}
+
+function _misWLHl(t,toks){
+  const o=esc(t);
+  const valid=(toks||[]).filter(k=>k&&k.length>=2).map(k=>k.replace(/[.*+?^${}()|[\]\\]/g,'\\$&'));
+  if(!valid.length) return o;
+  // single combined pass so one token never matches inside another token's injected <mark>
+  return o.replace(new RegExp('('+valid.join('|')+')','ig'),'<mark style="background:#fde68a;border-radius:2px;padding:0 1px;">$1</mark>');
+}
+
+function misWLFilter(i){
+  const panel=document.getElementById('misWLPanel_'+i); if(!panel) return;
+  const rows=_misWL[i]||[];
+  const q=document.getElementById('misWL_'+i)?.value||'';
+  const toks=q.toLowerCase().split(/\s+/).filter(Boolean);
+  _misWLFlat[i]=[]; _misWLActive[i]=-1;
+  const groups=[]; const gmap={};
+  rows.forEach(r=>{
+    const hay=((r.package_name||'')+' '+(r.tower_name||'')+' '+(r.loc_name||'')+' '+(r.loc_path||'')).toLowerCase();
+    if(toks.length && !toks.every(t=>hay.includes(t))) return;
+    const key=String(r.package_id);
+    if(!gmap[key]){ gmap[key]={pkg:r,locs:[]}; groups.push(gmap[key]); }
+    gmap[key].locs.push(r);
+  });
+  if(!groups.length){
+    panel.innerHTML='<div style="padding:12px;text-align:center;color:var(--muted);font-size:12px;">'+(rows.length?('No location matches “'+esc(q)+'”'):'No WBS estimate for this material')+'</div>';
+    return;
+  }
+  let html='';
+  groups.forEach(g=>{
+    html+='<div style="position:sticky;top:0;background:#ecfdf5;border-bottom:1px solid #a7f3d0;padding:6px 10px;font-size:10px;font-weight:700;color:#065f46;z-index:2;">📦 '+_misWLHl(g.pkg.package_name,toks)+' <span style="font-weight:500;opacity:.75;">'+esc(g.pkg.package_path||'')+'</span></div>';
+    g.locs.forEach(r=>{
+      const idx=_misWLFlat[i].length; _misWLFlat[i].push(r);
+      const rem=num(r.issue_remaining!=null?r.issue_remaining:r.remaining);
+      const remCss = rem<=0 ? 'color:#dc2626;' : rem<20 ? 'color:#d97706;' : 'color:var(--accent);';
+      const remTxt = rem<=0 ? '0 — none issuable' : fmtINR(rem)+' issuable';
+      const _l3=(r.loc_path||'').split(' › ').slice(-3);
+      const _leaf=_l3.length?_l3[_l3.length-1]:(r.loc_name||'');
+      const _up=_l3.slice(0,-1).join(' · ');
+      html+='<div class="misWLopt" data-i="'+idx+'" onmousedown="event.preventDefault();misWLPick('+i+','+idx+')" '
+        +'style="padding:7px 10px 7px 18px;cursor:pointer;border-bottom:1px solid #f1f5f9;display:flex;justify-content:space-between;gap:10px;align-items:center;">'
+        +'<div style="font-size:12px;">'+(_up?'<span style="color:var(--accent-2);font-weight:600;">'+_misWLHl(_up,toks)+'</span> · ':'')+'<span style="font-weight:600;">'+_misWLHl(_leaf,toks)+'</span>'
+        +'<div style="font-size:10px;color:var(--muted);margin-top:1px;">'+esc(r.loc_path||'')+'</div></div>'
+        +'<div style="font-size:11px;font-weight:600;white-space:nowrap;'+remCss+'">'+remTxt+'</div></div>';
+    });
+  });
+  panel.innerHTML=html;
+}
+
+function misWLPick(i,idx){
+  const r=(_misWLFlat[i]||[])[idx]; if(!r) return;
+  const pk=document.getElementById('misPkg_'+i), lc=document.getElementById('misLoc_'+i);
+  if(pk){ pk.value=r.package_id; pk.dataset.pkgName=r.package_name||''; }
+  if(lc) lc.value=r.loc_node_id;
+  _misIssueRem[i]={rem:num(r.issue_remaining!=null?r.issue_remaining:r.remaining), est:num(r.est_issue!=null?r.est_issue:r.remaining), issued:num(r.issued||0)};
+  const inp=document.getElementById('misWL_'+i); if(inp) inp.value=((r.loc_path||'').split(' › ').slice(-3).join(' · '))||(r.loc_name||'');
+  const pill=document.getElementById('misWLPill_'+i);
+  if(pill){ pill.style.display='';
+    const _u=document.getElementById('misUom_'+i)?.value||'';
+    const _rm=num(r.issue_remaining!=null?r.issue_remaining:r.remaining);
+    const _rc=_rm<=0?'#dc2626':(_rm<20?'#d97706':'#0d9488');
+    const _rt=_rm<=0?'0 — none issuable':(fmtINR(_rm)+(_u?' '+_u:'')+' issuable');
+    pill.innerHTML='<span style="display:inline-block;padding:3px 9px;background:var(--panel-2);border:1px solid var(--border);border-radius:11px;font-size:10px;line-height:1.4;"><b style="color:#065f46;">📦 '+esc(r.package_name||'')+'</b> &nbsp;›&nbsp; 📍 '+esc(r.loc_path||'')+' &nbsp;·&nbsp; <b style="color:'+_rc+';">'+_rt+'</b></span>'; }
+  const panel=document.getElementById('misWLPanel_'+i); if(panel) panel.classList.remove('show');
+  recalcMISRow(i);   // re-evaluate the issue-ceiling for any qty already typed
+}
+
+function misWLKey(e,i){
+  const panel=document.getElementById('misWLPanel_'+i); if(!panel) return;
+  const flat=_misWLFlat[i]||[];
+  if(e.key==='Escape'){ panel.classList.remove('show'); return; }
+  if(e.key==='ArrowDown'||e.key==='ArrowUp'){
+    e.preventDefault();
+    if(!panel.classList.contains('show')) misWLOpen(i);
+    let a=(_misWLActive[i]??-1)+(e.key==='ArrowDown'?1:-1);
+    if(a<0)a=flat.length-1; if(a>=flat.length)a=0; _misWLActive[i]=a;
+    [...panel.querySelectorAll('.misWLopt')].forEach(o=>{ const on=(+o.dataset.i===a);
+      o.style.background=on?'rgba(13,148,136,.10)':''; if(on)o.scrollIntoView({block:'nearest'}); });
+  }
+  if(e.key==='Enter'){ const a=_misWLActive[i]??-1; if(a>=0){ e.preventDefault(); misWLPick(i,a); } }
+}
+
+
 
 function recalcMISRow(i) {
   const balance = parseFloat(document.getElementById('misMatBal_'+i)?.value || 0);
@@ -24901,6 +25138,36 @@ function recalcMISRow(i) {
   const amt = (parseFloat(qtyEl.value)||0) * rate;
   const amtEl = document.getElementById('misAmt_'+i);
   if (amtEl) amtEl.textContent = fmtINR(amt);
+  // ── issue-ceiling (estimate − issued); over -> mark line + require override reason ──
+  const q = parseFloat(qtyEl.value)||0;
+  const ir = _misIssueRem[i];
+  const row = document.getElementById('misItem_'+i) || qtyEl.closest('tr');
+  const over = !!ir && q > num(ir.rem)+0.001;
+  qtyEl.style.borderColor = over ? '#dc2626' : '';
+  if (row) row.dataset.over = over ? '1' : '';
+  let noteEl = document.getElementById('misOver_'+i);
+  if (over) {
+    if (!noteEl) { noteEl=document.createElement('div'); noteEl.id='misOver_'+i;
+      noteEl.style.cssText='font-size:10px;color:#b91c1c;font-weight:600;margin-top:3px;white-space:nowrap;';
+      qtyEl.parentNode.appendChild(noteEl); }
+    noteEl.textContent='⚠ +'+_qf(q-num(ir.rem))+' over estimate ('+_qf(num(ir.rem))+' issuable)';
+  } else if (noteEl) { noteEl.remove(); }
+  _misRefreshOverrideUI();
+}
+
+function _misRefreshOverrideUI(){
+  const overRows=[...document.querySelectorAll('#misItemsBody tr')].filter(tr=>tr.dataset.over==='1');
+  const box=document.getElementById('misOverrideBox');
+  const btn=document.getElementById('mis_saveBtn');
+  const sum=document.getElementById('misOverrideSummary');
+  if(overRows.length){
+    if(box) box.style.display='';
+    if(sum) sum.textContent=overRows.length+' line(s) exceed the approved estimate — Admin override approval required.';
+    if(btn){ btn.textContent='⤴ Submit for Admin Override Approval'; btn.classList.remove('btn-primary'); btn.classList.add('btn-warn'); }
+  } else {
+    if(box) box.style.display='none';
+    if(btn){ btn.textContent='Save & Issue'; btn.classList.remove('btn-warn'); btn.classList.add('btn-primary'); }
+  }
 }
 
 function closeMISForm() {
@@ -24928,6 +25195,7 @@ async function saveMIS() {
   const locSel=document.getElementById('mis_location');
   const locOpt=locSel?.options[locSel.selectedIndex];
   const items=[];
+  const overInfo=[];   // lines exceeding the issue ceiling
   const trsAll = [...document.querySelectorAll('#misItemsBody tr')];
   // Validate every populated line: material must be selected from master
   for (let i=0; i<trsAll.length; i++) {
@@ -24951,12 +25219,12 @@ async function saveMIS() {
       const locV = ri2!=null ? document.getElementById('misLoc_'+ri2)?.value : '';
       if (!pkgV) {
         toast(`Line ${i+1} (${mat}): select a Work Package — WBS tagging is mandatory`,'error');
-        document.getElementById('misPkg_'+ri2)?.focus();
+        document.getElementById('misWL_'+ri2)?.focus();
         return;
       }
       if (!locV) {
         toast(`Line ${i+1} (${mat}): select a Location Unit — location tagging is mandatory`,'error');
-        document.getElementById('misLoc_'+ri2)?.focus();
+        document.getElementById('misWL_'+ri2)?.focus();
         return;
       }
     }
@@ -24978,14 +25246,21 @@ async function saveMIS() {
     const wbsNodeId = pkgSel?.value ? Number(pkgSel.value) : null;
     const locNodeId = locSel?.value || null;
     const matCode  = matInp?.dataset?.matCode||null;
+    const _ir=_misIssueRem[ri]; if(_ir && qty > num(_ir.rem)+0.001) overInfo.push({mat, over:qty-num(_ir.rem), rem:num(_ir.rem)});
     items.push({sno:items.length+1, material_code:matCode, material_name:mat, uom:uom,
       qty_issued:qty, stock_before:balance,
       stock_after:Math.max(0, balance - qty),
       unit_rate:rate, amount:qty*rate,
       wbs_node_id:wbsNodeId, loc_node_id:locNodeId,
-      wbs_activity:wbsNodeId ? (pkgSel.options[pkgSel.selectedIndex]?.text||null) : null});
+      wbs_activity:wbsNodeId ? (pkgSel?.dataset?.pkgName||null) : null});
   });
   if(!items.length){toast('Add at least one item','error');return;}
+  // over-issue override: store must supply a reason; routes to Admin approval
+  let overrideReason=null;
+  if(overInfo.length){
+    overrideReason=(document.getElementById('mis_overrideReason')?.value||'').trim();
+    if(!overrideReason){ toast('Over-issue needs a reason (entered by store) for '+overInfo.length+' line(s)','error'); document.getElementById('mis_overrideReason')?.focus(); return; }
+  }
 
   // ── Live stock check at save time ─────────────────────────────────────────
   // Re-read pu_stock_balance NOW (not from the form cache) to catch concurrent
@@ -25114,13 +25389,16 @@ async function saveMIS() {
       items: itemsPayload,
     };
     if (revisingMIS) payload.doc_number = revisingMIS;
+    if (overrideReason){ payload.allow_override=true; payload.override_reason=overrideReason; }
     const res = await puRPC('rpc_save_mis', payload);
     // v90 fix2: single shared toast element — the nag and the success
     // message must be ONE toast or the success overwrites the warning.
     const misRef = revisingMIS || res.doc_number;
     const okMsg = revisingMIS
       ? 'MIS '+misRef+' revised and resubmitted for approval'
-      : 'MIS '+misRef+' saved — pending Site Manager approval';
+      : (res.requires_override
+          ? 'MIS '+misRef+' submitted for Admin override approval ('+_qf(res.override_qty||0)+' over estimate)'
+          : 'MIS '+misRef+' saved — pending Site Manager approval');
     if (revisingMIS) delete document.getElementById('misForm').dataset.revisingMIS;
     if (res.untagged_count > 0) {
       toast('⚠ '+okMsg+' — but '+res.untagged_count+' line(s) have no WBS package/location and will be INVISIBLE to budget tracking','warn',8000);
@@ -25133,7 +25411,11 @@ async function saveMIS() {
 }
 
 async function confirmApproveMIS(misNum) {
-  if (!hasPerm('canApproveMIS')) { toast('Only Site Manager can approve MIS','error'); return; }
+  const _meta = window._misApprovalMeta || {};
+  if (_meta.requires_override) {
+    if (!hasPerm('canOverrideMIS')) { toast('Over-issue override can be approved only by Admin','error'); return; }
+    if (_meta.issued_by_id && state.userId && _meta.issued_by_id===state.userId) { toast('Maker-checker: you raised this over-issue — a different Admin must approve','error'); return; }
+  } else if (!hasPerm('canApproveMIS')) { toast('Only Site Manager can approve MIS','error'); return; }
 
   const misItems = window._misApprovalItems || [];
 
@@ -25168,7 +25450,9 @@ async function viewMIS(misNum) {
   const perms = mergedPerms();
   const isPending = h?.status === 'Pending Approval';
   const isAuditEntry = h?.status === 'Audit Entry';
-  const canApprove = perms.canApproveMIS && isPending;
+  const reqOv = !!h?.requires_override;
+  const isSelfMaker = !!(h?.issued_by_id && state.userId && h.issued_by_id===state.userId);
+  const canApprove = isPending && (reqOv ? (perms.canOverrideMIS && !isSelfMaker) : perms.canApproveMIS);
   const total=(items||[]).reduce((s,it)=>s+num(it.amount),0);
   const anyCash = (items||[]).some(it=>it.is_cash_purchase);
 
@@ -25192,9 +25476,10 @@ async function viewMIS(misNum) {
 
   // Item rows
   const itemRows = (items||[]).map((it,idx) => {
+    const ovBadge = num(it.over_issue_qty)>0 ? ` <span style="font-size:9px;background:#dc2626;color:#fff;padding:1px 5px;border-radius:3px;font-weight:700;" title="Issued over estimate">OVER +${_qf(it.over_issue_qty)}</span>` : '';
     return `<tr>
       <td>${it.sno}</td>
-      <td>${esc(it.material_name)}${lineBadge(it)}</td>
+      <td>${esc(it.material_name)}${lineBadge(it)}${ovBadge}</td>
       <td>${esc(it.uom)}</td>
       <td class="num">${fmtINR(it.stock_before)}</td>
       <td class="num">${fmtINR(it.qty_issued)}</td>
@@ -25205,12 +25490,21 @@ async function viewMIS(misNum) {
 
 
   // Action buttons
+  const ovrBanner = h?.requires_override
+    ? `<div style="background:#fffbeb;border:1px solid #fde68a;border-radius:6px;padding:8px 12px;margin-bottom:10px;font-size:12px;">
+        <span style="font-weight:700;color:#b45309;">⚠ Over-issue override</span>
+        <span style="color:#7c2d12;margin-left:6px;">${h.override_qty!=null?(_qf(h.override_qty)+' over the approved estimate.'):''}</span>
+        ${h.override_reason?`<div style="margin-top:4px;color:#7c2d12;"><b>Reason (store):</b> ${esc(h.override_reason)}</div>`:''}
+       </div>`
+    : '';
   let actionBtns = '';
   if (!isAuditEntry && canApprove) {
     actionBtns = `
       <button class="btn btn-primary"
-        onclick="confirmApproveMIS('${esc(misNum)}')">✓ Approve</button>
+        onclick="confirmApproveMIS('${esc(misNum)}')">${reqOv?'✓ Approve Override & Issue':'✓ Approve'}</button>
       <button class="btn btn-danger" onclick="closeModal();rejectDoc('MIS','${esc(misNum)}')">✕ Reject</button>`;
+  } else if (!isAuditEntry && isPending && reqOv) {
+    actionBtns = `<div style="font-size:12px;color:#92400e;background:#fffbeb;border:1px solid #fde68a;border-radius:6px;padding:8px 12px;">${isSelfMaker?'You raised this over-issue — a <b>different Admin</b> must authorize it.':'This over-issue can be authorized only by an <b>Admin</b>.'}</div>`;
   }
   if (!isAuditEntry && hasPerm('canCreateMIS') && h?.status === 'Rejected - Correction') {
     actionBtns += `<button class="btn btn-warn" onclick="reviseMIS('${esc(misNum)}')">✎ Revise & Resubmit</button>`;
@@ -25229,6 +25523,7 @@ async function viewMIS(misNum) {
   window._misApprovalItems = (items||[]).map(it=>({
     id: it.id, sno: it.sno, material_name: it.material_name
   }));
+  window._misApprovalMeta = { requires_override: !!h?.requires_override, issued_by_id: h?.issued_by_id||null };
 
   openModal(`
     <h3 style="margin-bottom:4px;">MIS — ${esc(misNum)}${headerBadge}${auditHeaderBadge}
@@ -25243,6 +25538,7 @@ async function viewMIS(misNum) {
       ${h?.remarks?`<div style="grid-column:span 2;"><label class="muted" style="font-size:11px;">REMARKS</label><div style="font-size:12px;">${esc(h.remarks)}</div></div>`:''}
     </div>
     ${rejBanner}
+    ${ovrBanner}
     ${auditBanner}
     <div class="table-wrap">
       <table>
