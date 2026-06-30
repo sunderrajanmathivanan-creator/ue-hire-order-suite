@@ -446,12 +446,13 @@ th.sortable.desc::after { content:' ↓'; opacity:.9; }
    Keyboard ↑/↓ still works; mobile numeric keypad still appears. */
 input[type="number"]::-webkit-inner-spin-button,
 input[type="number"]::-webkit-outer-spin-button {
-  -webkit-appearance: none;
-  margin: 0;
+  -webkit-appearance: none !important;
+  appearance: none !important;
+  margin: 0 !important;
 }
 input[type="number"] {
-  -moz-appearance: textfield;
-  appearance: textfield;
+  -moz-appearance: textfield !important;
+  appearance: textfield !important;
 }
 
 /* ── T&C Rich Editor ─────────────────────────────────────────────────────── */
@@ -608,6 +609,47 @@ input[type="number"] {
 .hoi-raleaf input[type=number].err{border-color:var(--danger);background:#fef2f2;}
 .hoi-raleaf .rem-hint{font-size:8.5px;color:var(--muted);display:block;text-align:right;margin-top:1px;}
 .hoi-roNote{font-size:11px;color:var(--muted);background:#f1f5f9;border:1px solid var(--border);border-radius:6px;padding:6px 10px;margin:8px 0;display:inline-block;}
+
+/* ===== v128 grouped MIR items ===== */
+.mi-bar{display:flex;align-items:center;gap:10px;margin-bottom:10px;}
+.mi-bar .btn-sm{padding:5px 10px;}
+.mi-colhdr{display:grid;grid-template-columns:30px 1fr 70px 140px 1fr 36px;gap:10px;padding:4px 12px;font-size:10px;text-transform:uppercase;letter-spacing:.4px;color:var(--muted);font-weight:600;}
+.mi-colhdr .r{text-align:right;}
+.mi-empty{padding:18px;text-align:center;color:var(--muted);font-size:13px;border:1px dashed var(--border);border-radius:8px;}
+.mi-mat{border:1px solid var(--border);border-radius:9px;margin-bottom:9px;overflow:hidden;background:#fff;}
+.mi-head{display:grid;grid-template-columns:30px 1fr 70px 140px 1fr 36px;gap:10px;align-items:center;padding:9px 12px;background:var(--panel-2);}
+.mi-gi{font-size:12px;color:var(--muted);text-align:center;}
+.mi-nm{min-width:0;display:flex;align-items:center;gap:8px;}
+.mi-exp{cursor:pointer;color:var(--muted);width:14px;flex-shrink:0;text-align:center;}
+.mi-del{cursor:pointer;color:var(--muted);width:16px;flex-shrink:0;}
+.mi-nb{min-width:0;}
+.mi-t{font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.mi-s{font-size:10px;color:var(--muted);}
+.mi-code{font-family:ui-monospace,Menlo,monospace;font-size:10px;color:var(--accent);}
+.mi-uom{font-size:12px;color:var(--muted);text-align:center;}
+.mi-cum{text-align:right;}
+.mi-cum .mi-q{font-weight:700;font-size:15px;font-variant-numeric:tabular-nums;}
+.mi-cum .mi-l{font-size:10px;color:var(--muted);}
+.mi-qh,.mi-ql{width:100px;padding:5px 6px;border:1px solid var(--border);border-radius:4px;font-size:13px;text-align:right;font-variant-numeric:tabular-nums;}
+.mi-cap{font-size:10px;color:var(--muted);margin-top:2px;text-align:right;}
+.mi-cap.over{color:#d97706;}
+.mi-specwrap{min-width:0;}
+.mi-specwrap.mi-single{display:flex;align-items:center;gap:8px;}
+.mi-spec{padding:5px 7px;border:1px solid var(--border);border-radius:4px;font-size:12px;width:100%;font-family:inherit;}
+.mi-single .mi-spec{max-width:150px;}
+.mi-locpill{display:inline-flex;align-items:center;gap:5px;padding:2px 8px;background:#fff;border:1px solid var(--border);border-radius:11px;font-size:11px;color:var(--muted);white-space:nowrap;}
+.mi-appr{color:#16a34a;font-size:9px;} .mi-draft{color:#d97706;font-size:9px;}
+.mi-locs{display:none;border-top:1px solid var(--border);}
+.mi-locs.open{display:block;}
+.mi-locs.mi-singlerow{border-top:1px dashed #eef2f7;}
+.mi-locrow{display:grid;grid-template-columns:30px 1fr 70px 140px 1fr 36px;gap:10px;align-items:center;padding:7px 12px;border-bottom:1px solid #f1f5f9;}
+.mi-locrow:last-child{border-bottom:none;}
+.mi-lp{grid-column:2;min-width:0;font-size:12px;display:flex;align-items:center;gap:6px;}
+.mi-arr{color:var(--muted);}
+.mi-ppath{color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.mi-qwrap{grid-column:4;text-align:right;}
+.mi-rmk{grid-column:5;padding:5px 7px;border:1px solid var(--border);border-radius:4px;font-size:12px;width:100%;font-family:inherit;}
+.mi-lx{grid-column:6;cursor:pointer;color:var(--muted);background:#fff;border:1px solid var(--border);border-radius:6px;width:28px;height:28px;display:inline-flex;align-items:center;justify-content:center;font-size:12px;}
 </style>
 </head>
 <body>
@@ -2419,14 +2461,15 @@ input[type="number"] {
         <div class="field"><label>Purpose / Work Front</label><input id="mir_purpose" placeholder="e.g. Foundation raft slab, Tower A"></div>
       </div>
       <div style="margin-top:16px;">
-        <h3 style="font-size:13px;margin-bottom:8px;color:var(--text);">Material Items Required</h3>
-        <div class="table-wrap">
-          <table>
-            <thead><tr><th>#</th><th>Material</th><th>UOM</th><th class="num">Qty Required</th><th>Specification</th><th>Location / Allocation</th><th>Remarks</th><th></th></tr></thead>
-            <tbody id="mirItemsBody"></tbody>
-          </table>
+        <div class="mi-bar">
+          <h3 style="font-size:13px;margin:0;color:var(--text);">Material Items Required</h3>
+          <button class="btn btn-ghost btn-sm" type="button" onclick="_miSetAll(true)">▾ Expand all</button>
+          <button class="btn btn-ghost btn-sm" type="button" onclick="_miSetAll(false)">▸ Collapse all</button>
+          <span style="margin-left:auto;"></span>
+          <button class="btn btn-primary btn-sm" onclick="openMirEstimatePicker()">＋ Add from estimate</button>
         </div>
-        <button class="btn btn-ghost btn-sm" style="margin-top:8px;" onclick="openMirEstimatePicker()">＋ Add from estimate</button>
+        <div class="mi-colhdr"><div>#</div><div>Material</div><div style="text-align:center;">UOM</div><div class="r">Qty required</div><div>Specification</div><div></div></div>
+        <div id="mirItemsHost"></div>
       </div>
       <div class="field" style="margin-top:12px;max-width:600px;"><label>Remarks</label><textarea id="mir_remarks" rows="2"></textarea></div>
       <div class="field" style="margin-top:8px;max-width:300px;"><label>Raised By</label><input id="mir_raisedBy" readonly style="opacity:.6;"></div>
@@ -17306,23 +17349,16 @@ function _draftCaptureMIR() {
     remarks:      document.getElementById('mir_remarks')?.value || null,
   };
   const items = [];
-  document.querySelectorAll('#mirItemsBody tr').forEach(tr => {
-    const matEl = tr.querySelector('.pu_material');
+  _mirGroups.forEach(g=>g.locs.forEach(l=>{
     items.push({
-      material_code: tr.dataset.matCode || matEl?.dataset?.matCode || '',
-      material_name: matEl?.value || '',
-      uom:           tr.querySelector('.pu_uom')?.value || '',
-      qty_required:  parseFloat(tr.querySelector('.mir_qty')?.value) || 0,
-      specification: tr.querySelector('.mir_spec')?.value || '',
-      remarks:       tr.querySelector('.mir_rmk')?.value || '',
-      wbs_node_id:   tr.dataset.wbsNode || '',
-      loc_node_id:   tr.dataset.locNode || '',
-      loc_name:      tr.dataset.locName || '',
-      loc_path:      tr.dataset.locPath || '',
-      leaf_name:     tr.dataset.leafName || '',
-      status:        tr.dataset.status || 'draft',
+      material_code: g.code, material_name: g.name, uom: g.uom,
+      qty_required:  Number(l.qty)||0,
+      specification: g.spec || '', remarks: l.rmk || '',
+      wbs_node_id:   (l.leafId!=null?String(l.leafId):''),
+      loc_node_id:   l.locId, loc_name: l.locName, loc_path: l.locPath,
+      leaf_name:     '', status: l.status || 'draft',
     });
-  });
+  }));
   return { header, items };
 }
 
@@ -17333,30 +17369,24 @@ function _draftRestoreMIR(pl) {
   if (h.project)     document.getElementById('mir_project').value    = h.project;
   if (h.purpose)     document.getElementById('mir_purpose').value    = h.purpose;
   if (h.remarks)     document.getElementById('mir_remarks').value    = h.remarks;
-  document.getElementById('mirItemsBody').innerHTML = '';
-  _mirItemC = 0;
-  // Resolve loc/wbs display names from the cached trees (the row builder needs them
-  // for the location pill; addMIRItemFromEstimate does not persist them to dataset).
+  _mirGroups = []; _mirOpen = new Set();
   const locMap = Object.fromEntries((_locTreeCache || []).map(n => [String(n.id), n]));
-  const wbsMap = Object.fromEntries((_wbsTreeCache || []).map(n => [String(n.id), n]));
   (pl.items || []).forEach(it => {
     const ln = locMap[String(it.loc_node_id)];
-    const wn = wbsMap[String(it.wbs_node_id)];
-    addMIRItemFromEstimate({
+    _mirModelUpsert({
       code: it.material_code, name: it.material_name, uom: it.uom,
-      leafId: it.wbs_node_id, leaf: (wn ? wn.name : (it.leaf_name || '')),
       locId: it.loc_node_id,
       locName: (ln ? ln.name : (it.loc_name || '')),
       locPath: (ln ? ln.path : (it.loc_path || '')),
-      status: it.status, est: 0, remaining: it.qty_required,
-    });
-    const i = _mirItemC - 1;
-    const tr = document.getElementById('mirItem_' + i);
-    if (!tr) return;
-    const q = tr.querySelector('.mir_qty'); if (q) q.value = it.qty_required;
-    const sp = tr.querySelector('.mir_spec'); if (sp) sp.value = it.specification || '';
-    const rm = tr.querySelector('.mir_rmk');  if (rm) rm.value = it.remarks || '';
+      status: it.status,
+      remaining: Number(it.qty_required)||0,   // draft has no live remaining; cap at saved qty (v127 parity)
+      leafId: (it.wbs_node_id!=='' && it.wbs_node_id!=null ? Number(it.wbs_node_id) : null),
+      spec: it.specification || '', rmk: it.remarks || '',
+    }, Number(it.qty_required)||0);
+    const g = _mirFindGroup(it.material_code); if (g && it.specification) g.spec = it.specification;
+    const l = g && g.locs.find(x=>String(x.locId)===String(it.loc_node_id)); if (l) l.rmk = it.remarks || '';
   });
+  _renderMirItems();
 }
 
 // ---- PO adapter ----
@@ -17705,7 +17735,6 @@ async function _draftRestoreWOC(pl) {
 // ============================================================
 // MIR — MATERIAL INDENT REQUEST
 // ============================================================
-let _mirItemC = 0;
 
 async function loadMIRList() {
   _renderDraftsPanel('MIR');
@@ -18035,8 +18064,7 @@ async function newMIR() {
   document.getElementById('mir_raisedBy').value = state.userName;
   document.getElementById('mir_number').value = 'MIR/' + currentFY() + '/—— (auto)';
   ['mir_purpose','mir_remarks'].forEach(id => { const e=document.getElementById(id); if(e) e.value=''; });
-  document.getElementById('mirItemsBody').innerHTML = '';
-  _mirItemC = 0;
+  _mirGroups = []; _mirOpen = new Set(); _renderMirItems();
   window.scrollTo(0,0);
 }
 
@@ -18052,9 +18080,6 @@ function closeMIRForm() {
 // rpc_save_po / rpc_save_mis can resolve it. MIR cap = estimate - MIR raised; warn only.
 // ============================================================
 let _mirEstTreeCache = null;
-let _mirEstOpen = new Set();
-let _mirEstFilter = 'all';
-let _mirEstFlat = [];
 
 function _fmtQ(n){ return (Math.round((Number(n)||0)*1000)/1000).toLocaleString('en-IN'); }
 function _fmtQin(n){ return (Math.round((Number(n)||0)*1000)/1000); }
@@ -18118,11 +18143,25 @@ async function _loadMirEstimateTree(force){
   finally { pbDone(); }
 }
 
-function _mirAlreadyAdded(code, locId){
-  return [...document.querySelectorAll('#mirItemsBody tr')].some(tr=>
-    (tr.dataset.matCode||'')===(code||'') && (tr.dataset.locNode||'')===String(locId));
-}
+// ============================================================
+// MIR ESTIMATE PICKER — v127 side-by-side, location-first, approved-only.
+// Grain A: selectable unit = (material_code x loc_node_id). Packages are a
+// display grouping; remaining is pooled per (code,loc) — summed est across
+// WBS slices minus MIR already raised (fixes the v126 double-subtraction).
+// Hard ceiling: cart + committed-row qty can never exceed pooled remaining.
+// ============================================================
+let _mpCells = null;     // { byKey:Map('code|loc'->cell), byLoc:Map(locId->[cell]) }
+let _mpRoots = [];       // location tree roots (approved-bearing only)
+let _mpNodeCells = {};   // node key -> [cell] (for bulk select / tri-state)
+let _mpCart = new Map(); // 'code|loc' -> {code,name,uom,locId,locName,locPath,status,remaining,leafId,pkgs,qty,orphan}
+let _mpOpen = new Set();
+let _mpExp  = new Set();  // expanded cart material codes
 
+const _mpKey = (code,locId)=> (code||'') + '|' + String(locId);
+const _mpLabel3 = p => (p||'').split(' \u203a ').slice(-3).join(' \u00b7 ');
+const _mpKind = nt => ({stage:'Stage',tower:'Tower',floor:'Floor',unit:'Unit'}[nt] || 'Area');
+
+// ---- preserved: flat (code|loc -> est) map used by PO/cap data elsewhere ----
 function _flatEstMap(){
   const m={};
   (_mirEstTreeCache||[]).forEach(L=>(L.locArr||[]).forEach(LO=>(LO.skuArr||[]).forEach(S=>{
@@ -18131,126 +18170,426 @@ function _flatEstMap(){
   return m;
 }
 
+// ---- pooled cells (grain A), approved-only ----
+function _mirPooledCells(){
+  const byKey=new Map();
+  (_mirEstTreeCache||[]).forEach(L=>(L.locArr||[]).forEach(LO=>{
+    if(LO.status!=='approved') return;             // approved-only
+    (LO.skuArr||[]).forEach(S=>{
+      if(!S.code) return;                          // must have a material code
+      const k=_mpKey(S.code,LO.locId);
+      let c=byKey.get(k);
+      if(!c){ c={code:S.code,name:S.name,uom:S.uom,locId:String(LO.locId),locName:LO.locName,
+                 locPath:LO.locPath,status:LO.status,est:0,mir:(S.mir||0),pkgs:[]}; byKey.set(k,c); }
+      c.est += (S.est||0);
+      // S.mir is keyed (code|loc) — identical across WBS slices; take once (max guards stale)
+      c.mir = Math.max(c.mir, S.mir||0);
+      c.pkgs.push({leafId:L.leafId, leaf:L.leaf, est:S.est||0});
+    });
+  }));
+  const byLoc=new Map();
+  for(const c of byKey.values()){
+    c.pkgs.sort((a,b)=>b.est-a.est);
+    c.leafId=c.pkgs[0]?c.pkgs[0].leafId:null;       // stamp the largest-est package
+    c.pkgName=c.pkgs[0]?c.pkgs[0].leaf:'\u2014';
+    c.remaining=Math.round((c.est - c.mir)*1e6)/1e6;
+    if(!byLoc.has(c.locId)) byLoc.set(c.locId,[]);
+    byLoc.get(c.locId).push(c);
+  }
+  for(const arr of byLoc.values()) arr.sort((a,b)=>(a.name||'').localeCompare(b.name||''));
+  return {byKey,byLoc};
+}
+
+// ---- build location tree (Stage > Tower > Floor[leaf]) over cells ----
+async function _mpBuildTree(){
+  const locTree = await _loadLocTree();
+  const map = Object.fromEntries((locTree||[]).map(n=>[String(n.id),n]));
+  _mpNodeCells = {};
+  const nodes = {};   // id -> {id,name,kind,path,children:[],cells:[]}
+  function ensure(id){
+    const n=map[id]; if(!n) return null;
+    if(nodes[id]) return nodes[id];
+    const node={id:String(id),name:n.name,kind:_mpKind(n.node_type),path:n.path,
+                parentId:n.parent_id!=null?String(n.parent_id):null,children:[],cells:[]};
+    nodes[id]=node; return node;
+  }
+  // attach cells to their leaf-location node, create ancestor chain
+  for(const [locId,cells] of _mpCells.byLoc){
+    const leaf=ensure(locId); if(!leaf) continue;
+    leaf.cells=cells; leaf.isFloor=true;
+    let cur=leaf;
+    while(cur && cur.parentId){ const p=ensure(cur.parentId); if(!p) break;
+      if(!p.children.includes(cur)) p.children.push(cur); cur=p; }
+  }
+  // roots = nodes without a parent in the set
+  const roots=Object.values(nodes).filter(n=>!n.parentId || !nodes[n.parentId]);
+  // accumulate cells per node (for bulk + tri-state) and sort
+  (function walk(n){
+    let acc=[...(n.cells||[])];
+    n.children.sort((a,b)=>(a.name||'').localeCompare(b.name||'',undefined,{numeric:true}));
+    n.children.forEach(c=>{ walk(c); acc=acc.concat(_mpNodeCells[c.id]||[]); });
+    _mpNodeCells[n.id]=acc;
+    return acc;
+  });
+  roots.sort((a,b)=>(a.name||'').localeCompare(b.name||''));
+  roots.forEach(r=>(function walk(n){ let acc=[...(n.cells||[])];
+    n.children.sort((a,b)=>(a.name||'').localeCompare(b.name||'',undefined,{numeric:true}));
+    n.children.forEach(c=>{ walk(c); acc=acc.concat(_mpNodeCells[c.id]||[]); });
+    _mpNodeCells[n.id]=acc; })(r));
+  _mpRoots=roots;
+}
+
 async function openMirEstimatePicker(){
   await _loadMirEstimateTree(true);
+  _mpCells=_mirPooledCells();
+  await _mpBuildTree();
+  _mpInjectCss();
+  // seed cart from the grouped MIR model so the picker reflects current selection
+  _mpCart=new Map(); _mpExp=new Set(); _mpOpen=new Set();
+  _mirGroups.forEach(g=>g.locs.forEach(l=>{
+    const k=_mpKey(g.code,l.locId); const cell=_mpCells.byKey.get(k);
+    if(cell){ _mpCart.set(k,{...cell,qty:l.qty}); }
+    else { _mpCart.set(k,{code:g.code,name:g.name,uom:g.uom,locId:l.locId,locName:l.locName,locPath:l.locPath,
+        status:l.status,remaining:(l.remaining!=null?l.remaining:l.qty),leafId:l.leafId,pkgs:[],pkgName:'',qty:l.qty,orphan:true}); }
+  }));
+  // auto-open the branches that already hold selected cells
+  _mpCart.forEach(v=>{ _mpExpandTo(v.locId); });
+
   openModal(
-    '<div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">'
-    + '<h3 style="margin:0;font-size:15px;">Add from material estimate</h3>'
-    + '<div style="margin-left:auto;display:inline-flex;border:1px solid var(--border);border-radius:7px;overflow:hidden;">'
-    + '<button id="mirEstAll"  class="btn btn-ghost btn-sm" style="border:0;border-radius:0;" onclick="_mirEstSetFilter(\'all\')">All</button>'
-    + '<button id="mirEstAppr" class="btn btn-ghost btn-sm" style="border:0;border-radius:0;" onclick="_mirEstSetFilter(\'appr\')">Approved only</button>'
-    + '</div></div>'
-    + '<div style="font-size:11px;color:var(--muted);margin-bottom:8px;">Only estimated materials appear. Pick an SKU at a location to add it as a MIR line. Qty defaults to remaining; you can edit it after.</div>'
-    + '<div id="mirEstTree" style="max-height:60vh;overflow:auto;border:1px solid var(--border);border-radius:8px;padding:6px;"></div>'
-    + '<div style="font-size:11px;color:var(--muted);margin-top:8px;"><span style="color:#16a34a;">\u25cf</span> approved (hard budget) &nbsp; <span style="color:#d97706;">\u25cf</span> draft (advisory) &nbsp;\u00b7&nbsp; remaining = estimate \u2212 MIR already raised</div>'
-    + '<div style="text-align:right;margin-top:10px;"><button class="btn btn-sm" onclick="closeModal()">Done</button></div>',
+    '<div class="mp-modal">'
+    + '<div class="mp-head"><div><h3>Add from material estimate</h3>'
+    +   '<div class="mp-sub">Only <b>approved</b> estimate cells appear. Tick a floor for all its bulk materials. Qty is capped at remaining.</div></div></div>'
+    + '<div class="mp-split">'
+    +   '<div class="mp-pane mp-left">'
+    +     '<div class="mp-pane-head"><span class="mp-ttl">Estimate</span>'
+    +       '<div class="mp-search"><input id="mpSearch" placeholder="Search material / location / code\u2026" oninput="_mpRenderTree()"></div></div>'
+    +     '<div class="mp-body" id="mpTree"></div>'
+    +   '</div>'
+    +   '<div class="mp-pane mp-right">'
+    +     '<div class="mp-pane-head"><span class="mp-ttl">Selected for this MIR</span><span class="mp-cnt" id="mpCartCount"></span></div>'
+    +     '<div class="mp-body" id="mpCart"></div>'
+    +   '</div>'
+    + '</div>'
+    + '<div class="mp-foot">'
+    +   '<span class="mp-legend"><span class="mp-dot">\u25cf</span> approved estimate (hard budget) &nbsp;\u00b7&nbsp; remaining = estimate \u2212 MIR already raised</span>'
+    +   '<div class="mp-spacer"></div>'
+    +   '<button class="btn btn-ghost btn-sm" onclick="_mpClear()">Clear</button>'
+    +   '<button class="btn btn-primary btn-sm" onclick="_mpCommit()">Add to MIR <span class="mp-pill" id="mpCommitCount">0</span></button>'
+    + '</div></div>',
     'large');
-  _mirEstSetFilter(_mirEstFilter);
+  _mpRefresh();
 }
 
-function _mirEstSetFilter(f){
-  _mirEstFilter=f;
-  const a=document.getElementById('mirEstAll'), b=document.getElementById('mirEstAppr');
-  if(a){ a.style.background = f==='all'?'var(--accent)':''; a.style.color = f==='all'?'#fff':''; }
-  if(b){ b.style.background = f==='appr'?'var(--accent)':''; b.style.color = f==='appr'?'#fff':''; }
-  _renderMirEstPicker();
+function _mpExpandTo(locId){
+  // open all ancestors of a leaf location so a seeded cell is visible
+  const m={}; // walk _mpRoots to find chain
+  function find(n,chain){ if(n.id===String(locId)){ chain.forEach(id=>_mpOpen.add(id)); _mpOpen.add(n.id); return true; }
+    return (n.children||[]).some(c=>find(c,chain.concat(n.id))); }
+  _mpRoots.forEach(r=>find(r,[]));
 }
-function _mirEstTog(k){ _mirEstOpen.has(k)?_mirEstOpen.delete(k):_mirEstOpen.add(k); _renderMirEstPicker(); }
 
-function _renderMirEstPicker(){
-  const host=document.getElementById('mirEstTree'); if(!host) return;
-  const tree=_mirEstTreeCache||[];
-  _mirEstFlat = [];
-  const rows=[];
-  tree.filter(L=> _mirEstFilter==='all' || L.anyApproved).forEach(L=>{
-    const pk='L'+L.leafId, pe=_mirEstOpen.has(pk);
-    const badge = L.anyApproved ? '<span style="color:#16a34a;">\u25cf</span>' : '<span style="color:#d97706;">\u25cf</span>';
-    rows.push('<div onclick="_mirEstTog(\''+pk+'\')" style="cursor:pointer;padding:6px 8px;border-radius:6px;display:flex;gap:8px;align-items:center;">'
-      + '<span style="width:12px;color:var(--muted);">'+(pe?'\u25be':'\u25b8')+'</span>'
-      + '<span>\ud83d\udce6 <b>'+esc(L.leaf)+'</b> '+badge+'</span>'
-      + '<span class="muted" style="font-size:11px;">'+esc(L.wbsPath||'')+'</span></div>');
-    if(!pe) return;
-    L.locArr.filter(LO=> _mirEstFilter==='all' || LO.status==='approved').forEach((LO,li)=>{
-      const lk=pk+'-'+LO.locId+'-'+li, le=_mirEstOpen.has(lk);
-      const lbadge = LO.status==='approved'?'<span style="color:#16a34a;">\u25cf</span>':'<span style="color:#d97706;">\u25cf</span>';
-      rows.push('<div onclick="_mirEstTog(\''+lk+'\')" style="cursor:pointer;padding:6px 8px;margin-left:20px;border-radius:6px;display:flex;gap:8px;align-items:center;">'
-        + '<span style="width:12px;color:var(--muted);">'+(le?'\u25be':'\u25b8')+'</span>'
-        + '<span>\ud83d\udccd '+esc(LO.locName)+' '+lbadge+'</span>'
-        + '<span class="muted" style="font-size:11px;">'+esc(LO.locPath||'')+'</span></div>');
-      if(!le) return;
-      LO.skuArr.forEach((S)=>{
-        const rem=S.remaining, remCss = rem<=0 ? 'color:#dc2626;' : 'color:#16a34a;';
-        const added=_mirAlreadyAdded(S.code, LO.locId);
-        const disabled = added || rem<=0 || !S.code;
-        const noCode = !S.code ? ' \u00b7 <span style="color:#dc2626;">no material code</span>' : '';
-        const fi=_mirEstFlat.length;
-        _mirEstFlat.push({code:S.code,name:S.name,uom:S.uom,leafId:L.leafId,leaf:L.leaf,
-                          locId:LO.locId,locName:LO.locName,locPath:LO.locPath,status:LO.status,
-                          est:S.est,remaining:rem});
-        rows.push('<div style="margin-left:40px;padding:5px 8px;display:flex;gap:8px;align-items:center;border-radius:6px;">'
-          + '<div style="flex:1;min-width:0;"><div>'+esc(S.name)
-          + (S.code?' <span style="font-family:monospace;font-size:10px;color:var(--accent);">'+esc(S.code)+'</span>':'')+noCode+'</div>'
-          + '<div class="muted" style="font-size:11px;">'+esc(S.uom)+' \u00b7 est '+_fmtQ(S.est)+' \u00b7 raised '+_fmtQ(S.mir)+' \u00b7 <b style="'+remCss+'">remaining '+_fmtQ(rem)+'</b></div></div>'
-          + '<button class="btn btn-ghost btn-sm" '+(disabled?'disabled':'')+' onclick="_mirPickSku('+fi+')">'+(added?'added':'\u{ff0b} add')+'</button></div>');
-      });
+function _mpMatch(text){
+  const q=(document.getElementById('mpSearch')?.value||'').toLowerCase().trim();
+  return !q || text.toLowerCase().includes(q);
+}
+function _mpVisibleNode(n){ return (_mpNodeCells[n.id]||[]).length>0; }
+
+function _mpRenderTree(){
+  const host=document.getElementById('mpTree'); if(!host) return;
+  host.innerHTML=_mpRoots.filter(_mpVisibleNode).map(_mpRenderNode).join('')
+    || '<div class="mp-empty">No approved estimate cells.</div>';
+  _mpSync();
+}
+function _mpRenderNode(n){
+  if(!_mpVisibleNode(n)) return '';
+  if(n.isFloor) return _mpRenderFloor(n);
+  const ex=_mpOpen.has(n.id);
+  return '<div class="mp-node"><div class="mp-row" onclick="_mpTog(\''+n.id+'\')">'
+    + '<span class="mp-tw">'+(ex?'\u25be':'\u25b8')+'</span>'
+    + '<input type="checkbox" class="mp-cb" data-node="'+n.id+'" onclick="event.stopPropagation();_mpBulk(\''+n.id+'\',this.checked)">'
+    + '<span class="mp-lbl"><span class="mp-kind">'+esc(n.kind)+'</span><span class="mp-nm">'+esc(n.name)+'</span></span></div>'
+    + (ex?'<div class="mp-children">'+n.children.filter(_mpVisibleNode).map(_mpRenderNode).join('')+'</div>':'')
+    + '</div>';
+}
+function _mpRenderFloor(n){
+  const ex=_mpOpen.has(n.id);
+  const pkgs=[...new Set(n.cells.map(c=>c.pkgName))];
+  return '<div class="mp-node"><div class="mp-row" onclick="_mpTog(\''+n.id+'\')">'
+    + '<span class="mp-tw">'+(ex?'\u25be':'\u25b8')+'</span>'
+    + '<input type="checkbox" class="mp-cb" data-floor="'+n.id+'" onclick="event.stopPropagation();_mpBulk(\''+n.id+'\',this.checked)">'
+    + '<span class="mp-lbl"><span class="mp-kind">'+esc(n.kind)+'</span><span class="mp-nm">'+esc(n.name)+'</span><span class="mp-dot">\u25cf</span></span></div>'
+    + (ex?'<div class="mp-children">'+pkgs.map(p=>_mpRenderPkg(n,p)).join('')+'</div>':'')
+    + '</div>';
+}
+function _mpRenderPkg(floor,pkg){
+  const pid=floor.id+'::'+pkg, ex=_mpOpen.has(pid);
+  const cells=floor.cells.filter(c=>c.pkgName===pkg);
+  const pj=pkg.replace(/'/g,"\\'");
+  return '<div class="mp-node"><div class="mp-row" onclick="_mpTog(\''+_mpAttr(pid)+'\')">'
+    + '<span class="mp-tw">'+(ex?'\u25be':'\u25b8')+'</span>'
+    + '<input type="checkbox" class="mp-cb" data-pkg="'+_mpAttr(pid)+'" onclick="event.stopPropagation();_mpBulkPkg(\''+floor.id+'\',\''+_mpAttr(pkg)+'\',this.checked)">'
+    + '<span class="mp-lbl"><span class="mp-kind">Pkg</span><span class="mp-nm">\ud83d\udce6 '+esc(pkg)+'</span></span></div>'
+    + (ex?'<div class="mp-children">'+cells.map(c=>_mpRenderMat(floor,c)).join('')+'</div>':'')
+    + '</div>';
+}
+function _mpRenderMat(floor,c){
+  if(!_mpMatch(c.name+' '+c.code+' '+(floor.path||''))) return '';
+  const k=_mpKey(c.code,c.locId), checked=_mpCart.has(k);
+  const dis=c.remaining<=0;
+  const remCss=c.remaining<=0?'mp-rem-no':'mp-rem-ok';
+  const multi=c.pkgs.length>1?'<span class="mp-pkgpill" title="also under: '+esc(c.pkgs.slice(1).map(p=>p.leaf).join(', '))+'">+'+(c.pkgs.length-1)+' pkg</span>':'';
+  return '<div class="mp-matrow"><input type="checkbox" class="mp-cb" data-mat="'+esc(k)+'" '+(checked?'checked':'')+' '+(dis?'disabled':'')+' onclick="_mpToggleMat(\''+esc(c.locId)+'\',\''+esc(c.code)+'\',this.checked)">'
+    + '<div class="mp-meta"><div class="mp-mn">'+esc(c.name)+' <span class="mp-code">'+esc(c.code)+'</span>'+multi+'</div>'
+    + '<div class="mp-ms">'+esc(c.uom)+' \u00b7 est '+_fmtQ(c.est)+' \u00b7 raised '+_fmtQ(c.mir)+' \u00b7 <span class="'+remCss+'">remaining '+_fmtQ(c.remaining)+'</span></div></div></div>';
+}
+const _mpAttr = s => String(s).replace(/'/g,'&#39;').replace(/"/g,'&quot;');
+
+function _mpTog(id){ id=id.replace(/&#39;/g,"'"); _mpOpen.has(id)?_mpOpen.delete(id):_mpOpen.add(id); _mpRenderTree(); }
+
+// ---- selection ----
+function _mpAddCell(c){ if(c.remaining<=0) return; const k=_mpKey(c.code,c.locId);
+  if(!_mpCart.has(k)) _mpCart.set(k,{...c,qty:c.remaining}); }
+function _mpDel(code,locId){ _mpCart.delete(_mpKey(code,locId)); }
+function _mpToggleMat(locId,code,on){
+  const c=_mpCells.byKey.get(_mpKey(code,locId)); if(!c) return;
+  on?_mpAddCell(c):_mpDel(code,locId); _mpRefresh();
+}
+function _mpBulk(nodeId,on){ (_mpNodeCells[nodeId]||[]).forEach(c=> on?_mpAddCell(c):_mpDel(c.code,c.locId)); _mpRefresh(); }
+function _mpBulkPkg(floorId,pkg,on){
+  pkg=pkg.replace(/&#39;/g,"'").replace(/&quot;/g,'"');
+  (_mpNodeCells[floorId]||[]).filter(c=>c.pkgName===pkg).forEach(c=> on?_mpAddCell(c):_mpDel(c.code,c.locId)); _mpRefresh();
+}
+function _mpTri(cells){
+  const vis=cells; if(!vis.length) return 'none';
+  let on=0; vis.forEach(c=>{ if(_mpCart.has(_mpKey(c.code,c.locId))) on++; });
+  return on===0?'none':(on===vis.length?'all':'some');
+}
+function _mpSync(){
+  document.querySelectorAll('.mp-cb[data-mat]').forEach(cb=>{ cb.checked=_mpCart.has(cb.dataset.mat.replace(/&#39;/g,"'")); });
+  document.querySelectorAll('.mp-cb[data-floor]').forEach(cb=>{ const st=_mpTri(_mpNodeCells[cb.dataset.floor]||[]); cb.checked=st==='all'; cb.indeterminate=st==='some'; });
+  document.querySelectorAll('.mp-cb[data-node]').forEach(cb=>{ const st=_mpTri(_mpNodeCells[cb.dataset.node]||[]); cb.checked=st==='all'; cb.indeterminate=st==='some'; });
+  document.querySelectorAll('.mp-cb[data-pkg]').forEach(cb=>{ const raw=cb.dataset.pkg.replace(/&#39;/g,"'").replace(/&quot;/g,'"');
+    const [fid,pkg]=raw.split('::'); const st=_mpTri((_mpNodeCells[fid]||[]).filter(c=>c.pkgName===pkg)); cb.checked=st==='all'; cb.indeterminate=st==='some'; });
+}
+
+// ---- cart ----
+function _mpCartGroups(){
+  const g=new Map();
+  for(const v of _mpCart.values()){ if(!g.has(v.code)) g.set(v.code,{code:v.code,name:v.name,uom:v.uom,locs:[]}); g.get(v.code).locs.push(v); }
+  for(const grp of g.values()) grp.locs.sort((a,b)=>(a.locPath||'').localeCompare(b.locPath||''));
+  return [...g.values()].sort((a,b)=>(a.name||'').localeCompare(b.name||''));
+}
+function _mpRenderCart(){
+  const host=document.getElementById('mpCart'); if(!host) return;
+  const groups=_mpCartGroups();
+  const lines=_mpCart.size;
+  const cc=document.getElementById('mpCartCount'); if(cc) cc.textContent=groups.length+' material'+(groups.length===1?'':'s');
+  const cm=document.getElementById('mpCommitCount'); if(cm) cm.textContent=lines;
+  if(!groups.length){ host.innerHTML='<div class="mp-empty"><div style="font-size:30px;">\ud83e\uddfa</div>Nothing selected yet.<br>Tick a floor or a material on the left.</div>'; return; }
+  host.innerHTML=groups.map(g=>{
+    const total=g.locs.reduce((s,l)=>s+(Number(l.qty)||0),0);
+    const multi=g.locs.length>1, ex=_mpExp.has(g.code)||!multi;
+    const orphan=g.locs.some(l=>l.orphan);
+    const chips=g.locs.map(l=>{
+      return '<span class="mp-lchip'+(l.orphan?' mp-orphan':'')+'"><span class="mp-lp">\ud83d\udccd '+esc(_mpLabel3(l.locPath)||l.locName||'loc')+'</span>'
+        + '<input type="number" step="0.001" value="'+_fmtQin(l.qty)+'" onwheel="this.blur()" oninput="_mpSetLocQty(\''+esc(l.code)+'\',\''+esc(l.locId)+'\',this.value)">'
+        + '<span class="mp-mini">/ '+_fmtQ(l.remaining)+'</span>'
+        + '<span class="mp-x" onclick="_mpDropLoc(\''+esc(l.code)+'\',\''+esc(l.locId)+'\')">\u2715</span></span>';
+    }).join('');
+    return '<div class="mp-ci">'
+      + '<div class="mp-ci-head">'
+      +   '<div class="mp-nm2"><div class="mp-t">'+esc(g.name)+' <span class="mp-code">'+esc(g.code)+'</span>'+(orphan?' <span class="mp-warnpill">not in approved estimate</span>':'')+'</div>'
+      +     '<div class="mp-s">'+(multi?g.locs.length+' locations':esc(_mpLabel3(g.locs[0].locPath)||g.locs[0].locName||''))+'</div></div>'
+      +   '<div class="mp-qbox"><input type="number" step="0.001" value="'+_fmtQin(total)+'" onwheel="this.blur()" title="Cumulative \u2014 distributes across locations, capped at remaining" oninput="_mpSetCumulative(\''+esc(g.code)+'\',this.value)"><span class="mp-uom">'+esc(g.uom)+'</span></div>'
+      +   (multi?'<span class="mp-exp" onclick="_mpToggleExp(\''+esc(g.code)+'\')">'+(ex?'\u25be':'\u25b8')+'</span>':'')
+      +   '<span class="mp-trash" onclick="_mpDropMat(\''+esc(g.code)+'\')">\ud83d\uddd1</span>'
+      + '</div>'
+      + '<div class="mp-ci-locs'+(ex?' open':'')+'">'+chips+'</div></div>';
+  }).join('');
+}
+function _mpSetLocQty(code,locId,val){ const v=_mpCart.get(_mpKey(code,locId)); if(v){ v.qty=Math.max(0,Math.min(Number(val)||0, v.remaining)); _mpRenderCart(); } }
+function _mpSetCumulative(code,val){
+  let left=Math.max(0,Number(val)||0);
+  const grp=_mpCartGroups().find(g=>g.code===code); if(!grp) return;
+  grp.locs.slice().sort((a,b)=>(a.locPath||'').localeCompare(b.locPath||'')).forEach(l=>{
+    const take=Math.max(0,Math.min(left,l.remaining)); l.qty=take; left-=take;   // hard cap: overflow discarded
+  });
+  _mpRenderCart();
+}
+function _mpToggleExp(code){ _mpExp.has(code)?_mpExp.delete(code):_mpExp.add(code); _mpRenderCart(); }
+function _mpDropLoc(code,locId){ _mpDel(code,locId); _mpRefresh(); }
+function _mpDropMat(code){ [..._mpCart.keys()].filter(k=>_mpCart.get(k).code===code).forEach(k=>_mpCart.delete(k)); _mpRefresh(); }
+function _mpClear(){ _mpCart.clear(); _mpExp.clear(); _mpRefresh(); }
+function _mpRefresh(){ _mpRenderTree(); _mpRenderCart(); }
+
+// ============================================================
+// MIR ITEMS — v128 grouped-by-material model. Source of truth for
+// the MIR form item list. Spec is material-level; remarks + qty are
+// per-location. Qty hard-capped at pooled remaining.
+// ============================================================
+let _mirGroups = [];   // [{code,name,uom,spec,locs:[{locId,locName,locPath,status,remaining,leafId,qty,rmk}]}]
+let _mirOpen   = new Set();
+
+const _miLabel3 = p => (p||'').split(' \u203a ').slice(-3).join(' \u00b7 ');
+const _miTail   = p => ((p||'').split(' \u203a ').slice(-1)[0])||'';
+function _mirFindGroup(code){ return _mirGroups.find(g=>g.code===code); }
+function _mirGroupCum(g){ return g.locs.reduce((s,l)=>s+(Number(l.qty)||0),0); }
+
+function _mirModelUpsert(cell, qty){
+  let g=_mirFindGroup(cell.code);
+  if(!g){ g={code:cell.code,name:cell.name,uom:cell.uom,spec:cell.spec||'',locs:[]}; _mirGroups.push(g); }
+  const cap=(cell.remaining!=null?Number(cell.remaining):(Number(qty)||0));
+  const q=Math.max(0,Math.min(Number(qty)||0, cap));
+  let l=g.locs.find(x=>String(x.locId)===String(cell.locId));
+  if(!l){ g.locs.push({locId:String(cell.locId),locName:cell.locName||'',locPath:cell.locPath||'',
+            status:cell.status||'draft',remaining:cap,leafId:(cell.leafId!=null?cell.leafId:null),qty:q,rmk:cell.rmk||''}); }
+  else { l.qty=q; l.remaining=cap; if(cell.locName) l.locName=cell.locName; if(cell.locPath) l.locPath=cell.locPath;
+         if(cell.status) l.status=cell.status; if(cell.leafId!=null) l.leafId=cell.leafId; }
+  g.locs.sort((a,b)=>(a.locPath||'').localeCompare(b.locPath||'',undefined,{numeric:true}));
+}
+
+function _renderMirItems(){
+  const host=document.getElementById('mirItemsHost'); if(!host) return;
+  if(!_mirGroups.length){ host.innerHTML='<div class="mi-empty">No materials yet \u2014 use <b>\uff0b Add from estimate</b> to pick approved estimate cells.</div>'; return; }
+  host.innerHTML=_mirGroups.map((g,gi)=>{
+    const total=_mirGroupCum(g);
+    const multi=g.locs.length>1, ex=_mirOpen.has(g.code);
+    const exp = multi ? '<span class="mi-exp" onclick="_miToggle(\''+esc(g.code)+'\')">'+(ex?'\u25be':'\u25b8')+'</span>' : '<span class="mi-exp"></span>';
+    const headQty = multi
+      ? '<div class="mi-cum"><span class="mi-q" id="micum_'+esc(g.code)+'">'+_fmtQ(total)+'</span> <span class="mi-l">'+esc(g.uom)+' \u00b7 '+g.locs.length+' loc</span></div>'
+      : '<div class="mi-cum"><input class="mi-qh num" type="number" step="0.001" value="'+_fmtQin(g.locs[0].qty)+'" onwheel="this.blur()" onkeydown="if(event.key===\'ArrowUp\'||event.key===\'ArrowDown\')event.preventDefault()" oninput="_miSetQty(\''+esc(g.code)+'\',\''+esc(g.locs[0].locId)+'\',this.value,this)"><div class="mi-cap" id="mical_'+esc(g.locs[0].locId)+'">/ '+_fmtQ(g.locs[0].remaining)+' '+esc(g.uom)+'</div></div>';
+    const headSpecLoc = multi
+      ? '<div class="mi-specwrap"><input class="mi-spec" placeholder="Grade / spec (applies to all locations)" value="'+esc(g.spec)+'" oninput="_miSetSpec(\''+esc(g.code)+'\',this.value)"></div>'
+      : '<div class="mi-specwrap mi-single"><input class="mi-spec" placeholder="Grade / spec" value="'+esc(g.spec)+'" oninput="_miSetSpec(\''+esc(g.code)+'\',this.value)"><span class="mi-locpill">\ud83d\udccd '+esc(_miTail(g.locs[0].locPath)||g.locs[0].locName)+' '+_miApprDot(g.locs[0])+'</span></div>';
+    let locBlock;
+    if(multi){
+      locBlock='<div class="mi-locs'+(ex?' open':'')+'">'+g.locs.map(l=>
+        '<div class="mi-locrow">'
+        + '<div class="mi-lp"><span class="mi-arr">\u21b3</span> \ud83d\udccd <span class="mi-ppath">'+esc(_miLabel3(l.locPath))+'</span> '+_miApprDot(l)+'</div>'
+        + '<div class="mi-qwrap"><input class="mi-ql num" type="number" step="0.001" value="'+_fmtQin(l.qty)+'" onwheel="this.blur()" onkeydown="if(event.key===\'ArrowUp\'||event.key===\'ArrowDown\')event.preventDefault()" oninput="_miSetQty(\''+esc(g.code)+'\',\''+esc(l.locId)+'\',this.value,this)"><div class="mi-cap" id="mical_'+esc(l.locId)+'">/ '+_fmtQ(l.remaining)+' '+esc(g.uom)+'</div></div>'
+        + '<input class="mi-rmk" placeholder="Remarks" value="'+esc(l.rmk)+'" oninput="_miSetRmk(\''+esc(g.code)+'\',\''+esc(l.locId)+'\',this.value)">'
+        + '<span class="mi-lx" title="Remove this location" onclick="_miDropLoc(\''+esc(g.code)+'\',\''+esc(l.locId)+'\')">\u2715</span>'
+        + '</div>').join('')+'</div>';
+    } else {
+      locBlock='<div class="mi-locs open mi-singlerow"><div class="mi-locrow"><input class="mi-rmk mi-rmk-single" placeholder="Remarks" value="'+esc(g.locs[0].rmk)+'" oninput="_miSetRmk(\''+esc(g.code)+'\',\''+esc(g.locs[0].locId)+'\',this.value)"></div></div>';
+    }
+    return '<div class="mi-mat">'
+      + '<div class="mi-head">'
+      +   '<div class="mi-gi">'+(gi+1)+'</div>'
+      +   '<div class="mi-nm">'+exp+'<span class="mi-del" title="Remove material" onclick="_miDropMat(\''+esc(g.code)+'\')">\ud83d\uddd1</span>'
+      +     '<div class="mi-nb"><div class="mi-t">'+esc(g.name)+'</div><div class="mi-s"><span class="mi-code">'+esc(g.code)+'</span></div></div></div>'
+      +   '<div class="mi-uom">'+esc(g.uom)+'</div>'
+      +   headQty
+      +   headSpecLoc
+      +   '<span></span>'
+      + '</div>'
+      + locBlock
+      + '</div>';
+  }).join('');
+}
+function _miApprDot(l){ return l.status==='approved'?'<span class="mi-appr">\u25cf approved</span>':'<span class="mi-draft">\u25cf draft</span>'; }
+
+function _miToggle(code){ _mirOpen.has(code)?_mirOpen.delete(code):_mirOpen.add(code); _renderMirItems(); }
+function _miSetAll(open){ _mirGroups.forEach(g=>{ if(g.locs.length>1){ open?_mirOpen.add(g.code):_mirOpen.delete(g.code); } }); _renderMirItems(); }
+function _miSetSpec(code,val){ const g=_mirFindGroup(code); if(g) g.spec=val; }
+function _miSetRmk(code,locId,val){ const g=_mirFindGroup(code); const l=g&&g.locs.find(x=>String(x.locId)===String(locId)); if(l) l.rmk=val; }
+function _miSetQty(code,locId,val,el){
+  const g=_mirFindGroup(code); const l=g&&g.locs.find(x=>String(x.locId)===String(locId)); if(!l) return;
+  let v=Math.max(0,Number(val)||0); const over=v>l.remaining+1e-6; if(over) v=l.remaining; l.qty=v;
+  if(over && el) el.value=_fmtQin(l.remaining);
+  const cap=document.getElementById('mical_'+locId);
+  if(cap){ cap.textContent=(over?'\u26a0 capped at ':'/ ')+_fmtQ(l.remaining)+' '+g.uom; cap.className='mi-cap'+(over?' over':''); }
+  const cum=document.getElementById('micum_'+code); if(cum) cum.textContent=_fmtQ(_mirGroupCum(g));
+}
+function _miDropLoc(code,locId){ const g=_mirFindGroup(code); if(!g) return; g.locs=g.locs.filter(x=>String(x.locId)!==String(locId)); if(!g.locs.length){ _miDropMat(code); return; } _renderMirItems(); }
+function _miDropMat(code){ const i=_mirGroups.findIndex(g=>g.code===code); if(i>=0) _mirGroups.splice(i,1); _renderMirItems(); }
+
+// ---- commit: reconcile picker cart into the grouped MIR model ----
+function _mpCommit(){
+  const cartKeys=new Set([..._mpCart.keys()]);
+  // every existing model loc was seeded into the cart at open → update kept, drop unticked
+  _mirGroups.forEach(g=>{
+    g.locs=g.locs.filter(l=>{
+      const k=_mpKey(g.code,l.locId);
+      if(cartKeys.has(k)){ const v=_mpCart.get(k);
+        l.remaining=v.remaining; l.qty=Math.min(Number(l.qty)||v.qty, v.remaining);
+        if(v.leafId!=null) l.leafId=v.leafId; if(v.locPath) l.locPath=v.locPath;
+        if(v.locName) l.locName=v.locName; if(v.status) l.status=v.status;
+        cartKeys.delete(k); return true; }
+      return false;
     });
   });
-  host.innerHTML = rows.join('') || '<div class="muted" style="padding:14px;text-align:center;">No estimated materials'+(_mirEstFilter==='appr'?' are approved yet':'')+'.</div>';
+  _mirGroups=_mirGroups.filter(g=>g.locs.length>0);
+  for(const k of cartKeys){ const v=_mpCart.get(k);
+    _mirModelUpsert({code:v.code,name:v.name,uom:v.uom,locId:v.locId,locName:v.locName,locPath:v.locPath,
+      status:v.status,remaining:v.remaining,
+      leafId:(v.leafId!=null?v.leafId:(v.pkgs&&v.pkgs[0]?v.pkgs[0].leafId:null))}, v.qty); }
+  closeModal(); _renderMirItems();
+  toast('MIR lines updated from estimate','success',2500);
 }
 
-function _mirPickSku(idx){
-  const s=_mirEstFlat[idx]; if(!s) return;
-  addMIRItemFromEstimate(s);
-  _renderMirEstPicker();
-}
-
-function addMIRItemFromEstimate(s){
-  const i = _mirItemC++;
-  const rem = Number(s.remaining)||0;
-  const tr = document.createElement('tr');
-  tr.id = 'mirItem_' + i;
-  tr.dataset.matCode  = s.code||'';
-  tr.dataset.wbsNode  = String(s.leafId);
-  tr.dataset.locNode  = String(s.locId);
-  tr.dataset.remaining= String(rem);
-  tr.dataset.status   = s.status||'draft';
-  const statusBadge = s.status==='approved'
-    ? '<span style="color:#16a34a;font-size:10px;">\u25cf approved</span>'
-    : '<span style="color:#d97706;font-size:10px;">\u25cf draft (advisory)</span>';
-  tr.innerHTML =
-      '<td>'+(i+1)+'</td>'
-    + '<td style="min-width:240px;">'
-    +   '<input class="pu_material" value="'+esc(s.name)+'" readonly style="width:100%;background:var(--panel-2);border:0;font-weight:600;" data-mat-code="'+esc(s.code||'')+'">'
-    +   '<div class="muted" style="font-size:10px;">'+(s.code?'<span style="font-family:monospace;color:var(--accent);">'+esc(s.code)+'</span> \u00b7 ':'')+esc(s.leaf||'')+'</div>'
-    + '</td>'
-    + '<td><input class="pu_uom" value="'+esc(s.uom||'')+'" readonly style="width:64px;background:var(--panel-2);border:0;"></td>'
-    + '<td><input type="number" class="num mir_qty" value="'+_fmtQin(rem)+'" style="width:90px;" step="0.001" onwheel="this.blur()" oninput="mirQtyWarn('+i+')" onkeydown="if(event.key===\'ArrowUp\'||event.key===\'ArrowDown\')event.preventDefault()">'
-    +   '<div class="mir_qwarn" id="mirQWarn_'+i+'" style="font-size:10px;color:#d97706;"></div></td>'
-    + '<td><input class="mir_spec" style="width:150px;" placeholder="Grade / spec"></td>'
-    + '<td style="min-width:150px;">'
-    +   '<span style="display:inline-block;padding:2px 8px;background:var(--panel-2);border:1px solid var(--border);border-radius:11px;font-size:11px;">\ud83d\udccd '+esc(s.locName||'')+'</span>'
-    +   '<div class="muted" style="font-size:10px;">'+esc(s.locPath||'')+' \u00b7 '+statusBadge+'</div></td>'
-    + '<td><input class="mir_rmk" style="width:110px;" placeholder="Remarks"></td>'
-    + '<td><button class="btn btn-ghost btn-sm" onclick="document.getElementById(\'mirItem_'+i+'\').remove()">\u2715</button></td>';
-  document.getElementById('mirItemsBody').appendChild(tr);
-  mirQtyWarn(i);
-}
-
-function mirQtyWarn(i){
-  const tr=document.getElementById('mirItem_'+i); if(!tr) return;
-  const qin=tr.querySelector('.mir_qty'); const w=tr.querySelector('.mir_qwarn');
-  const qty=parseFloat(qin&&qin.value)||0;
-  const rem=parseFloat(tr.dataset.remaining)||0;
-  const draft = tr.dataset.status!=='approved';
-  let msg='';
-  if (qty > rem + 1e-6){
-    if(qin){ qin.style.borderColor='#d97706'; qin.style.background='#fffbeb'; }
-    msg = '\u26a0 exceeds remaining '+_fmtQ(rem)+(draft?' (draft)':'')+' \u2014 advisory, save allowed';
-  } else {
-    if(qin){ qin.style.borderColor=''; qin.style.background=''; }
-    msg = draft ? 'draft estimate \u2014 advisory only' : '';
-  }
-  if(w) w.textContent=msg;
+// ---- one-time CSS for the picker ----
+function _mpInjectCss(){
+  if(document.getElementById('mpcss')) return;
+  const css=document.createElement('style'); css.id='mpcss';
+  css.textContent=`
+  .mp-modal{display:flex;flex-direction:column;min-height:60vh;}
+  .mp-head{padding:2px 2px 10px;}
+  .mp-head h3{margin:0;font-size:16px;color:var(--accent);}
+  .mp-sub{font-size:11px;color:var(--muted);margin-top:3px;}
+  .mp-split{display:grid;grid-template-columns:1fr 1fr;border:1px solid var(--border);border-radius:10px;overflow:hidden;min-height:56vh;}
+  .mp-pane{display:flex;flex-direction:column;min-height:0;}
+  .mp-pane.mp-left{border-right:1px solid var(--border);}
+  .mp-pane-head{display:flex;align-items:center;gap:10px;padding:9px 12px;background:var(--panel-2);border-bottom:1px solid var(--border);}
+  .mp-ttl{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.4px;color:var(--muted);}
+  .mp-cnt{margin-left:auto;font-size:11px;color:var(--muted);}
+  .mp-search{flex:1;}
+  .mp-search input{width:100%;padding:6px 9px;border:1px solid var(--border);border-radius:6px;font-size:13px;}
+  .mp-body{flex:1;overflow:auto;padding:8px;max-height:56vh;}
+  .mp-row{display:flex;align-items:center;gap:8px;padding:5px 7px;border-radius:6px;cursor:pointer;}
+  .mp-row:hover{background:var(--panel-2);}
+  .mp-tw{width:13px;text-align:center;color:var(--muted);font-size:11px;flex-shrink:0;}
+  .mp-cb{width:16px;height:16px;flex-shrink:0;cursor:pointer;accent-color:var(--accent);}
+  .mp-lbl{flex:1;min-width:0;display:flex;align-items:center;gap:7px;overflow:hidden;}
+  .mp-nm{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .mp-kind{font-size:9px;text-transform:uppercase;letter-spacing:.4px;color:var(--muted);background:#fff;border:1px solid var(--border);border-radius:6px;padding:0 5px;flex-shrink:0;}
+  .mp-dot{font-size:9px;color:#16a34a;flex-shrink:0;}
+  .mp-children{margin-left:15px;border-left:1px dashed var(--border);padding-left:4px;}
+  .mp-matrow{display:flex;align-items:center;gap:8px;padding:4px 7px;border-radius:6px;}
+  .mp-matrow:hover{background:var(--panel-2);}
+  .mp-meta{flex:1;min-width:0;}
+  .mp-mn{font-size:13px;}
+  .mp-ms{font-size:11px;color:var(--muted);}
+  .mp-code{font-family:ui-monospace,Menlo,monospace;font-size:10px;color:var(--accent);}
+  .mp-rem-ok{color:#16a34a;font-weight:600;} .mp-rem-no{color:#dc2626;font-weight:600;}
+  .mp-pkgpill{font-size:9px;color:var(--accent);background:rgba(13,148,136,.1);border-radius:6px;padding:0 5px;margin-left:5px;}
+  .mp-empty{display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;color:var(--muted);text-align:center;gap:6px;padding:20px;}
+  .mp-ci{border:1px solid var(--border);border-radius:8px;margin-bottom:8px;overflow:hidden;}
+  .mp-ci-head{display:flex;align-items:center;gap:9px;padding:8px 10px;background:var(--panel-2);}
+  .mp-nm2{flex:1;min-width:0;}
+  .mp-t{font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .mp-s{font-size:10px;color:var(--muted);}
+  .mp-qbox{display:flex;align-items:center;gap:5px;}
+  .mp-qbox input{width:76px;padding:5px 6px;border:1px solid var(--border);border-radius:4px;font-size:13px;text-align:right;font-variant-numeric:tabular-nums;}
+  .mp-uom{font-size:11px;color:var(--muted);min-width:24px;}
+  .mp-exp,.mp-trash,.mp-x{cursor:pointer;display:inline-flex;align-items:center;justify-content:center;border:1px solid var(--border);border-radius:6px;background:#fff;}
+  .mp-exp{width:24px;height:24px;color:var(--muted);font-size:12px;}
+  .mp-trash{width:24px;height:24px;color:#dc2626;font-size:13px;}
+  .mp-ci-locs{display:none;flex-wrap:wrap;gap:6px;padding:8px 10px;border-top:1px solid var(--border);}
+  .mp-ci-locs.open{display:flex;}
+  .mp-lchip{display:inline-flex;align-items:center;gap:6px;font-size:11px;padding:4px 8px;border-radius:11px;background:#f1f5f9;border:1px solid var(--border);}
+  .mp-lchip.mp-orphan{background:#fff7ed;border-color:#fed7aa;}
+  .mp-lp{color:var(--muted);}
+  .mp-lchip input{width:60px;padding:2px 5px;border:1px solid var(--border);border-radius:4px;font-size:11px;text-align:right;}
+  .mp-mini{font-size:10px;color:var(--muted);}
+  .mp-x{width:18px;height:18px;font-size:10px;color:#dc2626;}
+  .mp-warnpill{font-size:9px;font-weight:700;color:#9a3412;background:#fff7ed;border:1px solid #fed7aa;border-radius:9px;padding:1px 6px;}
+  .mp-foot{display:flex;align-items:center;gap:12px;padding:10px 2px 0;}
+  .mp-legend{font-size:11px;color:var(--muted);} .mp-legend .mp-dot{color:#16a34a;}
+  .mp-spacer{margin-left:auto;}
+  .mp-pill{background:#fff;color:var(--accent);border-radius:11px;padding:1px 8px;font-size:11px;margin-left:5px;}
+  `;
+  document.head.appendChild(css);
 }
 
 
@@ -18258,33 +18597,12 @@ async function saveMIR() {
   const date = document.getElementById('mir_date').value;
   if (!date) { toast('MIR Date required','error'); return; }
   const items = [];
-  const _seenML = {}; let _mirDup = null;
-  document.querySelectorAll('#mirItemsBody tr').forEach((tr) => {
-    const matEl2 = tr.querySelector('.pu_material');
-    const mat = matEl2?.value?.trim();
-    const matCode2 = tr.dataset.matCode || matEl2?.dataset?.matCode || null;
-    const qty = parseFloat(tr.querySelector('.mir_qty')?.value)||0;
-    const wbsNode = tr.dataset.wbsNode ? Number(tr.dataset.wbsNode) : null;
-    const locNode = tr.dataset.locNode || null;
-    if (mat && qty > 0) {
-      const dk = (matCode2 || mat.toLowerCase()) + '|' + (locNode||'');
-      if (_seenML[dk] != null && !_mirDup) _mirDup = { name: mat, rows: [_seenML[dk]+1, items.length+1] };
-      _seenML[dk] = items.length;
-      items.push({
-        sno: items.length+1, material_code: matCode2, material_name: mat,
-        uom: tr.querySelector('.pu_uom')?.value?.trim()||'',
-        qty_required: qty,
-        specification: tr.querySelector('.mir_spec')?.value?.trim()||null,
-        remarks: tr.querySelector('.mir_rmk')?.value?.trim()||null,
-        wbs_node_id: wbsNode,
-        loc_node_id: locNode,
-      });
-    }
-  });
-  if (!items.length) { toast('Add at least one material item from the estimate','error'); return; }
-  // (material_code x loc) duplicate gate — same material at the SAME location is the dup;
-  // the same material at DIFFERENT locations is a legitimate split.
-  if (_mirDup) { toast(`"${_mirDup.name}" appears twice for the same location (rows ${_mirDup.rows.join(' and ')}) — merge into one line`,'error',6000); return; }
+  for(const g of _mirGroups){ for(const l of g.locs){
+    const qty=Number(l.qty)||0; if(qty<=0) continue;
+    items.push({ sno:items.length+1, material_code:g.code, material_name:g.name, uom:g.uom||'',
+      qty_required:qty, specification:(g.spec||'').trim()||null, remarks:(l.rmk||'').trim()||null,
+      wbs_node_id:(l.leafId!=null?Number(l.leafId):null), loc_node_id:l.locId });
+  }}
   // v112: hard block — every MIR line must come from the estimate picker (carries loc_node_id)
   const _unlocated = items.filter(it => !it.loc_node_id);
   if (_unlocated.length) {
@@ -24729,7 +25047,7 @@ async function _loadWbsTree(){
 async function _loadLocTree(){
   if (_locTreeCache) return _locTreeCache;
   let data;
-  try { data = await _fetchAllRows('location_nodes', 'id,name,parent_id,is_leaf,is_active'); }
+  try { data = await _fetchAllRows('location_nodes', 'id,name,parent_id,is_leaf,is_active,node_type'); }
   catch(e){ toast('Location load: '+e.message,'error'); _locTreeCache=[]; return _locTreeCache; }
   const map = Object.fromEntries((data||[]).map(n=>[n.id,n]));
   _locTreeCache = (data||[]).map(n=>{
