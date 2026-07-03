@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Penguin-Procurement Suite v133 — Urban Excellence LLP · Poetry of Earth</title>
+<title>Penguin-Procurement Suite v138 — Urban Excellence LLP · Poetry of Earth</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <style>
@@ -18163,6 +18163,7 @@ let _mpNodeCells = {};   // node key -> [cell] (for bulk select / tri-state)
 let _mpCart = new Map(); // 'code|loc' -> {code,name,uom,locId,locName,locPath,status,remaining,leafId,pkgs,qty,orphan}
 let _mpOpen = new Set();
 let _mpExp  = new Set();  // expanded cart material codes
+let _mpMode = 'mir';      // v134: 'mir' | 'po' — drives remaining basis + commit target
 
 const _mpKey = (code,locId)=> (code||'') + '|' + String(locId);
 const _mpLabel3 = p => (p||'').split(' \u203a ').slice(-3).join(' \u00b7 ');
@@ -18199,7 +18200,8 @@ function _mirPooledCells(){
     c.pkgs.sort((a,b)=>b.est-a.est);
     c.leafId=c.pkgs[0]?c.pkgs[0].leafId:null;       // stamp the largest-est package
     c.pkgName=c.pkgs[0]?c.pkgs[0].leaf:'\u2014';
-    c.remaining=Math.round((c.est - c.mir)*1e6)/1e6;
+    c.committed = (_poCommittedMap||{})[c.code+'|'+c.locId] || 0;   // v134
+    c.remaining=Math.round((c.est - (_mpMode==='po' ? c.committed : c.mir))*1e6)/1e6;
     if(!byLoc.has(c.locId)) byLoc.set(c.locId,[]);
     byLoc.get(c.locId).push(c);
   }
@@ -18247,6 +18249,7 @@ async function _mpBuildTree(){
 }
 
 async function openMirEstimatePicker(){
+  _mpMode='mir';   // v134
   await _loadMirEstimateTree(true);
   _mpCells=_mirPooledCells();
   await _mpBuildTree();
@@ -18297,9 +18300,16 @@ function _mpExpandTo(locId){
 
 function _mpMatch(text){
   const q=(document.getElementById('mpSearch')?.value||'').toLowerCase().trim();
-  return !q || text.toLowerCase().includes(q);
+  if(!q) return true;
+  const hay=(text||'').toLowerCase();
+  return q.split(/\s+/).filter(Boolean).every(t=>hay.includes(t));   // v138: token match, any order
 }
-function _mpVisibleNode(n){ return (_mpNodeCells[n.id]||[]).length>0; }
+function _mpHasQ(){ return !!(document.getElementById('mpSearch')?.value||'').trim(); }
+function _mpCellMatch(c){ return _mpMatch((c.name||'')+' '+(c.code||'')+' '+(c.locPath||'')); }
+function _mpVisibleNode(n){   // v138: when searching, only branches that contain a matching cell
+  const cells=_mpNodeCells[n.id]||[]; if(!cells.length) return false;
+  return !_mpHasQ() || cells.some(_mpCellMatch);
+}
 
 function _mpRenderTree(){
   const host=document.getElementById('mpTree'); if(!host) return;
@@ -18310,7 +18320,7 @@ function _mpRenderTree(){
 function _mpRenderNode(n){
   if(!_mpVisibleNode(n)) return '';
   if(n.isFloor) return _mpRenderFloor(n);
-  const ex=_mpOpen.has(n.id);
+  const ex=_mpOpen.has(n.id)||_mpHasQ();   // v138: auto-expand on search
   return '<div class="mp-node"><div class="mp-row" onclick="_mpTog(\''+n.id+'\')">'
     + '<span class="mp-tw">'+(ex?'\u25be':'\u25b8')+'</span>'
     + '<input type="checkbox" class="mp-cb" data-node="'+n.id+'" onclick="event.stopPropagation();_mpBulk(\''+n.id+'\',this.checked)">'
@@ -18319,8 +18329,8 @@ function _mpRenderNode(n){
     + '</div>';
 }
 function _mpRenderFloor(n){
-  const ex=_mpOpen.has(n.id);
-  const pkgs=[...new Set(n.cells.map(c=>c.pkgName))];
+  const ex=_mpOpen.has(n.id)||_mpHasQ();   // v138
+  const pkgs=[...new Set(n.cells.filter(c=>!_mpHasQ()||_mpCellMatch(c)).map(c=>c.pkgName))];   // v138: matching pkgs only
   return '<div class="mp-node"><div class="mp-row" onclick="_mpTog(\''+n.id+'\')">'
     + '<span class="mp-tw">'+(ex?'\u25be':'\u25b8')+'</span>'
     + '<input type="checkbox" class="mp-cb" data-floor="'+n.id+'" onclick="event.stopPropagation();_mpBulk(\''+n.id+'\',this.checked)">'
@@ -18329,8 +18339,9 @@ function _mpRenderFloor(n){
     + '</div>';
 }
 function _mpRenderPkg(floor,pkg){
-  const pid=floor.id+'::'+pkg, ex=_mpOpen.has(pid);
+  const pid=floor.id+'::'+pkg, ex=_mpOpen.has(pid)||_mpHasQ();   // v138
   const cells=floor.cells.filter(c=>c.pkgName===pkg);
+  if(_mpHasQ() && !cells.some(_mpCellMatch)) return '';   // v138: hide package with no match
   const pj=pkg.replace(/'/g,"\\'");
   return '<div class="mp-node"><div class="mp-row" onclick="_mpTog(\''+_mpAttr(pid)+'\')">'
     + '<span class="mp-tw">'+(ex?'\u25be':'\u25b8')+'</span>'
@@ -21138,7 +21149,7 @@ function onPOGSTModeChange() {
 // commitment gate fires. remaining = estimate - committed-on-live-POs (indicative;
 // the DB gate is the hard authority). Reuses the approved-only MIR estimate tree.
 // ============================================================
-let _poCommittedMap=null; let _poPickIndex=null; let _poPickSelCode=null;   // v133 picker state
+let _poCommittedMap=null;   // v134: PO committed map (also used by _mirPooledCells in PO mode)
 
 function _poAlreadyAdded(code, locId){
   // v133: clubbed rows keep their locations in _poAlloc, not dataset.locNode.
@@ -21173,123 +21184,123 @@ async function _loadPoCommitted(force){
   return _poCommittedMap;
 }
 
-// v133: direct-PO estimate picker, material-first + multi-select locations (MIS-picker style).
-// remaining = approved estimate − committed on live POs. Picks route through the clubbed
-// addPOItemFromEstimate() path so several locations of one material become one row with a split.
+// v134: Direct-PO "Add from estimate" reuses the MIR picker (location-tree left + cart right).
+// Only three things differ from MIR mode: remaining basis (est − committed on live POs),
+// the cart is seeded from / committed to the clubbed PO rows (_poAlloc, src:'est'), and labels.
 async function openPoEstimatePicker(){
-  await Promise.all([_loadMirEstimateTree(), _loadPoCommitted(true)]);
-  _poPickIndex = _poBuildMatIndex();
-  _poPickSelCode = null;
+  _mpMode='po';
+  await Promise.all([_loadMirEstimateTree(true), _loadPoCommitted(true)]);
+  _mpCells=_mirPooledCells();          // remaining computed for PO mode (est − committed)
+  await _mpBuildTree();
+  _mpInjectCss();
+  _mpExp=new Set(); _mpOpen=new Set();
+  _poSeedCartFromRows();               // reflect what's already on the PO
   openModal(
-    '<div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;">'
-    +'<h3 style="margin:0;font-size:15px;">Add to PO from estimate</h3></div>'
-    +'<div style="font-size:11px;color:var(--muted);margin-bottom:10px;">Search a material, then tick locations. remaining = approved estimate − committed on live POs. The hard cap is enforced when you save.</div>'
-    +'<div style="position:relative;margin-bottom:8px;">'
-    +'  <input id="poPickMat" placeholder="Type material\u2026" autocomplete="off" oninput="_poPickerMatSearch(this.value)" style="width:100%;height:34px;font-size:13px;padding:0 10px;">'
-    +'  <div id="poPickMatRes" class="typeahead-results" style="min-width:380px;position:absolute;top:100%;left:0;right:0;z-index:9999;box-shadow:0 4px 16px rgba(0,0,0,.15);"></div>'
-    +'</div>'
-    +'<div id="poPickHead"></div>'
-    +'<div id="poPickLocs" style="max-height:48vh;overflow:auto;border:1px solid var(--border);border-radius:8px;"></div>'
-    +'<div style="display:flex;justify-content:space-between;align-items:center;margin-top:10px;">'
-    +'  <button class="btn btn-primary btn-sm" onclick="_poPickerAddSelected()">\uff0b Add selected</button>'
-    +'  <button class="btn btn-sm" onclick="closeModal()">Done</button>'
-    +'</div>',
+    '<div class="mp-modal">'
+    + '<div class="mp-head"><div><h3>Add to PO from estimate</h3>'
+    +   '<div class="mp-sub">Only <b>approved</b> estimate cells appear. Tick a floor for all its bulk materials. Qty is capped at remaining.</div></div></div>'
+    + '<div class="mp-split">'
+    +   '<div class="mp-pane mp-left">'
+    +     '<div class="mp-pane-head"><span class="mp-ttl">Estimate</span>'
+    +       '<div class="mp-search"><input id="mpSearch" placeholder="Search material / location / code\u2026" oninput="_mpRenderTree()"></div></div>'
+    +     '<div class="mp-body" id="mpTree"></div>'
+    +   '</div>'
+    +   '<div class="mp-pane mp-right">'
+    +     '<div class="mp-pane-head"><span class="mp-ttl">Selected for this PO</span><span class="mp-cnt" id="mpCartCount"></span></div>'
+    +     '<div class="mp-body" id="mpCart"></div>'
+    +   '</div>'
+    + '</div>'
+    + '<div class="mp-foot">'
+    +   '<span class="mp-legend"><span class="mp-dot">\u25cf</span> approved estimate &nbsp;\u00b7&nbsp; remaining = estimate \u2212 committed on live POs</span>'
+    +   '<div class="mp-spacer"></div>'
+    +   '<button class="btn btn-ghost btn-sm" onclick="_mpClear()">Clear</button>'
+    +   '<button class="btn btn-primary btn-sm" onclick="_poCommitFromCart()">Add to PO <span class="mp-pill" id="mpCommitCount">0</span></button>'
+    + '</div></div>',
     'large');
-  _poPickerRenderLocs();
-  setTimeout(()=>{ const el=document.getElementById('poPickMat'); if(el) el.focus(); }, 50);
+  _mpRefresh();
 }
 
-function _poBuildMatIndex(){
-  const tree=_mirEstTreeCache||[], cm=_poCommittedMap||{};
-  const idx={};
-  tree.forEach(L=>{
-    (L.locArr||[]).forEach(LO=>{
-      (LO.skuArr||[]).forEach(S=>{
-        if(!S.code) return;
-        const committed = cm[(S.code||'')+'|'+LO.locId] || 0;
-        const rem = (S.est||0) - committed;
-        const e = idx[S.code] || (idx[S.code] = { code:S.code, name:S.name, uom:S.uom, locs:[] });
-        e.locs.push({ leafId:L.leafId, leaf:L.leaf, wbsPath:L.wbsPath, locId:LO.locId,
-                      locName:LO.locName, locPath:LO.locPath, est:S.est, committed, remaining:rem });
-      });
+// Seed the cart from the PO's current estimate-sourced allocations (src:'est').
+// MIR-sourced / manual allocations are left out of the picker entirely.
+function _poSeedCartFromRows(){
+  _mpCart=new Map();
+  document.querySelectorAll('#poItemsBody tr').forEach(tr=>{
+    const rn=(tr.id||'').split('_')[1]; const alloc=_poAlloc[rn]; if(!alloc) return;
+    const code=tr.dataset.matCode||''; if(!code) return;
+    const name=tr.querySelector('.po_material')?.value||code;
+    const uom=tr.querySelector('.po_uom')?.value||'';
+    alloc.forEach(a=>{
+      if(a.src!=='est') return;
+      const k=_mpKey(code,a.loc); const cell=_mpCells.byKey.get(k);
+      if(cell){ _mpCart.set(k,{...cell,qty:(Number(a.qty)||0)}); }
+      else { _mpCart.set(k,{code,name,uom,locId:String(a.loc),locName:a.locName||'',locPath:a.locPath||'',
+              status:'',remaining:(a.estRemaining||a.qty||0),leafId:a.wbs,pkgs:[],pkgName:'',qty:(Number(a.qty)||0),orphan:true}); }
     });
   });
-  return idx;
+  _mpCart.forEach(v=>{ _mpExpandTo(v.locId); });
 }
 
-function _poPickerMatSearch(q){
-  const res=document.getElementById('poPickMatRes'); if(!res) return;
-  const s=(q||'').toLowerCase().trim();
-  if(!s){ res.innerHTML=''; return; }
-  const items=Object.values(_poPickIndex||{})
-    .filter(e => (e.name||'').toLowerCase().includes(s) || (e.code||'').toLowerCase().includes(s))
-    .slice(0,40)
-    .map(e => {
-      const n=e.locs.length, avail=e.locs.filter(l=>l.remaining>0).length;
-      return '<div class="typeahead-item" onmousedown="event.preventDefault();_poPickerSelectMat(\''+esc(e.code).replace(/'/g,"\\'")+'\')">'
-        +'<div style="font-size:12px;font-weight:600;">'+esc(e.name)+' <span style="font-family:monospace;font-size:10px;color:var(--accent);">'+esc(e.code)+'</span></div>'
-        +'<div class="muted" style="font-size:11px;">'+avail+' of '+n+' location(s) with remaining</div></div>';
-    }).join('');
-  res.innerHTML = items || '<div class="muted" style="padding:8px;font-size:12px;">No matching material in the approved estimate.</div>';
-}
-
-function _poPickerSelectMat(code){
-  _poPickSelCode = code;
-  const res=document.getElementById('poPickMatRes'); if(res) res.innerHTML='';
-  const inp=document.getElementById('poPickMat'); const e=(_poPickIndex||{})[code];
-  if(inp && e) inp.value=e.name;
-  _poPickerRenderLocs();
-}
-
-function _poPickerRenderLocs(){
-  const host=document.getElementById('poPickLocs'); if(!host) return;
-  const head=document.getElementById('poPickHead');
-  const e=_poPickSelCode ? (_poPickIndex||{})[_poPickSelCode] : null;
-  if(!e){
-    if(head) head.innerHTML='';
-    host.innerHTML='<div class="muted" style="padding:16px;text-align:center;font-size:12px;">Search and pick a material above to see its approved locations.</div>';
-    return;
+// Clubbed upsert of one (material, location) with an explicit qty, tagged src:'est'.
+function _poAddEstAlloc(s){
+  const _mkey = s.code || ('name:'+((s.name||'').toLowerCase()));
+  let rn=null;
+  document.querySelectorAll('#poItemsBody tr').forEach(tr=>{
+    const id=(tr.id||'').split('_')[1];
+    if((tr.dataset.matKey||tr.dataset.matCode||'')===_mkey && _poAlloc[id]) rn=id;
+  });
+  if(rn==null){
+    addPOItem();
+    rn=String(_poItemCount-1);
+    const row=document.getElementById('poItem_'+rn);
+    row.dataset.matCode=s.code||''; row.dataset.matKey=_mkey;
+    const matEl=row.querySelector('.po_material');
+    if(matEl){
+      matEl.value=s.name; matEl.readOnly=true; matEl.dataset.matCode=s.code||''; matEl.style.background='var(--panel-2)';
+      const cell=matEl.closest('td');
+      const ic=document.createElement('span'); ic.style.cssText='cursor:pointer;margin-left:8px;color:var(--accent);font-size:11px;white-space:nowrap;';
+      ic.innerHTML='\u24d8 split'; ic.title='Show / hide location split'; ic.onclick=()=>_poToggleAlloc(rn);
+      const warn=document.createElement('div'); warn.id='poAllocWarn_'+rn; warn.style.cssText='font-size:10px;color:#d97706;margin-top:2px;';
+      cell.appendChild(ic); cell.appendChild(warn);
+    }
+    const uomEl=row.querySelector('.po_uom'); if(uomEl){ uomEl.value=s.uom||''; uomEl.readOnly=true; }
+    const qEl=row.querySelector('.po_qty'); if(qEl){ qEl.setAttribute('oninput','_poRowRealloc(\''+rn+'\')'); }
+    _poAlloc[rn]=[];
   }
-  if(head) head.innerHTML='<div style="font-size:12px;font-weight:600;margin:8px 2px 6px;">'+esc(e.name)
-    +' <span style="font-family:monospace;font-size:10px;color:var(--accent);">'+esc(e.code)+'</span></div>';
-  const byPkg={};
-  e.locs.forEach(l=>{ (byPkg[l.leaf]=byPkg[l.leaf]||{path:l.wbsPath,locs:[]}).locs.push(l); });
-  let html='';
-  Object.entries(byPkg).forEach(([pk,g])=>{
-    html+='<div style="position:sticky;top:0;background:var(--panel-2);border-bottom:1px solid var(--border);padding:6px 10px;font-size:10px;font-weight:700;color:var(--accent);z-index:1;">\uD83D\uDCE6 '
-      +esc(pk)+' <span style="font-weight:500;opacity:.7;">'+esc(g.path||'')+'</span></div>';
-    g.locs.forEach(l=>{
-      const added=_poAlreadyAdded(e.code,l.locId);
-      const spent=l.remaining<=0;
-      const disabled=added||spent;
-      const remCss=added?'color:#0d9488;':(spent?'color:#dc2626;':(l.remaining<20?'color:#d97706;':'color:var(--accent);'));
-      const remTxt=added?'\u2713 added':(spent?'0 remaining':(_fmtQ(l.remaining)+' '+esc(e.uom||'')+' remaining'));
-      html+='<label style="display:flex;justify-content:space-between;align-items:center;gap:10px;padding:8px 12px;border-bottom:1px solid #f1f5f9;'+(disabled?'opacity:.5;':'cursor:pointer;')+'">'
-        +'<div style="display:flex;gap:9px;align-items:center;min-width:0;">'
-        +'<input type="checkbox" class="poPickChk" data-loc="'+esc(l.locId)+'" '+(disabled?'disabled':'')+'>'
-        +'<div style="min-width:0;"><div style="font-size:12px;font-weight:600;">\uD83D\uDCCD '+esc(l.locName)+'</div>'
-        +'<div class="muted" style="font-size:10px;">'+esc(l.locPath||'')+' \u00b7 est '+_fmtQ(l.est)+' \u00b7 committed '+_fmtQ(l.committed)+'</div></div></div>'
-        +'<div style="font-size:11px;font-weight:600;'+remCss+'white-space:nowrap;">'+remTxt+'</div></label>';
-    });
-  });
-  host.innerHTML=html;
+  const a=_poAlloc[rn];
+  let e=a.find(x=>String(x.loc)===String(s.locId));
+  if(!e){
+    e={wbs:s.leafId, loc:s.locId, plid:(window.crypto&&crypto.randomUUID?crypto.randomUUID():('id'+Date.now()+Math.random())),
+       locName:s.locName, locPath:s.locPath, mirBalance:0, estRemaining:(s.remaining>0?s.remaining:0), qty:0, src:'est'};
+    a.push(e);
+  }
+  e.src='est';
+  e.estRemaining=(s.remaining>0?s.remaining:e.estRemaining);
+  e.qty=Number(s.qty)||0;   // explicit cart qty (not greedy-reallocated)
 }
 
-function _poPickerAddSelected(){
-  const e=_poPickSelCode ? (_poPickIndex||{})[_poPickSelCode] : null;
-  if(!e){ toast('Search and pick a material first','error'); return; }
-  const checks=[...document.querySelectorAll('.poPickChk:checked')];
-  if(!checks.length){ toast('Tick at least one location','error'); return; }
-  let n=0;
-  checks.forEach(chk=>{
-    const l=e.locs.find(x=>String(x.locId)===String(chk.dataset.loc));
-    if(!l) return;
-    addPOItemFromEstimate({ code:e.code, name:e.name, uom:e.uom, leafId:l.leafId,
-      locId:l.locId, locName:l.locName, locPath:l.locPath, remaining:l.remaining });
-    n++;
+// "Add to PO": the picker owns src:'est' allocations — clear them, re-add from the cart.
+// MIR-sourced / manual allocations are untouched. Empty rows are removed.
+function _poCommitFromCart(){
+  document.querySelectorAll('#poItemsBody tr').forEach(tr=>{
+    const rn=(tr.id||'').split('_')[1]; const a=_poAlloc[rn]; if(!a) return;
+    _poAlloc[rn]=a.filter(x=>x.src!=='est');
   });
-  if(n) toast(n+' location'+(n>1?'s':'')+' added to the PO','success',3000);
-  _poPickerRenderLocs();
+  _mpCart.forEach(v=>{
+    if((Number(v.qty)||0)<=0) return;
+    _poAddEstAlloc({code:v.code,name:v.name,uom:v.uom,leafId:v.leafId,locId:v.locId,
+      locName:v.locName,locPath:v.locPath,remaining:v.remaining,qty:v.qty});
+  });
+  document.querySelectorAll('#poItemsBody tr').forEach(tr=>{
+    const rn=(tr.id||'').split('_')[1]; const a=_poAlloc[rn]; if(!a) return;
+    if(a.length===0){ delete _poAlloc[rn]; tr.remove(); }
+    else { const qEl=document.getElementById('poQty_'+rn);
+           if(qEl) qEl.value=_fmtQin(a.reduce((t,e)=>t+(Number(e.qty)||0),0));
+           recalcPORow(rn); }
+  });
+  if(typeof recalcPOTotals==='function') recalcPOTotals();
+  closeModal();
+  _mpMode='mir';
+  toast('PO lines updated from estimate','success',2500);
 }
 
 // ===== PO SUMMED MODEL (v101) — one display row per material; per-location split system-managed =====
@@ -21332,40 +21343,6 @@ function _poRowRealloc(rn){
   const warn=document.getElementById('poAllocWarn_'+rn);
   if(warn) warn.textContent = over>1e-6 ? ('\u26a0 '+_fmtQ(over)+' over estimate headroom — reduce qty') : '';
   recalcPORow(rn);
-}
-
-function addPOItemFromEstimate(s){
-  let rn=null;
-  document.querySelectorAll('#poItemsBody tr').forEach(tr=>{
-    const id=(tr.id||'').split('_')[1];
-    if(tr.dataset.matCode===(s.code||'') && _poAlloc[id]) rn=id;
-  });
-  if(rn==null){
-    addPOItem();
-    rn=String(_poItemCount-1);
-    const row=document.getElementById('poItem_'+rn);
-    row.dataset.matCode=s.code||'';
-    const matEl=row.querySelector('.po_material');
-    if(matEl){
-      matEl.value=s.name; matEl.readOnly=true; matEl.dataset.matCode=s.code||''; matEl.style.background='var(--panel-2)';
-      const cell=matEl.closest('td');
-      const ic=document.createElement('span'); ic.style.cssText='cursor:pointer;margin-left:8px;color:var(--accent);font-size:11px;white-space:nowrap;';
-      ic.innerHTML='\u24d8 split'; ic.title='Show / hide location split'; ic.onclick=()=>_poToggleAlloc(rn);
-      const warn=document.createElement('div'); warn.id='poAllocWarn_'+rn; warn.style.cssText='font-size:10px;color:#d97706;margin-top:2px;';
-      cell.appendChild(ic); cell.appendChild(warn);
-    }
-    const uomEl=row.querySelector('.po_uom'); if(uomEl){ uomEl.value=s.uom||''; uomEl.readOnly=true; }
-    const qEl=row.querySelector('.po_qty'); if(qEl){ qEl.setAttribute('oninput','_poRowRealloc(\''+rn+'\')'); }
-    _poAlloc[rn]=[];
-  }
-  const a=_poAlloc[rn];
-  if(!a.some(e=>String(e.loc)===String(s.locId))){
-    a.push({wbs:s.leafId, loc:s.locId, plid:(window.crypto&&crypto.randomUUID?crypto.randomUUID():('id'+Date.now()+Math.random())),
-            locName:s.locName, locPath:s.locPath, mirBalance:0, estRemaining:(s.remaining>0?s.remaining:0), qty:0});
-  }
-  const total=a.reduce((t,e)=>t+(e.estRemaining||0),0);
-  const qEl=document.getElementById('poQty_'+rn); if(qEl) qEl.value=_fmtQin(total);
-  _poRowRealloc(rn);
 }
 
 // ============================================================
