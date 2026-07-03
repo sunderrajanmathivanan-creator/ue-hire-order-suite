@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Penguin-Procurement Suite v138 — Urban Excellence LLP · Poetry of Earth</title>
+<title>Penguin-Procurement Suite v142 — Urban Excellence LLP · Poetry of Earth</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <style>
@@ -17081,6 +17081,7 @@ function selectMaterialItem(inputId, resultsId, name, uom, matCode) {
     if (uomEl) uomEl.value = uom;
   }
   if (input) blockDupMaterial(input);
+  if (input && input.classList.contains('po_material')) _poRefreshHistory();   // v140: rate history strip
 }
 
 // v83: duplicate material lines are BLOCKED at entry in MIR and PO forms.
@@ -17492,6 +17493,7 @@ function _draftRestorePO(pl) {
     row.querySelector('.po_qty')?.dispatchEvent(new Event('input'));
   });
   recalcPOTotals();
+  _poRefreshHistory();   // v140
 }
 
 // ---- HO adapter (estimate-sourced tree: _hoTree + _hoSel + _hoSpec) ----
@@ -18161,7 +18163,6 @@ let _mpCells = null;     // { byKey:Map('code|loc'->cell), byLoc:Map(locId->[cel
 let _mpRoots = [];       // location tree roots (approved-bearing only)
 let _mpNodeCells = {};   // node key -> [cell] (for bulk select / tri-state)
 let _mpCart = new Map(); // 'code|loc' -> {code,name,uom,locId,locName,locPath,status,remaining,leafId,pkgs,qty,orphan}
-let _mpOpen = new Set();
 let _mpExp  = new Set();  // expanded cart material codes
 let _mpMode = 'mir';      // v134: 'mir' | 'po' — drives remaining basis + commit target
 
@@ -18248,147 +18249,16 @@ async function _mpBuildTree(){
   _mpRoots=roots;
 }
 
-async function openMirEstimatePicker(){
-  _mpMode='mir';   // v134
-  await _loadMirEstimateTree(true);
-  _mpCells=_mirPooledCells();
-  await _mpBuildTree();
-  _mpInjectCss();
-  // seed cart from the grouped MIR model so the picker reflects current selection
-  _mpCart=new Map(); _mpExp=new Set(); _mpOpen=new Set();
-  _mirGroups.forEach(g=>g.locs.forEach(l=>{
-    const k=_mpKey(g.code,l.locId); const cell=_mpCells.byKey.get(k);
-    if(cell){ _mpCart.set(k,{...cell,qty:l.qty}); }
-    else { _mpCart.set(k,{code:g.code,name:g.name,uom:g.uom,locId:l.locId,locName:l.locName,locPath:l.locPath,
-        status:l.status,remaining:(l.remaining!=null?l.remaining:l.qty),leafId:l.leafId,pkgs:[],pkgName:'',qty:l.qty,orphan:true}); }
-  }));
-  // auto-open the branches that already hold selected cells
-  _mpCart.forEach(v=>{ _mpExpandTo(v.locId); });
-
-  openModal(
-    '<div class="mp-modal">'
-    + '<div class="mp-head"><div><h3>Add from material estimate</h3>'
-    +   '<div class="mp-sub">Only <b>approved</b> estimate cells appear. Tick a floor for all its bulk materials. Qty is capped at remaining.</div></div></div>'
-    + '<div class="mp-split">'
-    +   '<div class="mp-pane mp-left">'
-    +     '<div class="mp-pane-head"><span class="mp-ttl">Estimate</span>'
-    +       '<div class="mp-search"><input id="mpSearch" placeholder="Search material / location / code\u2026" oninput="_mpRenderTree()"></div></div>'
-    +     '<div class="mp-body" id="mpTree"></div>'
-    +   '</div>'
-    +   '<div class="mp-pane mp-right">'
-    +     '<div class="mp-pane-head"><span class="mp-ttl">Selected for this MIR</span><span class="mp-cnt" id="mpCartCount"></span></div>'
-    +     '<div class="mp-body" id="mpCart"></div>'
-    +   '</div>'
-    + '</div>'
-    + '<div class="mp-foot">'
-    +   '<span class="mp-legend"><span class="mp-dot">\u25cf</span> approved estimate (hard budget) &nbsp;\u00b7&nbsp; remaining = estimate \u2212 MIR already raised</span>'
-    +   '<div class="mp-spacer"></div>'
-    +   '<button class="btn btn-ghost btn-sm" onclick="_mpClear()">Clear</button>'
-    +   '<button class="btn btn-primary btn-sm" onclick="_mpCommit()">Add to MIR <span class="mp-pill" id="mpCommitCount">0</span></button>'
-    + '</div></div>',
-    'large');
-  _mpRefresh();
-}
-
-function _mpExpandTo(locId){
-  // open all ancestors of a leaf location so a seeded cell is visible
-  const m={}; // walk _mpRoots to find chain
-  function find(n,chain){ if(n.id===String(locId)){ chain.forEach(id=>_mpOpen.add(id)); _mpOpen.add(n.id); return true; }
-    return (n.children||[]).some(c=>find(c,chain.concat(n.id))); }
-  _mpRoots.forEach(r=>find(r,[]));
-}
-
-function _mpMatch(text){
-  const q=(document.getElementById('mpSearch')?.value||'').toLowerCase().trim();
-  if(!q) return true;
-  const hay=(text||'').toLowerCase();
-  return q.split(/\s+/).filter(Boolean).every(t=>hay.includes(t));   // v138: token match, any order
-}
-function _mpHasQ(){ return !!(document.getElementById('mpSearch')?.value||'').trim(); }
-function _mpCellMatch(c){ return _mpMatch((c.name||'')+' '+(c.code||'')+' '+(c.locPath||'')); }
-function _mpVisibleNode(n){   // v138: when searching, only branches that contain a matching cell
-  const cells=_mpNodeCells[n.id]||[]; if(!cells.length) return false;
-  return !_mpHasQ() || cells.some(_mpCellMatch);
-}
-
-function _mpRenderTree(){
-  const host=document.getElementById('mpTree'); if(!host) return;
-  host.innerHTML=_mpRoots.filter(_mpVisibleNode).map(_mpRenderNode).join('')
-    || '<div class="mp-empty">No approved estimate cells.</div>';
-  _mpSync();
-}
-function _mpRenderNode(n){
-  if(!_mpVisibleNode(n)) return '';
-  if(n.isFloor) return _mpRenderFloor(n);
-  const ex=_mpOpen.has(n.id)||_mpHasQ();   // v138: auto-expand on search
-  return '<div class="mp-node"><div class="mp-row" onclick="_mpTog(\''+n.id+'\')">'
-    + '<span class="mp-tw">'+(ex?'\u25be':'\u25b8')+'</span>'
-    + '<input type="checkbox" class="mp-cb" data-node="'+n.id+'" onclick="event.stopPropagation();_mpBulk(\''+n.id+'\',this.checked)">'
-    + '<span class="mp-lbl"><span class="mp-kind">'+esc(n.kind)+'</span><span class="mp-nm">'+esc(n.name)+'</span></span></div>'
-    + (ex?'<div class="mp-children">'+n.children.filter(_mpVisibleNode).map(_mpRenderNode).join('')+'</div>':'')
-    + '</div>';
-}
-function _mpRenderFloor(n){
-  const ex=_mpOpen.has(n.id)||_mpHasQ();   // v138
-  const pkgs=[...new Set(n.cells.filter(c=>!_mpHasQ()||_mpCellMatch(c)).map(c=>c.pkgName))];   // v138: matching pkgs only
-  return '<div class="mp-node"><div class="mp-row" onclick="_mpTog(\''+n.id+'\')">'
-    + '<span class="mp-tw">'+(ex?'\u25be':'\u25b8')+'</span>'
-    + '<input type="checkbox" class="mp-cb" data-floor="'+n.id+'" onclick="event.stopPropagation();_mpBulk(\''+n.id+'\',this.checked)">'
-    + '<span class="mp-lbl"><span class="mp-kind">'+esc(n.kind)+'</span><span class="mp-nm">'+esc(n.name)+'</span><span class="mp-dot">\u25cf</span></span></div>'
-    + (ex?'<div class="mp-children">'+pkgs.map(p=>_mpRenderPkg(n,p)).join('')+'</div>':'')
-    + '</div>';
-}
-function _mpRenderPkg(floor,pkg){
-  const pid=floor.id+'::'+pkg, ex=_mpOpen.has(pid)||_mpHasQ();   // v138
-  const cells=floor.cells.filter(c=>c.pkgName===pkg);
-  if(_mpHasQ() && !cells.some(_mpCellMatch)) return '';   // v138: hide package with no match
-  const pj=pkg.replace(/'/g,"\\'");
-  return '<div class="mp-node"><div class="mp-row" onclick="_mpTog(\''+_mpAttr(pid)+'\')">'
-    + '<span class="mp-tw">'+(ex?'\u25be':'\u25b8')+'</span>'
-    + '<input type="checkbox" class="mp-cb" data-pkg="'+_mpAttr(pid)+'" onclick="event.stopPropagation();_mpBulkPkg(\''+floor.id+'\',\''+_mpAttr(pkg)+'\',this.checked)">'
-    + '<span class="mp-lbl"><span class="mp-kind">Pkg</span><span class="mp-nm">\ud83d\udce6 '+esc(pkg)+'</span></span></div>'
-    + (ex?'<div class="mp-children">'+cells.map(c=>_mpRenderMat(floor,c)).join('')+'</div>':'')
-    + '</div>';
-}
-function _mpRenderMat(floor,c){
-  if(!_mpMatch(c.name+' '+c.code+' '+(floor.path||''))) return '';
-  const k=_mpKey(c.code,c.locId), checked=_mpCart.has(k);
-  const dis=c.remaining<=0;
-  const remCss=c.remaining<=0?'mp-rem-no':'mp-rem-ok';
-  const multi=c.pkgs.length>1?'<span class="mp-pkgpill" title="also under: '+esc(c.pkgs.slice(1).map(p=>p.leaf).join(', '))+'">+'+(c.pkgs.length-1)+' pkg</span>':'';
-  return '<div class="mp-matrow"><input type="checkbox" class="mp-cb" data-mat="'+esc(k)+'" '+(checked?'checked':'')+' '+(dis?'disabled':'')+' onclick="_mpToggleMat(\''+esc(c.locId)+'\',\''+esc(c.code)+'\',this.checked)">'
-    + '<div class="mp-meta"><div class="mp-mn">'+esc(c.name)+' <span class="mp-code">'+esc(c.code)+'</span>'+multi+'</div>'
-    + '<div class="mp-ms">'+esc(c.uom)+' \u00b7 est '+_fmtQ(c.est)+' \u00b7 raised '+_fmtQ(c.mir)+' \u00b7 <span class="'+remCss+'">remaining '+_fmtQ(c.remaining)+'</span></div></div></div>';
-}
-const _mpAttr = s => String(s).replace(/'/g,'&#39;').replace(/"/g,'&quot;');
-
-function _mpTog(id){ id=id.replace(/&#39;/g,"'"); _mpOpen.has(id)?_mpOpen.delete(id):_mpOpen.add(id); _mpRenderTree(); }
-
-// ---- selection ----
+// ---- selection primitives (shared by pp picker + cart) ----
 function _mpAddCell(c){ if(c.remaining<=0) return; const k=_mpKey(c.code,c.locId);
   if(!_mpCart.has(k)) _mpCart.set(k,{...c,qty:c.remaining}); }
 function _mpDel(code,locId){ _mpCart.delete(_mpKey(code,locId)); }
-function _mpToggleMat(locId,code,on){
-  const c=_mpCells.byKey.get(_mpKey(code,locId)); if(!c) return;
-  on?_mpAddCell(c):_mpDel(code,locId); _mpRefresh();
-}
-function _mpBulk(nodeId,on){ (_mpNodeCells[nodeId]||[]).forEach(c=> on?_mpAddCell(c):_mpDel(c.code,c.locId)); _mpRefresh(); }
-function _mpBulkPkg(floorId,pkg,on){
-  pkg=pkg.replace(/&#39;/g,"'").replace(/&quot;/g,'"');
-  (_mpNodeCells[floorId]||[]).filter(c=>c.pkgName===pkg).forEach(c=> on?_mpAddCell(c):_mpDel(c.code,c.locId)); _mpRefresh();
-}
 function _mpTri(cells){
   const vis=cells; if(!vis.length) return 'none';
   let on=0; vis.forEach(c=>{ if(_mpCart.has(_mpKey(c.code,c.locId))) on++; });
   return on===0?'none':(on===vis.length?'all':'some');
 }
-function _mpSync(){
-  document.querySelectorAll('.mp-cb[data-mat]').forEach(cb=>{ cb.checked=_mpCart.has(cb.dataset.mat.replace(/&#39;/g,"'")); });
-  document.querySelectorAll('.mp-cb[data-floor]').forEach(cb=>{ const st=_mpTri(_mpNodeCells[cb.dataset.floor]||[]); cb.checked=st==='all'; cb.indeterminate=st==='some'; });
-  document.querySelectorAll('.mp-cb[data-node]').forEach(cb=>{ const st=_mpTri(_mpNodeCells[cb.dataset.node]||[]); cb.checked=st==='all'; cb.indeterminate=st==='some'; });
-  document.querySelectorAll('.mp-cb[data-pkg]').forEach(cb=>{ const raw=cb.dataset.pkg.replace(/&#39;/g,"'").replace(/&quot;/g,'"');
-    const [fid,pkg]=raw.split('::'); const st=_mpTri((_mpNodeCells[fid]||[]).filter(c=>c.pkgName===pkg)); cb.checked=st==='all'; cb.indeterminate=st==='some'; });
-}
+const _mpAttr = s => String(s).replace(/'/g,'&#39;').replace(/"/g,'&quot;');
 
 // ---- cart ----
 function _mpCartGroups(){
@@ -18438,7 +18308,7 @@ function _mpToggleExp(code){ _mpExp.has(code)?_mpExp.delete(code):_mpExp.add(cod
 function _mpDropLoc(code,locId){ _mpDel(code,locId); _mpRefresh(); }
 function _mpDropMat(code){ [..._mpCart.keys()].filter(k=>_mpCart.get(k).code===code).forEach(k=>_mpCart.delete(k)); _mpRefresh(); }
 function _mpClear(){ _mpCart.clear(); _mpExp.clear(); _mpRefresh(); }
-function _mpRefresh(){ _mpRenderTree(); _mpRenderCart(); }
+function _mpRefresh(){ _mpRenderCart(); if(window._ppActive) _ppRenderCols(); }
 
 // ============================================================
 // MIR ITEMS — v128 grouped-by-material model. Source of truth for
@@ -18555,32 +18425,15 @@ function _mpInjectCss(){
   .mp-head{padding:2px 2px 10px;}
   .mp-head h3{margin:0;font-size:16px;color:var(--accent);}
   .mp-sub{font-size:11px;color:var(--muted);margin-top:3px;}
-  .mp-split{display:grid;grid-template-columns:1fr 1fr;border:1px solid var(--border);border-radius:10px;overflow:hidden;min-height:56vh;}
-  .mp-pane{display:flex;flex-direction:column;min-height:0;}
-  .mp-pane.mp-left{border-right:1px solid var(--border);}
+    .mp-pane{display:flex;flex-direction:column;min-height:0;}
   .mp-pane-head{display:flex;align-items:center;gap:10px;padding:9px 12px;background:var(--panel-2);border-bottom:1px solid var(--border);}
   .mp-ttl{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.4px;color:var(--muted);}
   .mp-cnt{margin-left:auto;font-size:11px;color:var(--muted);}
-  .mp-search{flex:1;}
-  .mp-search input{width:100%;padding:6px 9px;border:1px solid var(--border);border-radius:6px;font-size:13px;}
   .mp-body{flex:1;overflow:auto;padding:8px;max-height:56vh;}
-  .mp-row{display:flex;align-items:center;gap:8px;padding:5px 7px;border-radius:6px;cursor:pointer;}
-  .mp-row:hover{background:var(--panel-2);}
-  .mp-tw{width:13px;text-align:center;color:var(--muted);font-size:11px;flex-shrink:0;}
   .mp-cb{width:16px;height:16px;flex-shrink:0;cursor:pointer;accent-color:var(--accent);}
-  .mp-lbl{flex:1;min-width:0;display:flex;align-items:center;gap:7px;overflow:hidden;}
-  .mp-nm{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
   .mp-kind{font-size:9px;text-transform:uppercase;letter-spacing:.4px;color:var(--muted);background:#fff;border:1px solid var(--border);border-radius:6px;padding:0 5px;flex-shrink:0;}
   .mp-dot{font-size:9px;color:#16a34a;flex-shrink:0;}
-  .mp-children{margin-left:15px;border-left:1px dashed var(--border);padding-left:4px;}
-  .mp-matrow{display:flex;align-items:center;gap:8px;padding:4px 7px;border-radius:6px;}
-  .mp-matrow:hover{background:var(--panel-2);}
-  .mp-meta{flex:1;min-width:0;}
-  .mp-mn{font-size:13px;}
-  .mp-ms{font-size:11px;color:var(--muted);}
   .mp-code{font-family:ui-monospace,Menlo,monospace;font-size:10px;color:var(--accent);}
-  .mp-rem-ok{color:#16a34a;font-weight:600;} .mp-rem-no{color:#dc2626;font-weight:600;}
-  .mp-pkgpill{font-size:9px;color:var(--accent);background:rgba(13,148,136,.1);border-radius:6px;padding:0 5px;margin-left:5px;}
   .mp-empty{display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;color:var(--muted);text-align:center;gap:6px;padding:20px;}
   .mp-ci{border:1px solid var(--border);border-radius:8px;margin-bottom:8px;overflow:hidden;}
   .mp-ci-head{display:flex;align-items:center;gap:9px;padding:8px 10px;background:var(--panel-2);}
@@ -18750,95 +18603,131 @@ async function viewMIR(mirNum) {
 
   let _mirLocMap={};
   try{ const _lt=await _loadLocTree(); _mirLocMap=Object.fromEntries((_lt||[]).map(n=>[String(n.id),n])); }catch(e){}
-  const itemRows = (items||[]).map(it => {
+  // v142: club per-location lines into one row per (material, uom) with a split
+  // toggle — same pattern as viewPO. Selection stays per-sno: the group checkbox
+  // is a tri-state over its lines' checkboxes, which live inside the split body,
+  // so mirActionFromView / confirm-quantities read exactly the same inputs.
+  const _vLines = (items||[]).map(it => {
     const plid      = it.procurement_line_id;
     const _ln       = it.loc_node_id ? _mirLocMap[String(it.loc_node_id)] : null;
-    const _locLine  = _ln ? `<div style="font-size:10px;color:var(--muted);margin-top:2px;">📍 ${esc(_ln.path||_ln.name)}</div>` : '';
+    const locPath   = _ln ? (_ln.path||_ln.name) : '';
     const poQty     = plid ? (poQtyMap[plid]||0)  : 0;
     const scQty     = plid ? (scQtyMap[plid]||0)  : 0;
     const effPoQty  = Math.max(0, poQty - scQty);
     const grnQty    = plid ? (grnQtyMap[plid]||0) : 0;
     const qtyReq    = it.qty_required||0;
     const ist       = _computeItemStatusV73(qtyReq, effPoQty, grnQty);
-    const stCol     = statusColor[ist]||'#64748b';
-    // v114: 9-label + approved/pending split
     const _apprPo   = plid ? (apprPoQtyMap[plid]||0) : 0;
     const _pendPo   = plid ? (pendPoQtyMap[plid]||0) : 0;
     const label9    = _mirLineLabel9(qtyReq, _apprPo, _pendPo, grnQty);
     const label9Col = MIR_LABEL9_COLOR[label9] || '#64748b';
-    const poPendingLock = _pendPo > 0;   // derived lock — a PO is in approval
+    const poPendingLock = _pendPo > 0;
 
-    // Tally summary badges
     if      (ist==='PO Pending')                    pendCount++;
     else if (ist==='Partial PO Issued')             poPartCount++;
     else if (ist==='PO Issued')                     poCount++;
     else if (ist==='Partial Received')              recPartCount++;
     else if (['Received','Closed'].includes(ist))   recCount++;
 
-    // Balance = qty_required - effectivePoQty (uncovered by any active PO)
-    const balance  = Math.max(0, qtyReq - effPoQty);
-    const balStyle = balance===0
-      ? 'color:#15803d;font-weight:600;'
-      : effPoQty>0 ? 'color:#b45309;font-weight:600;' : 'color:#64748b;';
-
-    // Balance-closed line: checkbox suppressed, show SC pill
-    const balClosed  = !!it.is_balance_closed;
-    const scPill     = balClosed
-      ? `<span style="margin-left:5px;padding:1px 7px;background:#fce7f3;color:#9d174d;border:1px solid #f9a8d4;border-radius:10px;font-size:10px;font-weight:700;">✂ Balance Closed</span>`
-      : '';
-
-    // Checkbox: suppressed if balance-closed OR PO-pending-locked OR not actionable
+    const balance   = Math.max(0, qtyReq - effPoQty);
+    const balClosed = !!it.is_balance_closed;
     const isActionable = !balClosed && !poPendingLock && balance > 0 && !['Received','Closed'].includes(ist);
-    const chkCell = canAct && isActionable
-      ? `<td style="width:32px;"><input type="checkbox" class="mir_item_chk"
-           value="${it.sno}"
-           data-mat="${esc(it.material_name)}"
-           data-uom="${esc(it.uom)}"
-           data-qty-required="${qtyReq}"
-           data-qty-rfq="0"
-           data-qty-covered="${effPoQty}"
-           data-spec="${esc(it.specification||'')}"
-           style="width:16px;height:16px;cursor:pointer;" checked></td>`
-      : `<td style="width:32px;">${balClosed?'<span title="Balance short-closed" style="color:#9d174d;font-size:14px;">✂</span>':poPendingLock?'<span title="PO in approval" style="color:#854F0B;font-size:13px;">⏳</span>':''}</td>`;
-
     const poNums = plid ? [...(poNumMap[plid]||new Set())] : (it.po_number ? [it.po_number] : []);
-    const poCell = poNums.length
-      ? '<div style="display:flex;flex-wrap:wrap;gap:3px;">' + poNums.map(p=>{
-          const bucket = _poStatusBucket(poStatusMap[p]);
-          if (bucket === 'pending')
-            return `<span class="mono" title="PO in approval — not yet approved" style="display:inline-block;font-size:11px;color:#854F0B;background:#faeeda;border:1px dashed #BA7517;border-radius:10px;padding:1px 7px;white-space:nowrap;">⏳ ${esc(p)}</span>`;
-          if (bucket === 'approved')
-            return `<span class="mono" title="PO approved" style="display:inline-block;font-size:11px;color:#3B6D11;background:#eaf3de;border:1px solid #639922;border-radius:10px;padding:1px 7px;white-space:nowrap;">✓ ${esc(p)}</span>`;
-          return `<span class="mono" title="PO rejected/cancelled" style="display:inline-block;font-size:11px;color:#991b1b;background:#fff1f2;border:1px solid #fecaca;text-decoration:line-through;border-radius:10px;padding:1px 7px;white-space:nowrap;">${esc(p)}</span>`;
-        }).join('') + '</div>'
-      : '—';
+    return { sno:it.sno, mat:it.material_name, uom:it.uom, spec:it.specification||'',
+             locPath, qtyReq, poQty, scQty, grnQty, effPoQty, balance,
+             apprPo:_apprPo, pendPo:_pendPo, label9, label9Col, poPendingLock, balClosed, isActionable, poNums };
+  });
 
-    return `<tr style="${balClosed?'background:#fdf2f8;opacity:0.85;':''}" >
+  const _vPoPill = p => {
+    const bucket = _poStatusBucket(poStatusMap[p]);
+    if (bucket === 'pending')
+      return `<span class="mono" title="PO in approval — not yet approved" style="display:inline-block;font-size:10px;color:#854F0B;background:#faeeda;border:1px dashed #BA7517;border-radius:10px;padding:1px 7px;white-space:nowrap;">⏳ ${esc(p)}</span>`;
+    if (bucket === 'approved')
+      return `<span class="mono" title="PO approved" style="display:inline-block;font-size:10px;color:#3B6D11;background:#eaf3de;border:1px solid #639922;border-radius:10px;padding:1px 7px;white-space:nowrap;">✓ ${esc(p)}</span>`;
+    return `<span class="mono" title="PO rejected/cancelled" style="display:inline-block;font-size:10px;color:#991b1b;background:#fff1f2;border:1px solid #fecaca;text-decoration:line-through;border-radius:10px;padding:1px 7px;white-space:nowrap;">${esc(p)}</span>`;
+  };
+
+  const _vGrpMap = new Map();
+  _vLines.forEach(l => { const k=l.mat+'|'+l.uom; if(!_vGrpMap.has(k)) _vGrpMap.set(k,[]); _vGrpMap.get(k).push(l); });
+  let _vgSno = 0;
+  const itemRows = [..._vGrpMap.values()].map(gl => {
+    _vgSno++;
+    const gid='mirVG_'+_vgSno, splitId='mirVSplit_'+_vgSno;
+    const f=gl[0];
+    const sReq=gl.reduce((t,l)=>t+l.qtyReq,0), sPo=gl.reduce((t,l)=>t+l.poQty,0);
+    const sSc=gl.reduce((t,l)=>t+l.scQty,0),  sGrn=gl.reduce((t,l)=>t+l.grnQty,0);
+    const sAppr=gl.reduce((t,l)=>t+l.apprPo,0), sPend=gl.reduce((t,l)=>t+l.pendPo,0);
+    const sBal=gl.reduce((t,l)=>t+l.balance,0);
+    const gLabel9=_mirLineLabel9(sReq, sAppr, sPend, sGrn);
+    const gCol=MIR_LABEL9_COLOR[gLabel9]||'#64748b';
+    const actionable=gl.filter(l=>l.isActionable);
+    const lockedN=gl.filter(l=>l.poPendingLock).length;
+    const closedN=gl.filter(l=>l.balClosed).length;
+    const gSpec=(gl.find(l=>l.spec)||{}).spec||'';
+    const gPoNums=[...new Set(gl.flatMap(l=>l.poNums))];
+    const allClosed=closedN===gl.length;
+    const balStyle=sBal===0?'color:#15803d;font-weight:600;':(sPo-sSc)>0?'color:#b45309;font-weight:600;':'color:#64748b;';
+
+    const chkCell = (canAct && actionable.length)
+      ? `<td style="width:32px;"><input type="checkbox" class="mir_grp_chk" data-gid="${gid}" checked
+           onchange="_mirVGrpToggle('${gid}',this.checked)" style="width:16px;height:16px;cursor:pointer;"></td>`
+      : `<td style="width:32px;">${allClosed?'<span title="Balance short-closed" style="color:#9d174d;font-size:14px;">✂</span>':(lockedN===gl.length&&lockedN>0)?'<span title="PO in approval" style="color:#854F0B;font-size:13px;">⏳</span>':''}</td>`;
+
+    // hidden per-sno checkboxes for lines of a group with NO visible group checkbox
+    // are not rendered at all (nothing actionable) — parity with old per-line view.
+    const splitRows = gl.map(l => {
+      const lineChk = (canAct && l.isActionable)
+        ? `<input type="checkbox" class="mir_item_chk" value="${l.sno}"
+             data-gid="${gid}" data-mat="${esc(l.mat)}" data-uom="${esc(l.uom)}"
+             data-qty-required="${l.qtyReq}" data-qty-rfq="0" data-qty-covered="${l.effPoQty}"
+             data-spec="${esc(l.spec)}" data-loc="${esc(l.locPath)}"
+             onchange="_mirVSyncGrp('${gid}')"
+             style="width:13px;height:13px;cursor:pointer;flex-shrink:0;" checked>`
+        : `<span style="width:13px;flex-shrink:0;text-align:center;">${l.balClosed?'<span title="Balance short-closed" style="color:#9d174d;">✂</span>':l.poPendingLock?'<span title="PO in approval" style="color:#854F0B;">⏳</span>':''}</span>`;
+      return `<div style="display:flex;align-items:center;gap:7px;padding:2px 0;flex-wrap:wrap;">
+        ${lineChk}
+        <span style="min-width:230px;">📍 ${esc(l.locPath||'— no location')}</span>
+        <span>req <b class="mono">${fmtINR(l.qtyReq)}</b></span>
+        <span style="color:#7c3aed;">PO <b class="mono">${fmtINR(l.poQty)}</b></span>
+        ${l.scQty>0?`<span style="color:#dc2626;">SC <b class="mono">${fmtINR(l.scQty)}</b></span>`:''}
+        <span style="color:#0369a1;">GRN <b class="mono">${fmtINR(l.grnQty)}</b></span>
+        <span>bal <b class="mono" style="${l.balance===0?'color:#15803d;':'color:#b45309;'}">${l.balance===0?'✓':fmtINR(l.balance)}</b></span>
+        <span style="padding:0 6px;border-radius:9px;font-size:9px;font-weight:600;background:${l.label9Col}20;color:${l.label9Col};border:1px solid ${l.label9Col}40;white-space:nowrap;">${l.label9}</span>
+        ${l.poNums.map(_vPoPill).join(' ')}
+      </div>`;
+    }).join('');
+    const splitToggle = ` <span style="cursor:pointer;color:var(--accent);font-size:11px;white-space:nowrap;"
+      onclick="var d=document.getElementById('${splitId}');d.style.display=d.style.display==='none'?'block':'none';">ⓘ split (${gl.length})</span>`;
+    const splitBody = `<div id="${splitId}" style="display:none;font-size:10.5px;color:var(--text);margin-top:5px;line-height:1.5;border-top:1px dashed var(--border);padding-top:4px;">${splitRows}</div>`;
+    const mixPills =
+      (closedN&&!allClosed?`<span style="margin-left:5px;padding:1px 7px;background:#fce7f3;color:#9d174d;border:1px solid #f9a8d4;border-radius:10px;font-size:10px;font-weight:700;">✂ ${closedN}</span>`:'')
+      + (allClosed?`<span style="margin-left:5px;padding:1px 7px;background:#fce7f3;color:#9d174d;border:1px solid #f9a8d4;border-radius:10px;font-size:10px;font-weight:700;">✂ Balance Closed</span>`:'')
+      + (lockedN?`<span style="margin-left:5px;padding:1px 7px;background:#faeeda;color:#854F0B;border:1px solid #BA7517;border-radius:10px;font-size:10px;font-weight:600;white-space:nowrap;">⏳ ${lockedN} in process</span>`:'');
+
+    return `<tr style="${allClosed?'background:#fdf2f8;opacity:0.85;':''}" >
       ${chkCell}
-      <td>${it.sno}</td>
-      <td>${esc(it.material_name)}${_locLine}</td>
-      <td>${esc(it.uom)}</td>
-      <td class="num">${fmtINR(qtyReq)}</td>
-      <td class="num" style="color:#7c3aed;">${fmtINR(poQty)}</td>
-      <td class="num" style="color:#dc2626;">${scQty>0?fmtINR(scQty):'—'}</td>
-      <td class="num" style="color:#0369a1;">${fmtINR(grnQty)}</td>
-      <td class="num" style="${balStyle}">${balance===0?'✓ Full':fmtINR(balance)}</td>
-      <td style="font-size:11px;">${esc(it.specification||'—')}</td>
+      <td>${_vgSno}</td>
+      <td>${esc(f.mat)}${mixPills}${splitToggle}${splitBody}</td>
+      <td>${esc(f.uom)}</td>
+      <td class="num">${fmtINR(sReq)}</td>
+      <td class="num" style="color:#7c3aed;">${fmtINR(sPo)}</td>
+      <td class="num" style="color:#dc2626;">${sSc>0?fmtINR(sSc):'—'}</td>
+      <td class="num" style="color:#0369a1;">${fmtINR(sGrn)}</td>
+      <td class="num" style="${balStyle}">${sBal===0?'✓ Full':fmtINR(sBal)}</td>
+      <td style="font-size:11px;">${esc(gSpec||'—')}</td>
       <td>
         <div style="display:flex;flex-wrap:wrap;gap:4px;align-items:center;">
-        ${!(mirSt==='Rejected' && label9==='PO Pending') ? `<span style="padding:2px 8px;border-radius:10px;font-size:11px;font-weight:600;background:${label9Col}20;color:${label9Col};border:1px solid ${label9Col}40;white-space:nowrap;">${label9}</span>` : ''}
-        ${poPendingLock ? `<span title="A PO is in approval for this line — locked from new PO" style="padding:1px 7px;background:#faeeda;color:#854F0B;border:1px solid #BA7517;border-radius:10px;font-size:10px;font-weight:600;white-space:nowrap;">⏳ PO in process</span>` : ''}
-        ${scPill}
+        ${!(mirSt==='Rejected' && gLabel9==='PO Pending') ? `<span style="padding:2px 8px;border-radius:10px;font-size:11px;font-weight:600;background:${gCol}20;color:${gCol};border:1px solid ${gCol}40;white-space:nowrap;">${gLabel9}</span>` : ''}
         </div>
       </td>
-      <td style="font-size:11px;">${poCell}</td>
+      <td style="font-size:11px;"><div style="display:flex;flex-wrap:wrap;gap:3px;">${gPoNums.length?gPoNums.map(_vPoPill).join(''):'—'}</div></td>
     </tr>`;
   }).join('');
 
   const selectAllRow = canAct ? `
     <tr style="background:#f8fafc;">
       <td><input type="checkbox" id="mir_selectAll" checked
-        onchange="document.querySelectorAll('.mir_item_chk').forEach(c=>c.checked=this.checked)"
+        onchange="document.querySelectorAll('.mir_item_chk').forEach(c=>c.checked=this.checked);document.querySelectorAll('.mir_grp_chk').forEach(g=>{g.checked=this.checked;g.indeterminate=false;})"
         style="width:16px;height:16px;cursor:pointer;"></td>
       <td colspan="10" style="font-size:11px;color:var(--muted);padding:6px 8px;">Select / Deselect All Actionable Items</td>
     </tr>` : '';
@@ -18904,6 +18793,17 @@ async function viewMIR(mirNum) {
     </div>`, 'large');
 }
 
+// v142: clubbed-row selection helpers — group checkbox drives its lines; lines sync tri-state back
+function _mirVGrpToggle(gid,on){
+  document.querySelectorAll('.mir_item_chk[data-gid="'+gid+'"]').forEach(c=>{ c.checked=on; });
+}
+function _mirVSyncGrp(gid){
+  const lines=[...document.querySelectorAll('.mir_item_chk[data-gid="'+gid+'"]')];
+  const g=document.querySelector('.mir_grp_chk[data-gid="'+gid+'"]'); if(!g) return;
+  const on=lines.filter(c=>c.checked).length;
+  g.checked=(on===lines.length&&on>0); g.indeterminate=(on>0&&on<lines.length);
+}
+
 // Called when Raise RFQ or Direct PO is clicked from inside viewMIR popup
 function mirActionFromView(mirNum, action) {
   const selected = [...document.querySelectorAll('.mir_item_chk:checked')];
@@ -18927,27 +18827,73 @@ function _mirQtyConfirmModal(mirNum, action, selectedEls) {
     qtyRequired: parseFloat(c.dataset.qtyRequired)||0,
     qtyRfq:      parseFloat(c.dataset.qtyRfq)||0,
     qtyCovered:  parseFloat(c.dataset.qtyCovered)||0,
-    spec:        c.dataset.spec||''
+    spec:        c.dataset.spec||'',
+    loc:         c.dataset.loc||''
   }));
-  const rows = _mirQtyConfirmItems.map((it,i) => {
-    const assigned = isRFQ ? it.qtyRfq : it.qtyCovered;
-    const balance  = Math.max(0, it.qtyRequired - assigned);
+  // v142: club by (material, uom) — one visible row per material with a split of the
+  // per-sno lines beneath. The clubbed qty distributes greedily (ascending) across
+  // the lines, each capped at its own balance — same allocation model as the PO form.
+  // Per-line inputs (mirQtyConf_<i>) stay index-aligned to _mirQtyConfirmItems, so
+  // _mirQtyConfirmProceed and everything downstream is untouched.
+  const grpMap=new Map();
+  _mirQtyConfirmItems.forEach((it,i)=>{ const k=it.mat+'|'+it.uom; if(!grpMap.has(k)) grpMap.set(k,[]); grpMap.get(k).push(i); });
+  window._mirQtyGrps=[...grpMap.values()];
+  const isAssigned = it => isRFQ ? it.qtyRfq : it.qtyCovered;
+
+  const rows = window._mirQtyGrps.map((idxs,g)=>{
+    const f=_mirQtyConfirmItems[idxs[0]];
+    const sReq=idxs.reduce((t,i)=>t+_mirQtyConfirmItems[i].qtyRequired,0);
+    const sAsg=idxs.reduce((t,i)=>t+isAssigned(_mirQtyConfirmItems[i]),0);
+    const sBal=idxs.reduce((t,i)=>t+Math.max(0,_mirQtyConfirmItems[i].qtyRequired-isAssigned(_mirQtyConfirmItems[i])),0);
+    if(idxs.length===1){
+      const i=idxs[0], it=_mirQtyConfirmItems[i];
+      const bal=Math.max(0,it.qtyRequired-isAssigned(it));
+      return `<tr>
+        <td style="font-size:12px;">${esc(it.mat)}${it.loc?`<div style="font-size:10px;color:var(--muted);">📍 ${esc(it.loc)}</div>`:''}</td>
+        <td style="font-size:12px;">${esc(it.uom)}</td>
+        <td class="num" style="font-size:12px;">${fmtINR(it.qtyRequired)}</td>
+        <td class="num" style="font-size:12px;color:var(--muted);">${fmtINR(isAssigned(it))}</td>
+        <td class="num" style="font-size:12px;font-weight:600;color:#b45309;">${fmtINR(bal)}</td>
+        <td><input type="number" id="mirQtyConf_${i}" value="${bal}" min="0" max="${bal}" step="0.001"
+            style="width:85px;padding:3px 6px;border:1px solid var(--border);border-radius:4px;text-align:right;font-size:12px;"
+            onwheel="this.blur()" onkeydown="if(event.key==='ArrowUp'||event.key==='ArrowDown')event.preventDefault()"></td>
+      </tr>`;
+    }
+    const splitRows = idxs.map(i=>{
+      const it=_mirQtyConfirmItems[i];
+      const bal=Math.max(0,it.qtyRequired-isAssigned(it));
+      return `<tr class="mirQtySplit_${g}" style="display:none;background:var(--input-bg);">
+        <td style="font-size:11px;padding-left:22px;color:var(--muted);">📍 ${esc(it.loc||'— no location')}</td>
+        <td style="font-size:11px;color:var(--muted);">${esc(it.uom)}</td>
+        <td class="num" style="font-size:11px;color:var(--muted);">${fmtINR(it.qtyRequired)}</td>
+        <td class="num" style="font-size:11px;color:var(--muted);">${fmtINR(isAssigned(it))}</td>
+        <td class="num" style="font-size:11px;color:var(--muted);">${fmtINR(bal)}</td>
+        <td><input type="number" id="mirQtyConf_${i}" value="${bal}" min="0" max="${bal}" step="0.001" data-bal="${bal}"
+            style="width:85px;padding:2px 6px;border:1px solid var(--border);border-radius:4px;text-align:right;font-size:11px;"
+            oninput="_mirQtyLineSync(${g})" onwheel="this.blur()" onkeydown="if(event.key==='ArrowUp'||event.key==='ArrowDown')event.preventDefault()"></td>
+      </tr>`;
+    }).join('');
     return `<tr>
-      <td style="font-size:12px;">${esc(it.mat)}</td>
-      <td style="font-size:12px;">${esc(it.uom)}</td>
-      <td class="num" style="font-size:12px;">${fmtINR(it.qtyRequired)}</td>
-      <td class="num" style="font-size:12px;color:var(--muted);">${fmtINR(assigned)}</td>
-      <td class="num" style="font-size:12px;font-weight:600;color:#b45309;">${fmtINR(balance)}</td>
-      <td><input type="number" id="mirQtyConf_${i}" value="${balance}"
-          min="0.001" max="${balance}" step="0.001"
-          style="width:85px;padding:3px 6px;border:1px solid var(--border);border-radius:4px;text-align:right;font-size:12px;" onwheel="this.blur()" onkeydown="if(event.key==='ArrowUp'||event.key==='ArrowDown')event.preventDefault()"></td>
-    </tr>`;
+      <td style="font-size:12px;">${esc(f.mat)}
+        <span style="cursor:pointer;color:var(--accent);font-size:11px;white-space:nowrap;margin-left:6px;"
+          onclick="document.querySelectorAll('.mirQtySplit_${g}').forEach(r=>r.style.display=r.style.display==='none'?'table-row':'none');">ⓘ split (${idxs.length})</span>
+      </td>
+      <td style="font-size:12px;">${esc(f.uom)}</td>
+      <td class="num" style="font-size:12px;">${fmtINR(sReq)}</td>
+      <td class="num" style="font-size:12px;color:var(--muted);">${fmtINR(sAsg)}</td>
+      <td class="num" style="font-size:12px;font-weight:600;color:#b45309;">${fmtINR(sBal)}</td>
+      <td><input type="number" id="mirQtyGrp_${g}" value="${sBal}" min="0" max="${sBal}" step="0.001"
+          title="Distributes across locations, ascending — each capped at its balance"
+          style="width:85px;padding:3px 6px;border:1.5px solid var(--border);border-radius:4px;text-align:right;font-size:12px;font-weight:600;"
+          oninput="_mirQtyGrpDistribute(${g})" onwheel="this.blur()" onkeydown="if(event.key==='ArrowUp'||event.key==='ArrowDown')event.preventDefault()"></td>
+    </tr>${splitRows}`;
   }).join('');
 
   openModal(`
     <h3 style="margin-bottom:6px;">${isRFQ?'Raise RFQ':'Direct PO'} — Confirm Quantities</h3>
     <p style="font-size:12px;color:var(--muted);margin-bottom:12px;">
       Adjust qty if you want partial assignment. Balance = remaining unassigned.
+      Clubbed qty distributes across locations ascending — expand <b>ⓘ split</b> to fine-tune per location.
     </p>
     <div class="table-wrap"><table>
       <thead><tr>
@@ -18963,6 +18909,31 @@ function _mirQtyConfirmModal(mirNum, action, selectedEls) {
       <button class="btn btn-primary" onclick="_mirQtyConfirmProceed()">Proceed →</button>
       <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
     </div>`);
+}
+
+// v142: greedy ascending distribution of a clubbed qty across its per-line inputs
+function _mirQtyGrpDistribute(g){
+  const idxs=(window._mirQtyGrps||[])[g]||[];
+  let left=Math.max(0,parseFloat(document.getElementById('mirQtyGrp_'+g)?.value)||0);
+  idxs.forEach(i=>{
+    const el=document.getElementById('mirQtyConf_'+i); if(!el) return;
+    const cap=parseFloat(el.dataset.bal)||0;
+    const take=Math.min(left,cap);
+    el.value=take; left-=take;
+  });
+  // overflow beyond total balance is discarded — clamp the group field back
+  if(left>1e-9){
+    const el=document.getElementById('mirQtyGrp_'+g);
+    if(el) el.value=idxs.reduce((t,i)=>t+(parseFloat(document.getElementById('mirQtyConf_'+i)?.value)||0),0);
+  }
+}
+function _mirQtyLineSync(g){
+  const idxs=(window._mirQtyGrps||[])[g]||[];
+  idxs.forEach(i=>{ const el=document.getElementById('mirQtyConf_'+i); if(!el) return;
+    const cap=parseFloat(el.dataset.bal)||0; let v=parseFloat(el.value)||0;
+    if(v>cap){ v=cap; el.value=v; } });
+  const el=document.getElementById('mirQtyGrp_'+g);
+  if(el) el.value=idxs.reduce((t,i)=>t+(parseFloat(document.getElementById('mirQtyConf_'+i)?.value)||0),0);
 }
 
 function _mirQtyConfirmProceed() {
@@ -19991,7 +19962,8 @@ async function viewQuoteComparison(rfqNum) {
 }
 
 // ── FETCH HISTORICAL PO PRICES ────────────────────────────────────────────────
-async function fetchHistoricalPOPrices(matNames) {
+// v141: optional excludePo — a PO viewing its own history must not count itself.
+async function fetchHistoricalPOPrices(matNames, excludePo) {
   if (!matNames||!matNames.length) return {};
   const {data:poItems} = await sb.from('pu_po_items')
     .select('material_name,unit_rate,po_number')
@@ -20010,7 +19982,7 @@ async function fetchHistoricalPOPrices(matNames) {
   const result = {};
   matNames.forEach(mat=>{
     const rows = poItems
-      .filter(i=>i.material_name===mat && hdrMap[i.po_number])
+      .filter(i=>i.material_name===mat && hdrMap[i.po_number] && (!excludePo || i.po_number!==excludePo))
       .map(i=>({rate:i.unit_rate, po:i.po_number, vendor:hdrMap[i.po_number].vendor_name, date:hdrMap[i.po_number].po_date}))
       .filter(r=>r.rate>0)
       .sort((a,b)=>new Date(b.date)-new Date(a.date));
@@ -20220,6 +20192,7 @@ async function _poPopulateFromMir(mirRecs, opts){
     if(qEl) qEl.value=_fmtQin(total);
     _poRowRealloc(rn);
   });
+  _poRefreshHistory();   // v140: rate history strips for populated lines
 }
 
 async function directPOFromSelection(mirNum, confirmedItems) {
@@ -20268,14 +20241,36 @@ async function confirmMIRItemSelection(mirNum, confirmedItems) {
   document.getElementById('rfqForm').dataset.mirSnos  = items.map(it=>it.sno).join(',');
   document.getElementById('rfqForm').dataset.mirMats  = items.map(it=>it.mat).join('|||');
   document.getElementById('rfqForm').dataset.mirQtys  = items.map(it=>it.qty).join(',');
-  items.forEach(it => {
+  // v142: club by (material, uom) — one RFQ line per material, qty summed across
+  // the selected MIR lines; per-location breakdown shown as a split under the row.
+  // Per-sno traces stay intact in dataset.mirSnos / dataset.mirQtys for the links.
+  const _rfqGrpMap=new Map();
+  items.forEach(it=>{ const k=it.mat+'|'+it.uom; if(!_rfqGrpMap.has(k)) _rfqGrpMap.set(k,[]); _rfqGrpMap.get(k).push(it); });
+  [..._rfqGrpMap.values()].forEach(gl => {
     addRFQItem();
     const i = _rfqItemC-1;
-    document.getElementById('rfqMat_'+i).value = it.mat;
-    document.getElementById('rfqUom_'+i).value = it.uom;
-    document.getElementById('rfqQty_'+i).value = it.qty;
+    const f=gl[0];
+    document.getElementById('rfqMat_'+i).value = f.mat;
+    document.getElementById('rfqUom_'+i).value = f.uom;
+    document.getElementById('rfqQty_'+i).value = gl.reduce((t,x)=>t+(Number(x.qty)||0),0);
     const specEl = document.getElementById('rfqSpec_'+i);
-    if(specEl && it.spec) specEl.value = it.spec;
+    const spec=(gl.find(x=>x.spec)||{}).spec;
+    if(specEl && spec) specEl.value = spec;
+    if(gl.length>1 || gl.some(x=>x.loc)){
+      const matEl=document.getElementById('rfqMat_'+i);
+      const cell=matEl?.closest('td');
+      if(cell){
+        const sid='rfqSplit_'+i;
+        const tog=document.createElement('span');
+        tog.style.cssText='cursor:pointer;color:var(--accent);font-size:11px;white-space:nowrap;';
+        tog.innerHTML='ⓘ split ('+gl.length+')';
+        tog.onclick=()=>{ const d=document.getElementById(sid); if(d) d.style.display=d.style.display==='none'?'block':'none'; };
+        const div=document.createElement('div'); div.id=sid;
+        div.style.cssText='display:none;font-size:10.5px;color:var(--muted);margin-top:4px;line-height:1.5;';
+        div.innerHTML=gl.map(x=>'📍 '+esc(x.loc||'— no location')+' — <span class="mono">'+fmtINR(Number(x.qty)||0)+'</span> '+esc(f.uom||'')).join('<br>');
+        cell.appendChild(tog); cell.appendChild(div);
+      }
+    }
   });
   document.getElementById('rfq_description').value = 'Procurement for MIR '+mirNum;
 }
@@ -20337,11 +20332,22 @@ async function saveRFQ() {
       const mirSnosStr = document.getElementById('rfqForm')?.dataset?.mirSnos||'';
       mirSnos = mirSnosStr ? mirSnosStr.split(',').map(Number).filter(Boolean) : [];
       if (mirSnos.length) {
-        const rfqMatQtyMap = {};
-        items.forEach(it => { rfqMatQtyMap[it.material_name] = it.qty_required; });
+        // v142: qty_assigned per sno from the confirmed-quantities arrays.
+        // The old name-keyed map collapsed duplicate materials — every sno of a
+        // material got the last row's qty; with clubbed RFQ rows it would get the
+        // SUM. The per-sno arrays carry the exact confirmed split.
+        const mirQtysStr = document.getElementById('rfqForm')?.dataset?.mirQtys||'';
+        const mirQtys = mirQtysStr ? mirQtysStr.split(',').map(Number) : [];
+        const snoQty = {};
+        if (mirQtys.length === mirSnos.length) mirSnos.forEach((sno,ix)=>{ snoQty[sno]=mirQtys[ix]||0; });
+        else { // fallback: legacy name-keyed behaviour if arrays are absent/misaligned
+          const rfqMatQtyMap = {};
+          items.forEach(it => { rfqMatQtyMap[it.material_name] = it.qty_required; });
+          (mirLineIds||[]).forEach(r=>{ if(mirSnos.includes(r.sno)) snoQty[r.sno]=rfqMatQtyMap[r.material_name]||0; });
+        }
         links = (mirLineIds||[]).filter(r=>mirSnos.includes(r.sno)).map(it => ({
           mir_number: mirNum, sno: it.sno, material_name: it.material_name,
-          qty_assigned: rfqMatQtyMap[it.material_name] || 0
+          qty_assigned: snoQty[it.sno] || 0
         })).filter(l => l.qty_assigned > 0);
       }
     }
@@ -21019,6 +21025,7 @@ function renderPOList() {
 }
 
 async function newPO() {
+  _poHistCache={};   // v140: fresh rate history per form session
   if(!hasPerm('canCreatePO')){toast('Only Procurement can create POs','error');return;}
   if (!puState.materials.length) await apiLoadMaterials();
   document.getElementById('poForm').style.display='block';
@@ -21184,40 +21191,469 @@ async function _loadPoCommitted(force){
   return _poCommittedMap;
 }
 
-// v134: Direct-PO "Add from estimate" reuses the MIR picker (location-tree left + cart right).
-// Only three things differ from MIR mode: remaining basis (est − committed on live POs),
-// the cart is seeded from / committed to the clubbed PO rows (_poAlloc, src:'est'), and labels.
-async function openPoEstimatePicker(){
-  _mpMode='po';
-  await Promise.all([_loadMirEstimateTree(true), _loadPoCommitted(true)]);
-  _mpCells=_mirPooledCells();          // remaining computed for PO mode (est − committed)
-  await _mpBuildTree();
-  _mpInjectCss();
-  _mpExp=new Set(); _mpOpen=new Set();
-  _poSeedCartFromRows();               // reflect what's already on the PO
+// ============================================================
+// v139: DIRECT-PO ESTIMATE PICKER — material-first, bulk select.
+// Three panes: [packages OR location tree] > [drill: materials/floors] > [cart].
+// Tick a package = every pooled cell under it; tick a location node = every
+// pooled cell in its subtree; optional material chip scopes both. Data layer
+// unchanged: _mirPooledCells (est − committed on live POs), _mpNodeCells for
+// location subtrees, _mpCart + _poCommitFromCart for the clubbed-row commit.
+// Grain stays (material_code, loc_node_id) — packages are navigation only;
+// pooled cells shared across packages are one budget (SHARED pill).
+// ============================================================
+let _ppMode='pkg';      // 'pkg' | 'loc' — grouping axis of column 1
+let _ppMat=null;        // material_code scope (null = all)
+let _ppSelPkg=null;     // selected package index into _ppPkgArr
+let _ppSelNode=null;    // selected location node id
+let _ppExp=new Set();   // expanded col-1 tree keys
+let _ppGrp=new Set();   // open col-2 material groups (codes)
+let _ppPkgArr=[];       // [{leafId,name,path,cells:[]}] sorted by name
+let _ppPkgTree=null;    // area trie over package wbs paths
+let _ppTreeNodes=[];    // flat ref array for onclick-by-index (pkg tree areas)
+let _ppMatAgg=null;     // Map(code -> {name,uom,pkgN,rem}) over pooled cells
+
+const _ppScope = cells => _ppMat ? cells.filter(c=>c.code===_ppMat) : cells;
+const _ppLive  = cells => cells.filter(c=>c.remaining>0);
+
+// v140: one picker, two modes. 'po' = est − committed on live POs, commits to
+// clubbed PO rows; 'mir' = est − MIR already raised, commits to _mirGroups.
+async function openPoEstimatePicker(){ return _ppOpenPicker('po'); }
+async function openMirEstimatePicker(){ return _ppOpenPicker('mir'); }
+
+async function _ppOpenPicker(mode){
+  _mpMode=mode;
+  if(mode==='po') await Promise.all([_loadMirEstimateTree(true), _loadPoCommitted(true)]);
+  else await _loadMirEstimateTree(true);
+  if(!(puState.materials||[]).length){ try{ await apiLoadMaterials(); }catch(e){} }
+  _mpCells=_mirPooledCells();          // remaining basis follows _mpMode
+  await _mpBuildTree();                // _mpRoots + _mpNodeCells (location subtrees)
+  _ppBuildPkgIndex();
+  _mpInjectCss(); _ppInjectCss();
+  _ppMode='pkg'; _ppMat=null; _ppSelPkg=null; _ppSelNode=null;
+  _ppExp=new Set(); _ppGrp=new Set(); _mpExp=new Set();
+  if(mode==='po') _poSeedCartFromRows(); else _mirSeedCartFromGroups();
+  window._ppActive=true;
+  const T = mode==='po'
+    ? {title:'Add to PO from estimate', cart:'Selected for this PO',
+       basis:'remaining = estimate \u2212 committed on live POs',
+       commit:'_poCommitFromCart()', commitLbl:'Add to PO'}
+    : {title:'Add from material estimate', cart:'Selected for this MIR',
+       basis:'remaining = estimate \u2212 MIR already raised',
+       commit:'_mpCommit()', commitLbl:'Add to MIR'};
   openModal(
     '<div class="mp-modal">'
-    + '<div class="mp-head"><div><h3>Add to PO from estimate</h3>'
-    +   '<div class="mp-sub">Only <b>approved</b> estimate cells appear. Tick a floor for all its bulk materials. Qty is capped at remaining.</div></div></div>'
-    + '<div class="mp-split">'
-    +   '<div class="mp-pane mp-left">'
-    +     '<div class="mp-pane-head"><span class="mp-ttl">Estimate</span>'
-    +       '<div class="mp-search"><input id="mpSearch" placeholder="Search material / location / code\u2026" oninput="_mpRenderTree()"></div></div>'
-    +     '<div class="mp-body" id="mpTree"></div>'
+    + '<div class="mp-head"><div><h3>'+T.title+'</h3>'
+    +   '<div class="mp-sub">Tick a <b>package</b> for all its materials, or switch to <b>location</b> and tick a node for everything estimated there. Search a material to scope. Only <b>approved</b> cells appear; qty is capped at remaining.</div></div></div>'
+    + '<div class="pp-matbar">'
+    +   '<span class="pp-lbl">Material <span class="pp-lblsub">(optional scope)</span></span>'
+    +   '<div class="pp-mswrap" id="ppMsWrap">'
+    +     '<input id="ppMatSearch" placeholder="Search material master \u2014 name or code\u2026" autocomplete="off" oninput="_ppMatDropRender()">'
+    +     '<div class="pp-drop" id="ppMatDrop"></div></div>'
+    +   '<div id="ppMatChip" style="display:none;"></div>'
+    + '</div>'
+    + '<div class="pp-split">'
+    +   '<div class="mp-pane">'
+    +     '<div class="mp-pane-head">'
+    +       '<div class="pp-seg"><button id="ppSegPkg" class="on" onclick="_ppSetMode(\'pkg\')">Package</button>'
+    +       '<button id="ppSegLoc" onclick="_ppSetMode(\'loc\')">Location</button></div>'
+    +       '<span class="mp-cnt" id="ppC1Cnt"></span></div>'
+    +     '<div class="pp-filter"><input id="ppC1Filter" placeholder="Filter packages\u2026" oninput="_ppRenderCols()"></div>'
+    +     '<div class="mp-body pp-c1" id="ppC1Body"></div>'
+    +   '</div>'
+    +   '<div class="mp-pane">'
+    +     '<div class="mp-pane-head"><span class="mp-ttl" id="ppC2Ttl">Materials / locations</span><span class="mp-cnt" id="ppC2Cnt"></span></div>'
+    +     '<div class="mp-body" id="ppC2Body"></div>'
     +   '</div>'
     +   '<div class="mp-pane mp-right">'
-    +     '<div class="mp-pane-head"><span class="mp-ttl">Selected for this PO</span><span class="mp-cnt" id="mpCartCount"></span></div>'
+    +     '<div class="mp-pane-head"><span class="mp-ttl">'+T.cart+'</span><span class="mp-cnt" id="mpCartCount"></span></div>'
     +     '<div class="mp-body" id="mpCart"></div>'
     +   '</div>'
     + '</div>'
     + '<div class="mp-foot">'
-    +   '<span class="mp-legend"><span class="mp-dot">\u25cf</span> approved estimate &nbsp;\u00b7&nbsp; remaining = estimate \u2212 committed on live POs</span>'
+    +   '<span class="mp-legend"><span class="mp-dot">\u25cf</span> approved estimate &nbsp;\u00b7&nbsp; '+T.basis+' &nbsp;\u00b7&nbsp; <span class="pp-shared" style="cursor:default;">SHARED</span> = pooled across packages</span>'
     +   '<div class="mp-spacer"></div>'
     +   '<button class="btn btn-ghost btn-sm" onclick="_mpClear()">Clear</button>'
-    +   '<button class="btn btn-primary btn-sm" onclick="_poCommitFromCart()">Add to PO <span class="mp-pill" id="mpCommitCount">0</span></button>'
+    +   '<button class="btn btn-primary btn-sm" onclick="'+T.commit+'">'+T.commitLbl+' <span class="mp-pill" id="mpCommitCount">0</span></button>'
     + '</div></div>',
     'large');
-  _mpRefresh();
+  const box=document.getElementById('modalBox'); if(box) box.style.maxWidth='1240px';   // three panes need width
+  _ppRenderCols(); _mpRenderCart();
+}
+
+// seed cart from the grouped MIR model so the picker reflects current selection
+function _mirSeedCartFromGroups(){
+  _mpCart=new Map();
+  _mirGroups.forEach(g=>g.locs.forEach(l=>{
+    const k=_mpKey(g.code,l.locId); const cell=_mpCells.byKey.get(k);
+    if(cell){ _mpCart.set(k,{...cell,qty:l.qty}); }
+    else { _mpCart.set(k,{code:g.code,name:g.name,uom:g.uom,locId:l.locId,locName:l.locName,locPath:l.locPath,
+        status:l.status,remaining:(l.remaining!=null?l.remaining:l.qty),leafId:l.leafId,pkgs:[],pkgName:'',qty:l.qty,orphan:true}); }
+  }));
+}
+
+// ---- package index: leafId -> {name, path, cells[]} from pooled cells' pkgs[] ----
+function _ppBuildPkgIndex(){
+  const pathByLeaf={};
+  (_mirEstTreeCache||[]).forEach(L=>{ pathByLeaf[String(L.leafId)]=L.wbsPath||L.leaf; });
+  const pkgs=new Map();
+  for(const c of _mpCells.byKey.values()){
+    (c.pkgs||[]).forEach(p=>{
+      const id=String(p.leafId);
+      let P=pkgs.get(id);
+      if(!P){ P={leafId:id, name:p.leaf, path:pathByLeaf[id]||p.leaf, cells:[]}; pkgs.set(id,P); }
+      P.cells.push(c);
+    });
+  }
+  _ppPkgArr=[...pkgs.values()].sort((a,b)=>(a.name||'').localeCompare(b.name||''));
+  _ppPkgArr.forEach((P,i)=>P.idx=i);
+  // area trie over wbs paths (segments above the package itself)
+  _ppTreeNodes=[];
+  const root={name:null, children:new Map(), pkgs:[], key:'root'};
+  _ppPkgArr.forEach(P=>{
+    const segs=(P.path||P.name||'').split(' \u203a ');
+    let cur=root;
+    for(let i=0;i<segs.length-1;i++){
+      const k=cur.key+'>'+segs[i];
+      if(!cur.children.has(k)){ const n={name:segs[i], children:new Map(), pkgs:[], key:k, idx:_ppTreeNodes.length}; _ppTreeNodes.push(n); cur.children.set(k,n); }
+      cur=cur.children.get(k);
+    }
+    cur.pkgs.push(P);
+  });
+  _ppPkgTree=root;
+  // material aggregate over pooled cells (for search dropdown)
+  _ppMatAgg=new Map();
+  for(const c of _mpCells.byKey.values()){
+    let a=_ppMatAgg.get(c.code);
+    if(!a){ a={name:c.name, uom:c.uom, pkgSet:new Set(), rem:0}; _ppMatAgg.set(c.code,a); }
+    (c.pkgs||[]).forEach(p=>a.pkgSet.add(String(p.leafId)));
+    a.rem+=Math.max(0,c.remaining||0);
+  }
+}
+
+// ---- material scope search (master-wide; non-estimated rows greyed) ----
+function _ppMatDropRender(){
+  const q=(document.getElementById('ppMatSearch')?.value||'').trim().toLowerCase();
+  const drop=document.getElementById('ppMatDrop'); if(!drop) return;
+  if(!q){ drop.classList.remove('open'); return; }
+  const toks=q.split(/\s+/).filter(Boolean);
+  const hit=m=>{ const hay=((m.material_name||'')+' '+(m.material_code||'')).toLowerCase(); return toks.every(t=>hay.includes(t)); };
+  let master=(puState.materials||[]).filter(hit);
+  // fall back to estimated cells if master isn't loaded
+  if(!master.length && !(puState.materials||[]).length){
+    master=[..._ppMatAgg.entries()].filter(([code,a])=>toks.every(t=>((a.name||'')+' '+code).toLowerCase().includes(t)))
+      .map(([code,a])=>({material_code:code, material_name:a.name, uom:a.uom}));
+  }
+  master=master.slice(0,40);
+  drop.innerHTML = master.length ? master.map(m=>{
+    const agg=_ppMatAgg.get(m.material_code);
+    const has=!!agg;
+    return '<div class="pp-ddrow'+(has?'':' pp-dim')+'" '+(has?('onclick="_ppPickMat(\''+_mpAttr(m.material_code)+'\')"'):'')+'>'
+      + '<span class="pp-ddcode">'+esc(m.material_code)+'</span>'
+      + '<span class="pp-ddnm">'+esc(m.material_name)+'</span>'
+      + '<span class="pp-dduom">'+esc(m.uom||'')+'</span>'
+      + '<span class="pp-ddpk">'+(has?(agg.pkgSet.size+' pkg \u00b7 rem '+_fmtQ(agg.rem)):'no approved estimate')+'</span></div>';
+  }).join('') : '<div class="pp-ddrow" style="color:var(--muted);cursor:default;">No material matches</div>';
+  drop.classList.add('open');
+}
+function _ppPickMat(code){
+  code=code.replace(/&#39;/g,"'");
+  if(!_ppMatAgg.has(code)) return;
+  _ppMat=code; _ppSelPkg=null; _ppSelNode=null; _ppGrp.clear();
+  const a=_ppMatAgg.get(code);
+  const si=document.getElementById('ppMatSearch'); if(si){ si.value=''; si.style.display='none'; }
+  const dd=document.getElementById('ppMatDrop'); if(dd) dd.classList.remove('open');
+  const chip=document.getElementById('ppMatChip');
+  if(chip){ chip.style.display='';
+    chip.innerHTML='<span class="pp-chip"><span class="c">'+esc(code)+'</span><span class="n">'+esc(a.name)+'</span><span class="u">'+esc(a.uom||'')+'</span>'
+      + '<span class="x" title="Clear material scope" onclick="_ppClearMat()">\u2715</span></span>'; }
+  _ppAutoExpand(); _ppRenderCols();
+}
+function _ppClearMat(){
+  _ppMat=null; _ppSelPkg=null; _ppSelNode=null; _ppGrp.clear();
+  const chip=document.getElementById('ppMatChip'); if(chip){ chip.style.display='none'; chip.innerHTML=''; }
+  const si=document.getElementById('ppMatSearch'); if(si){ si.style.display=''; si.focus(); }
+  _ppAutoExpand(); _ppRenderCols();
+}
+
+function _ppSetMode(m){
+  if(_ppMode===m) return;
+  _ppMode=m; _ppSelPkg=null; _ppSelNode=null; _ppExp.clear(); _ppGrp.clear();
+  const bp=document.getElementById('ppSegPkg'), bl=document.getElementById('ppSegLoc');
+  if(bp) bp.classList.toggle('on',m==='pkg');
+  if(bl) bl.classList.toggle('on',m==='loc');
+  const f=document.getElementById('ppC1Filter');
+  if(f){ f.value=''; f.placeholder=(m==='pkg'?'Filter packages\u2026':'Filter locations\u2026'); }
+  _ppAutoExpand(); _ppRenderCols();
+}
+// grouped/collapsed by default; auto-expand branches with hits when a scope or filter is live
+function _ppAutoExpand(){
+  _ppExp.clear();
+  const q=(document.getElementById('ppC1Filter')?.value||'').trim();
+  if(!_ppMat && !q) return;
+  if(_ppMode==='pkg'){ _ppTreeNodes.forEach(n=>_ppExp.add(n.key)); }
+  else {
+    const mark=n=>{ let any=_ppLive(_ppScope(_mpNodeCells[n.id]||[])).length>0;
+      if(any){ (n.children||[]).forEach(mark); if(n.children && n.children.length) _ppExp.add(n.id); }
+      return any; };
+    _mpRoots.forEach(mark);
+  }
+}
+function _ppTogTree(key){ key=String(key); _ppExp.has(key)?_ppExp.delete(key):_ppExp.add(key); _ppRenderCols(); }
+function _ppTogGrp(code){ code=code.replace(/&#39;/g,"'"); _ppGrp.has(code)?_ppGrp.delete(code):_ppGrp.add(code); _ppRenderCols(); }
+function _ppPickPkg(i){ _ppSelPkg=i; _ppSelNode=null; _ppGrp.clear(); _ppRenderCols(); }
+function _ppPickNode(id){ _ppSelNode=String(id); _ppSelPkg=null; _ppGrp.clear(); _ppRenderCols(); }
+
+// ---- bulk selection (skips zero-remaining; pooled cells added once) ----
+function _ppBulkPkg(i,on){ _ppScope(_ppPkgArr[i].cells).forEach(c=> on?_mpAddCell(c):_mpDel(c.code,c.locId)); _ppRefresh(); }
+function _ppBulkNode(id,on){ _ppScope(_mpNodeCells[String(id)]||[]).forEach(c=> on?_mpAddCell(c):_mpDel(c.code,c.locId)); _ppRefresh(); }
+function _ppBulkGrp(code,on){
+  code=code.replace(/&#39;/g,"'");
+  _ppDrillCells().filter(c=>c.code===code).forEach(c=> on?_mpAddCell(c):_mpDel(c.code,c.locId));
+  _ppRefresh();
+}
+function _ppToggleCell(code,locId,on){
+  code=code.replace(/&#39;/g,"'");
+  const c=_mpCells.byKey.get(_mpKey(code,locId)); if(!c) return;
+  on?_mpAddCell(c):_mpDel(code,locId);
+  _ppRefresh();
+}
+function _ppSetQty(code,locId,el){
+  code=code.replace(/&#39;/g,"'");
+  const k=_mpKey(code,locId), v=_mpCart.get(k);
+  const cell=_mpCells.byKey.get(k); if(!cell) return;
+  let q=Math.max(0,Number(el.value)||0);
+  if(q>cell.remaining) q=cell.remaining;
+  if(q<=0){ _mpCart.delete(k); } else if(v){ v.qty=q; } else { _mpCart.set(k,{...cell,qty:q}); }
+  _ppRefresh();
+}
+function _ppRefresh(){ _ppRenderCols(); _mpRenderCart(); }
+
+// cells of the current drill (selected package or location node), scoped
+function _ppDrillCells(){
+  if(_ppSelPkg!=null) return _ppScope(_ppPkgArr[_ppSelPkg].cells);
+  if(_ppSelNode!=null) return _ppScope(_mpNodeCells[_ppSelNode]||[]);
+  return [];
+}
+
+// ---- render: column 1 ----
+function _ppRenderCols(){ _ppRenderCol1(); _ppRenderCol2(); _ppSyncCbs(); }
+function _ppFilterQ(){ return (document.getElementById('ppC1Filter')?.value||'').trim().toLowerCase(); }
+function _ppTri(cells){ return _mpTri(_ppLive(cells).length?_ppLive(cells):cells); }
+const _ppCb=(attr,val,handler)=>'<input type="checkbox" class="mp-cb" '+attr+'="'+_mpAttr(val)+'" onclick="event.stopPropagation();" onchange="'+handler+'">';
+
+function _ppRenderCol1(){
+  const host=document.getElementById('ppC1Body'), cnt=document.getElementById('ppC1Cnt');
+  if(!host) return;
+  const q=_ppFilterQ();
+  const toks=q.split(/\s+/).filter(Boolean);
+  const tmatch=s=>!toks.length||toks.every(t=>(s||'').toLowerCase().includes(t));
+
+  if(_ppMode==='pkg'){
+    const pkgRow=P=>{
+      const cells=_ppScope(P.cells); if(_ppMat && !cells.length) return '';
+      if(!tmatch(P.name)) return '';
+      const tot=cells.reduce((s,c)=>s+Math.max(0,c.remaining||0),0);
+      const sub=_ppMat
+        ? cells.length+' location'+(cells.length===1?'':'s')
+        : new Set(cells.map(c=>c.code)).size+' materials \u00b7 '+cells.length+' cells';
+      const rem=_ppMat?('<span class="pp-rem">'+_fmtQ(tot)+' '+esc(cells[0]?cells[0].uom:'')+'</span>'):'';
+      return '<div class="pp-tnode'+(_ppSelPkg===P.idx?' sel':'')+'" onclick="_ppPickPkg('+P.idx+')">'
+        + _ppCb('data-ppkg',P.idx,'_ppBulkPkg('+P.idx+',this.checked)')
+        + '<span class="mp-kind">Pkg</span><span class="pp-nmwrap"><div class="pp-nm" title="'+_mpAttr(P.name)+'">\ud83d\udce6 '+esc(P.name)+'</div><div class="pp-sub">'+sub+'</div></span>'
+        + rem+'<span class="pp-chev">\u203a</span></div>';
+    };
+    const walkArea=n=>{
+      const inner=[...n.children.values()].map(walkArea).join('') + n.pkgs.map(pkgRow).join('');
+      if(!inner) return '';
+      const ex=_ppExp.has(n.key);
+      return '<div><div class="pp-tnode" onclick="_ppTogTree(\''+_mpAttr(n.key)+'\')">'
+        + '<span class="pp-tw">'+(ex?'\u25be':'\u25b8')+'</span>'
+        + '<span class="mp-kind">Area</span><span class="pp-nmwrap"><div class="pp-nm">'+esc(n.name)+'</div></span></div>'
+        + (ex?('<div class="pp-kids">'+inner+'</div>'):'')
+        + '</div>';
+    };
+    let shown=0;
+    _ppPkgArr.forEach(P=>{ const cells=_ppScope(P.cells); if((!_ppMat||cells.length)&&tmatch(P.name)) shown++; });
+    if(cnt) cnt.textContent=shown+' package'+(shown===1?'':'s');
+    const rootInner=[..._ppPkgTree.children.values()].map(walkArea).join('') + _ppPkgTree.pkgs.map(pkgRow).join('');
+    host.innerHTML=rootInner || '<div class="mp-empty">'+(_ppMat?'No package carries an approved estimate for this material.':'No package matches the filter.')+'</div>';
+    return;
+  }
+
+  // loc mode — location tree; every node with scoped cells is bulk-tickable + drillable
+  let shown=0;
+  const walkNode=n=>{
+    const cells=_ppScope(_mpNodeCells[n.id]||[]);
+    if(!cells.length) return '';
+    const kidsHtml=(n.children||[]).map(walkNode).join('');
+    if(toks.length && !tmatch(n.name) && !tmatch(n.path) && !kidsHtml) return '';
+    shown++;
+    const ex=_ppExp.has(n.id);
+    const tot=cells.reduce((s,c)=>s+Math.max(0,c.remaining||0),0);
+    const sub=_ppMat
+      ? cells.length+' location'+(cells.length===1?'':'s')
+      : new Set(cells.map(c=>c.code)).size+' materials \u00b7 '+cells.length+' cells';
+    const rem=_ppMat?('<span class="pp-rem">'+_fmtQ(tot)+' '+esc(cells[0]?cells[0].uom:'')+'</span>'):'';
+    return '<div><div class="pp-tnode'+(_ppSelNode===String(n.id)?' sel':'')+'" onclick="_ppPickNode(\''+_mpAttr(n.id)+'\')">'
+      + '<span class="pp-tw'+(kidsHtml?'':' leaf')+'" onclick="event.stopPropagation();_ppTogTree(\''+_mpAttr(n.id)+'\')">'+(kidsHtml?(ex?'\u25be':'\u25b8'):'\u2022')+'</span>'
+      + _ppCb('data-pnode',n.id,'_ppBulkNode(\''+_mpAttr(n.id)+'\',this.checked)')
+      + '<span class="mp-kind">'+esc(n.kind)+'</span><span class="pp-nmwrap"><div class="pp-nm">'+esc(n.name)+'</div><div class="pp-sub">'+sub+'</div></span>'
+      + rem+'<span class="pp-chev">\u203a</span></div>'
+      + (kidsHtml&&ex?('<div class="pp-kids">'+kidsHtml+'</div>'):'')
+      + '</div>';
+  };
+  const h=_mpRoots.map(walkNode).join('');
+  if(cnt) cnt.textContent=shown+' node'+(shown===1?'':'s');
+  host.innerHTML=h || '<div class="mp-empty">'+(_ppMat?'No location carries an approved estimate for this material.':'No location matches the filter.')+'</div>';
+}
+
+// ---- render: column 2 ----
+function _ppLocRow(c,subText){
+  const k=_mpKey(c.code,c.locId), inCart=_mpCart.has(k), zero=(c.remaining||0)<=0;
+  const qty=inCart?_mpCart.get(k).qty:'';
+  const shared=(c.pkgs||[]).length>1
+    ? ' <span class="pp-shared" title="Estimated under '+c.pkgs.length+' packages here \u2014 remaining is pooled across them">SHARED</span>' : '';
+  return '<div class="pp-lrow'+(inCart?' added':'')+'">'
+    + '<input type="checkbox" class="mp-cb" data-pcell="'+_mpAttr(k)+'" '+(inCart?'checked':'')+' '+(zero?'disabled':'')
+    +   ' onchange="_ppToggleCell(\''+_mpAttr(c.code)+'\',\''+_mpAttr(c.locId)+'\',this.checked)">'
+    + '<span class="pp-nmwrap"><div class="pp-nm">'+esc(c.locName||'loc')+shared+'</div>'
+    +   (subText?('<div class="pp-sub" title="'+_mpAttr(subText)+'">'+esc(subText)+'</div>'):'')+'</span>'
+    + '<span class="pp-lrem'+(zero?' zero':'')+'">rem <b>'+_fmtQ(c.remaining)+'</b> '+esc(c.uom||'')+'</span>'
+    + '<input type="number" step="0.001" class="pp-qty" placeholder="qty" onwheel="this.blur()" value="'+(inCart?_fmtQin(qty):'')+'" '+((!inCart||zero)?'disabled':'')
+    +   ' onchange="_ppSetQty(\''+_mpAttr(c.code)+'\',\''+_mpAttr(c.locId)+'\',this)">'
+    + '</div>';
+}
+function _ppRenderCol2(){
+  const host=document.getElementById('ppC2Body'), ttl=document.getElementById('ppC2Ttl'), cnt=document.getElementById('ppC2Cnt');
+  if(!host) return;
+  const drilled=(_ppSelPkg!=null)||(_ppSelNode!=null);
+  if(!drilled){
+    if(ttl) ttl.textContent='Materials / locations';
+    if(cnt) cnt.textContent='';
+    host.innerHTML='<div class="mp-empty"><div style="font-size:30px;">\ud83e\udded</div>'
+      + (_ppMode==='pkg'
+        ? 'Tick a package checkbox to take everything under it,<br>or click a package to fine-tune per material and floor.'
+        : 'Tick a location node to take everything estimated there,<br>or click a node to fine-tune per material and floor.')
+      + '</div>';
+    return;
+  }
+  const cells=_ppDrillCells();
+  const ctxName=_ppSelPkg!=null?_ppPkgArr[_ppSelPkg].name
+    : (function(){ const n=(function find(list){ for(const r of list){ if(String(r.id)===_ppSelNode) return r; const f=find(r.children||[]); if(f) return f; } return null; })(_mpRoots); return n?(_mpLabel3(n.path)||n.name):''; })();
+  const ctxIcon=_ppSelPkg!=null?'\ud83d\udce6':'\ud83d\udccd';
+  if(_ppMat){
+    if(ttl) ttl.textContent='Locations';
+    if(cnt) cnt.textContent=cells.length+' location'+(cells.length===1?'':'s');
+    const a=_ppMatAgg.get(_ppMat)||{};
+    host.innerHTML='<div class="pp-ctx"><span class="mp-code">'+esc(_ppMat)+'</span><b>'+esc(a.name||_ppMat)+'</b>'
+      + '<span style="color:var(--muted);">'+(_ppSelPkg!=null?'under':'in')+'</span><b class="pp-ellip">'+esc(ctxName)+'</b></div>'
+      + (cells.map(c=>_ppLocRow(c, _ppSelPkg!=null ? _mpLabel3(c.locPath) : (_mpLabel3(c.locPath)+' \u00b7 '+(c.pkgName||'')))).join('')
+         || '<div class="mp-empty">No cells here for this material.</div>');
+    return;
+  }
+  // no material scope — collapsible material groups with group-level select-all
+  const byMat=new Map();
+  cells.forEach(c=>{ if(!byMat.has(c.code)) byMat.set(c.code,[]); byMat.get(c.code).push(c); });
+  const codes=[...byMat.keys()].sort((x,y)=>((byMat.get(x)[0].name)||'').localeCompare((byMat.get(y)[0].name)||''));
+  if(ttl) ttl.textContent=_ppSelPkg!=null?'Materials in package':'Materials at location';
+  if(cnt) cnt.textContent=codes.length+' material'+(codes.length===1?'':'s');
+  if(codes.length===1 && !_ppGrp.size) _ppGrp.add(codes[0]);
+  host.innerHTML='<div class="pp-ctx">'+ctxIcon+' <b class="pp-ellip">'+esc(ctxName)+'</b>'
+    + '<span style="color:var(--muted);">\u2014 tick a material for all its locations, or expand for single floors</span></div>'
+    + (codes.map(code=>{
+        const rows=byMat.get(code).slice().sort((a,b)=>(a.locPath||'').localeCompare(b.locPath||''));
+        const open=_ppGrp.has(code);
+        const tot=rows.reduce((s,c)=>s+Math.max(0,c.remaining||0),0);
+        const inN=rows.filter(c=>_mpCart.has(_mpKey(c.code,c.locId))).length;
+        return '<div class="pp-grp">'
+          + '<div class="pp-grph" onclick="_ppTogGrp(\''+_mpAttr(code)+'\')">'
+          +   '<span class="pp-tw">'+(open?'\u25be':'\u25b8')+'</span>'
+          +   _ppCb('data-pgrp',code,'_ppBulkGrp(\''+_mpAttr(code)+'\',this.checked)')
+          +   '<span class="mp-code">'+esc(code)+'</span><span class="pp-ellip">'+esc(rows[0].name)+'</span>'
+          +   '<span class="pp-gsub">\u00b7 '+rows.length+' loc'+(inN?(' \u00b7 '+inN+' selected'):'')+'</span>'
+          +   '<span class="pp-grem">'+_fmtQ(tot)+' '+esc(rows[0].uom||'')+'</span></div>'
+          + '<div class="pp-grpb'+(open?' open':'')+'">'+rows.map(c=>_ppLocRow(c,_mpLabel3(c.locPath))).join('')+'</div></div>';
+      }).join('') || '<div class="mp-empty">No estimate cells here.</div>');
+}
+
+// ---- tri-state sync for pp checkboxes ----
+function _ppSyncCbs(){
+  document.querySelectorAll('.mp-cb[data-ppkg]').forEach(cb=>{
+    const P=_ppPkgArr[Number(cb.dataset.ppkg)]; if(!P) return;
+    const st=_ppTri(_ppScope(P.cells)); cb.checked=st==='all'; cb.indeterminate=st==='some'; });
+  document.querySelectorAll('.mp-cb[data-pnode]').forEach(cb=>{
+    const st=_ppTri(_ppScope(_mpNodeCells[cb.dataset.pnode]||[])); cb.checked=st==='all'; cb.indeterminate=st==='some'; });
+  document.querySelectorAll('.mp-cb[data-pgrp]').forEach(cb=>{
+    const code=cb.dataset.pgrp.replace(/&#39;/g,"'");
+    const st=_ppTri(_ppDrillCells().filter(c=>c.code===code)); cb.checked=st==='all'; cb.indeterminate=st==='some'; });
+  document.querySelectorAll('.mp-cb[data-pcell]').forEach(cb=>{
+    cb.checked=_mpCart.has(cb.dataset.pcell.replace(/&#39;/g,"'")); });
+}
+
+function _ppInjectCss(){
+  if(document.getElementById('ppcss')) return;
+  const css=document.createElement('style'); css.id='ppcss';
+  css.textContent=`
+  .pp-split{display:grid;grid-template-columns:300px 1fr 350px;border:1px solid var(--border);border-radius:10px;overflow:hidden;min-height:56vh;}
+  .pp-split .mp-pane{border-right:1px solid var(--border);}
+  .pp-split .mp-pane:last-child{border-right:none;}
+  .pp-matbar{display:flex;align-items:center;gap:12px;margin:4px 0 10px;}
+  .pp-lbl{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.4px;color:var(--muted);flex-shrink:0;}
+  .pp-lblsub{font-weight:400;text-transform:none;letter-spacing:0;}
+  .pp-mswrap{position:relative;flex:1;max-width:520px;}
+  .pp-mswrap input{width:100%;padding:7px 11px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;background:var(--input-bg);}
+  .pp-mswrap input:focus{outline:none;border-color:var(--accent);background:#fff;}
+  .pp-drop{position:absolute;top:calc(100% + 4px);left:0;right:0;background:#fff;border:1px solid var(--border);border-radius:8px;box-shadow:0 10px 28px rgba(15,23,42,.18);max-height:300px;overflow:auto;z-index:40;display:none;}
+  .pp-drop.open{display:block;}
+  .pp-ddrow{display:flex;align-items:center;gap:9px;padding:7px 11px;cursor:pointer;font-size:12.5px;}
+  .pp-ddrow:hover{background:var(--panel-2);}
+  .pp-ddrow.pp-dim{opacity:.45;cursor:default;}
+  .pp-ddcode{font-family:ui-monospace,Menlo,monospace;font-size:10.5px;color:var(--accent);min-width:64px;}
+  .pp-ddnm{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .pp-dduom{font-size:11px;color:var(--muted);}
+  .pp-ddpk{font-size:10px;color:var(--muted);white-space:nowrap;}
+  .pp-chip{display:inline-flex;align-items:center;gap:8px;background:rgba(13,148,136,.08);border:1px solid rgba(13,148,136,.35);border-radius:9px;padding:6px 11px;}
+  .pp-chip .c{font-family:ui-monospace,Menlo,monospace;font-size:10.5px;color:var(--accent);}
+  .pp-chip .n{font-weight:600;font-size:13px;}
+  .pp-chip .u{font-size:11px;color:var(--muted);}
+  .pp-chip .x{cursor:pointer;color:var(--danger);border:1px solid var(--border);background:#fff;border-radius:6px;width:20px;height:20px;display:inline-flex;align-items:center;justify-content:center;font-size:11px;}
+  .pp-seg{display:inline-flex;border:1px solid var(--border);border-radius:8px;overflow:hidden;background:#fff;flex-shrink:0;}
+  .pp-seg button{border:none;background:transparent;padding:4px 12px;font-size:11px;font-weight:600;color:var(--muted);cursor:pointer;letter-spacing:.3px;text-transform:uppercase;}
+  .pp-seg button.on{background:var(--accent);color:#fff;}
+  .pp-filter{padding:8px 10px 6px;background:var(--panel-2);border-bottom:1px solid var(--border);}
+  .pp-filter input{width:100%;padding:6px 9px;border:1px solid var(--border);border-radius:6px;font-size:12px;background:#fff;}
+  .pp-filter input:focus{outline:none;border-color:var(--accent);}
+  .pp-tnode{display:flex;align-items:center;gap:7px;padding:6px 7px;border-radius:7px;cursor:pointer;border:1px solid transparent;}
+  .pp-tnode:hover{background:var(--panel-2);}
+  .pp-tnode.sel{background:rgba(13,148,136,.08);border-color:rgba(13,148,136,.4);}
+  .pp-tw{width:16px;height:16px;display:inline-flex;align-items:center;justify-content:center;color:var(--muted);font-size:10px;flex-shrink:0;cursor:pointer;border-radius:4px;}
+  .pp-tw:hover{background:var(--border);}
+  .pp-tw.leaf{cursor:default;opacity:0;}
+  .pp-kids{margin-left:14px;border-left:1px dashed var(--border);padding-left:5px;}
+  .pp-nmwrap{flex:1;min-width:0;}
+  .pp-nm{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:13px;}
+  .pp-sub{font-size:10.5px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .pp-rem{font-size:11px;font-weight:600;color:#16a34a;white-space:nowrap;font-variant-numeric:tabular-nums;flex-shrink:0;}
+  .pp-chev{color:var(--muted);font-size:11px;flex-shrink:0;}
+  .pp-ctx{display:flex;align-items:center;gap:8px;padding:8px 10px;margin:0 0 6px;background:var(--input-bg);border:1px dashed var(--border);border-radius:8px;font-size:12px;}
+  .pp-ellip{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;}
+  .pp-lrow{display:flex;align-items:center;gap:9px;padding:5px 8px;border-radius:7px;}
+  .pp-lrow:hover{background:var(--panel-2);}
+  .pp-lrow.added{background:rgba(13,148,136,.07);}
+  .pp-lrem{font-size:11px;white-space:nowrap;font-variant-numeric:tabular-nums;color:var(--muted);flex-shrink:0;}
+  .pp-lrem b{color:#16a34a;}
+  .pp-lrem.zero b{color:var(--danger);}
+  .pp-qty{width:82px;padding:5px 6px;border:1px solid var(--border);border-radius:5px;font-size:12.5px;text-align:right;font-variant-numeric:tabular-nums;flex-shrink:0;}
+  .pp-qty:disabled{background:var(--input-bg);color:var(--muted);}
+  .pp-shared{font-size:9px;font-weight:700;color:#9a3412;background:#fff7ed;border:1px solid #fed7aa;border-radius:9px;padding:1px 6px;flex-shrink:0;}
+  .pp-grp{border:1px solid var(--border);border-radius:8px;margin-bottom:6px;overflow:hidden;}
+  .pp-grph{display:flex;align-items:center;gap:7px;padding:7px 9px;background:var(--panel-2);cursor:pointer;font-size:12.5px;font-weight:600;}
+  .pp-gsub{font-weight:400;color:var(--muted);font-size:11px;white-space:nowrap;}
+  .pp-grem{margin-left:auto;font-weight:600;color:#16a34a;font-size:11px;font-variant-numeric:tabular-nums;white-space:nowrap;}
+  .pp-grpb{display:none;padding:4px 6px;}
+  .pp-grpb.open{display:block;}
+  `;
+  document.head.appendChild(css);
 }
 
 // Seed the cart from the PO's current estimate-sourced allocations (src:'est').
@@ -21237,7 +21673,6 @@ function _poSeedCartFromRows(){
               status:'',remaining:(a.estRemaining||a.qty||0),leafId:a.wbs,pkgs:[],pkgName:'',qty:(Number(a.qty)||0),orphan:true}); }
     });
   });
-  _mpCart.forEach(v=>{ _mpExpandTo(v.locId); });
 }
 
 // Clubbed upsert of one (material, location) with an explicit qty, tagged src:'est'.
@@ -21298,8 +21733,10 @@ function _poCommitFromCart(){
            recalcPORow(rn); }
   });
   if(typeof recalcPOTotals==='function') recalcPOTotals();
+  _poRefreshHistory();   // v140: rate history strips for newly added lines
   closeModal();
   _mpMode='mir';
+  window._ppActive=false;   // v139
   toast('PO lines updated from estimate','success',2500);
 }
 
@@ -21357,7 +21794,7 @@ function addPOItem() {
     <td>${i+1}</td>
     <td style="min-width:280px;"><div style="position:relative;">
       <input class="po_material" id="poMat_${i}" placeholder="Type material…" style="width:100%;"
-        oninput="materialTypeahead('poMat_${i}','poMatRes_${i}')" onchange="blockDupMaterial(this)" autocomplete="off">
+        oninput="materialTypeahead('poMat_${i}','poMatRes_${i}')" onchange="blockDupMaterial(this);_poRefreshHistory()" autocomplete="off">
       <div class="typeahead-results" id="poMatRes_${i}" style="min-width:380px;position:absolute;top:100%;left:0;z-index:9999;box-shadow:0 4px 16px rgba(0,0,0,.15);"></div>
     </div></td>
     <td><input class="po_uom" id="poUom_${i}" style="width:65px;"></td>
@@ -21374,6 +21811,64 @@ function addPOItem() {
     <td><input id="poRmk_${i}" style="width:100px;" placeholder="Remarks"></td>
     <td><button class="btn btn-ghost btn-sm" onclick="this.closest('tr').remove();recalcPOTotals()">✕</button></td>`;
   document.getElementById('poItemsBody').appendChild(tr);
+}
+
+// ============================================================
+// v140: PO LINE RATE HISTORY — same source as QC's "PO History"
+// strip (fetchHistoricalPOPrices): Lowest / Highest / Last across
+// live POs (Open/Closed/Short-Closed/Approved), keyed material_name.
+// Session cache; one batched fetch per refresh for all new names.
+// ============================================================
+let _poHistCache = {};   // material_name -> {low,high,last} | null (looked up, none found)
+
+function _poHistEnsureHost(rn){
+  const row=document.getElementById('poItem_'+rn); if(!row) return null;
+  let host=document.getElementById('poHist_'+rn);
+  if(!host){
+    const matEl=row.querySelector('.po_material'); if(!matEl) return null;
+    host=document.createElement('div'); host.id='poHist_'+rn;
+    host.style.cssText='margin-top:3px;font-size:9px;line-height:1.5;';
+    matEl.closest('td').appendChild(host);
+  }
+  return host;
+}
+function _poHistPill(bg,fg,label,r){
+  return '<span style="background:'+bg+';color:'+fg+';font-weight:700;padding:1px 5px;border-radius:3px;">'+label+'</span>'
+    + '<span style="font-weight:600;color:'+fg+';margin:0 4px;">\u20b9'+fmtINR(r.rate)+'</span>'
+    + '<span style="font-size:8px;color:#64748b;">'+esc(r.vendor)+' \u00b7 '+esc(r.po)+' \u00b7 '+fmtDate(r.date)+'</span>';
+}
+function _poHistRender(rn){
+  const host=_poHistEnsureHost(rn); if(!host) return;
+  const row=document.getElementById('poItem_'+rn);
+  const name=(row?.querySelector('.po_material')?.value||'').trim();
+  if(!name){ host.innerHTML=''; return; }
+  if(!(name in _poHistCache)){ host.innerHTML='<span style="color:#94a3b8;font-style:italic;">PO history\u2026</span>'; return; }
+  const h=_poHistCache[name];
+  if(!h){ host.innerHTML='<span style="font-weight:700;color:#1e3a5f;text-transform:uppercase;letter-spacing:.4px;margin-right:6px;">PO History</span>'
+    + '<span style="color:#94a3b8;font-style:italic;">No previous POs for this material</span>'; return; }
+  host.innerHTML='<span style="font-weight:700;color:#1e3a5f;text-transform:uppercase;letter-spacing:.4px;margin-right:8px;">PO History</span>'
+    + _poHistPill('#d1fae5','#065f46','Lowest',h.low)
+    + '<span style="margin:0 8px;color:#cbd5e1;">|</span>'
+    + _poHistPill('#fee2e2','#991b1b','Highest',h.high)
+    + '<span style="margin:0 8px;color:#cbd5e1;">|</span>'
+    + _poHistPill('#e0e7ff','#3730a3','Last',h.last);
+}
+async function _poRefreshHistory(){
+  const rows=[...document.querySelectorAll('#poItemsBody tr')].filter(tr=>(tr.id||'').startsWith('poItem_'));
+  const wants=new Set();
+  rows.forEach(tr=>{
+    const rn=(tr.id||'').split('_')[1];
+    const name=(tr.querySelector('.po_material')?.value||'').trim();
+    if(name && !(name in _poHistCache)) wants.add(name);
+    _poHistRender(rn);   // paints cached strips + "PO history…" placeholders immediately
+  });
+  if(wants.size){
+    try{
+      const m=await fetchHistoricalPOPrices([...wants]);
+      wants.forEach(n=>{ _poHistCache[n]=m[n]||null; });
+    }catch(e){ console.warn('PO history:',e); wants.forEach(n=>{ if(!(n in _poHistCache)) _poHistCache[n]=null; }); }
+    rows.forEach(tr=>_poHistRender((tr.id||'').split('_')[1]));
+  }
 }
 
 function recalcPORow(i) {
@@ -22000,6 +22495,9 @@ async function viewPO(poNum) {
   // v103: group per-location rows into one summed line per material, with expandable split
   let _vLocMap={};
   try{ const _vlt=await _loadLocTree(); _vLocMap=Object.fromEntries((_vlt||[]).map(n=>[String(n.id),n])); }catch(e){}
+  // v141: rate history per material — same source as QC's strip, excluding this PO itself
+  let _vHist={};
+  try{ _vHist=await fetchHistoricalPOPrices([...new Set((items||[]).map(i=>i.material_name).filter(Boolean))], h.po_number); }catch(e){ console.warn('PO view history:',e); }
   const _vGroups={};
   (items||[]).forEach(it=>{ const k=(it.material_code!=null?('c'+it.material_code):('n'+it.material_name)); (_vGroups[k]=_vGroups[k]||[]).push(it); });
   let _vSno=0;
@@ -22027,6 +22525,18 @@ async function viewPO(poNum) {
     const splitBody = hasSplit ? `<div id="${splitId}" style="display:none;font-size:11px;color:var(--muted);margin-top:4px;line-height:1.5;">
       ${group.map(x=>{ const ln=_vLocMap[String(x.loc_node_id)]; const lp=ln?(ln.path||ln.name):(x.loc_node_id?('loc '+x.loc_node_id):'— no location'); return `📍 ${esc(lp)} — <span class="mono">${fmtINR(num(x.qty))}</span> ${esc(first.uom||'')}`; }).join('<br>')}
     </div>` : '';
+    const _hh=_vHist[first.material_name];
+    const histRow = `<tr><td colspan="9" style="padding:0;">
+      <div style="background:${_hh?'#f0f7ff':'#f8fafc'};border-top:1px dashed ${_hh?'#b8d4f0':'#e2e8f0'};padding:3px 8px;font-size:9px;line-height:1.5;">
+        <span style="font-weight:700;color:#1e3a5f;text-transform:uppercase;letter-spacing:.4px;margin-right:8px;">PO History</span>
+        ${_hh
+          ? _poHistPill('#d1fae5','#065f46','Lowest',_hh.low)
+            + '<span style="margin:0 8px;color:#cbd5e1;">|</span>'
+            + _poHistPill('#fee2e2','#991b1b','Highest',_hh.high)
+            + '<span style="margin:0 8px;color:#cbd5e1;">|</span>'
+            + _poHistPill('#e0e7ff','#3730a3','Last',_hh.last)
+          : '<span style="color:#94a3b8;font-style:italic;">No previous POs for this material</span>'}
+      </div></td></tr>`;
     return `<tr>
       <td>${_vSno}</td>
       <td>${esc(first.material_name)}${directBadge}${splitToggle}${splitBody}${footnote}</td>
@@ -22037,7 +22547,7 @@ async function viewPO(poNum) {
       <td class="num">${fmtINR(first.unit_rate)}</td>
       <td class="num">${fmtINR(baseAmt)}</td>
       <td class="num">${fmtINR(totAmt)}</td>
-    </tr>`;
+    </tr>${histRow}`;
   }).join('');
 
   // Lifecycle action buttons (cancel / short-close) at the bottom
