@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Penguin-Procurement Suite v142 — Urban Excellence LLP · Poetry of Earth</title>
+<title>Penguin-Procurement Suite v149 — Urban Excellence LLP · Poetry of Earth</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <style>
@@ -1366,14 +1366,9 @@ input[type="number"] {
       </div>
     </div>
 
-    <div class="field" style="margin-top:10px;max-width:440px;position:relative;">
-      <label>Package</label>
-      <div style="display:flex;gap:6px;align-items:center;">
-        <input id="wo_pkgPick" placeholder="Type to search a package with activities…" autocomplete="off"
-               oninput="woPackagePick()" style="flex:1;">
-        <button type="button" class="btn btn-ghost btn-sm" id="wo_pkgPickClear" onclick="woClearPackagePick()" style="display:none;">✕</button>
-      </div>
-      <div class="typeahead-results" id="wo_pkgPickResults"></div>
+    <div style="margin-top:10px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+      <button class="btn btn-primary" onclick="openWoActivityPicker()">🧭 Pick activities from estimate</button>
+      <span style="font-size:11px;color:var(--muted);">Select activities across <b>multiple packages</b> — by package or by location. LS ₹ lines order an amount against the budget pool.</span>
     </div>
 
     <div id="woItemTree" style="margin-top:14px;"></div>
@@ -4407,8 +4402,13 @@ function openModal(html, size) {
   }
   document.getElementById('modalBg').classList.add('show');
 }
-function closeModal() { document.getElementById('modalBg').classList.remove('show'); }
-document.getElementById('modalBg').addEventListener('click', e => { if (e.target.id === 'modalBg') closeModal(); });
+function closeModal() { document.getElementById('modalBg').classList.remove('show'); window._modalNoBackdropClose = false; }
+document.getElementById('modalBg').addEventListener('click', e => {
+  if (e.target.id === 'modalBg') {
+    if (window._modalNoBackdropClose) return;   // v144: pickers hold cart state — close only via \u2715 / commit
+    closeModal();
+  }
+});
 
 // ============================================================
 // PROGRESS BAR — self-clearing, can never get permanently stuck
@@ -10500,9 +10500,6 @@ function _woResetTreeState() {
   ['wo_refreshRemBtn','wo_expandAllBtn','wo_collapseAllBtn','wo_printBtn'].forEach(id => {
     const el = document.getElementById(id); if (el) el.style.display = 'none';
   });
-  const pick = document.getElementById('wo_pkgPick');
-  if (pick) { pick.value = ''; pick.readOnly = false; }
-  const pc = document.getElementById('wo_pkgPickClear'); if (pc) pc.style.display = 'none';
 }
 
 async function loadWOList() {
@@ -10592,43 +10589,13 @@ function closeWOForm() {
   _woResetTreeState();
 }
 
-// ── Package picker ────────────────────────────────────────────
-async function woPackagePick() {
-  const inp = document.getElementById('wo_pkgPick');
-  const res = document.getElementById('wo_pkgPickResults');
-  if (!inp || !res) return;
-  const q = (inp.value || '').toLowerCase();
-  if (!q) { res.classList.remove('show'); res.style.display = 'none'; return; }
-  const pkgs = await _woPackagesWithActivities();
-  const tokens = _fuzzyTokens(q);
-  const matches = pkgs.filter(p => _fuzzyMatch((p.path || p.name), tokens)).slice(0, 12);
-  if (!matches.length) {
-    res.innerHTML = `<div class="typeahead-item" style="cursor:default;color:var(--muted);font-size:11px;pointer-events:none;">
-      ${pkgs.length === 0
-        ? '\u26a0 No package contains activity nodes \u2014 create \ud83d\udcd4 Activity nodes under a \ud83d\udce6 Package in Planning &amp; QS first'
-        : 'No package matches "' + esc(inp.value) + '"'}
-    </div>`;
-    _anchorDropdown(inp, res); return;
-  }
-  res.innerHTML = matches.map(p => `<div class="typeahead-item"
-    data-id="${p.id}" data-name="${esc(p.name)}"
-    onmousedown="event.preventDefault();woSelectPackage(${p.id},'${esc(p.name)}')">
-    <div>${esc(p.name)}</div>
-    <div class="muted" style="font-size:11px;">${esc(p.path)}</div>
-  </div>`).join('');
-  _anchorDropdown(inp, res);
-}
-
-function woClearPackagePick() {
-  if (Object.keys(_woSel).length && !confirm('Changing the package clears all selected line items. Continue?')) return;
-  _woResetTreeState();
-}
-
-async function _woPackagesWithActivities() {
-  const tree = await _loadWbsTree();
-  const pkgIdsWithAct = new Set(tree.filter(n => n.node_type === 'activity').map(n => n.parent_id));
-  return tree.filter(n => n.node_type === 'package' && pkgIdsWithAct.has(n.id));
-}
+// ── v143: WO activity picker + multi-package loader ──────────
+// The single-package typeahead is gone. Activities are chosen in a
+// three-pane picker (packages OR location tree → activities → cart) and
+// the tree below becomes a multi-package editor. LS activity scopes
+// (estimate_mode='ls') are rupee-budget pools: the line's qty IS the ₹
+// amount, rate is locked at 1, UOM saves as 'LS (₹)' — so WOC/WOB math
+// runs unchanged and fn_package_remaining's qty sums are already rupees.
 
 // Logical site-order comparator for tower/floor/unit names.
 // Floors rank: basements (B2,B1) < Ground (GF/G) < Mezzanine < 1st,2nd,… < Terrace.
@@ -10664,111 +10631,616 @@ function _siteOrder(a, b) {
   return ax.length - bx.length;
 }
 
-async function woSelectPackage(pkgId, pkgName) {
-  const inp = document.getElementById('wo_pkgPick');
-  const res = document.getElementById('wo_pkgPickResults');
-  if (res) res.classList.remove('show');
-  if (inp) { inp.value = pkgName; inp.readOnly = true; }
-  const pc = document.getElementById('wo_pkgPickClear'); if (pc) pc.style.display = '';
-  pbShow('Loading activities & budget…');
-  // Always drop cached structure so a re-pick reflects current estimates/approvals.
-  _wbsTreeCache = null; _locTreeCache = null; _approvedWbsScopeCache = null; _wbsScopeTierCache = null;
-  try {
-    const [tree, locTree] = await Promise.all([_loadWbsTree(), _loadLocTree()]);
-    const locMap = Object.fromEntries(locTree.map(n => [String(n.id), n]));
+const _woR2 = x => Math.round((Number(x)||0)*100)/100;
 
-    const activitiesInPkg = tree.filter(n => n.node_type === 'activity' && Number(n.parent_id) === Number(pkgId));
-    const actNodeIds = activitiesInPkg.map(n => Number(n.id));
-    if (!actNodeIds.length) { toast('This package has no activity nodes — add them in Planning & QS first.','warn'); pbDone(); return; }
+// Fetch every wbs_scope row (paged past PostgREST's 1000 cap) and filter
+// client-side — a .in() over hundreds of activity ids would blow the URL,
+// and the table is small enough (~3–4k rows) that one full read is cheaper.
+async function _woFetchScopes() {
+  return _fetchAllRows('wbs_scope',
+    'wbs_node_id, loc_node_id, scope_status, est_qty, est_rate, estimate_mode, ls_budget_amount');
+}
 
-    // When revising, exclude THIS order's own reservation so its quantities can be
-    // freely rearranged up to the true budget (the order no longer counts against itself).
-    const revisingWO = document.getElementById('woForm').dataset.revisingWO || null;
+// Load the rich tree for a set of activities (any mix of packages).
+// Does NOT touch _woSel/_woStages — callers own selection state.
+async function _woLoadActivities(actNodeIds) {
+  actNodeIds = [...new Set((actNodeIds||[]).map(Number).filter(Boolean))];
+  if (!actNodeIds.length) { _woTree = { items: [] }; woRenderTree(); return; }
+  const [tree, locTree, allScopes] = await Promise.all([_loadWbsTree(), _loadLocTree(), _woFetchScopes()]);
+  const locMap = Object.fromEntries(locTree.map(n => [String(n.id), n]));
+  const wbsMap = Object.fromEntries(tree.map(n => [String(n.id), n]));
+  const actSet = new Set(actNodeIds);
+  const activities = tree.filter(n => n.node_type === 'activity' && actSet.has(Number(n.id)));
+  if (!activities.length) { toast('Selected activities no longer exist in the WBS.','error'); return; }
 
-    // ONE call returns remaining for every approved pair in the package.
-    const { data: remRows, error: remErr } = await sb.rpc('fn_package_remaining', {
-      p_activity_ids: actNodeIds,
-      p_exclude_wo: revisingWO,
-      p_exclude_ho: null
-    });
-    if (remErr) throw remErr;
+  // When revising, exclude THIS order's own reservation so its quantities can be
+  // freely rearranged up to the true budget (the order no longer counts against itself).
+  const revisingWO = document.getElementById('woForm').dataset.revisingWO || null;
 
-    // Index by `wbs|loc` for fast lookup, and keep est_rate from wbs_scope.
-    const remByPair = {};   // `${wbs}|${loc}` -> { remaining, est_qty }
-    (remRows||[]).forEach(r => { remByPair[`${r.wbs_node_id}|${r.loc_node_id}`] = { remaining: num(r.remaining), est_qty: num(r.est_qty) }; });
+  const { data: remRows, error: remErr } = await sb.rpc('fn_package_remaining', {
+    p_activity_ids: actNodeIds, p_exclude_wo: revisingWO, p_exclude_ho: null
+  });
+  if (remErr) throw remErr;
+  // Keep certified+reserved too — LS remaining is budget − certified − reserved
+  // (qty sums ARE rupees on LS pairs because LS lines save qty=₹, rate=1).
+  const remByPair = {};
+  (remRows||[]).forEach(r => { remByPair[`${r.wbs_node_id}|${r.loc_node_id}`] =
+    { remaining: num(r.remaining), est_qty: num(r.est_qty), certified: num(r.certified), reserved: num(r.reserved) }; });
 
-    // v105: per-activity issued WO pivot data (ordered/certified by WO status)
-    const _woIssued = await _woLoadIssued(actNodeIds);
+  // v105: per-activity issued WO pivot data (ordered/certified by WO status)
+  const _woIssued = await _woLoadIssued(actNodeIds);
 
-    // est_rate isn't returned by fn_package_remaining — fetch scope rows for rate + status.
-    let scopeRows = [];
-    { const PAGE = 1000; let from = 0;
-      for (let guard = 0; guard < 100; guard++) {
-        const { data, error } = await sb.from('wbs_scope')
-          .select('wbs_node_id, loc_node_id, scope_status, est_qty, est_rate')
-          .in('wbs_node_id', actNodeIds)
-          .range(from, from + PAGE - 1);
-        if (error) throw error;
-        scopeRows = scopeRows.concat(data || []);
-        if (!data || data.length < PAGE) break;
-        from += PAGE;
+  const scopeRows = allScopes.filter(r => actSet.has(Number(r.wbs_node_id)));
+
+  function _locChain(locId) {
+    const chain = []; let cur = locMap[String(locId)], g = 0;
+    while (cur && g++ < 50) { chain.unshift(cur); cur = cur.parent_id ? locMap[String(cur.parent_id)] : null; }
+    return chain;
+  }
+
+  const items = activities.map(act => {
+    const pkgNode = act.parent_id != null ? wbsMap[String(act.parent_id)] : null;
+    const pairs = scopeRows.filter(r => Number(r.wbs_node_id) === Number(act.id));
+    const groups = {};
+    let bestTier = 'none', lsCount = 0, pairCount = 0;
+    pairs.forEach(r => {
+      const chain = _locChain(r.loc_node_id);
+      const depth = chain.length; if (!depth) return;
+      pairCount++;
+      const leafNode      = chain[depth - 1];
+      const parentNode    = depth >= 2 ? chain[depth - 2] : null;
+      const grandpaNode   = depth >= 3 ? chain[depth - 3] : null;
+      const outerNode     = grandpaNode || parentNode || leafNode;
+      const innerNode     = grandpaNode ? parentNode : null;
+      const approved = r.scope_status === 'approved';
+      if (approved) bestTier = 'approved'; else if (bestTier !== 'approved') bestTier = 'draft';
+      const isLS = r.estimate_mode === 'ls';
+      if (isLS) lsCount++;
+      const lsBudget = isLS ? (Number(r.ls_budget_amount)||0) : 0;
+      const liveKey = `${r.wbs_node_id}|${r.loc_node_id}`;
+      const remEntry = remByPair[liveKey];
+      const hasLive = approved ? (remEntry != null) : false;
+      // QTY: remaining units. LS: remaining rupees = budget − certified − reserved.
+      const remVal = isLS
+        ? (hasLive ? Math.max(0, _woR2(lsBudget - remEntry.certified - remEntry.reserved)) : lsBudget)
+        : (hasLive ? remEntry.remaining : (Number(r.est_qty)||0));
+      const leafData = { id: String(r.loc_node_id), selKey: act.id + '|' + String(r.loc_node_id),
+        name: leafNode.name, path: leafNode.path||leafNode.name,
+        rem: remVal, remLive: hasLive,
+        est: isLS ? lsBudget : (remEntry ? num(remEntry.est_qty) : (Number(r.est_qty)||0)),
+        est_rate: isLS ? 1 : (Number(r.est_rate)||0),
+        approved, isLS, lsBudget };
+      const outerKey = String(outerNode.id);
+      if (!groups[outerKey]) groups[outerKey] = { grp: outerNode.name, path: outerNode.path||outerNode.name, subGroups: {}, leaves: [] };
+      if (innerNode) {
+        const innerKey = String(innerNode.id);
+        if (!groups[outerKey].subGroups[innerKey])
+          groups[outerKey].subGroups[innerKey] = { subGrp: innerNode.name, path: innerNode.path||innerNode.name, leaves: [] };
+        groups[outerKey].subGroups[innerKey].leaves.push(leafData);
+      } else {
+        groups[outerKey].leaves.push(leafData);
       }
-    }
+    });
+    const sortedGroups = Object.values(groups)
+      .map(g => ({ ...g, subGroups: Object.values(g.subGroups).sort((a,b)=>_siteOrder(a.subGrp,b.subGrp)), leaves: (g.leaves||[]).sort((a,b)=>_siteOrder(a.name,b.name)) }))
+      .sort((a,b)=>_siteOrder(a.grp,b.grp));
+    sortedGroups.forEach(g => (g.subGroups||[]).forEach(sg => sg.leaves.sort((a,b)=>_siteOrder(a.name,b.name))));
+    const _ai = _woIssued.byAct[act.id] || {};
+    return { id: act.id, name: act.name, uom: act.uom||'', wbsNodeId: Number(act.id), tier: bestTier, groups: sortedGroups,
+      pkgId: pkgNode ? Number(pkgNode.id) : null, pkgName: pkgNode ? pkgNode.name : '—', pkgPath: pkgNode ? (pkgNode.path||pkgNode.name) : '',
+      allLS: pairCount > 0 && lsCount === pairCount, anyLS: lsCount > 0,
+      woCols: _ai.colsArr||[], issuedByLoc: _ai.byLoc||{}, woColSum: _ai.colSum||{} };
+  }).sort((a,b) => (a.pkgName||'').localeCompare(b.pkgName||'') || (a.name||'').localeCompare(b.name||''));
 
-    function _locChain(locId) {
-      const chain = []; let cur = locMap[String(locId)], g = 0;
-      while (cur && g++ < 50) { chain.unshift(cur); cur = cur.parent_id ? locMap[String(cur.parent_id)] : null; }
-      return chain;
-    }
+  _woTree = { items };
+  ['wo_refreshRemBtn','wo_expandAllBtn','wo_collapseAllBtn','wo_printBtn'].forEach(id => { const el = document.getElementById(id); if (el) el.style.display = ''; });
+  document.getElementById('woItemFoot').style.display = 'block';
+}
 
-    const items = activitiesInPkg.map(act => {
-      const pairs = (scopeRows||[]).filter(r => Number(r.wbs_node_id) === Number(act.id));
-      const groups = {};
-      let bestTier = 'none';
-      pairs.forEach(r => {
-        const chain = _locChain(r.loc_node_id);
-        const depth = chain.length; if (!depth) return;
-        const leafNode      = chain[depth - 1];
-        const parentNode    = depth >= 2 ? chain[depth - 2] : null;
-        const grandpaNode   = depth >= 3 ? chain[depth - 3] : null;
-        const outerNode     = grandpaNode || parentNode || leafNode;
-        const innerNode     = grandpaNode ? parentNode : null;
-        const approved = r.scope_status === 'approved';
-        if (approved) bestTier = 'approved'; else if (bestTier !== 'approved') bestTier = 'draft';
-        const liveKey = `${r.wbs_node_id}|${r.loc_node_id}`;
-        // Approved pairs always have a remaining row; if somehow missing, fall back to est_qty but flag.
-        const remEntry = remByPair[liveKey];
-        const hasLive = approved ? (remEntry != null) : false;
-        const remVal  = hasLive ? remEntry.remaining : (Number(r.est_qty)||0);
-        const leafData = { id: String(r.loc_node_id), selKey: act.id + '|' + String(r.loc_node_id),
-          name: leafNode.name, path: leafNode.path||leafNode.name,
-          rem: remVal, remLive: hasLive, est: (remEntry? num(remEntry.est_qty) : (Number(r.est_qty)||0)), est_rate: Number(r.est_rate)||0, approved };
-        const outerKey = String(outerNode.id);
-        if (!groups[outerKey]) groups[outerKey] = { grp: outerNode.name, path: outerNode.path||outerNode.name, subGroups: {}, leaves: [] };
-        if (innerNode) {
-          const innerKey = String(innerNode.id);
-          if (!groups[outerKey].subGroups[innerKey])
-            groups[outerKey].subGroups[innerKey] = { subGrp: innerNode.name, path: innerNode.path||innerNode.name, leaves: [] };
-          groups[outerKey].subGroups[innerKey].leaves.push(leafData);
-        } else {
-          groups[outerKey].leaves.push(leafData);
-        }
-      });
-      const sortedGroups = Object.values(groups)
-        .map(g => ({ ...g, subGroups: Object.values(g.subGroups).sort((a,b)=>_siteOrder(a.subGrp,b.subGrp)), leaves: (g.leaves||[]).sort((a,b)=>_siteOrder(a.name,b.name)) }))
-        .sort((a,b)=>_siteOrder(a.grp,b.grp));
-      sortedGroups.forEach(g => (g.subGroups||[]).forEach(sg => sg.leaves.sort((a,b)=>_siteOrder(a.name,b.name))));
-      const _ai = _woIssued.byAct[act.id] || {};
-      return { id: act.id, name: act.name, uom: act.uom||'', wbsNodeId: Number(act.id), tier: bestTier, groups: sortedGroups,
-        woCols: _ai.colsArr||[], issuedByLoc: _ai.byLoc||{}, woColSum: _ai.colSum||{} };
+// ============================================================
+// v143: WO ACTIVITY PICKER — three panes, multi-package, LS-aware.
+// Grain = (activity, location). An activity belongs to exactly one
+// package, so there is no pooled/SHARED logic (unlike the PO picker).
+// Approved pairs only; QTY qty caps at remaining; LS entries are ₹
+// against fn-computed rupee remaining. Commit REPLACES the WO's
+// estimate selection (stages survive for activities that remain).
+// ============================================================
+let _wpCells=null;       // Map 'act|loc' -> cell
+let _wpActs=null;        // Map actId -> {id,name,uom,pkg,cells:[]}
+let _wpPkgArr=[];        // [{pkgId,name,path,cells:[]}]
+let _wpPkgTree=null; let _wpTreeNodes=[];
+let _wpLocNodes={};      // locId -> {id,name,path,parentId,children:[],cells:[]}
+let _wpLocRoots=[];
+let _wpMode='pkg'; let _wpSelPkg=null; let _wpSelNode=null;
+let _wpExp=new Set(); let _wpGrpOpen=new Set();
+let _wpTwOpen=new Set(); let _wpTwCells={};   // v144: tower folding inside activity groups
+let _wpCart=new Map();   // 'act|loc' -> {actId,locId,val,rate}
+const _wpKey=(a,l)=>String(a)+'|'+String(l);
+const _wpLive=cells=>cells.filter(c=>c.rem>0);
+
+function _wpInjectCss(){
+  if(document.getElementById('wpcss')) return;
+  const css=document.createElement('style'); css.id='wpcss';
+  css.textContent=`
+  .wo-ls-pill{font-size:9px;font-weight:700;color:#5a4500;background:#fdf8e7;border:1px solid #ecd98a;border-radius:9px;padding:1px 6px;flex-shrink:0;letter-spacing:.3px;}
+  .wo-qty-pill{font-size:9px;font-weight:700;color:#155e75;background:#ecfeff;border:1px solid #a5f3fc;border-radius:9px;padding:1px 6px;flex-shrink:0;letter-spacing:.3px;}
+  .wo-pkg-band{display:flex;align-items:center;gap:8px;font-size:11px;font-weight:700;color:#475569;text-transform:uppercase;letter-spacing:.5px;margin:14px 2px 6px;}
+  .wo-pkg-band .sub{font-weight:400;text-transform:none;letter-spacing:0;color:var(--muted);font-size:10.5px;}
+  .wo-pkg-band::after{content:"";flex:1;height:1px;background:var(--border);}
+  .wp-ratebox{display:inline-flex;align-items:center;gap:4px;font-size:11px;color:var(--muted);}
+  .wp-ratebox input{width:72px;padding:3px 5px;border:1px solid var(--border);border-radius:4px;font-size:11.5px;text-align:right;font-variant-numeric:tabular-nums;}
+  .mp-ci.wp-ls{border-color:#ecd98a;}
+  .mp-ci.wp-ls .mp-ci-head{background:#fdf8e7;}
+  .mp-lchip.wp-ls{background:#fdf8e7;border-color:#ecd98a;}
+  .mp-lchip input.over{border-color:var(--danger);background:#fef2f2;}
+  `;
+  document.head.appendChild(css);
+}
+
+async function openWoActivityPicker(){
+  pbShow('Loading approved estimate…');
+  try{
+    const [tree, locTree, allScopes] = await Promise.all([_loadWbsTree(), _loadLocTree(), _woFetchScopes()]);
+    _buildLocTowerMap(locTree);   // v144: tower folding in column 2
+    const wbsMap = Object.fromEntries(tree.map(n=>[String(n.id),n]));
+    const locMap = Object.fromEntries(locTree.map(n=>[String(n.id),n]));
+    const acts = tree.filter(n=>n.node_type==='activity');
+    if(!acts.length){ toast('No activity nodes in the WBS — create 📔 Activity nodes under packages in Planning & QS first.','warn',6000); return; }
+    const actIds = acts.map(n=>Number(n.id));
+    const actSet = new Set(actIds);
+    const revisingWO = document.getElementById('woForm').dataset.revisingWO || null;
+    const { data: remRows, error: remErr } = await sb.rpc('fn_package_remaining', {
+      p_activity_ids: actIds, p_exclude_wo: revisingWO, p_exclude_ho: null });
+    if(remErr) throw remErr;
+    const remByPair={};
+    (remRows||[]).forEach(r=>{ remByPair[`${r.wbs_node_id}|${r.loc_node_id}`]=
+      {remaining:num(r.remaining),certified:num(r.certified),reserved:num(r.reserved)}; });
+
+    // approved pairs only — the picker mirrors the PO picker's contract
+    _wpCells=new Map(); _wpActs=new Map();
+    allScopes.forEach(r=>{
+      if(r.scope_status!=='approved') return;
+      const aid=Number(r.wbs_node_id); if(!actSet.has(aid)) return;
+      const actN=wbsMap[String(aid)], locN=locMap[String(r.loc_node_id)];
+      if(!actN||!locN) return;
+      const pkgN=actN.parent_id!=null?wbsMap[String(actN.parent_id)]:null;
+      const rr=remByPair[`${aid}|${r.loc_node_id}`];
+      const isLS=r.estimate_mode==='ls';
+      const lsBudget=isLS?(Number(r.ls_budget_amount)||0):0;
+      const rem=isLS
+        ? Math.max(0,_woR2(lsBudget-(rr?rr.certified:0)-(rr?rr.reserved:0)))
+        : (rr?rr.remaining:(Number(r.est_qty)||0));
+      const cell={actId:aid, actName:actN.name, uom:actN.uom||'',
+        pkgId:pkgN?Number(pkgN.id):null, pkgName:pkgN?pkgN.name:'—', pkgPath:pkgN?(pkgN.path||pkgN.name):'',
+        locId:String(r.loc_node_id), locName:locN.name, locPath:locN.path||locN.name,
+        rem, rate:isLS?1:(Number(r.est_rate)||0), isLS, lsBudget};
+      _wpCells.set(_wpKey(aid,cell.locId),cell);
+      let A=_wpActs.get(aid);
+      if(!A){ A={id:aid,name:actN.name,uom:cell.uom,pkgId:cell.pkgId,pkgName:cell.pkgName,pkgPath:cell.pkgPath,cells:[]}; _wpActs.set(aid,A); }
+      A.cells.push(cell);
+    });
+    if(!_wpCells.size){ toast('No approved activity estimates found — approve estimates in Planning & QS first.','warn',6000); return; }
+
+    // package index + area trie (segments above the package itself)
+    const pkgs=new Map();
+    for(const c of _wpCells.values()){
+      const id=String(c.pkgId);
+      let P=pkgs.get(id);
+      if(!P){ P={pkgId:c.pkgId,name:c.pkgName,path:c.pkgPath,cells:[]}; pkgs.set(id,P); }
+      P.cells.push(c);
+    }
+    _wpPkgArr=[...pkgs.values()].sort((a,b)=>(a.name||'').localeCompare(b.name||''));
+    _wpTreeNodes=[];
+    const root={name:null,children:new Map(),pkgs:[],key:'root'};
+    _wpPkgArr.forEach(P=>{
+      const segs=(P.path||P.name||'').split(' \u203a ');
+      let cur=root;
+      for(let i=0;i<segs.length-1;i++){
+        const k=cur.key+'>'+segs[i];
+        if(!cur.children.has(k)){ const n={name:segs[i],children:new Map(),pkgs:[],key:k,idx:_wpTreeNodes.length}; _wpTreeNodes.push(n); cur.children.set(k,n); }
+        cur=cur.children.get(k);
+      }
+      cur.pkgs.push(P);
+    });
+    _wpPkgTree=root;
+
+    // location tree over the cells' locations
+    _wpLocNodes={}; _wpLocRoots=[];
+    const ensure=id=>{
+      const n=locMap[String(id)]; if(!n) return null;
+      if(_wpLocNodes[String(id)]) return _wpLocNodes[String(id)];
+      const node={id:String(id),name:n.name,path:n.path||n.name,
+        parentId:n.parent_id!=null?String(n.parent_id):null,children:[],cells:[]};
+      _wpLocNodes[String(id)]=node; return node;
+    };
+    for(const c of _wpCells.values()){
+      const leaf=ensure(c.locId); if(!leaf) continue;
+      leaf.cells.push(c);
+      let cur=leaf, g=0;
+      while(cur.parentId&&g++<50){
+        const p=ensure(cur.parentId); if(!p) break;
+        if(!p.children.includes(cur)) p.children.push(cur);
+        cur=p;
+      }
+      if(!cur.parentId&&!_wpLocRoots.includes(cur)) _wpLocRoots.push(cur);
+    }
+    const sortKids=n=>{ n.children.sort((a,b)=>_siteOrder(a.name,b.name)); n.children.forEach(sortKids); };
+    _wpLocRoots.sort((a,b)=>_siteOrder(a.name,b.name)); _wpLocRoots.forEach(sortKids);
+
+    // seed cart from current tree selection
+    _wpCart=new Map();
+    Object.keys(_woSel||{}).forEach(k=>{
+      const c=_wpCells.get(k); if(!c) return;
+      const s=_woSel[k];
+      _wpCart.set(k,{actId:c.actId,locId:c.locId,val:Number(s.qty)||0,rate:c.isLS?1:(Number(s.rate)||c.rate)});
     });
 
-    _woTree = { pkgId, pkgName, items };
-    _woSel = {}; _woStages = {}; _woOpenItem = {}; _woOpenGrp = {}; _woActRate = {};
-    ['wo_refreshRemBtn','wo_expandAllBtn','wo_collapseAllBtn','wo_printBtn'].forEach(id => { const el = document.getElementById(id); if (el) el.style.display = ''; });
-    document.getElementById('woItemFoot').style.display = 'block';
+    _wpMode='pkg'; _wpSelPkg=null; _wpSelNode=null; _wpExp=new Set(); _wpGrpOpen=new Set();
+    _wpTwOpen=new Set(); _wpTwCells={};
+    _mpInjectCss(); _ppInjectCss(); _wpInjectCss();
+    openModal(
+      '<div class="mp-modal">'
+      + '<div class="mp-head" style="display:flex;align-items:flex-start;gap:10px;"><div style="flex:1;min-width:0;"><h3>Add activities from estimate</h3>'
+      +   '<div class="mp-sub">Tick a <b>package</b> for every activity under it, or switch to <b>location</b> and tick a node for everything estimated there. Only <b>approved</b> pairs appear; qty is capped at remaining. <span class="wo-ls-pill">LS \u20b9</span> lines have no quantity \u2014 enter the \u20b9 amount to order against the budget remaining.</div></div>'
+      +   '<button class="mp-closebtn" onclick="_wpCancel()" title="Close without adding">\u2715</button></div>'
+      + '<div class="pp-split">'
+      +   '<div class="mp-pane">'
+      +     '<div class="mp-pane-head">'
+      +       '<div class="pp-seg"><button id="wpSegPkg" class="on" onclick="_wpSetMode(\'pkg\')">Package</button>'
+      +       '<button id="wpSegLoc" onclick="_wpSetMode(\'loc\')">Location</button></div>'
+      +       '<span class="mp-cnt" id="wpC1Cnt"></span></div>'
+      +     '<div class="pp-filter"><input id="wpC1Filter" placeholder="Filter\u2026" oninput="_wpRenderC1()"></div>'
+      +     '<div class="mp-body pp-c1" id="wpC1Body"></div>'
+      +   '</div>'
+      +   '<div class="mp-pane">'
+      +     '<div class="mp-pane-head"><span class="mp-ttl" id="wpC2Ttl">Activities</span><span class="mp-cnt" id="wpC2Cnt"></span></div>'
+      +     '<div class="mp-body" id="wpC2Body"></div>'
+      +   '</div>'
+      +   '<div class="mp-pane mp-right">'
+      +     '<div class="mp-pane-head"><span class="mp-ttl">Selected for this WO</span><span class="mp-cnt" id="wpCartCnt"></span></div>'
+      +     '<div class="mp-body" id="wpCart"></div>'
+      +   '</div>'
+      + '</div>'
+      + '<div class="mp-foot">'
+      +   '<span class="mp-legend"><span class="mp-dot">\u25cf</span> approved estimate &nbsp;\u00b7&nbsp; remaining = est \u2212 certified \u2212 reserved on live WOs &nbsp;\u00b7&nbsp; <span class="wo-ls-pill" style="cursor:default;">LS \u20b9</span> = rupee budget pool</span>'
+      +   '<div class="mp-spacer"></div>'
+      +   '<span style="font-size:12.5px;color:var(--muted);">Gross <b id="wpFootAmt" style="color:var(--accent);font-variant-numeric:tabular-nums;">\u20b90.00</b></span>'
+      +   '<button class="btn btn-ghost btn-sm" onclick="_wpClear()">Clear</button>'
+      +   '<button class="btn btn-primary btn-sm" onclick="_wpCommit()">Add to WO <span class="mp-pill" id="wpCommitCnt">0</span></button>'
+      + '</div></div>',
+      'large');
+    const box=document.getElementById('modalBox'); if(box) box.style.maxWidth='1240px';
+    window._modalNoBackdropClose = true;   // v144: cart state — close only via \u2715 / commit
+    _wpRenderAll();
+  }catch(e){ toast('Picker load failed: '+e.message,'error'); }
+  finally{ pbDone(); }
+}
+
+function _wpCancel(){ closeModal(); }
+
+function _wpSetMode(m){
+  _wpMode=m; _wpSelPkg=null; _wpSelNode=null;
+  const p=document.getElementById('wpSegPkg'), l=document.getElementById('wpSegLoc');
+  if(p) p.classList.toggle('on',m==='pkg'); if(l) l.classList.toggle('on',m==='loc');
+  const f=document.getElementById('wpC1Filter'); if(f) f.value='';
+  _wpRenderC1(); _wpRenderC2();
+}
+
+function _wpNodeCellsOf(node){
+  const out=[...node.cells];
+  node.children.forEach(k=>out.push(..._wpNodeCellsOf(k)));
+  return out;
+}
+function _wpTri(cells){
+  const live=_wpLive(cells); if(!live.length) return 'none';
+  const on=live.filter(c=>_wpCart.has(_wpKey(c.actId,c.locId))).length;
+  return on===0?'off':on===live.length?'on':'part';
+}
+function _wpBulkCells(cells,turnOn){
+  _wpLive(cells).forEach(c=>{
+    const k=_wpKey(c.actId,c.locId);
+    if(turnOn){ if(!_wpCart.has(k)) _wpCart.set(k,{actId:c.actId,locId:c.locId,val:c.rem,rate:c.rate}); }
+    else _wpCart.delete(k);
+  });
+  _wpRenderAll();
+}
+function _wpBulkPkg(pkgId,turnOn){ const P=_wpPkgArr.find(p=>String(p.pkgId)===String(pkgId)); if(P) _wpBulkCells(P.cells,turnOn); }
+function _wpBulkNode(nodeId,turnOn){ const n=_wpLocNodes[String(nodeId)]; if(n) _wpBulkCells(_wpNodeCellsOf(n),turnOn); }
+function _wpBulkArea(idx,turnOn){
+  const n=_wpTreeNodes[idx]; if(!n) return;
+  const collect=x=>{ let cs=[]; x.pkgs.forEach(P=>cs.push(...P.cells)); [...x.children.values()].forEach(k=>cs.push(...collect(k))); return cs; };
+  _wpBulkCells(collect(n),turnOn);
+}
+function _wpBulkAct(actId,turnOn,scopeLocIds){
+  const A=_wpActs.get(Number(actId)); if(!A) return;
+  const cells=scopeLocIds?A.cells.filter(c=>scopeLocIds.includes(c.locId)):A.cells;
+  _wpBulkCells(cells,turnOn);
+}
+function _wpCb(st,fn){
+  return '<input type="checkbox" class="mp-cb" '+(st==='on'?'checked ':'')+(st==='part'?'data-ind="1" ':'')+(st==='none'?'disabled ':'')
+    +'onclick="event.stopPropagation();'+fn+'">';
+}
+function _wpFmtRem(c){ return c.isLS ? ('\u20b9'+fmtINR(c.rem)) : (_woFmtQ(c.rem)+(c.uom?' '+_woUnit(c.uom):'')); }
+
+function _wpRenderC1(){
+  const el=document.getElementById('wpC1Body'); if(!el) return;
+  const f=(document.getElementById('wpC1Filter')?.value||'').toLowerCase();
+  if(_wpMode==='pkg'){
+    const pkgRow=P=>{
+      if(f && !((P.name+' '+P.path).toLowerCase().includes(f))) return '';
+      const st=_wpTri(P.cells);
+      const qtyRem=P.cells.filter(c=>!c.isLS).reduce((s,c)=>s+Math.max(0,c.rem),0);
+      const lsRem=P.cells.filter(c=>c.isLS).reduce((s,c)=>s+Math.max(0,c.rem),0);
+      const remTx=[lsRem?('\u20b9'+fmtINR(lsRem)):'', qtyRem?_woFmtQ(qtyRem):''].filter(Boolean).join(' + ');
+      return '<div class="pp-tnode '+(String(_wpSelPkg)===String(P.pkgId)?'sel':'')+'" onclick="_wpSelPkg=\''+P.pkgId+'\';_wpSelNode=null;_wpRenderC1();_wpRenderC2();">'
+        + _wpCb(st,'_wpBulkPkg(\''+P.pkgId+'\','+(st!=='on')+')')
+        + '<div class="pp-nmwrap"><div class="pp-nm">\ud83d\udce6 '+esc(P.name)+'</div><div class="pp-sub">'+esc(P.path)+'</div></div>'
+        + '<span class="pp-rem">'+remTx+'</span></div>';
+    };
+    const walkArea=n=>{
+      const inner=[...n.children.values()].map(walkArea).join('')+n.pkgs.map(pkgRow).join('');
+      if(!inner) return '';
+      const collect=x=>{ let cs=[]; x.pkgs.forEach(P=>cs.push(...P.cells)); [...x.children.values()].forEach(k=>cs.push(...collect(k))); return cs; };
+      const st=_wpTri(collect(n));
+      const open=_wpExp.has(n.key)||!!f;
+      return '<div class="pp-tnode" onclick="_wpExp.has(\''+n.key+'\')?_wpExp.delete(\''+n.key+'\'):_wpExp.add(\''+n.key+'\');_wpRenderC1();">'
+        + '<span class="pp-tw">'+(open?'\u25be':'\u25b8')+'</span>'
+        + _wpCb(st,'_wpBulkArea('+n.idx+','+(st!=='on')+')')
+        + '<div class="pp-nmwrap"><div class="pp-nm">'+esc(n.name)+'</div></div></div>'
+        + (open?('<div class="pp-kids">'+inner+'</div>'):'');
+    };
+    el.innerHTML=[..._wpPkgTree.children.values()].map(walkArea).join('')+_wpPkgTree.pkgs.map(pkgRow).join('');
+    const cnt=document.getElementById('wpC1Cnt'); if(cnt) cnt.textContent=_wpPkgArr.length+' packages';
+  } else {
+    const row=n=>{
+      const cells=_wpNodeCellsOf(n); if(!cells.length) return '';
+      if(f && !n.path.toLowerCase().includes(f) && !n.children.length) return '';
+      const st=_wpTri(cells);
+      const open=_wpExp.has('L'+n.id)||!!f;
+      let h='<div class="pp-tnode '+(String(_wpSelNode)===String(n.id)?'sel':'')+'" onclick="_wpSelNode=\''+n.id+'\';_wpSelPkg=null;_wpRenderC1();_wpRenderC2();">'
+        + '<span class="pp-tw'+(n.children.length?'':' leaf')+'" onclick="event.stopPropagation();_wpExp.has(\'L'+n.id+'\')?_wpExp.delete(\'L'+n.id+'\'):_wpExp.add(\'L'+n.id+'\');_wpRenderC1();">'+(n.children.length?(open?'\u25be':'\u25b8'):'')+'</span>'
+        + _wpCb(st,'_wpBulkNode(\''+n.id+'\','+(st!=='on')+')')
+        + '<div class="pp-nmwrap"><div class="pp-nm">'+esc(n.name)+'</div></div></div>';
+      if(n.children.length&&open) h+='<div class="pp-kids">'+n.children.map(row).join('')+'</div>';
+      return h;
+    };
+    el.innerHTML=_wpLocRoots.map(row).join('');
+    const cnt=document.getElementById('wpC1Cnt'); if(cnt) cnt.textContent='';
+  }
+  el.querySelectorAll('input[data-ind]').forEach(i=>i.indeterminate=true);
+}
+
+function _wpCtxSet(){ return (_wpMode==='loc'&&_wpSelNode!=null) ? _locCtxSet(_wpSelNode) : new Set(); }
+function _wpRenderC2(){
+  const el=document.getElementById('wpC2Body'); if(!el) return;
+  let cells=[], ttl='Activities';
+  if(_wpMode==='pkg'&&_wpSelPkg!=null){ const P=_wpPkgArr.find(p=>String(p.pkgId)===String(_wpSelPkg)); if(P){ cells=P.cells; ttl='Activities \u2014 '+P.name; } }
+  else if(_wpMode==='loc'&&_wpSelNode!=null){ const n=_wpLocNodes[String(_wpSelNode)]; if(n){ cells=_wpNodeCellsOf(n); ttl='Activities @ '+n.path; } }
+  const ttlEl=document.getElementById('wpC2Ttl'); if(ttlEl) ttlEl.textContent=ttl;
+  if(!cells.length){
+    el.innerHTML='<div class="mp-empty">\u26cf<div>Pick a '+(_wpMode==='pkg'?'package':'location')+' on the left,<br>or tick its checkbox to bulk-select.</div></div>';
+    const c=document.getElementById('wpC2Cnt'); if(c) c.textContent=''; return;
+  }
+  const byAct={};
+  cells.forEach(c=>{(byAct[c.actId]=byAct[c.actId]||[]).push(c);});
+  el.innerHTML=Object.entries(byAct).map(([aid,cs])=>{
+    const A=_wpActs.get(Number(aid));
+    const st=_wpTri(cs);
+    const anyLS=cs.some(c=>c.isLS), allLS=cs.every(c=>c.isLS);
+    const grem=allLS?('\u20b9'+fmtINR(cs.reduce((s,c)=>s+Math.max(0,c.rem),0)))
+      :_woFmtQ(cs.filter(c=>!c.isLS).reduce((s,c)=>s+Math.max(0,c.rem),0))+(A.uom?' '+_woUnit(A.uom):'');
+    const open=_wpGrpOpen.has(aid);   // v144: activities fold by default
+    const locIds=JSON.stringify(cs.map(c=>c.locId)).replace(/"/g,'&quot;');
+    return '<div class="pp-grp"><div class="pp-grph" onclick="_wpGrpOpen.has(\''+aid+'\')?_wpGrpOpen.delete(\''+aid+'\'):_wpGrpOpen.add(\''+aid+'\');_wpRenderC2();">'
+      + _wpCb(st,'_wpBulkAct('+aid+','+(st!=='on')+',JSON.parse(this.parentElement.dataset.locs||\'null\'))')
+      + '<span>\ud83d\udcd4 '+esc(A.name)+'</span>'
+      + (allLS?'<span class="wo-ls-pill">LS \u20b9</span>':(anyLS?'<span class="wo-ls-pill">mixed LS</span>':'<span class="wo-qty-pill">QTY</span>'))
+      + '<span class="pp-gsub">'+esc(A.pkgName)+'</span>'
+      + '<span class="pp-grem">'+grem+' rem</span></div>'
+      + '<div class="pp-grpb '+(open?'open':'')+'">'
+      + _wpTowerRows(cs, aid, _wpCtxSet())
+      + '</div></div>';
+  }).join('');
+  // stamp loc scope on group headers so the header checkbox only bulk-selects visible rows
+  el.querySelectorAll('.pp-grph').forEach((h,i)=>{
+    const aid=Object.keys(byAct)[i];
+    h.dataset.locs=JSON.stringify(byAct[aid].map(c=>c.locId));
+  });
+  const c2=document.getElementById('wpC2Cnt'); if(c2) c2.textContent=Object.keys(byAct).length+' activities';
+  el.querySelectorAll('input[data-ind]').forEach(i=>i.indeterminate=true);
+}
+
+function _wpLocRowHTML(c, label){
+  const k=_wpKey(c.actId,c.locId); const inCart=_wpCart.has(k); const zero=c.rem<=0;
+  return '<div class="pp-lrow '+(inCart?'added':'')+'">'
+    + '<input type="checkbox" class="mp-cb" '+(inCart?'checked ':'')+(zero?'disabled ':'')
+    + 'onclick="_wpToggleCell('+c.actId+',\''+c.locId+'\')">'
+    + '<span class="pp-ellip">'+label+'</span>'
+    + '<span class="pp-lrem '+(zero?'zero':'')+'">'
+    + (c.isLS?('budget \u20b9'+fmtINR(c.lsBudget)+' \u00b7 <b>\u20b9'+fmtINR(c.rem)+'</b> rem')
+             :('<b>'+_woFmtQ(c.rem)+'</b> '+_woUnit(c.uom)+' rem \u00b7 est \u20b9'+fmtINR(c.rate)))
+    + '</span></div>';
+}
+// v147: fold an activity's locations into Tower > Floor > unit groups,
+// RELATIVE to the drill context — levels implied by the drilled location
+// (its id + ancestors) are suppressed, so drilling to a floor lists units
+// flat and drilling to a tower shows floor groups only. Site-ordered.
+function _wpGrpSum(rows){
+  const allLS=rows.every(c=>c.isLS);
+  return allLS ? ('\u20b9'+fmtINR(rows.reduce((s,c)=>s+Math.max(0,c.rem),0)))
+    : (_woFmtQ(rows.filter(c=>!c.isLS).reduce((s,c)=>s+Math.max(0,c.rem),0))+(rows[0].uom?' '+_woUnit(rows[0].uom):''));
+}
+function _wpTowerRows(cs, aid, ctxSet){
+  ctxSet = ctxSet || new Set();
+  const sortRows = a => a.slice().sort((x,y)=>_siteOrder(x.locName,y.locName));
+  const lvl = c => { const t=_locTowerOf(c.locId);
+    return { tw: ctxSet.has(t.key)?null:{key:t.key,name:t.name},
+             fl: (t.floorKey&&!ctxSet.has(t.floorKey))?{key:t.floorKey,name:t.floorName}:null }; };
+  const anyTw = cs.some(c=>lvl(c).tw), anyFl = cs.some(c=>lvl(c).fl);
+  const twDistinct = new Set(cs.map(c=>{ const t=lvl(c).tw; return t?t.key:''; }));
+  if(twDistinct.size<=1 && !anyFl) return sortRows(cs).map(c=>_wpLocRowHTML(c, esc(ctxSet.size?(c.locName||''):c.locPath))).join('');
+
+  const flGroups = (list, baseId) => {
+    const byFl=new Map();
+    list.forEach(c=>{ const f=lvl(c).fl; const fk=f?f.key:''; if(!byFl.has(fk)) byFl.set(fk,{name:f?f.name:'',rows:[]}); byFl.get(fk).rows.push(c); });
+    if(byFl.size===1 && byFl.has('')) return sortRows(list).map(c=>_wpLocRowHTML(c, esc(c.locName||''))).join('');
+    const flKeys=[...byFl.keys()].sort((a,b)=> a===''?-1 : (b===''?1 : _siteOrder(byFl.get(a).name,byFl.get(b).name)));
+    return flKeys.map(fk=>{
+      const f=byFl.get(fk);
+      if(fk==='') return sortRows(f.rows).map(c=>_wpLocRowHTML(c, esc(c.locName||''))).join('');
+      const flId=baseId+'@'+fk;
+      _wpTwCells[flId]=f.rows;
+      const fOpen=_wpTwOpen.has(flId);
+      const fSt=_wpTri(f.rows);
+      const fIn=f.rows.filter(c=>_wpCart.has(_wpKey(c.actId,c.locId))).length;
+      return '<div class="pp-flgrp">'
+        + '<div class="pp-twh pp-flh" onclick="_wpTogTw(\''+flId+'\')">'
+        +   '<span class="pp-tw">'+(fOpen?'\u25be':'\u25b8')+'</span>'
+        +   _wpCb(fSt,'_wpBulkTw(\''+flId+'\','+(fSt!=='on')+')')
+        +   '<span class="pp-ellip">'+esc(f.name)+'</span>'
+        +   '<span class="pp-gsub">\u00b7 '+f.rows.length+' loc'+(fIn?(' \u00b7 '+fIn+' selected'):'')+'</span>'
+        +   '<span class="pp-grem">'+_wpGrpSum(f.rows)+' rem</span></div>'
+        + '<div class="pp-twb'+(fOpen?' open':'')+'">'
+        +   sortRows(f.rows).map(c=>_wpLocRowHTML(c, esc(c.locName||''))).join('')
+        + '</div></div>';
+    }).join('');
+  };
+
+  if(!anyTw) return flGroups(cs, String(aid));
+
+  const by=new Map();
+  cs.forEach(c=>{ const t=lvl(c).tw; const k=t?t.key:''; if(!by.has(k)) by.set(k,{name:t?t.name:'',rows:[]}); by.get(k).rows.push(c); });
+  const keys=[...by.keys()].sort((a,b)=> a===''?-1 : (b===''?1 : _siteOrder(by.get(a).name,by.get(b).name)));
+  return keys.map(k=>{
+    const g=by.get(k);
+    if(k==='') return flGroups(g.rows, String(aid));
+    const id=aid+'@'+k;
+    _wpTwCells[id]=g.rows;
+    const open=_wpTwOpen.has(id);
+    const st=_wpTri(g.rows);
+    const inN=g.rows.filter(c=>_wpCart.has(_wpKey(c.actId,c.locId))).length;
+    return '<div class="pp-twgrp">'
+      + '<div class="pp-twh" onclick="_wpTogTw(\''+id+'\')">'
+      +   '<span class="pp-tw">'+(open?'\u25be':'\u25b8')+'</span>'
+      +   _wpCb(st,'_wpBulkTw(\''+id+'\','+(st!=='on')+')')
+      +   '<span class="pp-ellip" style="font-weight:600;">\ud83c\udfd7 '+esc(g.name||'Other locations')+'</span>'
+      +   '<span class="pp-gsub">\u00b7 '+g.rows.length+' loc'+(inN?(' \u00b7 '+inN+' selected'):'')+'</span>'
+      +   '<span class="pp-grem">'+_wpGrpSum(g.rows)+' rem</span></div>'
+      + '<div class="pp-twb'+(open?' open':'')+'">'+flGroups(g.rows, id)+'</div></div>';
+  }).join('');
+}
+
+function _wpTogTw(id){ _wpTwOpen.has(id)?_wpTwOpen.delete(id):_wpTwOpen.add(id); _wpRenderC2(); }
+function _wpBulkTw(id,turnOn){ _wpBulkCells(_wpTwCells[id]||[], turnOn); }
+
+function _wpToggleCell(actId,locId){
+  const k=_wpKey(actId,locId);
+  if(_wpCart.has(k)) _wpCart.delete(k);
+  else { const c=_wpCells.get(k); if(!c||c.rem<=0) return;
+    _wpCart.set(k,{actId:c.actId,locId:c.locId,val:c.rem,rate:c.rate}); }
+  _wpRenderAll();
+}
+function _wpSetVal(actId,locId,v){ const e=_wpCart.get(_wpKey(actId,locId)); if(e){ e.val=Number(v)||0; } _wpFoot(); _wpPaintOver(); }
+function _wpSetRate(actId,v){
+  const r=Number(v)||0;
+  _wpCart.forEach(e=>{ if(Number(e.actId)===Number(actId)){ const c=_wpCells.get(_wpKey(e.actId,e.locId)); if(c&&!c.isLS) e.rate=r; } });
+  _wpFoot(); _wpRenderCart();
+}
+function _wpPaintOver(){
+  document.querySelectorAll('#wpCart input[data-cell]').forEach(inp=>{
+    const c=_wpCells.get(inp.dataset.cell); const e=_wpCart.get(inp.dataset.cell);
+    if(c&&e) inp.classList.toggle('over',(Number(e.val)||0)>c.rem+0.001);
+  });
+}
+function _wpRenderCart(){
+  const el=document.getElementById('wpCart'); if(!el) return;
+  if(!_wpCart.size){
+    el.innerHTML='<div class="mp-empty">\ud83d\uded2<div>Nothing selected yet.<br>Tick locations to add them here.</div></div>';
+    const c=document.getElementById('wpCartCnt'); if(c) c.textContent=''; _wpFoot(); return;
+  }
+  const byPkg={};
+  _wpCart.forEach((e,k)=>{
+    const c=_wpCells.get(k); if(!c) return;
+    (byPkg[c.pkgId]=byPkg[c.pkgId]||{name:c.pkgName,acts:{}});
+    (byPkg[c.pkgId].acts[c.actId]=byPkg[c.pkgId].acts[c.actId]||[]).push({e,c});
+  });
+  el.innerHTML=Object.values(byPkg).map(P=>
+    '<div class="wo-pkg-band">\ud83d\udce6 '+esc(P.name)+'</div>'
+    + Object.entries(P.acts).map(([aid,rows])=>{
+        const A=_wpActs.get(Number(aid));
+        const isLS=rows.every(x=>x.c.isLS);
+        const amt=rows.reduce((s,x)=>s+(x.c.isLS?(Number(x.e.val)||0):(Number(x.e.val)||0)*(Number(x.e.rate)||0)),0);
+        return '<div class="mp-ci '+(isLS?'wp-ls':'')+'">'
+          + '<div class="mp-ci-head"><div class="mp-nm2">'
+          + '<div class="mp-t">'+esc(A.name)+' '+(isLS?'<span class="wo-ls-pill">LS \u20b9</span>':'')+'</div>'
+          + '<div class="mp-s">'+(isLS?'\u20b9 amount ordered against the budget pool':esc(A.uom||''))+'</div></div>'
+          + (isLS?'':'<span class="wp-ratebox">\u20b9/'+esc(_woUnit(A.uom)||'unit')
+              +' <input type="number" value="'+(rows[0].e.rate||'')+'" oninput="_wpSetRate('+aid+',this.value)" onwheel="this.blur()"></span>')
+          + '<span class="mp-mini">\u20b9'+fmtINR(amt)+'</span></div>'
+          + '<div class="mp-ci-locs">'
+          + rows.map(x=>{
+              const k=_wpKey(x.c.actId,x.c.locId); const over=(Number(x.e.val)||0)>x.c.rem+0.001;
+              return '<span class="mp-lchip '+(x.c.isLS?'wp-ls':'')+'">'+esc(x.c.locName)
+                + (x.c.isLS?' \u20b9':'')
+                + '<input type="number" data-cell="'+k+'" class="'+(over?'over':'')+'" value="'+x.e.val+'"'
+                + ' oninput="_wpSetVal('+x.c.actId+',\''+x.c.locId+'\',this.value)" onwheel="this.blur()">'
+                + '<span class="mp-mini">/ '+(x.c.isLS?('\u20b9'+fmtINR(x.c.rem)):_woFmtQ(x.c.rem))+'</span>'
+                + '<span class="mp-x" onclick="_wpCart.delete(\''+k+'\');_wpRenderAll();">\u2715</span></span>';
+            }).join('')
+          + '</div></div>';
+      }).join('')
+  ).join('');
+  const c=document.getElementById('wpCartCnt'); if(c) c.textContent=_wpCart.size+' lines';
+  _wpFoot();
+}
+function _wpFoot(){
+  let amt=0;
+  _wpCart.forEach((e,k)=>{ const c=_wpCells.get(k); if(!c) return;
+    amt+=c.isLS?(Number(e.val)||0):(Number(e.val)||0)*(Number(e.rate)||0); });
+  const a=document.getElementById('wpFootAmt'); if(a) a.textContent='\u20b9'+fmtINR(amt);
+  const n=document.getElementById('wpCommitCnt'); if(n) n.textContent=_wpCart.size;
+}
+function _wpClear(){ _wpCart.clear(); _wpRenderAll(); }
+function _wpRenderAll(){ _wpRenderC1(); _wpRenderC2(); _wpRenderCart(); }
+
+async function _wpCommit(){
+  const entries=[..._wpCart.entries()].filter(([k,e])=>(Number(e.val)||0)>0);
+  if(!entries.length){ toast('Nothing selected \u2014 tick locations and set quantities first.','warn'); return; }
+  // hard ceiling at commit: nothing leaves the picker above remaining
+  const over=entries.filter(([k,e])=>{ const c=_wpCells.get(k); return c&&(Number(e.val)||0)>c.rem+0.001; });
+  if(over.length){
+    const c0=_wpCells.get(over[0][0]);
+    toast(over.length+' line(s) exceed remaining \u2014 e.g. "'+c0.actName+'" @ '+c0.locName
+      +' ('+(c0.isLS?('\u20b9'+fmtINR(c0.rem)):_woFmtQ(c0.rem))+' available). Reduce before adding.','error',7000);
+    return;
+  }
+  const actIds=[...new Set(entries.map(([k,e])=>Number(e.actId)))];
+  pbShow('Loading selected activities\u2026');
+  try{
+    await _woLoadActivities(actIds);
+    const newSel={};
+    entries.forEach(([k,e])=>{
+      const c=_wpCells.get(k);
+      newSel[k]={ qty:Number(e.val)||0, rate:(c&&c.isLS)?1:(Number(e.rate)||0) };
+    });
+    _woSel=newSel;
+    // stages survive only for activities still on the order
+    Object.keys(_woStages).forEach(id=>{ if(!actIds.includes(Number(id))) delete _woStages[id]; });
+    Object.keys(_woActRate).forEach(id=>{ if(!actIds.includes(Number(id))) delete _woActRate[id]; });
+    _woOpenItem={}; actIds.forEach(id=>_woOpenItem[id]=true);
+    _woOpenGrp={};
+    _woTree.items.forEach(it=>it.groups.forEach(g=>{
+      const all=[...(g.leaves||[]),...((g.subGroups||[]).flatMap(sg=>sg.leaves||[]))];
+      if(all.some(l=>newSel[l.selKey])){
+        _woOpenGrp[it.id+'::'+g.grp]=true;
+        (g.subGroups||[]).forEach(sg=>{ if((sg.leaves||[]).some(l=>newSel[l.selKey])) _woOpenGrp[it.id+'::'+g.grp+'::'+sg.subGrp]=true; });
+      }
+    }));
     woRenderTree();
-  } catch(e) { toast('Load failed: ' + e.message, 'error'); } finally { pbDone(); }
+    closeModal();
+    toast('WO lines updated from estimate \u2014 '+entries.length+' line(s) across '+new Set(entries.map(([k])=>{const c=_wpCells.get(k);return c&&c.pkgId;})).size+' package(s).','success',3000);
+  }catch(e){ toast('Load failed: '+e.message,'error'); }
+  finally{ pbDone(); }
 }
 
 // ── Tree render ───────────────────────────────────────────────
@@ -10866,6 +11338,7 @@ function _woTierBadge(t) {
 }
 
 function _woRateFor(itemId, leaf){
+  if (leaf && leaf.isLS) return 1;   // v143: LS lines carry rate 1 (qty IS the \u20b9 amount)
   const hr = _woActRate[itemId];
   return (hr!=null && hr!=='' && Number(hr)>0) ? Number(hr) : leaf.est_rate;
 }
@@ -10875,9 +11348,10 @@ function applyActivityRate(itemId){
   const v = inp.value;
   if(v===''||!(Number(v)>0)){ toast('Enter a valid rate to apply','warn'); inp.focus(); return; }
   const item = _woFindItem(itemId); if(!item) return;
+  if(item.allLS){ toast('LS activity \u2014 rate is locked at 1; edit the \u20b9 amount instead.','warn'); return; }
   const allLeaves = item.groups.flatMap(g=>[].concat(g.leaves||[], (g.subGroups||[]).flatMap(function(sg){return sg.leaves||[];})));
   let n=0;
-  allLeaves.forEach(function(l){ if(_woSel[l.selKey]){ _woSel[l.selKey].rate = Number(v); n++; } });
+  allLeaves.forEach(function(l){ if(l.isLS) return; if(_woSel[l.selKey]){ _woSel[l.selKey].rate = Number(v); n++; } });
   _woActRate[itemId] = v;
   woRenderTree();
   if(!n) toast('Rate saved \u2014 it will fill locations as you select them','warn');
@@ -10886,8 +11360,9 @@ function applyActivityRate(itemId){
 function woRenderTree() {
   const root = document.getElementById('woItemTree');
   if (!root || !_woTree) return;
-  if (!_woTree.items.length) { root.innerHTML = `<div class="hoi-empty">This package has no activity nodes.</div>`; return; }
-  root.innerHTML = _woTree.items.map(item => {
+  _wpInjectCss();
+  if (!_woTree.items.length) { root.innerHTML = `<div class="hoi-empty">No activities selected yet \u2014 use \ud83e\udded Pick activities from estimate.</div>`; return; }
+  const _itemHTML = (item) => {
     const open = _woOpenItem[item.id];
     const allLeaves = item.groups.flatMap(g => [...(g.leaves||[]), ...((g.subGroups||[]).flatMap(sg => sg.leaves||[]))]);
     const selLeaves = allLeaves.filter(l => _woSel[l.selKey]);
@@ -10905,14 +11380,15 @@ function woRenderTree() {
         <span class="hoi-chev">\u25b6</span>
         <span class="hoi-name">${esc(item.name)}</span>
         ${_woTierBadge(item.tier)}
-        <span class="hoi-meta">${esc(item.uom)}</span>
+        ${item.allLS?'<span class="wo-ls-pill">LS \u20b9</span>':(item.anyLS?'<span class="wo-ls-pill">mixed LS</span>':'')}
+        <span class="hoi-meta">${item.allLS?'\u20b9 pool':esc(item.uom)}</span>
         ${stages.length?`<span class="woi-stage-badge ${stagesOk?'ok':'err'}">${stages.length} stage${stages.length>1?'s':''}${stagesOk?'':' \u26a0'}</span>`:''}
       </div>
       <div class="hoi-subtotal woi-summary">
-        <span><span class="lbl">Total Qty:</span> <span id="woiSubQty_${item.id}" class="${subQty?'val':'muted-val'}">${subQty?subQty.toLocaleString('en-IN')+' '+esc(_woUnit(item.uom)):'\u2014'}</span></span>
+        <span><span class="lbl">${item.allLS?'Total \u20b9:':'Total Qty:'}</span> <span id="woiSubQty_${item.id}" class="${subQty?'val':'muted-val'}">${subQty?(item.allLS?'\u20b9'+fmtINR(subQty):subQty.toLocaleString('en-IN')+' '+esc(_woUnit(item.uom))):'\u2014'}</span></span>
         <span><span class="lbl">Total Amount:</span> <span id="woiSubAmt_${item.id}" class="${subAmt?'val':'muted-val'}">\u20b9${subAmt.toLocaleString('en-IN')}</span></span>
         <span style="margin-left:auto;color:var(--muted);font-size:11px;" id="woiSubLoc_${item.id}">${selLeaves.length} of ${approvableN} approved location(s) selected</span>
-        <span class="woi-ratebulk" style="display:inline-flex;align-items:center;gap:6px;margin-left:14px;">
+        <span class="woi-ratebulk" style="display:${item.allLS?'none':'inline-flex'};align-items:center;gap:6px;margin-left:14px;">
           <span style="font-size:11px;color:var(--muted);">Rate \u20b9</span>
           <input id="woiRate_${item.id}" type="number" value="${_hdrRate}" placeholder="${_actEstRate||'rate'}" onwheel="this.blur()" onkeydown="if(event.key==='Enter'){event.preventDefault();applyActivityRate(${item.id});}else if(event.key==='ArrowUp'||event.key==='ArrowDown')event.preventDefault();" onclick="event.stopPropagation();" style="width:66px;padding:3px 6px;font-size:12px;text-align:right;border:1px solid var(--accent);border-radius:4px;font-weight:600;" title="Rate for this activity">
           <button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();applyActivityRate(${item.id})" style="padding:2px 9px;font-size:11px;" title="Fill this rate into every selected location in this activity">Apply to selected \u2192</button>
@@ -10921,7 +11397,7 @@ function woRenderTree() {
       <div class="hoi-body">
         ${item.groups.length
           ? `<div class="hoi-colh" style="grid-template-columns:${_woGridCols((item.woCols||[]).length)};"><span></span><span style="text-align:left;">Location</span><span>Est</span><span>Remaining</span>${(item.woCols||[]).map(c=>`<span class="woi-wocol" title="${esc(c.contractor)} \u00b7 ${esc(c.status)} \u00b7 ${c.source==='certified'?'certified':'ordered'}"><span class="woi-won">${esc(c.wo_number)}</span><span class="woi-wovn">${esc(c.contractor)}</span><span class="woi-wost ${_woStatusCls(c.status)}">${esc(c.status)}</span></span>`).join('')}<span>Qty</span><span>Rate \u20b9</span></div>
-             ${(function(){ var _al=item.groups.flatMap(function(g){return [].concat(g.leaves||[], (g.subGroups||[]).flatMap(function(sg){return sg.leaves||[];}));}); var _et=_al.reduce(function(t,l){return t+(Number(l.est)||0);},0); var _rt=_al.reduce(function(t,l){return t+(Number(l.rem)||0);},0); var _wc=item.woCols||[]; return `<div class="hoi-leaf woi-sumrow" style="grid-template-columns:${_woGridCols(_wc.length)};"><span></span><span class="woi-sumlbl">Activity \u03a3</span><span class="woi-num">${_woFmtQ(_et)}</span><span class="woi-num">${_woFmtQ(_rt)}</span>${_wc.map(function(c){return `<span class="woi-num woi-wocell">${_woFmtQ((item.woColSum&&item.woColSum[c.wo_number])||0)}</span>`;}).join('')}<span class="woi-num">${subQty?_woFmtQ(subQty):'\u2014'}</span><span></span></div>`; })()}
+             ${(function(){ var _al=item.groups.flatMap(function(g){return [].concat(g.leaves||[], (g.subGroups||[]).flatMap(function(sg){return sg.leaves||[];}));}); var _ls=item.allLS; var _ql=_ls?_al:_al.filter(function(l){return !l.isLS;}); var _et=_ql.reduce(function(t,l){return t+(Number(l.est)||0);},0); var _rt=_ql.reduce(function(t,l){return t+(Number(l.rem)||0);},0); var _wc=item.woCols||[]; return `<div class="hoi-leaf woi-sumrow" style="grid-template-columns:${_woGridCols(_wc.length)};"><span></span><span class="woi-sumlbl">Activity \u03a3</span><span class="woi-num">${_ls?'\u20b9'+fmtINR(_et):_woFmtQ(_et)}</span><span class="woi-num">${_ls?'\u20b9'+fmtINR(_rt):_woFmtQ(_rt)}</span>${_wc.map(function(c){return `<span class="woi-num woi-wocell">${_woFmtQ((item.woColSum&&item.woColSum[c.wo_number])||0)}</span>`;}).join('')}<span class="woi-num">${subQty?(_ls?'\u20b9'+fmtINR(subQty):_woFmtQ(subQty)):'\u2014'}</span><span></span></div>`; })()}
              <div class="hoi-loctree">${item.groups.map(g => _woGrpHTML(item,g)).join('')}</div>`
           : `<div class="hoi-empty">No approved locations \u2014 estimate this activity in Planning &amp; QS first.</div>`}
         <div class="woi-stages-wrap">
@@ -10938,7 +11414,16 @@ function woRenderTree() {
         </div>
       </div>
     </div>`;
-  }).join('');
+  };
+  let _html = '', _lastPkg = '__none__';
+  _woTree.items.forEach(item => {
+    if (String(item.pkgId) !== String(_lastPkg)) {
+      _lastPkg = item.pkgId;
+      _html += `<div class="wo-pkg-band">\ud83d\udce6 ${esc(item.pkgName||'\u2014')} <span class="sub">${esc(item.pkgPath||'')}</span></div>`;
+    }
+    _html += _itemHTML(item);
+  });
+  root.innerHTML = _html;
   woRecalcTotals();
 }
 
@@ -11009,7 +11494,8 @@ function _woLeafHTML(item, g, l) {
   const sel = _woSel[l.selKey];
   const locked = !l.approved;
   const qtyErr  = sel && !(Number(sel.qty)  > 0);
-  const rateErr = sel && !(Number(sel.rate) > 0);
+  const rateErr = sel && !l.isLS && !(Number(sel.rate) > 0);
+  const remTxt  = l.isLS ? ('\u20b9'+fmtINR(l.rem)) : `${l.rem} ${esc(_woUnit(item.uom))}`;
   const cbx = locked
     ? `<span class="hoi-cbx disabled" title="Not approved \u2014 approve in Planning &amp; QS"></span>`
     : `<span class="hoi-cbx ${sel?'on':''}" onclick="woToggleLeaf(${item.id},'${esc(l.id)}')"></span>`;
@@ -11020,16 +11506,16 @@ function _woLeafHTML(item, g, l) {
   <div class="hoi-leaf ${sel?'sel':''} ${locked?'locked':''}" style="grid-template-columns:${_woGridCols(_wc.length)};">
     ${cbx}
     <div>
-      <div class="hoi-leaf-name">${esc(l.name)}${locked?' <span class="hoi-lock-note">\u00b7 draft, not approved</span>':''}</div>
+      <div class="hoi-leaf-name">${esc(l.name)}${l.isLS?' <span class="wo-ls-pill">LS \u20b9</span>':''}${locked?' <span class="hoi-lock-note">\u00b7 draft, not approved</span>':''}</div>
       <div class="hoi-leaf-path">${esc(l.path)}</div>
     </div>
-    <div class="hoi-leaf-est">${l.est!=null?_woFmtQ(l.est):'\u2014'}</div>
-    <div class="hoi-leaf-rem">${l.remLive === false ? `<span title="Live remaining unavailable — showing estimate. Click ↻ Refresh remaining." style="color:var(--warn);">${l.rem} ${esc(_woUnit(item.uom))} ⚠</span>` : `${l.rem} ${esc(_woUnit(item.uom))}`}</div>
+    <div class="hoi-leaf-est">${l.isLS?'\u20b9'+fmtINR(l.est):(l.est!=null?_woFmtQ(l.est):'\u2014')}</div>
+    <div class="hoi-leaf-rem">${l.remLive === false ? `<span title="Live remaining unavailable — showing estimate. Click ↻ Refresh remaining." style="color:var(--warn);">${remTxt} ⚠</span>` : remTxt}</div>
     ${_wcells}
     <input type="number" data-leaf="${esc(l.selKey)}" data-fld="qty" max="${l.rem}" class="${qtyErr?'err':''}" ${sel?'':'disabled'} value="${sel?sel.qty:''}"
        oninput="woSetField('${esc(l.selKey)}','qty',this.value)" onwheel="this.blur()"
-       onkeydown="if(event.key==='ArrowUp'||event.key==='ArrowDown')event.preventDefault()" placeholder="\u2014">
-    <input type="number" data-leaf="${esc(l.selKey)}" data-fld="rate" class="${rateErr?'err':''}" ${sel?'':'disabled'} value="${sel?sel.rate:''}"
+       onkeydown="if(event.key==='ArrowUp'||event.key==='ArrowDown')event.preventDefault()" placeholder="${l.isLS?'\u20b9':'\u2014'}">
+    <input type="number" data-leaf="${esc(l.selKey)}" data-fld="rate" class="${rateErr?'err':''}" ${l.isLS?'disabled title="LS \u2014 rate locked at 1"':(sel?'':'disabled')} value="${sel?(l.isLS?1:sel.rate):''}"
        oninput="woSetField('${esc(l.selKey)}','rate',this.value)" onwheel="this.blur()"
        onkeydown="if(event.key==='ArrowUp'||event.key==='ArrowDown')event.preventDefault()" placeholder="\u2014">
   </div>`;
@@ -11069,6 +11555,7 @@ async function woToggleLeaf(itemId, leafId) {
   if (_woSel[selKey]) { delete _woSel[selKey]; woRenderTree(); return; }
   _woSel[selKey] = { qty: leaf.rem, rate: _woRateFor(itemId, leaf) };
   woRenderTree();
+  if (leaf.isLS) return;   // v143: LS remaining is \u20b9 (budget \u2212 cert \u2212 reserved), already loaded with self-exclusion; \u21bb refreshes it
   try {
     const revisingWO = document.getElementById('woForm').dataset.revisingWO || null;
     const { data, error } = await sb.rpc('fn_pair_remaining', { p_wbs_node_id: Number(itemId), p_loc_node_id: leafId, p_exclude_wo: revisingWO, p_exclude_ho: null });
@@ -11144,7 +11631,7 @@ function _woPatchItemSubtotal(item) {
   selLeaves.forEach(l => { const s = _woSel[l.selKey]; subQty += Number(s.qty)||0; subAmt += (Number(s.qty)||0)*(Number(s.rate)||0); });
   const qEl = document.getElementById('woiSubQty_' + item.id);
   const aEl = document.getElementById('woiSubAmt_' + item.id);
-  if (qEl) { qEl.textContent = subQty ? subQty.toLocaleString('en-IN')+' '+_woUnit(item.uom) : '\u2014'; qEl.className = subQty ? 'val' : 'muted-val'; }
+  if (qEl) { qEl.textContent = subQty ? (item.allLS ? '\u20b9'+fmtINR(subQty) : subQty.toLocaleString('en-IN')+' '+_woUnit(item.uom)) : '\u2014'; qEl.className = subQty ? 'val' : 'muted-val'; }
   if (aEl) { aEl.textContent = '\u20b9'+subAmt.toLocaleString('en-IN'); aEl.className = subAmt ? 'val' : 'muted-val'; }
   const lEl = document.getElementById('woiSubLoc_' + item.id);
   if (lEl) { const approvableN = allLeaves.filter(l => l.approved).length; lEl.textContent = `${selLeaves.length} of ${approvableN} approved location(s) selected`; }
@@ -11153,7 +11640,7 @@ function _woPatchItemSubtotal(item) {
     const qtyEl  = wrap.querySelector(`input[data-leaf="${CSS.escape(l.selKey)}"][data-fld="qty"]`);
     const rateEl = wrap.querySelector(`input[data-leaf="${CSS.escape(l.selKey)}"][data-fld="rate"]`);
     if (qtyEl)  qtyEl.classList.toggle('err', !(Number(s.qty)  > 0));
-    if (rateEl) rateEl.classList.toggle('err', !(Number(s.rate) > 0));
+    if (rateEl) rateEl.classList.toggle('err', !l.isLS && !(Number(s.rate) > 0));
   });
 }
 
@@ -11205,13 +11692,16 @@ async function woRefreshRemaining() {
     });
     if (error) throw error;
     const remByPair = {};
-    (remRows||[]).forEach(r => { remByPair[`${r.wbs_node_id}|${r.loc_node_id}`] = num(r.remaining); });
+    (remRows||[]).forEach(r => { remByPair[`${r.wbs_node_id}|${r.loc_node_id}`] = r; });
     _woTree.items.forEach(item => {
       const allLeaves = item.groups.flatMap(g => [...(g.leaves||[]), ...((g.subGroups||[]).flatMap(sg => sg.leaves||[]))]);
       allLeaves.forEach(l => {
         if (!l.approved) return;
-        const rem = remByPair[`${item.id}|${l.id}`];
-        if (rem != null) { l.rem = rem; l.remLive = true; }
+        const row = remByPair[`${item.id}|${l.id}`];
+        if (row != null) {
+          l.rem = l.isLS ? Math.max(0, _woR2((l.lsBudget||0) - num(row.certified) - num(row.reserved))) : num(row.remaining);
+          l.remLive = true;
+        }
       });
     });
     woRenderTree();
@@ -11291,11 +11781,12 @@ function getWOFormData() {
       }
       selLeaves.forEach(l => {
         const s = _woSel[l.selKey];
-        const qty = Number(s.qty), rate = Number(s.rate);
-        if (!(qty  > 0)) errors.push(`"${item.name}" @ ${l.name} \u2014 qty missing`);
-        if (!(rate > 0)) errors.push(`"${item.name}" @ ${l.name} \u2014 rate missing`);
+        const isLS = !!l.isLS;   // v143: LS lines — qty IS the \u20b9 amount, rate locked at 1
+        const qty = Number(s.qty), rate = isLS ? 1 : Number(s.rate);
+        if (!(qty  > 0)) errors.push(`"${item.name}" @ ${l.name} \u2014 ${isLS?'\u20b9 amount':'qty'} missing`);
+        if (!isLS && !(rate > 0)) errors.push(`"${item.name}" @ ${l.name} \u2014 rate missing`);
         items.push({
-          sno: ++sno, description: item.name, uom: item.uom||null,
+          sno: ++sno, description: item.name, uom: isLS ? 'LS (\u20b9)' : (item.uom||null),
           qty, rate, amount: qty*rate,
           wbs_node_id: Number(item.id), loc_node_id: l.id,
           stages: stages.map((st,si) => ({ stage_seq: si+1, stage_name: st.name.trim(), stage_pct: Number(st.pct)||0 }))
@@ -11423,33 +11914,24 @@ async function reviseWO(woNum) {
 
   _woResetTreeState();
 
-  const tree = await _loadWbsTree();
-  const pkgOf = wbsId => {
-    const leaf = tree.find(n => Number(n.id) === Number(wbsId));
-    if (!leaf || leaf.parent_id == null) return null;
-    return tree.find(n => Number(n.id) === Number(leaf.parent_id)) || null;
-  };
-  const pkgIds = [...new Set(items.map(it => { const p = pkgOf(it['_wbs_node_id']); return p ? p.id : null; }).filter(Boolean))];
-  if (!pkgIds.length) {
-    toast('Could not resolve package for this order.','error');
-    document.getElementById('woForm').dataset.revisingWO = woNum; return;
-  }
-  if (pkgIds.length > 1) toast(`This order spans ${pkgIds.length} packages — showing first package only.`,'warn',6000);
-
-  // Set revise flag BEFORE loading the package, so fn_package_remaining excludes
-  // this order's own reservation — letting its quantities be freely rearranged.
+  // v143: multi-package revise — load EVERY package this order spans and
+  // restore every line. (The old path kept only the first package and would
+  // have silently deleted the rest on resave.)
+  // Set the revise flag BEFORE loading, so fn_package_remaining excludes
+  // this order's own reservation — quantities can be freely rearranged.
   document.getElementById('woForm').dataset.revisingWO = woNum;
-
-  const firstPkg = tree.find(n => Number(n.id) === Number(pkgIds[0]));
-  await woSelectPackage(firstPkg.id, firstPkg.name);
+  const actIds = [...new Set(items.map(it => Number(it['_wbs_node_id'])).filter(Boolean))];
+  if (!actIds.length) { toast('Could not resolve activities for this order.','error'); return; }
+  try { await _woLoadActivities(actIds); }
+  catch(e) { toast('Load failed: ' + e.message, 'error'); return; }
 
   // Restore selections + stages from loaded items
   items.forEach(it => {
-    const p = pkgOf(it['_wbs_node_id']);
-    if (!p || Number(p.id) !== Number(pkgIds[0])) return;
     const leafId = String(it['_loc_node_id']); if (!leafId || leafId === 'null') return;
     const selKey = it['_wbs_node_id'] + '|' + leafId;
-    _woSel[selKey] = { qty: Number(it['Qty'])||0, rate: Number(it['Unit Rate'])||0 };
+    const _f = _woFindLeafByKey(selKey);
+    const _isLS = !!(_f && _f.leaf.isLS);
+    _woSel[selKey] = { qty: Number(it['Qty'])||0, rate: _isLS ? 1 : (Number(it['Unit Rate'])||0) };
     _woOpenItem[it['_wbs_node_id']] = true;
     const item = _woFindItem(it['_wbs_node_id']);
     if (item) item.groups.forEach(g => {
@@ -17587,7 +18069,7 @@ function _draftCaptureWO() {
       leaves.forEach(l => {
         const s = _woSel[l.selKey]; if (!s) return;
         items.push({
-          pkgId: _woTree.pkgId, pkgName: _woTree.pkgName,
+          pkgId: item.pkgId, pkgName: item.pkgName,
           itemId: Number(item.id), itemName: item.name, uom: item.uom || null,
           selKey: l.selKey, leafId: l.id, qty: Number(s.qty)||0, rate: Number(s.rate)||0,
           stages: (_woStages[item.id]||[]).map(st => ({ name: st.name, pct: st.pct })),
@@ -17609,24 +18091,20 @@ async function _draftRestoreWO(pl) {
   if (h.vendor) { try { wo_vendor_locked = true; lockMasterField('wo_vendor','wo_vendor_clear'); } catch(e){} }
 
   _woResetTreeState();
-  const byPkg = {};
-  (pl.items||[]).forEach(it => { (byPkg[it.pkgId] = byPkg[it.pkgId] || { name: it.pkgName, items: [] }).items.push(it); });
-  const pkgIds = Object.keys(byPkg);
-  if (!pkgIds.length) return;
-  if (pkgIds.length > 1)
-    toast('This draft spans ' + pkgIds.length + ' packages — only the first is reloaded (WO entry is one package at a time).', 'warn', 7000);
-
-  const firstId = pkgIds[0];
-  const grp = byPkg[firstId];
-  grp.items.forEach(it => {
-    _woSel[it.selKey] = { qty: it.qty, rate: it.rate };
+  const its = pl.items || [];
+  if (!its.length) return;
+  // v143: multi-package restore — load every package the draft spans.
+  const actIds = [...new Set(its.map(it => Number(it.itemId)).filter(Boolean))];
+  try { await _woLoadActivities(actIds); }
+  catch(e) { toast('Draft restore failed: ' + e.message, 'error'); return; }
+  its.forEach(it => {
+    const _f = _woFindLeafByKey(it.selKey);
+    const _isLS = !!(_f && _f.leaf.isLS);
+    _woSel[it.selKey] = { qty: it.qty, rate: _isLS ? 1 : it.rate };
     if (it.stages && it.stages.length)
       _woStages[it.itemId] = it.stages.map((st,i) => ({ id: 'st'+i, name: st.name, pct: st.pct }));
     _woOpenItem[it.itemId] = true;
-  });
-  await woSelectPackage(Number(firstId), grp.name);
-  grp.items.forEach(it => {
-    const item = _woTree && _woTree.items.find(x => Number(x.id) === Number(it.itemId));
+    const item = _woFindItem(it.itemId);
     if (item) item.groups.forEach(g => {
       const all = [...(g.leaves||[]), ...((g.subGroups||[]).flatMap(sg => sg.leaves||[]))];
       if (all.some(l => l.selKey === it.selKey)) _woOpenGrp[it.itemId+'::'+g.grp] = true;
@@ -18099,7 +18577,7 @@ async function _loadMirEstimateTree(force){
     const [buildup, scopes, mirItems, mirHdrs, wbsTree, locTree] = await Promise.all([
       _fetchAllRows('wbs_material_buildup','scope_id,material_code,material_name,uom,qty_total'),
       _fetchAllRows('wbs_scope','id,wbs_node_id,loc_node_id,scope_status,is_active,estimate_mode,ls_budget_amount'),
-      _fetchAllRows('pu_mir_items','mir_number,material_code,loc_node_id,qty_required,is_balance_closed'),
+      _fetchAllRows('pu_mir_items','mir_number,material_code,loc_node_id,wbs_node_id,qty_required,is_balance_closed'),
       _fetchAllRows('pu_mir','mir_number,status'),
       _loadWbsTree(), _loadLocTree()
     ]);
@@ -18110,15 +18588,19 @@ async function _loadMirEstimateTree(force){
                  && (sc.is_active===null || sc.is_active===undefined || sc.is_active===true))
       .map(sc=>[String(sc.id),sc]));
     const mirStatus = Object.fromEntries(mirHdrs.map(m=>[m.mir_number, m.status]));
-    const mirUsed = {};
+    // v148: consumption keyed at the (wbs, material, loc) TRIPLE — mirroring
+    // fn_material_consumed_pkg exactly, so UI remaining == server gate remaining.
+    const mirUsed3 = {};
     mirItems.forEach(it=>{
       const st = mirStatus[it.mir_number];
       if (st==='Rejected' || st==='Cancelled') return;
       if (it.is_balance_closed) return;   // v116: balance-closed lines released back to estimation
-      if (!it.material_code || !it.loc_node_id) return;
-      const k = it.material_code+'|'+it.loc_node_id;
-      mirUsed[k] = (mirUsed[k]||0) + (parseFloat(it.qty_required)||0);
+      if (!it.material_code || !it.loc_node_id || it.wbs_node_id==null) return;
+      const k = it.wbs_node_id+'|'+it.material_code+'|'+it.loc_node_id;
+      mirUsed3[k] = (mirUsed3[k]||0) + (parseFloat(it.qty_required)||0);
     });
+    const poMaps  = await _loadPoCommitted(true);   // {qty3, rupees2} — hardened MIR exemption
+    const grnMaps = await _loadCashGrnMaps(true);   // {qty3, rupees2} — cash GRN legs
     const leaves = {};
     buildup.forEach(b=>{
       const sc = scopeMap[String(b.scope_id)]; if(!sc) return;
@@ -18136,11 +18618,21 @@ async function _loadMirEstimateTree(force){
     const out = Object.values(leaves).map(L=>{
       L.locArr = Object.values(L.locs).map(LO=>{
         LO.skuArr = Object.values(LO.skus).map(S=>{
-          const k = (S.code||'')+'|'+LO.locId;
-          S.mir = mirUsed[k]||0;
-          S.remaining = Math.round((S.est - S.mir) * 1e6) / 1e6;
+          // v148: PER-PACKAGE grain — this SKU slice belongs to L.leafId only.
+          const k3 = L.leafId+'|'+(S.code||'')+'|'+LO.locId;
+          S.mir      = mirUsed3[k3]||0;
+          S.po       = (poMaps.qty3||{})[k3]||0;
+          S.cash     = (grnMaps.qty3||{})[k3]||0;
+          S.consumed = Math.round((S.mir + S.po + S.cash) * 1e6) / 1e6;
+          S.remaining = Math.round((S.est - S.consumed) * 1e6) / 1e6;
           return S;
         }).sort((a,b)=>(a.name||'').localeCompare(b.name||''));
+        // v148: LS \u20b9 remaining for this (package, loc) pair = budget \u2212 all
+        // live PO rupees \u2212 cash GRN rupees (mirrors fn_ls_remaining post-D6).
+        if (LO.isLS) {
+          const k2 = L.leafId+'|'+LO.locId;
+          LO.lsRem = Math.round((LO.lsBudget - ((poMaps.rupees2||{})[k2]||0) - ((grnMaps.rupees2||{})[k2]||0)) * 100) / 100;
+        }
         return LO;
       }).sort((a,b)=>(a.locPath||'').localeCompare(b.locPath||''));
       L.anyApproved = L.locArr.some(LO=>LO.status==='approved');
@@ -18166,7 +18658,10 @@ let _mpCart = new Map(); // 'code|loc' -> {code,name,uom,locId,locName,locPath,s
 let _mpExp  = new Set();  // expanded cart material codes
 let _mpMode = 'mir';      // v134: 'mir' | 'po' — drives remaining basis + commit target
 
-const _mpKey = (code,locId)=> (code||'') + '|' + String(locId);
+// v148: cell identity is the (material, location, package) TRIPLE — the same
+// grain as the server gate. Two packages estimating one material at one
+// location are now two independent cells with independent remainings.
+const _mpKey = (code,locId,wbs)=> (code||'') + '|' + String(locId) + '|' + String(wbs==null?'':wbs);
 const _mpLabel3 = p => (p||'').split(' \u203a ').slice(-3).join(' \u00b7 ');
 const _mpKind = nt => ({stage:'Stage',tower:'Tower',floor:'Floor',unit:'Unit'}[nt] || 'Area');
 
@@ -18174,45 +18669,90 @@ const _mpKind = nt => ({stage:'Stage',tower:'Tower',floor:'Floor',unit:'Unit'}[n
 function _flatEstMap(){
   const m={};
   (_mirEstTreeCache||[]).forEach(L=>(L.locArr||[]).forEach(LO=>(LO.skuArr||[]).forEach(S=>{
-    if(!S.code) return; const k=S.code+'|'+LO.locId; m[k]=(m[k]||0)+(S.est||0);
+    if(!S.code) return; const k=_mpKey(S.code,LO.locId,L.leafId); m[k]=(m[k]||0)+(S.est||0);
   })));
   return m;
 }
 
-// ---- pooled cells (grain A), approved-only ----
+// ---- v148: PER-PACKAGE cells, approved-only. One cell per (package,
+// material, location); remaining = slice est \u2212 (MIR + direct PO + cash GRN)
+// at the triple \u2014 identical in MIR and PO mode, mirroring the server gate.
+// LS whitelist SKUs (est 0 under an LS scope) surface as \u20b9-pool cells:
+// MIR mode orders free qty (gated in \u20b9 at PO), PO mode shows the live
+// \u20b9 remaining as advisory (hard gate in rpc_save_po). SHARED is retired:
+// packages no longer pool.
 function _mirPooledCells(){
   const byKey=new Map();
   (_mirEstTreeCache||[]).forEach(L=>(L.locArr||[]).forEach(LO=>{
     if(LO.status!=='approved') return;             // approved-only
     (LO.skuArr||[]).forEach(S=>{
       if(!S.code) return;                          // must have a material code
-      const k=_mpKey(S.code,LO.locId);
-      let c=byKey.get(k);
-      if(!c){ c={code:S.code,name:S.name,uom:S.uom,locId:String(LO.locId),locName:LO.locName,
-                 locPath:LO.locPath,status:LO.status,est:0,mir:(S.mir||0),pkgs:[]}; byKey.set(k,c); }
-      c.est += (S.est||0);
-      // S.mir is keyed (code|loc) — identical across WBS slices; take once (max guards stale)
-      c.mir = Math.max(c.mir, S.mir||0);
-      c.pkgs.push({leafId:L.leafId, leaf:L.leaf, est:S.est||0});
+      const k=_mpKey(S.code,LO.locId,L.leafId);
+      const isLS = !!LO.isLS;
+      const c={key:k, code:S.code, name:S.name, uom:S.uom,
+        locId:String(LO.locId), locName:LO.locName, locPath:LO.locPath, status:LO.status,
+        leafId:L.leafId, pkgName:L.leaf, pkgPath:L.wbsPath,
+        pkgs:[{leafId:L.leafId, leaf:L.leaf, est:S.est||0}],
+        est:(S.est||0), consumed:(S.consumed||0),
+        isLS, lsBudget:(isLS?LO.lsBudget:0), lsRem:(isLS?(LO.lsRem!=null?LO.lsRem:LO.lsBudget):0),
+        remaining: isLS ? null : Math.round(((S.est||0)-(S.consumed||0))*1e6)/1e6};
+      byKey.set(k,c);
     });
   }));
   const byLoc=new Map();
   for(const c of byKey.values()){
-    c.pkgs.sort((a,b)=>b.est-a.est);
-    c.leafId=c.pkgs[0]?c.pkgs[0].leafId:null;       // stamp the largest-est package
-    c.pkgName=c.pkgs[0]?c.pkgs[0].leaf:'\u2014';
-    c.committed = (_poCommittedMap||{})[c.code+'|'+c.locId] || 0;   // v134
-    c.remaining=Math.round((c.est - (_mpMode==='po' ? c.committed : c.mir))*1e6)/1e6;
     if(!byLoc.has(c.locId)) byLoc.set(c.locId,[]);
     byLoc.get(c.locId).push(c);
   }
-  for(const arr of byLoc.values()) arr.sort((a,b)=>(a.name||'').localeCompare(b.name||''));
+  for(const arr of byLoc.values()) arr.sort((a,b)=>(a.name||'').localeCompare(b.name||'') || (a.pkgName||'').localeCompare(b.pkgName||''));
   return {byKey,byLoc};
+}
+// v148: a cell is orderable when its qty remaining is open, or its LS pool has \u20b9 left.
+function _mpCellLive(c){ return c.isLS ? (c.lsRem>0.009) : ((c.remaining||0)>0); }
+
+// v144: locId -> tower-level grouping ancestor (nearest node_type='tower';
+// falls back to the parent node, then the leaf itself). Used by the pickers
+// to fold flat floor lists into tower groups.
+let _locTowerMap=null;
+let _locParentMap=null;   // v147: locId -> parentId, for drill-context suppression
+function _buildLocTowerMap(locTree){
+  const map=Object.fromEntries((locTree||[]).map(n=>[String(n.id),n]));
+  _locTowerMap={};
+  _locParentMap={};
+  (locTree||[]).forEach(n=>{ _locParentMap[String(n.id)] = n.parent_id!=null ? String(n.parent_id) : null; });
+  (locTree||[]).forEach(n=>{
+    // full ancestor chain, root -> n
+    const chain=[]; let cur=n, g=0;
+    while(cur&&g++<50){ chain.unshift(cur); cur=cur.parent_id!=null?map[String(cur.parent_id)]:null; }
+    // v145: tower = deepest ancestor tagged node_type='tower'; when the tree
+    // isn't tagged, fall back to the CHAIN POSITION — the child of the root
+    // (stage-rooted trees put towers there). Two-segment chains group to the
+    // root itself; a lone root groups to itself.
+    let tower=null;
+    for(let i=chain.length-1;i>=0;i--){ if((chain[i].node_type||'')==='tower'){ tower=chain[i]; break; } }
+    if(!tower) tower = chain.length>=3 ? chain[1] : chain[0];
+    // floor = the leaf's parent, unless the parent IS the tower (floor-grain leaves)
+    const parent = chain.length>=2 ? chain[chain.length-2] : null;
+    const floor = (parent && String(parent.id)!==String(tower.id)) ? parent : null;
+    _locTowerMap[String(n.id)]={key:String(tower.id),name:tower.name,path:tower.path||tower.name,
+      floorKey:floor?String(floor.id):null, floorName:floor?floor.name:''};
+  });
+}
+function _locTowerOf(locId){
+  return (_locTowerMap&&_locTowerMap[String(locId)])||{key:String(locId),name:'',path:'',floorKey:null,floorName:''};
+}
+// v147: the drilled node + all its ancestors — grouping levels already implied
+// by the drill context are suppressed instead of re-nested inside column 2.
+function _locCtxSet(locId){
+  const s=new Set(); let cur=locId!=null?String(locId):null, g=0;
+  while(cur&&g++<50){ s.add(cur); cur=_locParentMap?_locParentMap[cur]:null; }
+  return s;
 }
 
 // ---- build location tree (Stage > Tower > Floor[leaf]) over cells ----
 async function _mpBuildTree(){
   const locTree = await _loadLocTree();
+  _buildLocTowerMap(locTree);
   const map = Object.fromEntries((locTree||[]).map(n=>[String(n.id),n]));
   _mpNodeCells = {};
   const nodes = {};   // id -> {id,name,kind,path,children:[],cells:[]}
@@ -18250,12 +18790,12 @@ async function _mpBuildTree(){
 }
 
 // ---- selection primitives (shared by pp picker + cart) ----
-function _mpAddCell(c){ if(c.remaining<=0) return; const k=_mpKey(c.code,c.locId);
-  if(!_mpCart.has(k)) _mpCart.set(k,{...c,qty:c.remaining}); }
-function _mpDel(code,locId){ _mpCart.delete(_mpKey(code,locId)); }
+function _mpAddCell(c){ if(!_mpCellLive(c)) return; const k=c.key||_mpKey(c.code,c.locId,c.leafId);
+  if(!_mpCart.has(k)) _mpCart.set(k,{...c, key:k, qty:(c.isLS?'':c.remaining)}); }
+function _mpDelK(k){ _mpCart.delete(k); }
 function _mpTri(cells){
   const vis=cells; if(!vis.length) return 'none';
-  let on=0; vis.forEach(c=>{ if(_mpCart.has(_mpKey(c.code,c.locId))) on++; });
+  let on=0; vis.forEach(c=>{ if(_mpCart.has(c.key||_mpKey(c.code,c.locId,c.leafId))) on++; });
   return on===0?'none':(on===vis.length?'all':'some');
 }
 const _mpAttr = s => String(s).replace(/'/g,'&#39;').replace(/"/g,'&quot;');
@@ -18264,6 +18804,8 @@ const _mpAttr = s => String(s).replace(/'/g,'&#39;').replace(/"/g,'&quot;');
 function _mpCartGroups(){
   const g=new Map();
   for(const v of _mpCart.values()){ if(!g.has(v.code)) g.set(v.code,{code:v.code,name:v.name,uom:v.uom,locs:[]}); g.get(v.code).locs.push(v); }
+  // v148: same material may appear under several packages — tag chips when so
+  for(const grp of g.values()){ grp.multiPkg = new Set(grp.locs.map(l=>String(l.leafId))).size>1; }
   for(const grp of g.values()) grp.locs.sort((a,b)=>(a.locPath||'').localeCompare(b.locPath||''));
   return [...g.values()].sort((a,b)=>(a.name||'').localeCompare(b.name||''));
 }
@@ -18279,10 +18821,13 @@ function _mpRenderCart(){
     const multi=g.locs.length>1, ex=_mpExp.has(g.code)||!multi;
     const orphan=g.locs.some(l=>l.orphan);
     const chips=g.locs.map(l=>{
-      return '<span class="mp-lchip'+(l.orphan?' mp-orphan':'')+'"><span class="mp-lp">\ud83d\udccd '+esc(_mpLabel3(l.locPath)||l.locName||'loc')+'</span>'
-        + '<input type="number" step="0.001" value="'+_fmtQin(l.qty)+'" onwheel="this.blur()" oninput="_mpSetLocQty(\''+esc(l.code)+'\',\''+esc(l.locId)+'\',this.value)">'
-        + '<span class="mp-mini">/ '+_fmtQ(l.remaining)+'</span>'
-        + '<span class="mp-x" onclick="_mpDropLoc(\''+esc(l.code)+'\',\''+esc(l.locId)+'\')">\u2715</span></span>';
+      const K=_mpAttr(l.key);
+      return '<span class="mp-lchip'+(l.orphan?' mp-orphan':'')+(l.isLS?' wp-ls':'')+'"><span class="mp-lp">\ud83d\udccd '+esc(_mpLabel3(l.locPath)||l.locName||'loc')+'</span>'
+        + (g.multiPkg?'<span class="mp-mini">\ud83d\udce6 '+esc(l.pkgName||'')+'</span>':'')
+        + (l.isLS?'<span class="wo-ls-pill">LS \u20b9</span>':'')
+        + '<input type="number" step="0.001" value="'+_fmtQin(l.qty)+'" onwheel="this.blur()" oninput="_mpSetLocQtyK(\''+K+'\',this.value)">'
+        + '<span class="mp-mini">'+(l.isLS?('pool \u20b9'+_fmtQ(l.lsRem)):('/ '+_fmtQ(l.remaining)))+'</span>'
+        + '<span class="mp-x" onclick="_mpDelK(\''+K+'\');_mpRefresh();">\u2715</span></span>';
     }).join('');
     return '<div class="mp-ci">'
       + '<div class="mp-ci-head">'
@@ -18295,17 +18840,21 @@ function _mpRenderCart(){
       + '<div class="mp-ci-locs'+(ex?' open':'')+'">'+chips+'</div></div>';
   }).join('');
 }
-function _mpSetLocQty(code,locId,val){ const v=_mpCart.get(_mpKey(code,locId)); if(v){ v.qty=Math.max(0,Math.min(Number(val)||0, v.remaining)); _mpRenderCart(); } }
+function _mpSetLocQtyK(k,val){ const v=_mpCart.get(k); if(!v) return;
+  // v148: LS lines carry no qty ceiling (gated in \u20b9 at PO); QTY lines cap at the package slice
+  v.qty = v.isLS ? Math.max(0,Number(val)||0) : Math.max(0,Math.min(Number(val)||0, v.remaining));
+  _mpRenderCart(); }
 function _mpSetCumulative(code,val){
   let left=Math.max(0,Number(val)||0);
   const grp=_mpCartGroups().find(g=>g.code===code); if(!grp) return;
   grp.locs.slice().sort((a,b)=>(a.locPath||'').localeCompare(b.locPath||'')).forEach(l=>{
-    const take=Math.max(0,Math.min(left,l.remaining)); l.qty=take; left-=take;   // hard cap: overflow discarded
+    const cap=l.isLS?left:l.remaining;   // v148: LS lines take freely (\u20b9-gated at PO)
+    const take=Math.max(0,Math.min(left,cap)); l.qty=take; left-=take;   // hard cap: overflow discarded
   });
   _mpRenderCart();
 }
 function _mpToggleExp(code){ _mpExp.has(code)?_mpExp.delete(code):_mpExp.add(code); _mpRenderCart(); }
-function _mpDropLoc(code,locId){ _mpDel(code,locId); _mpRefresh(); }
+
 function _mpDropMat(code){ [..._mpCart.keys()].filter(k=>_mpCart.get(k).code===code).forEach(k=>_mpCart.delete(k)); _mpRefresh(); }
 function _mpClear(){ _mpCart.clear(); _mpExp.clear(); _mpRefresh(); }
 function _mpRefresh(){ _mpRenderCart(); if(window._ppActive) _ppRenderCols(); }
@@ -18326,13 +18875,15 @@ function _mirGroupCum(g){ return g.locs.reduce((s,l)=>s+(Number(l.qty)||0),0); }
 function _mirModelUpsert(cell, qty){
   let g=_mirFindGroup(cell.code);
   if(!g){ g={code:cell.code,name:cell.name,uom:cell.uom,spec:cell.spec||'',locs:[]}; _mirGroups.push(g); }
-  const cap=(cell.remaining!=null?Number(cell.remaining):(Number(qty)||0));
-  const q=Math.max(0,Math.min(Number(qty)||0, cap));
-  let l=g.locs.find(x=>String(x.locId)===String(cell.locId));
+  const cap=(cell.remaining!=null?Number(cell.remaining):null);
+  const q = cell.isLS || cap==null ? Math.max(0,Number(qty)||0) : Math.max(0,Math.min(Number(qty)||0, cap));
+  let l=g.locs.find(x=>String(x.locId)===String(cell.locId) && String(x.leafId)===String(cell.leafId));   // v148: (loc, package) identity
   if(!l){ g.locs.push({locId:String(cell.locId),locName:cell.locName||'',locPath:cell.locPath||'',
-            status:cell.status||'draft',remaining:cap,leafId:(cell.leafId!=null?cell.leafId:null),qty:q,rmk:cell.rmk||''}); }
+            status:cell.status||'draft',remaining:cap,leafId:(cell.leafId!=null?cell.leafId:null),qty:q,rmk:cell.rmk||'',
+            isLS:!!cell.isLS, lsRem:(cell.lsRem!=null?cell.lsRem:0), pkgName:cell.pkgName||''}); }
   else { l.qty=q; l.remaining=cap; if(cell.locName) l.locName=cell.locName; if(cell.locPath) l.locPath=cell.locPath;
-         if(cell.status) l.status=cell.status; if(cell.leafId!=null) l.leafId=cell.leafId; }
+         if(cell.status) l.status=cell.status; if(cell.leafId!=null) l.leafId=cell.leafId;
+         l.isLS=!!cell.isLS; if(cell.lsRem!=null) l.lsRem=cell.lsRem; if(cell.pkgName) l.pkgName=cell.pkgName; }
   g.locs.sort((a,b)=>(a.locPath||'').localeCompare(b.locPath||'',undefined,{numeric:true}));
 }
 
@@ -18340,12 +18891,13 @@ function _renderMirItems(){
   const host=document.getElementById('mirItemsHost'); if(!host) return;
   if(!_mirGroups.length){ host.innerHTML='<div class="mi-empty">No materials yet \u2014 use <b>\uff0b Add from estimate</b> to pick approved estimate cells.</div>'; return; }
   host.innerHTML=_mirGroups.map((g,gi)=>{
+    g.multiPkg = new Set(g.locs.map(l=>String(l.leafId))).size>1;   // v148
     const total=_mirGroupCum(g);
     const multi=g.locs.length>1, ex=_mirOpen.has(g.code);
     const exp = multi ? '<span class="mi-exp" onclick="_miToggle(\''+esc(g.code)+'\')">'+(ex?'\u25be':'\u25b8')+'</span>' : '<span class="mi-exp"></span>';
     const headQty = multi
       ? '<div class="mi-cum"><span class="mi-q" id="micum_'+esc(g.code)+'">'+_fmtQ(total)+'</span> <span class="mi-l">'+esc(g.uom)+' \u00b7 '+g.locs.length+' loc</span></div>'
-      : '<div class="mi-cum"><input class="mi-qh num" type="number" step="0.001" value="'+_fmtQin(g.locs[0].qty)+'" onwheel="this.blur()" onkeydown="if(event.key===\'ArrowUp\'||event.key===\'ArrowDown\')event.preventDefault()" oninput="_miSetQty(\''+esc(g.code)+'\',\''+esc(g.locs[0].locId)+'\',this.value,this)"><div class="mi-cap" id="mical_'+esc(g.locs[0].locId)+'">/ '+_fmtQ(g.locs[0].remaining)+' '+esc(g.uom)+'</div></div>';
+      : '<div class="mi-cum"><input class="mi-qh num" type="number" step="0.001" value="'+_fmtQin(g.locs[0].qty)+'" onwheel="this.blur()" onkeydown="if(event.key===\'ArrowUp\'||event.key===\'ArrowDown\')event.preventDefault()" oninput="_miSetQty(\''+esc(g.code)+'\',\''+esc(_miLk(g.locs[0]))+'\',this.value,this)"><div class="mi-cap" id="mical_'+esc(_miLk(g.locs[0]))+'">'+(g.locs[0].isLS?'LS \u2014 \u20b9-gated at PO':('/ '+_fmtQ(g.locs[0].remaining)+' '+esc(g.uom)))+'</div></div>';
     const headSpecLoc = multi
       ? '<div class="mi-specwrap"><input class="mi-spec" placeholder="Grade / spec (applies to all locations)" value="'+esc(g.spec)+'" oninput="_miSetSpec(\''+esc(g.code)+'\',this.value)"></div>'
       : '<div class="mi-specwrap mi-single"><input class="mi-spec" placeholder="Grade / spec" value="'+esc(g.spec)+'" oninput="_miSetSpec(\''+esc(g.code)+'\',this.value)"><span class="mi-locpill">\ud83d\udccd '+esc(_miTail(g.locs[0].locPath)||g.locs[0].locName)+' '+_miApprDot(g.locs[0])+'</span></div>';
@@ -18353,10 +18905,12 @@ function _renderMirItems(){
     if(multi){
       locBlock='<div class="mi-locs'+(ex?' open':'')+'">'+g.locs.map(l=>
         '<div class="mi-locrow">'
-        + '<div class="mi-lp"><span class="mi-arr">\u21b3</span> \ud83d\udccd <span class="mi-ppath">'+esc(_miLabel3(l.locPath))+'</span> '+_miApprDot(l)+'</div>'
-        + '<div class="mi-qwrap"><input class="mi-ql num" type="number" step="0.001" value="'+_fmtQin(l.qty)+'" onwheel="this.blur()" onkeydown="if(event.key===\'ArrowUp\'||event.key===\'ArrowDown\')event.preventDefault()" oninput="_miSetQty(\''+esc(g.code)+'\',\''+esc(l.locId)+'\',this.value,this)"><div class="mi-cap" id="mical_'+esc(l.locId)+'">/ '+_fmtQ(l.remaining)+' '+esc(g.uom)+'</div></div>'
-        + '<input class="mi-rmk" placeholder="Remarks" value="'+esc(l.rmk)+'" oninput="_miSetRmk(\''+esc(g.code)+'\',\''+esc(l.locId)+'\',this.value)">'
-        + '<span class="mi-lx" title="Remove this location" onclick="_miDropLoc(\''+esc(g.code)+'\',\''+esc(l.locId)+'\')">\u2715</span>'
+        + '<div class="mi-lp"><span class="mi-arr">\u21b3</span> \ud83d\udccd <span class="mi-ppath">'+esc(_miLabel3(l.locPath))+'</span>'
+        +   (g.multiPkg?' <span class="mp-mini">\ud83d\udce6 '+esc(l.pkgName||'')+'</span>':'')
+        +   (l.isLS?' <span class="wo-ls-pill">LS \u20b9</span>':'')+' '+_miApprDot(l)+'</div>'
+        + '<div class="mi-qwrap"><input class="mi-ql num" type="number" step="0.001" value="'+_fmtQin(l.qty)+'" onwheel="this.blur()" onkeydown="if(event.key===\'ArrowUp\'||event.key===\'ArrowDown\')event.preventDefault()" oninput="_miSetQty(\''+esc(g.code)+'\',\''+esc(_miLk(l))+'\',this.value,this)"><div class="mi-cap" id="mical_'+esc(_miLk(l))+'">'+(l.isLS?'LS \u2014 \u20b9-gated at PO':('/ '+_fmtQ(l.remaining)+' '+esc(g.uom)))+'</div></div>'
+        + '<input class="mi-rmk" placeholder="Remarks" value="'+esc(l.rmk)+'" oninput="_miSetRmk(\''+esc(g.code)+'\',\''+esc(_miLk(l))+'\',this.value)">'
+        + '<span class="mi-lx" title="Remove this location" onclick="_miDropLoc(\''+esc(g.code)+'\',\''+esc(_miLk(l))+'\')">\u2715</span>'
         + '</div>').join('')+'</div>';
     } else {
       locBlock='<div class="mi-locs open mi-singlerow"><div class="mi-locrow"><input class="mi-rmk mi-rmk-single" placeholder="Remarks" value="'+esc(g.locs[0].rmk)+'" oninput="_miSetRmk(\''+esc(g.code)+'\',\''+esc(g.locs[0].locId)+'\',this.value)"></div></div>';
@@ -18380,16 +18934,20 @@ function _miApprDot(l){ return l.status==='approved'?'<span class="mi-appr">\u25
 function _miToggle(code){ _mirOpen.has(code)?_mirOpen.delete(code):_mirOpen.add(code); _renderMirItems(); }
 function _miSetAll(open){ _mirGroups.forEach(g=>{ if(g.locs.length>1){ open?_mirOpen.add(g.code):_mirOpen.delete(g.code); } }); _renderMirItems(); }
 function _miSetSpec(code,val){ const g=_mirFindGroup(code); if(g) g.spec=val; }
-function _miSetRmk(code,locId,val){ const g=_mirFindGroup(code); const l=g&&g.locs.find(x=>String(x.locId)===String(locId)); if(l) l.rmk=val; }
-function _miSetQty(code,locId,val,el){
-  const g=_mirFindGroup(code); const l=g&&g.locs.find(x=>String(x.locId)===String(locId)); if(!l) return;
-  let v=Math.max(0,Number(val)||0); const over=v>l.remaining+1e-6; if(over) v=l.remaining; l.qty=v;
+function _miSetRmk(code,lk,val){ const g=_mirFindGroup(code); const l=_miFindLoc(g,lk); if(l) l.rmk=val; }
+function _miLk(l){ return String(l.locId)+'@'+String(l.leafId==null?'':l.leafId); }   // v148: (loc, package) line key
+function _miFindLoc(g,lk){ return g && g.locs.find(x=>_miLk(x)===String(lk)); }
+function _miSetQty(code,lk,val,el){
+  const g=_mirFindGroup(code); const l=_miFindLoc(g,lk); if(!l) return;
+  let v=Math.max(0,Number(val)||0);
+  // v148: LS lines have no qty ceiling (the eventual PO is \u20b9-gated server-side)
+  const over = !l.isLS && v>l.remaining+1e-6; if(over) v=l.remaining; l.qty=v;
   if(over && el) el.value=_fmtQin(l.remaining);
-  const cap=document.getElementById('mical_'+locId);
-  if(cap){ cap.textContent=(over?'\u26a0 capped at ':'/ ')+_fmtQ(l.remaining)+' '+g.uom; cap.className='mi-cap'+(over?' over':''); }
+  const cap=document.getElementById('mical_'+lk);
+  if(cap){ cap.textContent = l.isLS ? ('LS \u2014 \u20b9-gated at PO') : ((over?'\u26a0 capped at ':'/ ')+_fmtQ(l.remaining)+' '+g.uom); cap.className='mi-cap'+(over?' over':''); }
   const cum=document.getElementById('micum_'+code); if(cum) cum.textContent=_fmtQ(_mirGroupCum(g));
 }
-function _miDropLoc(code,locId){ const g=_mirFindGroup(code); if(!g) return; g.locs=g.locs.filter(x=>String(x.locId)!==String(locId)); if(!g.locs.length){ _miDropMat(code); return; } _renderMirItems(); }
+function _miDropLoc(code,lk){ const g=_mirFindGroup(code); if(!g) return; g.locs=g.locs.filter(x=>_miLk(x)!==String(lk)); if(!g.locs.length){ _miDropMat(code); return; } _renderMirItems(); }
 function _miDropMat(code){ const i=_mirGroups.findIndex(g=>g.code===code); if(i>=0) _mirGroups.splice(i,1); _renderMirItems(); }
 
 // ---- commit: reconcile picker cart into the grouped MIR model ----
@@ -18398,9 +18956,11 @@ function _mpCommit(){
   // every existing model loc was seeded into the cart at open → update kept, drop unticked
   _mirGroups.forEach(g=>{
     g.locs=g.locs.filter(l=>{
-      const k=_mpKey(g.code,l.locId);
+      const k=_mpKey(g.code,l.locId,l.leafId);
       if(cartKeys.has(k)){ const v=_mpCart.get(k);
-        l.remaining=v.remaining; l.qty=Math.min(Number(l.qty)||v.qty, v.remaining);
+        l.remaining=v.remaining;
+        l.isLS=!!v.isLS; if(v.lsRem!=null) l.lsRem=v.lsRem; if(v.pkgName) l.pkgName=v.pkgName;
+        l.qty = v.isLS ? (Number(l.qty)||Number(v.qty)||0) : Math.min(Number(l.qty)||v.qty, v.remaining);
         if(v.leafId!=null) l.leafId=v.leafId; if(v.locPath) l.locPath=v.locPath;
         if(v.locName) l.locName=v.locName; if(v.status) l.status=v.status;
         cartKeys.delete(k); return true; }
@@ -18411,6 +18971,7 @@ function _mpCommit(){
   for(const k of cartKeys){ const v=_mpCart.get(k);
     _mirModelUpsert({code:v.code,name:v.name,uom:v.uom,locId:v.locId,locName:v.locName,locPath:v.locPath,
       status:v.status,remaining:v.remaining,
+      isLS:!!v.isLS, lsRem:(v.lsRem!=null?v.lsRem:0), pkgName:v.pkgName||'',
       leafId:(v.leafId!=null?v.leafId:(v.pkgs&&v.pkgs[0]?v.pkgs[0].leafId:null))}, v.qty); }
   closeModal(); _renderMirItems();
   toast('MIR lines updated from estimate','success',2500);
@@ -20183,10 +20744,14 @@ async function _poPopulateFromMir(mirRecs, opts){
     if(rate!=null && rate!=='' && document.getElementById('poRate_'+rn)) document.getElementById('poRate_'+rn).value=rate;
     _poAlloc[rn]=group.map(r=>{
       const ln=locMap[String(r.loc_node_id)];
-      const k=(r.material_code||'')+'|'+r.loc_node_id;
+      // v148: headroom at the (wbs, material, loc) TRIPLE — the line's own
+      // package slice, matching the server gate.
+      const k3=r.wbs_node_id+'|'+(r.material_code||'')+'|'+r.loc_node_id;
       return { wbs:r.wbs_node_id, loc:r.loc_node_id, plid:r.procurement_line_id,
                locName:ln?ln.name:'', locPath:ln?ln.path:'',
-               mirBalance:(Number(r.demand)||0), estRemaining:(r.loc_node_id ? ((estMap[k]||0)-(comMap[k]||0)) : (Number(r.demand)||0)), qty:0 };
+               mirBalance:(Number(r.demand)||0),
+               estRemaining:((r.loc_node_id && r.wbs_node_id!=null) ? ((estMap[k3]||0)-((comMap.qty3||{})[k3]||0)) : (Number(r.demand)||0)),
+               qty:0 };
     });
     const total=_poAlloc[rn].reduce((t,e)=>t+(e.mirBalance||0),0);
     if(qEl) qEl.value=_fmtQin(total);
@@ -21156,7 +21721,8 @@ function onPOGSTModeChange() {
 // commitment gate fires. remaining = estimate - committed-on-live-POs (indicative;
 // the DB gate is the hard authority). Reuses the approved-only MIR estimate tree.
 // ============================================================
-let _poCommittedMap=null;   // v134: PO committed map (also used by _mirPooledCells in PO mode)
+let _poCommittedMap=null;   // v148: {qty3:'wbs|code|loc'->direct qty, rupees2:'wbs|loc'->all-PO \u20b9} — mirrors server legs
+let _cashGrnMaps=null;      // v148: {qty3, rupees2} — cash-GRN legs of fn_material_consumed_pkg / fn_ls_consumed
 
 function _poAlreadyAdded(code, locId){
   // v133: clubbed rows keep their locations in _poAlloc, not dataset.locNode.
@@ -21170,25 +21736,60 @@ function _poAlreadyAdded(code, locId){
 }
 
 async function _loadPoCommitted(force){
+  // v148: mirrors the server's consumption legs exactly.
+  //   qty3    — DIRECT PO qty (hardened MIR exemption: item stamp 'mir' OR
+  //             NULL stamp under a mir_number header is exempt) at the
+  //             (wbs, material, loc) triple — fn_material_consumed_pkg leg 2.
+  //   rupees2 — ALL live PO base_amount at (wbs, loc) — fn_ls_consumed leg 1 (D6).
   if(_poCommittedMap && !force) return _poCommittedMap;
   try{
     const [poItems, poHdrs]=await Promise.all([
-      _fetchAllRows('pu_po_items','po_number,material_code,loc_node_id,qty,short_closed_qty'),
-      _fetchAllRows('pu_po_orders','po_number,status')
+      _fetchAllRows('pu_po_items','po_number,material_code,loc_node_id,wbs_node_id,qty,short_closed_qty,base_amount,procurement_source'),
+      _fetchAllRows('pu_po_orders','po_number,status,mir_number')
     ]);
-    const st=Object.fromEntries(poHdrs.map(po=>[po.po_number,po.status]));
+    const hdr=Object.fromEntries(poHdrs.map(po=>[po.po_number,po]));
     const dead=new Set(['Rejected','Rejected - Correction','Cancelled']);
-    const m={};
+    const qty3={}, rupees2={};
     poItems.forEach(it=>{
-      if(dead.has(st[it.po_number])) return;
-      if(!it.material_code||!it.loc_node_id) return;
-      const k=it.material_code+'|'+it.loc_node_id;
+      const po=hdr[it.po_number]||{};
+      if(dead.has(po.status)) return;
+      if(!it.loc_node_id||it.wbs_node_id==null) return;
+      const k2=it.wbs_node_id+'|'+it.loc_node_id;
+      rupees2[k2]=(rupees2[k2]||0)+(parseFloat(it.base_amount)||0);
+      if(!it.material_code) return;
+      const mirSourced = it.procurement_source==='mir'
+        || (it.procurement_source==null && po.mir_number!=null && po.mir_number!=='');
+      if(mirSourced) return;
+      const k3=it.wbs_node_id+'|'+it.material_code+'|'+it.loc_node_id;
       const net=Math.max(0,(parseFloat(it.qty)||0)-(parseFloat(it.short_closed_qty)||0));
-      m[k]=(m[k]||0)+net;
+      qty3[k3]=(qty3[k3]||0)+net;
     });
-    _poCommittedMap=m;
-  }catch(e){ console.warn('PO committed load failed:',e); _poCommittedMap={}; }
+    _poCommittedMap={qty3, rupees2};
+  }catch(e){ console.warn('PO committed load failed:',e); _poCommittedMap={qty3:{},rupees2:{}}; }
   return _poCommittedMap;
+}
+async function _loadCashGrnMaps(force){
+  if(_cashGrnMaps && !force) return _cashGrnMaps;
+  try{
+    const [gis, gs]=await Promise.all([
+      _fetchAllRows('pu_grn_items','grn_number,material_code,this_grn_qty,base_amount,wbs_node_id,loc_node_id,is_cash_purchase'),
+      _fetchAllRows('pu_grn','grn_number,status')
+    ]);
+    const st=Object.fromEntries(gs.map(g=>[g.grn_number,g.status]));
+    const qty3={}, rupees2={};
+    gis.forEach(gi=>{
+      if(!gi.is_cash_purchase) return;
+      if(st[gi.grn_number]==='Rejected') return;
+      if(!gi.loc_node_id||gi.wbs_node_id==null) return;
+      const k2=gi.wbs_node_id+'|'+gi.loc_node_id;
+      rupees2[k2]=(rupees2[k2]||0)+(parseFloat(gi.base_amount)||0);
+      if(!gi.material_code) return;
+      const k3=gi.wbs_node_id+'|'+gi.material_code+'|'+gi.loc_node_id;
+      qty3[k3]=(qty3[k3]||0)+(parseFloat(gi.this_grn_qty)||0);
+    });
+    _cashGrnMaps={qty3, rupees2};
+  }catch(e){ console.warn('cash GRN load failed:',e); _cashGrnMaps={qty3:{},rupees2:{}}; }
+  return _cashGrnMaps;
 }
 
 // ============================================================
@@ -21199,7 +21800,7 @@ async function _loadPoCommitted(force){
 // unchanged: _mirPooledCells (est − committed on live POs), _mpNodeCells for
 // location subtrees, _mpCart + _poCommitFromCart for the clubbed-row commit.
 // Grain stays (material_code, loc_node_id) — packages are navigation only;
-// pooled cells shared across packages are one budget (SHARED pill).
+// v148: grain = (package, material, location) — packages no longer pool.
 // ============================================================
 let _ppMode='pkg';      // 'pkg' | 'loc' — grouping axis of column 1
 let _ppMat=null;        // material_code scope (null = all)
@@ -21213,7 +21814,7 @@ let _ppTreeNodes=[];    // flat ref array for onclick-by-index (pkg tree areas)
 let _ppMatAgg=null;     // Map(code -> {name,uom,pkgN,rem}) over pooled cells
 
 const _ppScope = cells => _ppMat ? cells.filter(c=>c.code===_ppMat) : cells;
-const _ppLive  = cells => cells.filter(c=>c.remaining>0);
+const _ppLive  = cells => cells.filter(c=>_mpCellLive(c));   // v148: LS pool cells are live while \u20b9 remains
 
 // v140: one picker, two modes. 'po' = est − committed on live POs, commits to
 // clubbed PO rows; 'mir' = est − MIR already raised, commits to _mirGroups.
@@ -21231,19 +21832,21 @@ async function _ppOpenPicker(mode){
   _mpInjectCss(); _ppInjectCss();
   _ppMode='pkg'; _ppMat=null; _ppSelPkg=null; _ppSelNode=null;
   _ppExp=new Set(); _ppGrp=new Set(); _mpExp=new Set();
+  _ppTwOpen=new Set(); _ppTwCells={};
   if(mode==='po') _poSeedCartFromRows(); else _mirSeedCartFromGroups();
   window._ppActive=true;
   const T = mode==='po'
     ? {title:'Add to PO from estimate', cart:'Selected for this PO',
-       basis:'remaining = estimate \u2212 committed on live POs',
+       basis:'remaining = package estimate \u2212 consumed (MIR + direct PO + cash GRN)',
        commit:'_poCommitFromCart()', commitLbl:'Add to PO'}
     : {title:'Add from material estimate', cart:'Selected for this MIR',
-       basis:'remaining = estimate \u2212 MIR already raised',
+       basis:'remaining = package estimate \u2212 consumed (MIR + direct PO + cash GRN)',
        commit:'_mpCommit()', commitLbl:'Add to MIR'};
   openModal(
     '<div class="mp-modal">'
-    + '<div class="mp-head"><div><h3>'+T.title+'</h3>'
-    +   '<div class="mp-sub">Tick a <b>package</b> for all its materials, or switch to <b>location</b> and tick a node for everything estimated there. Search a material to scope. Only <b>approved</b> cells appear; qty is capped at remaining.</div></div></div>'
+    + '<div class="mp-head" style="display:flex;align-items:flex-start;gap:10px;"><div style="flex:1;min-width:0;"><h3>'+T.title+'</h3>'
+    +   '<div class="mp-sub">Tick a <b>package</b> for all its materials, or switch to <b>location</b> and tick a node for everything estimated there. Search a material to scope. Only <b>approved</b> cells appear; qty is capped at remaining.</div></div>'
+    +   '<button class="mp-closebtn" onclick="_ppCancel()" title="Close without adding">\u2715</button></div>'
     + '<div class="pp-matbar">'
     +   '<span class="pp-lbl">Material <span class="pp-lblsub">(optional scope)</span></span>'
     +   '<div class="pp-mswrap" id="ppMsWrap">'
@@ -21270,21 +21873,29 @@ async function _ppOpenPicker(mode){
     +   '</div>'
     + '</div>'
     + '<div class="mp-foot">'
-    +   '<span class="mp-legend"><span class="mp-dot">\u25cf</span> approved estimate &nbsp;\u00b7&nbsp; '+T.basis+' &nbsp;\u00b7&nbsp; <span class="pp-shared" style="cursor:default;">SHARED</span> = pooled across packages</span>'
+    +   '<span class="mp-legend"><span class="mp-dot">\u25cf</span> approved estimate &nbsp;\u00b7&nbsp; '+T.basis+' &nbsp;\u00b7&nbsp; <span class="wo-ls-pill" style="cursor:default;">LS \u20b9</span> = rupee pool, gated in \u20b9 at PO</span>'
     +   '<div class="mp-spacer"></div>'
     +   '<button class="btn btn-ghost btn-sm" onclick="_mpClear()">Clear</button>'
     +   '<button class="btn btn-primary btn-sm" onclick="'+T.commit+'">'+T.commitLbl+' <span class="mp-pill" id="mpCommitCount">0</span></button>'
     + '</div></div>',
     'large');
   const box=document.getElementById('modalBox'); if(box) box.style.maxWidth='1240px';   // three panes need width
+  window._modalNoBackdropClose = true;   // v144: cart state — close only via \u2715 / commit
   _ppRenderCols(); _mpRenderCart();
+}
+
+// v144: explicit cancel — resets the mode flags that commit paths normally reset
+function _ppCancel(){
+  closeModal();
+  _mpMode='mir';
+  window._ppActive=false;
 }
 
 // seed cart from the grouped MIR model so the picker reflects current selection
 function _mirSeedCartFromGroups(){
   _mpCart=new Map();
   _mirGroups.forEach(g=>g.locs.forEach(l=>{
-    const k=_mpKey(g.code,l.locId); const cell=_mpCells.byKey.get(k);
+    const k=_mpKey(g.code,l.locId,l.leafId); const cell=_mpCells.byKey.get(k);
     if(cell){ _mpCart.set(k,{...cell,qty:l.qty}); }
     else { _mpCart.set(k,{code:g.code,name:g.name,uom:g.uom,locId:l.locId,locName:l.locName,locPath:l.locPath,
         status:l.status,remaining:(l.remaining!=null?l.remaining:l.qty),leafId:l.leafId,pkgs:[],pkgName:'',qty:l.qty,orphan:true}); }
@@ -21400,30 +22011,134 @@ function _ppAutoExpand(){
 }
 function _ppTogTree(key){ key=String(key); _ppExp.has(key)?_ppExp.delete(key):_ppExp.add(key); _ppRenderCols(); }
 function _ppTogGrp(code){ code=code.replace(/&#39;/g,"'"); _ppGrp.has(code)?_ppGrp.delete(code):_ppGrp.add(code); _ppRenderCols(); }
+// v144: tower sub-groups inside column 2 — fold flat floor lists by tower
+let _ppTwOpen=new Set();   // open tower groups ('ctx@towerKey')
+let _ppTwCells={};         // render-time registry: id -> rows
+function _ppTogTw(id){ id=id.replace(/&#39;/g,"'"); _ppTwOpen.has(id)?_ppTwOpen.delete(id):_ppTwOpen.add(id); _ppRenderCols(); }
+function _ppBulkTw(id,on){
+  id=id.replace(/&#39;/g,"'");
+  (_ppTwCells[id]||[]).forEach(c=> on?_mpAddCell(c):_mpDelK(c.key||_mpKey(c.code,c.locId,c.leafId)));
+  _ppRefresh();
+}
+// v149: when cells at the current drill span MULTIPLE packages (location
+// mode: same material estimated by several WBS nodes), group by PACKAGE
+// first — each package group shows its own remaining, tri-state bulk
+// checkbox, and its locations nested inside (tower/floor logic intact).
+// Single-package sets pass straight through.
+function _ppPkgTowerRows(rows, ctxKey, labelFn, ctxSet){
+  const byPkg=new Map();
+  rows.forEach(c=>{ const k=String(c.leafId); if(!byPkg.has(k)) byPkg.set(k,{name:c.pkgName||'\u2014',rows:[]}); byPkg.get(k).rows.push(c); });
+  if(byPkg.size<=1) return _ppTowerRows(rows, ctxKey, labelFn, ctxSet);
+  const innerLabel = c=>_mpLabel3(c.locPath);   // pkg now lives in the header
+  const keys=[...byPkg.keys()].sort((a,b)=>(byPkg.get(a).name||'').localeCompare(byPkg.get(b).name||''));
+  return keys.map(k=>{
+    const g=byPkg.get(k); const id=ctxKey+'@pk'+k;
+    _ppTwCells[id]=g.rows;
+    const allLS=g.rows.every(c=>c.isLS), anyLS=g.rows.some(c=>c.isLS);
+    const qtySum=g.rows.filter(c=>!c.isLS).reduce((s,c)=>s+Math.max(0,c.remaining||0),0);
+    const lsSum=g.rows.filter(c=>c.isLS).reduce((s,c)=>s+Math.max(0,c.lsRem||0),0);
+    const remTxt = allLS ? ('\u20b9'+_fmtQ(lsSum)+' pool')
+      : (_fmtQ(qtySum)+' '+esc((g.rows.find(c=>!c.isLS)||{}).uom||'')+(anyLS?(' \u00b7 \u20b9'+_fmtQ(lsSum)+' pool'):''));
+    const inN=g.rows.filter(c=>_mpCart.has(c.key||_mpKey(c.code,c.locId,c.leafId))).length;
+    return '<div class="pp-twgrp">'
+      + '<div class="pp-twh pp-pkh" onclick="event.stopPropagation();">'
+      +   _ppCb('data-ptw',id,'_ppBulkTw(\''+_mpAttr(id)+'\',this.checked)')
+      +   '<span class="pp-ellip" style="font-weight:600;">\ud83d\udce6 '+esc(g.name)+'</span>'
+      +   '<span class="pp-gsub">\u00b7 '+g.rows.length+' loc'+(inN?(' \u00b7 '+inN+' selected'):'')+'</span>'
+      +   '<span class="pp-grem">'+remTxt+' rem</span></div>'
+      + '<div class="pp-twb open">'+_ppTowerRows(g.rows, id, innerLabel, ctxSet)+'</div></div>';
+  }).join('');
+}
+
+// v147: rows -> Tower > Floor > location HTML, relative to the drill context.
+// Levels already implied by the drilled node (its own id + ancestors in ctxSet)
+// are SUPPRESSED — drilling to a floor lists its units flat; drilling to a
+// tower shows floor groups only. Floors/units sort in site order.
+function _ppTowerRows(rows, ctxKey, labelFn, ctxSet){
+  labelFn = labelFn || (c=>_mpLabel3(c.locPath));
+  ctxSet = ctxSet || new Set();
+  const sortRows = a => a.slice().sort((x,y)=>_siteOrder(x.locName,y.locName));
+  const lvl = c => { const t=_locTowerOf(c.locId);
+    return { tw: ctxSet.has(t.key)?null:{key:t.key,name:t.name},
+             fl: (t.floorKey&&!ctxSet.has(t.floorKey))?{key:t.floorKey,name:t.floorName}:null }; };
+  const anyTw = rows.some(c=>lvl(c).tw), anyFl = rows.some(c=>lvl(c).fl);
+  const twDistinct = new Set(rows.map(c=>{ const t=lvl(c).tw; return t?t.key:''; }));
+  if(twDistinct.size<=1 && !anyFl) return sortRows(rows).map(c=>_ppLocRow(c,labelFn(c))).join('');
+
+  const flGroups = (list, baseId, label) => {   // floor grouping within one bucket
+    const byFl=new Map();
+    list.forEach(c=>{ const f=lvl(c).fl; const fk=f?f.key:''; if(!byFl.has(fk)) byFl.set(fk,{name:f?f.name:'',rows:[]}); byFl.get(fk).rows.push(c); });
+    if(byFl.size===1 && byFl.has('')) return sortRows(list).map(c=>_ppLocRow(c, label(c))).join('');
+    const flKeys=[...byFl.keys()].sort((a,b)=> a===''?-1 : (b===''?1 : _siteOrder(byFl.get(a).name,byFl.get(b).name)));
+    return flKeys.map(fk=>{
+      const f=byFl.get(fk);
+      if(fk==='') return sortRows(f.rows).map(c=>_ppLocRow(c, label(c))).join('');
+      const flId=baseId+'@'+fk;
+      _ppTwCells[flId]=f.rows;
+      const fOpen=_ppTwOpen.has(flId);
+      const fTot=f.rows.reduce((s,c)=>s+Math.max(0,c.remaining||0),0);
+      const fIn=f.rows.filter(c=>_mpCart.has(c.key||_mpKey(c.code,c.locId,c.leafId))).length;
+      return '<div class="pp-flgrp">'
+        + '<div class="pp-twh pp-flh" onclick="_ppTogTw(\''+_mpAttr(flId)+'\')">'
+        +   '<span class="pp-tw">'+(fOpen?'\u25be':'\u25b8')+'</span>'
+        +   _ppCb('data-ptw',flId,'_ppBulkTw(\''+_mpAttr(flId)+'\',this.checked)')
+        +   '<span class="pp-ellip">'+esc(f.name)+'</span>'
+        +   '<span class="pp-gsub">\u00b7 '+f.rows.length+' loc'+(fIn?(' \u00b7 '+fIn+' selected'):'')+'</span>'
+        +   '<span class="pp-grem">'+_fmtQ(fTot)+' '+esc(f.rows[0].uom||'')+'</span></div>'
+        + '<div class="pp-twb'+(fOpen?' open':'')+'">'
+        +   sortRows(f.rows).map(c=>_ppLocRow(c, c.pkgName?('\ud83d\udce6 '+esc(c.pkgName)):'')).join('')
+        + '</div></div>';
+    }).join('');
+  };
+
+  if(!anyTw) return flGroups(rows, ctxKey, c=>(c.pkgName?('\ud83d\udce6 '+esc(c.pkgName)):''));   // tower level suppressed by drill
+
+  const by=new Map();
+  rows.forEach(c=>{ const t=lvl(c).tw; const k=t?t.key:''; if(!by.has(k)) by.set(k,{name:t?t.name:'',rows:[]}); by.get(k).rows.push(c); });
+  const twKeys=[...by.keys()].sort((a,b)=> a===''?-1 : (b===''?1 : _siteOrder(by.get(a).name,by.get(b).name)));
+  return twKeys.map(k=>{
+    const g=by.get(k);
+    if(k==='') return flGroups(g.rows, ctxKey, c=>(c.pkgName?('\ud83d\udce6 '+esc(c.pkgName)):''));   // rows above/at the drill context
+    const twId=ctxKey+'@'+k;
+    _ppTwCells[twId]=g.rows;
+    const open=_ppTwOpen.has(twId);
+    const tot=g.rows.reduce((s,c)=>s+Math.max(0,c.remaining||0),0);
+    const inN=g.rows.filter(c=>_mpCart.has(c.key||_mpKey(c.code,c.locId,c.leafId))).length;
+    return '<div class="pp-twgrp">'
+      + '<div class="pp-twh" onclick="_ppTogTw(\''+_mpAttr(twId)+'\')">'
+      +   '<span class="pp-tw">'+(open?'\u25be':'\u25b8')+'</span>'
+      +   _ppCb('data-ptw',twId,'_ppBulkTw(\''+_mpAttr(twId)+'\',this.checked)')
+      +   '<span class="pp-ellip" style="font-weight:600;">\ud83c\udfd7 '+esc(g.name||'Other locations')+'</span>'
+      +   '<span class="pp-gsub">\u00b7 '+g.rows.length+' loc'+(inN?(' \u00b7 '+inN+' selected'):'')+'</span>'
+      +   '<span class="pp-grem">'+_fmtQ(tot)+' '+esc(g.rows[0].uom||'')+'</span></div>'
+      + '<div class="pp-twb'+(open?' open':'')+'">'+flGroups(g.rows, twId, c=>(c.pkgName?('\ud83d\udce6 '+esc(c.pkgName)):''))+'</div></div>';
+  }).join('');
+}
+
 function _ppPickPkg(i){ _ppSelPkg=i; _ppSelNode=null; _ppGrp.clear(); _ppRenderCols(); }
 function _ppPickNode(id){ _ppSelNode=String(id); _ppSelPkg=null; _ppGrp.clear(); _ppRenderCols(); }
 
 // ---- bulk selection (skips zero-remaining; pooled cells added once) ----
-function _ppBulkPkg(i,on){ _ppScope(_ppPkgArr[i].cells).forEach(c=> on?_mpAddCell(c):_mpDel(c.code,c.locId)); _ppRefresh(); }
-function _ppBulkNode(id,on){ _ppScope(_mpNodeCells[String(id)]||[]).forEach(c=> on?_mpAddCell(c):_mpDel(c.code,c.locId)); _ppRefresh(); }
+function _ppBulkPkg(i,on){ _ppScope(_ppPkgArr[i].cells).forEach(c=> on?_mpAddCell(c):_mpDelK(c.key||_mpKey(c.code,c.locId,c.leafId))); _ppRefresh(); }
+function _ppBulkNode(id,on){ _ppScope(_mpNodeCells[String(id)]||[]).forEach(c=> on?_mpAddCell(c):_mpDelK(c.key||_mpKey(c.code,c.locId,c.leafId))); _ppRefresh(); }
 function _ppBulkGrp(code,on){
   code=code.replace(/&#39;/g,"'");
-  _ppDrillCells().filter(c=>c.code===code).forEach(c=> on?_mpAddCell(c):_mpDel(c.code,c.locId));
+  _ppDrillCells().filter(c=>c.code===code).forEach(c=> on?_mpAddCell(c):_mpDelK(c.key||_mpKey(c.code,c.locId,c.leafId)));
   _ppRefresh();
 }
-function _ppToggleCell(code,locId,on){
-  code=code.replace(/&#39;/g,"'");
-  const c=_mpCells.byKey.get(_mpKey(code,locId)); if(!c) return;
-  on?_mpAddCell(c):_mpDel(code,locId);
+function _ppToggleCellK(k,on){
+  k=k.replace(/&#39;/g,"'").replace(/&quot;/g,'"');
+  const c=_mpCells.byKey.get(k); if(!c) return;
+  on?_mpAddCell(c):_mpDelK(k);
   _ppRefresh();
 }
-function _ppSetQty(code,locId,el){
-  code=code.replace(/&#39;/g,"'");
-  const k=_mpKey(code,locId), v=_mpCart.get(k);
+function _ppSetQtyK(k,el){
+  k=k.replace(/&#39;/g,"'").replace(/&quot;/g,'"');
+  const v=_mpCart.get(k);
   const cell=_mpCells.byKey.get(k); if(!cell) return;
   let q=Math.max(0,Number(el.value)||0);
-  if(q>cell.remaining) q=cell.remaining;
-  if(q<=0){ _mpCart.delete(k); } else if(v){ v.qty=q; } else { _mpCart.set(k,{...cell,qty:q}); }
+  if(!cell.isLS && q>cell.remaining) q=cell.remaining;   // v148: LS lines are \u20b9-gated at PO, not qty-capped
+  if(q<=0){ _mpCart.delete(k); } else if(v){ v.qty=q; } else { _mpCart.set(k,{...cell, key:k, qty:q}); }
   _ppRefresh();
 }
 function _ppRefresh(){ _ppRenderCols(); _mpRenderCart(); }
@@ -21509,20 +22224,26 @@ function _ppRenderCol1(){
 
 // ---- render: column 2 ----
 function _ppLocRow(c,subText){
-  const k=_mpKey(c.code,c.locId), inCart=_mpCart.has(k), zero=(c.remaining||0)<=0;
+  // v148: per-package cells — the key IS the (material, location, package)
+  // triple; SHARED is retired (packages no longer pool). LS whitelist cells
+  // show the \u20b9 pool remaining and take free qty (\u20b9-gated at PO save).
+  const k=c.key||_mpKey(c.code,c.locId,c.leafId), inCart=_mpCart.has(k), zero=!_mpCellLive(c);
   const qty=inCart?_mpCart.get(k).qty:'';
-  const shared=(c.pkgs||[]).length>1
-    ? ' <span class="pp-shared" title="Estimated under '+c.pkgs.length+' packages here \u2014 remaining is pooled across them">SHARED</span>' : '';
+  const lsPill=c.isLS?' <span class="wo-ls-pill">LS \u20b9</span>':'';
+  const remTxt=c.isLS
+    ? ('pool <b>\u20b9'+_fmtQ(c.lsRem)+'</b>')
+    : ('rem <b>'+_fmtQ(c.remaining)+'</b> '+esc(c.uom||''));
   return '<div class="pp-lrow'+(inCart?' added':'')+'">'
     + '<input type="checkbox" class="mp-cb" data-pcell="'+_mpAttr(k)+'" '+(inCart?'checked':'')+' '+(zero?'disabled':'')
-    +   ' onchange="_ppToggleCell(\''+_mpAttr(c.code)+'\',\''+_mpAttr(c.locId)+'\',this.checked)">'
-    + '<span class="pp-nmwrap"><div class="pp-nm">'+esc(c.locName||'loc')+shared+'</div>'
+    +   ' onchange="_ppToggleCellK(\''+_mpAttr(k)+'\',this.checked)">'
+    + '<span class="pp-nmwrap"><div class="pp-nm">'+esc(c.locName||'loc')+lsPill+'</div>'
     +   (subText?('<div class="pp-sub" title="'+_mpAttr(subText)+'">'+esc(subText)+'</div>'):'')+'</span>'
-    + '<span class="pp-lrem'+(zero?' zero':'')+'">rem <b>'+_fmtQ(c.remaining)+'</b> '+esc(c.uom||'')+'</span>'
+    + '<span class="pp-lrem'+(zero?' zero':'')+'">'+remTxt+'</span>'
     + '<input type="number" step="0.001" class="pp-qty" placeholder="qty" onwheel="this.blur()" value="'+(inCart?_fmtQin(qty):'')+'" '+((!inCart||zero)?'disabled':'')
-    +   ' onchange="_ppSetQty(\''+_mpAttr(c.code)+'\',\''+_mpAttr(c.locId)+'\',this)">'
+    +   ' onchange="_ppSetQtyK(\''+_mpAttr(k)+'\',this)">'
     + '</div>';
 }
+function _ppCtxSet(){ return _ppSelNode!=null ? _locCtxSet(_ppSelNode) : new Set(); }
 function _ppRenderCol2(){
   const host=document.getElementById('ppC2Body'), ttl=document.getElementById('ppC2Ttl'), cnt=document.getElementById('ppC2Cnt');
   if(!host) return;
@@ -21547,8 +22268,9 @@ function _ppRenderCol2(){
     const a=_ppMatAgg.get(_ppMat)||{};
     host.innerHTML='<div class="pp-ctx"><span class="mp-code">'+esc(_ppMat)+'</span><b>'+esc(a.name||_ppMat)+'</b>'
       + '<span style="color:var(--muted);">'+(_ppSelPkg!=null?'under':'in')+'</span><b class="pp-ellip">'+esc(ctxName)+'</b></div>'
-      + (cells.map(c=>_ppLocRow(c, _ppSelPkg!=null ? _mpLabel3(c.locPath) : (_mpLabel3(c.locPath)+' \u00b7 '+(c.pkgName||'')))).join('')
-         || '<div class="mp-empty">No cells here for this material.</div>');
+      + (cells.length
+           ? _ppPkgTowerRows(cells,'mat:'+_ppMat, c=>(_ppSelPkg!=null ? _mpLabel3(c.locPath) : (_mpLabel3(c.locPath)+' \u00b7 '+(c.pkgName||''))), _ppCtxSet())
+           : '<div class="mp-empty">No cells here for this material.</div>');
     return;
   }
   // no material scope — collapsible material groups with group-level select-all
@@ -21564,7 +22286,7 @@ function _ppRenderCol2(){
         const rows=byMat.get(code).slice().sort((a,b)=>(a.locPath||'').localeCompare(b.locPath||''));
         const open=_ppGrp.has(code);
         const tot=rows.reduce((s,c)=>s+Math.max(0,c.remaining||0),0);
-        const inN=rows.filter(c=>_mpCart.has(_mpKey(c.code,c.locId))).length;
+        const inN=rows.filter(c=>_mpCart.has(c.key||_mpKey(c.code,c.locId,c.leafId))).length;
         return '<div class="pp-grp">'
           + '<div class="pp-grph" onclick="_ppTogGrp(\''+_mpAttr(code)+'\')">'
           +   '<span class="pp-tw">'+(open?'\u25be':'\u25b8')+'</span>'
@@ -21572,7 +22294,7 @@ function _ppRenderCol2(){
           +   '<span class="mp-code">'+esc(code)+'</span><span class="pp-ellip">'+esc(rows[0].name)+'</span>'
           +   '<span class="pp-gsub">\u00b7 '+rows.length+' loc'+(inN?(' \u00b7 '+inN+' selected'):'')+'</span>'
           +   '<span class="pp-grem">'+_fmtQ(tot)+' '+esc(rows[0].uom||'')+'</span></div>'
-          + '<div class="pp-grpb'+(open?' open':'')+'">'+rows.map(c=>_ppLocRow(c,_mpLabel3(c.locPath))).join('')+'</div></div>';
+          + '<div class="pp-grpb'+(open?' open':'')+'">'+_ppPkgTowerRows(rows,'g:'+code, null, _ppCtxSet())+'</div></div>';
       }).join('') || '<div class="mp-empty">No estimate cells here.</div>');
 }
 
@@ -21583,6 +22305,9 @@ function _ppSyncCbs(){
     const st=_ppTri(_ppScope(P.cells)); cb.checked=st==='all'; cb.indeterminate=st==='some'; });
   document.querySelectorAll('.mp-cb[data-pnode]').forEach(cb=>{
     const st=_ppTri(_ppScope(_mpNodeCells[cb.dataset.pnode]||[])); cb.checked=st==='all'; cb.indeterminate=st==='some'; });
+  document.querySelectorAll('.mp-cb[data-ptw]').forEach(cb=>{
+    const id=cb.dataset.ptw.replace(/&#39;/g,"'");
+    const st=_ppTri(_ppTwCells[id]||[]); cb.checked=st==='all'; cb.indeterminate=st==='some'; });
   document.querySelectorAll('.mp-cb[data-pgrp]').forEach(cb=>{
     const code=cb.dataset.pgrp.replace(/&#39;/g,"'");
     const st=_ppTri(_ppDrillCells().filter(c=>c.code===code)); cb.checked=st==='all'; cb.indeterminate=st==='some'; });
@@ -21594,7 +22319,9 @@ function _ppInjectCss(){
   if(document.getElementById('ppcss')) return;
   const css=document.createElement('style'); css.id='ppcss';
   css.textContent=`
-  .pp-split{display:grid;grid-template-columns:300px 1fr 350px;border:1px solid var(--border);border-radius:10px;overflow:hidden;min-height:56vh;}
+  .pp-split{display:grid;grid-template-columns:300px minmax(0,1fr) 350px;border:1px solid var(--border);border-radius:10px;overflow:hidden;min-height:56vh;}
+  .pp-split .mp-pane{min-width:0;}
+  .pp-split .mp-body{min-width:0;}
   .pp-split .mp-pane{border-right:1px solid var(--border);}
   .pp-split .mp-pane:last-child{border-right:none;}
   .pp-matbar{display:flex;align-items:center;gap:12px;margin:4px 0 10px;}
@@ -21631,12 +22358,14 @@ function _ppInjectCss(){
   .pp-tw.leaf{cursor:default;opacity:0;}
   .pp-kids{margin-left:14px;border-left:1px dashed var(--border);padding-left:5px;}
   .pp-nmwrap{flex:1;min-width:0;}
-  .pp-nm{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:13px;}
+  .pp-nm{white-space:normal;overflow-wrap:anywhere;font-size:13px;line-height:1.25;}
   .pp-sub{font-size:10.5px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
   .pp-rem{font-size:11px;font-weight:600;color:#16a34a;white-space:nowrap;font-variant-numeric:tabular-nums;flex-shrink:0;}
   .pp-chev{color:var(--muted);font-size:11px;flex-shrink:0;}
   .pp-ctx{display:flex;align-items:center;gap:8px;padding:8px 10px;margin:0 0 6px;background:var(--input-bg);border:1px dashed var(--border);border-radius:8px;font-size:12px;}
   .pp-ellip{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;}
+  .pp-grph .pp-ellip,.pp-ctx .pp-ellip{white-space:normal;overflow:visible;text-overflow:clip;overflow-wrap:anywhere;flex:1 1 auto;line-height:1.25;}
+  .pp-grph{flex-wrap:nowrap;}
   .pp-lrow{display:flex;align-items:center;gap:9px;padding:5px 8px;border-radius:7px;}
   .pp-lrow:hover{background:var(--panel-2);}
   .pp-lrow.added{background:rgba(13,148,136,.07);}
@@ -21652,6 +22381,16 @@ function _ppInjectCss(){
   .pp-grem{margin-left:auto;font-weight:600;color:#16a34a;font-size:11px;font-variant-numeric:tabular-nums;white-space:nowrap;}
   .pp-grpb{display:none;padding:4px 6px;}
   .pp-grpb.open{display:block;}
+  .pp-twgrp{border:1px solid var(--border);border-radius:7px;margin:4px 2px;overflow:hidden;background:#fff;}
+  .pp-twh{display:flex;align-items:center;gap:7px;padding:6px 8px;background:var(--input-bg);cursor:pointer;font-size:12px;}
+  .pp-twh:hover{background:var(--panel-2);}
+  .pp-twb{display:none;padding:2px 4px;}
+  .pp-twb.open{display:block;}
+  .pp-flgrp{border:1px solid var(--border);border-radius:6px;margin:3px 4px 3px 16px;overflow:hidden;background:#fff;}
+  .pp-pkh{background:rgba(13,148,136,.06);cursor:default;}
+  .pp-flh{background:#fff;font-size:11.5px;}
+  .mp-closebtn{flex-shrink:0;width:28px;height:28px;border:1px solid var(--border);border-radius:7px;background:#fff;color:var(--muted);font-size:13px;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;}
+  .mp-closebtn:hover{color:var(--danger);border-color:var(--danger);}
   `;
   document.head.appendChild(css);
 }
@@ -21667,7 +22406,7 @@ function _poSeedCartFromRows(){
     const uom=tr.querySelector('.po_uom')?.value||'';
     alloc.forEach(a=>{
       if(a.src!=='est') return;
-      const k=_mpKey(code,a.loc); const cell=_mpCells.byKey.get(k);
+      const k=_mpKey(code,a.loc,a.wbs); const cell=_mpCells.byKey.get(k);
       if(cell){ _mpCart.set(k,{...cell,qty:(Number(a.qty)||0)}); }
       else { _mpCart.set(k,{code,name,uom,locId:String(a.loc),locName:a.locName||'',locPath:a.locPath||'',
               status:'',remaining:(a.estRemaining||a.qty||0),leafId:a.wbs,pkgs:[],pkgName:'',qty:(Number(a.qty)||0),orphan:true}); }
@@ -21702,14 +22441,19 @@ function _poAddEstAlloc(s){
     _poAlloc[rn]=[];
   }
   const a=_poAlloc[rn];
-  let e=a.find(x=>String(x.loc)===String(s.locId));
+  // v148: allocation identity is (location, PACKAGE) — the same material at
+  // one floor under two packages is two independent slices.
+  let e=a.find(x=>String(x.loc)===String(s.locId) && String(x.wbs)===String(s.leafId));
   if(!e){
     e={wbs:s.leafId, loc:s.locId, plid:(window.crypto&&crypto.randomUUID?crypto.randomUUID():('id'+Date.now()+Math.random())),
-       locName:s.locName, locPath:s.locPath, mirBalance:0, estRemaining:(s.remaining>0?s.remaining:0), qty:0, src:'est'};
+       locName:s.locName, locPath:s.locPath, pkgName:s.pkgName||'',
+       isLS:!!s.isLS, lsRem:(s.lsRem!=null?s.lsRem:0),
+       mirBalance:0, estRemaining:(s.isLS?1e15:(s.remaining>0?s.remaining:0)), qty:0, src:'est'};
     a.push(e);
   }
   e.src='est';
-  e.estRemaining=(s.remaining>0?s.remaining:e.estRemaining);
+  e.isLS=!!s.isLS; if(s.lsRem!=null) e.lsRem=s.lsRem; if(s.pkgName) e.pkgName=s.pkgName;
+  e.estRemaining=(s.isLS?1e15:(s.remaining>0?s.remaining:e.estRemaining));   // LS: qty is not the gated axis
   e.qty=Number(s.qty)||0;   // explicit cart qty (not greedy-reallocated)
 }
 
@@ -21723,7 +22467,8 @@ function _poCommitFromCart(){
   _mpCart.forEach(v=>{
     if((Number(v.qty)||0)<=0) return;
     _poAddEstAlloc({code:v.code,name:v.name,uom:v.uom,leafId:v.leafId,locId:v.locId,
-      locName:v.locName,locPath:v.locPath,remaining:v.remaining,qty:v.qty});
+      locName:v.locName,locPath:v.locPath,remaining:v.remaining,qty:v.qty,
+      isLS:!!v.isLS, lsRem:(v.lsRem!=null?v.lsRem:0), pkgName:v.pkgName||''});
   });
   document.querySelectorAll('#poItemsBody tr').forEach(tr=>{
     const rn=(tr.id||'').split('_')[1]; const a=_poAlloc[rn]; if(!a) return;
@@ -21758,9 +22503,11 @@ function _poAllocDetailHTML(rn){
   if(!alloc.length) return '<span class="muted" style="font-size:11px;">No location split.</span>';
   return '<div style="font-size:11px;padding:3px 0;"><b>Location split</b> — system-allocated, ascending (fills MIR demand first, then estimate headroom):</div>'
     + alloc.map(a=>'<div style="font-size:11px;display:flex;gap:12px;padding:2px 0;align-items:baseline;">'
-        + '<span style="min-width:240px;">\uD83D\uDCCD '+esc(a.locPath||a.locName||('loc '+a.loc))+'</span>'
+        + '<span style="min-width:240px;">\uD83D\uDCCD '+esc(a.locPath||a.locName||('loc '+a.loc))
+        +   (a.pkgName?' <span class="mp-mini">\ud83d\udce6 '+esc(a.pkgName)+'</span>':'')
+        +   (a.isLS?' <span class="wo-ls-pill">LS \u20b9</span>':'')+'</span>'
         + '<span>order <b style="'+((a.qty||0)>0?'color:#16a34a;':'color:#94a3b8;')+'">'+_fmtQ(a.qty||0)+'</b></span>'
-        + '<span class="muted">MIR bal '+_fmtQ(a.mirBalance||0)+' \u00b7 est rem '+_fmtQ(a.estRemaining||0)+'</span></div>').join('');
+        + '<span class="muted">'+(a.isLS?('LS pool \u20b9'+_fmtQ(a.lsRem||0)+' rem'):('MIR bal '+_fmtQ(a.mirBalance||0)+' \u00b7 est rem '+_fmtQ(a.estRemaining||0)))+'</span></div>').join('');
 }
 function _poRenderAllocDetail(rn){ const ex=document.getElementById('poAllocRow_'+rn); if(ex){ const c=ex.querySelector('td[colspan]'); if(c) c.innerHTML=_poAllocDetailHTML(rn); } }
 function _poToggleAlloc(rn){
@@ -22042,22 +22789,38 @@ async function savePO() {
     toast(`${_nullLocLines.map(it=>'"'+it.material_name+'"').join(', ')} ${_nullLocLines.length===1?'has':'have'} no location — add lines via "＋ Add from estimate" or ensure the source MIR carries location.`,'error',7000);
     return;
   }
-  // v99: frontend commitment cap (per (material_code, loc)). DB gate is the backstop;
-  // this gives a clear per-line message before the round-trip. Tagged lines only.
-  const _capItems = items.filter(it=>it.material_code && it.loc_node_id);
+  // v148: frontend cap at the (wbs, material, loc) TRIPLE — the same grain as
+  // rpc_save_po's gate, for a clear per-line message before the round-trip.
+  // MIR-sourced lines pass (counted at the MIR head); LS lines are \u20b9-gated
+  // server-side and get an advisory \u20b9 check here.
+  const _capItems = items.filter(it=>it.material_code && it.loc_node_id && it.wbs_node_id!=null
+                                   && (it.procurement_source||'')!=='mir');
   if(_capItems.length){
     pbShow('Checking estimate caps…');
-    let estMap={}, comMap={};
-    try{ await _loadMirEstimateTree(true); estMap=_flatEstMap(); comMap=await _loadPoCommitted(true); }
+    let estMap={}, comMap={qty3:{},rupees2:{}}, grnMapsC={qty3:{},rupees2:{}}, lsPairs=new Set();
+    try{
+      await _loadMirEstimateTree(true); estMap=_flatEstMap();
+      comMap=await _loadPoCommitted(true); grnMapsC=await _loadCashGrnMaps(true);
+      (_mirEstTreeCache||[]).forEach(L=>(L.locArr||[]).forEach(LO=>{ if(LO.isLS&&LO.status==='approved') lsPairs.add(L.leafId+'|'+LO.locId); }));
+    }
     catch(e){ console.warn('cap precheck:',e); }
     pbDone();
     const _over=[];
     _capItems.forEach(it=>{
-      const k=it.material_code+'|'+it.loc_node_id;
-      const rem=(estMap[k]||0)-(comMap[k]||0);
-      if((it.qty||0) > rem + 1e-6) _over.push(it.material_name+': ordering '+it.qty+', remaining '+(Math.round(rem*1000)/1000));
+      const k2=it.wbs_node_id+'|'+it.loc_node_id;
+      if(lsPairs.has(k2)){
+        // advisory \u20b9 check for LS lines (hard gate in rpc_save_po)
+        const budget=(()=>{ let b=0; (_mirEstTreeCache||[]).forEach(L=>{ if(String(L.leafId)!==String(it.wbs_node_id)) return; (L.locArr||[]).forEach(LO=>{ if(String(LO.locId)===String(it.loc_node_id)&&LO.isLS) b=LO.lsBudget; }); }); return b; })();
+        const lsRem=Math.round((budget-((comMap.rupees2||{})[k2]||0)-((grnMapsC.rupees2||{})[k2]||0))*100)/100;
+        const amt=Number(it.base_amount)|| (Number(it.qty)||0)*(Number(it.unit_rate)||0);
+        if(amt > lsRem + 0.01) _over.push(it.material_name+': \u20b9'+amt+' vs LS pool remaining \u20b9'+lsRem);
+        return;
+      }
+      const k3=it.wbs_node_id+'|'+it.material_code+'|'+it.loc_node_id;
+      const rem=(estMap[k3]||0)-((comMap.qty3||{})[k3]||0)-((grnMapsC.qty3||{})[k3]||0);
+      if((it.qty||0) > rem + 1e-6) _over.push(it.material_name+': ordering '+it.qty+', package remaining '+(Math.round(rem*1000)/1000));
     });
-    if(_over.length){ toast('Exceeds approved estimate — '+_over.join('  ·  ')+'. Reduce qty or revise the estimate.','error',9000); return; }
+    if(_over.length){ toast('Exceeds approved estimate — '+_over.join('  \u00b7  ')+'. Reduce qty or revise the estimate.','error',9000); return; }
   }
   pbShow('Saving PO…');
   try {
@@ -25644,8 +26407,24 @@ let _locTreeCache = null;     // [{id,name,parent_id,is_leaf,is_active, path}]
 
 // Fetch ALL rows from a table, paginating past PostgREST's 1000-row cap.
 async function _fetchAllRows(table, columns) {
+  // v145: first page carries an exact count, remaining pages fetched in
+  // PARALLEL — a 12k-row table drops from 13 sequential round trips to 2.
+  // Serial fallback if the count is unavailable.
   const PAGE = 1000;
-  let all = [], from = 0;
+  const first = await sb.from(table).select(columns, { count: 'exact' }).range(0, PAGE - 1);
+  if (first.error) throw first.error;
+  let all = first.data || [];
+  const total = (typeof first.count === 'number') ? first.count : null;
+  if (total != null) {
+    if (all.length >= total) return all;
+    const jobs = [];
+    for (let from = PAGE; from < total && from < 200000; from += PAGE)
+      jobs.push(sb.from(table).select(columns).range(from, from + PAGE - 1));
+    const pages = await Promise.all(jobs);
+    for (const r of pages) { if (r.error) throw r.error; all = all.concat(r.data || []); }
+    return all;
+  }
+  let from = PAGE;
   for (let guard = 0; guard < 200; guard++) {   // hard cap 200k rows
     const { data, error } = await sb.from(table).select(columns).range(from, from + PAGE - 1);
     if (error) throw error;
