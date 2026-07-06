@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Penguin-Procurement Suite v149 — Urban Excellence LLP · Poetry of Earth</title>
+<title>Penguin-Procurement Suite v151 — Urban Excellence LLP · Poetry of Earth</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <style>
@@ -22028,7 +22028,17 @@ function _ppBulkTw(id,on){
 function _ppPkgTowerRows(rows, ctxKey, labelFn, ctxSet){
   const byPkg=new Map();
   rows.forEach(c=>{ const k=String(c.leafId); if(!byPkg.has(k)) byPkg.set(k,{name:c.pkgName||'\u2014',rows:[]}); byPkg.get(k).rows.push(c); });
-  if(byPkg.size<=1) return _ppTowerRows(rows, ctxKey, labelFn, ctxSet);
+  if(byPkg.size<=1){
+    // v150: single-package sets previously fell through with a path-only
+    // default label \u2014 the package name only appeared when a material was
+    // estimated under MULTIPLE packages (band headers). Default label now
+    // carries the package too, suppressed when the drill itself is a
+    // package (context header already names it).
+    // v151: package leads the label \u2014 .pp-sub is nowrap+ellipsis, so a
+    // trailing package was visually clipped by long location paths.
+    const fn = labelFn || (c=>((_ppSelPkg==null&&c.pkgName)?('\ud83d\udce6 '+c.pkgName+' \u00b7 '):'')+_mpLabel3(c.locPath));
+    return _ppTowerRows(rows, ctxKey, fn, ctxSet);
+  }
   const innerLabel = c=>_mpLabel3(c.locPath);   // pkg now lives in the header
   const keys=[...byPkg.keys()].sort((a,b)=>(byPkg.get(a).name||'').localeCompare(byPkg.get(b).name||''));
   return keys.map(k=>{
