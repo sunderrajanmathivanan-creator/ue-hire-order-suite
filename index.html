@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Penguin-Procurement Suite v152 — Urban Excellence LLP · Poetry of Earth</title>
+<title>Penguin-Procurement Suite v155 — Urban Excellence LLP · Poetry of Earth</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <style>
@@ -3298,17 +3298,14 @@ input[type="number"] {
       <!-- MIS Items -->
       <div style="margin-top:16px;">
         <h3 style="font-size:13px;margin-bottom:8px;color:var(--text);">Materials to Issue</h3>
-        <div class="table-wrap">
-          <table>
-            <thead><tr>
-              <th>#</th><th>Material</th><th>UOM</th><th style="min-width:300px;">📦 WBS Package &amp; 📍 Location <span style="color:#dc2626;">*</span></th>
-              <th class="num">Stock Available</th><th class="num">Qty to Issue</th>
-              <th class="num">Latest Rate</th><th class="num">Amount</th><th></th>
-            </tr></thead>
-            <tbody id="misItemsBody"></tbody>
-          </table>
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;flex-wrap:wrap;">
+          <button class="btn btn-primary btn-sm" onclick="openMisEstimatePicker()">＋ Add from estimate</button>
+          <span style="font-size:11px;color:var(--muted);">Pick approved estimate cells — the same material clubs into one card; ▸ expands the per-location split.</span>
+          <span style="margin-left:auto;"></span>
+          <button class="btn btn-ghost btn-sm" onclick="_misSetAll(true)">Expand all</button>
+          <button class="btn btn-ghost btn-sm" onclick="_misSetAll(false)">Collapse all</button>
         </div>
-        <button class="btn btn-ghost btn-sm" style="margin-top:8px;" onclick="addMISItem()">+ Add Row</button>
+        <div id="misItemsHost"></div>
       </div>
       <div id="misOverrideBox" style="display:none;background:#fef2f2;border:1px solid #fca5a5;border-radius:8px;padding:10px 12px;margin:6px 0 12px;font-size:12px;color:#7f1d1d;">
         <div id="misOverrideSummary" style="font-weight:600;margin-bottom:6px;"></div>
@@ -11144,7 +11141,10 @@ function _wpSetVal(actId,locId,v){ const e=_wpCart.get(_wpKey(actId,locId)); if(
 function _wpSetRate(actId,v){
   const r=Number(v)||0;
   _wpCart.forEach(e=>{ if(Number(e.actId)===Number(actId)){ const c=_wpCells.get(_wpKey(e.actId,e.locId)); if(c&&!c.isLS) e.rate=r; } });
-  _wpFoot(); _wpRenderCart();
+  // v153: no _wpRenderCart() on oninput \u2014 it destroyed the rate input after one
+  // keystroke (same one-digit bug as the PO/MIR cart). Foot totals update live;
+  // the cart body resyncs on change (blur/Enter).
+  _wpFoot(); _wpPaintOver();
 }
 function _wpPaintOver(){
   document.querySelectorAll('#wpCart input[data-cell]').forEach(inp=>{
@@ -11175,7 +11175,7 @@ function _wpRenderCart(){
           + '<div class="mp-t">'+esc(A.name)+' '+(isLS?'<span class="wo-ls-pill">LS \u20b9</span>':'')+'</div>'
           + '<div class="mp-s">'+(isLS?'\u20b9 amount ordered against the budget pool':esc(A.uom||''))+'</div></div>'
           + (isLS?'':'<span class="wp-ratebox">\u20b9/'+esc(_woUnit(A.uom)||'unit')
-              +' <input type="number" value="'+(rows[0].e.rate||'')+'" oninput="_wpSetRate('+aid+',this.value)" onwheel="this.blur()"></span>')
+              +' <input type="number" value="'+(rows[0].e.rate||'')+'" oninput="_wpSetRate('+aid+',this.value)" onchange="_wpRenderCart()" onwheel="this.blur()"></span>')
           + '<span class="mp-mini">\u20b9'+fmtINR(amt)+'</span></div>'
           + '<div class="mp-ci-locs">'
           + rows.map(x=>{
@@ -18708,7 +18708,11 @@ function _mirPooledCells(){
   return {byKey,byLoc};
 }
 // v148: a cell is orderable when its qty remaining is open, or its LS pool has \u20b9 left.
-function _mpCellLive(c){ return c.isLS ? (c.lsRem>0.009) : ((c.remaining||0)>0); }
+function _mpCellLive(c){
+  // v153: in MIS mode an LS line is issued FROM STOCK (v130) \u2014 an exhausted
+  // \u20b9 pool must not block issuing material the store already received.
+  if(_mpMode==='mis' && c.isLS) return true;
+  return c.isLS ? (c.lsRem>0.009) : ((c.remaining||0)>0); }
 
 // v144: locId -> tower-level grouping ancestor (nearest node_type='tower';
 // falls back to the parent node, then the leaf itself). Used by the pickers
@@ -18825,7 +18829,7 @@ function _mpRenderCart(){
       return '<span class="mp-lchip'+(l.orphan?' mp-orphan':'')+(l.isLS?' wp-ls':'')+'"><span class="mp-lp">\ud83d\udccd '+esc(_mpLabel3(l.locPath)||l.locName||'loc')+'</span>'
         + (g.multiPkg?'<span class="mp-mini">\ud83d\udce6 '+esc(l.pkgName||'')+'</span>':'')
         + (l.isLS?'<span class="wo-ls-pill">LS \u20b9</span>':'')
-        + '<input type="number" step="0.001" value="'+_fmtQin(l.qty)+'" onwheel="this.blur()" oninput="_mpSetLocQtyK(\''+K+'\',this.value)">'
+        + '<input type="number" step="0.001" value="'+_fmtQin(l.qty)+'" onwheel="this.blur()" data-mpk="'+K+'" oninput="_mpSetLocQtyK(\''+K+'\',this.value,this)" onchange="_mpRenderCart()">'
         + '<span class="mp-mini">'+(l.isLS?('pool \u20b9'+_fmtQ(l.lsRem)):('/ '+_fmtQ(l.remaining)))+'</span>'
         + '<span class="mp-x" onclick="_mpDelK(\''+K+'\');_mpRefresh();">\u2715</span></span>';
     }).join('');
@@ -18833,25 +18837,41 @@ function _mpRenderCart(){
       + '<div class="mp-ci-head">'
       +   '<div class="mp-nm2"><div class="mp-t">'+esc(g.name)+' <span class="mp-code">'+esc(g.code)+'</span>'+(orphan?' <span class="mp-warnpill">not in approved estimate</span>':'')+'</div>'
       +     '<div class="mp-s">'+(multi?g.locs.length+' locations':esc(_mpLabel3(g.locs[0].locPath)||g.locs[0].locName||''))+'</div></div>'
-      +   '<div class="mp-qbox"><input type="number" step="0.001" value="'+_fmtQin(total)+'" onwheel="this.blur()" title="Cumulative \u2014 distributes across locations, capped at remaining" oninput="_mpSetCumulative(\''+esc(g.code)+'\',this.value)"><span class="mp-uom">'+esc(g.uom)+'</span></div>'
+      +   '<div class="mp-qbox"><input type="number" step="0.001" value="'+_fmtQin(total)+'" onwheel="this.blur()" title="Cumulative \u2014 distributes across locations, capped at remaining" oninput="_mpSetCumulative(\''+esc(g.code)+'\',this.value,this)" onchange="_mpRenderCart()"><span class="mp-uom">'+esc(g.uom)+'</span></div>'
       +   (multi?'<span class="mp-exp" onclick="_mpToggleExp(\''+esc(g.code)+'\')">'+(ex?'\u25be':'\u25b8')+'</span>':'')
       +   '<span class="mp-trash" onclick="_mpDropMat(\''+esc(g.code)+'\')">\ud83d\uddd1</span>'
       + '</div>'
       + '<div class="mp-ci-locs'+(ex?' open':'')+'">'+chips+'</div></div>';
   }).join('');
 }
-function _mpSetLocQtyK(k,val){ const v=_mpCart.get(k); if(!v) return;
+function _mpSetLocQtyK(k,val,el){ const v=_mpCart.get(k); if(!v) return;
   // v148: LS lines carry no qty ceiling (gated in \u20b9 at PO); QTY lines cap at the package slice
-  v.qty = v.isLS ? Math.max(0,Number(val)||0) : Math.max(0,Math.min(Number(val)||0, v.remaining));
-  _mpRenderCart(); }
-function _mpSetCumulative(code,val){
+  // v153: SURGICAL update \u2014 the old full _mpRenderCart() on every keystroke destroyed
+  // the input mid-typing (only one digit could be entered before focus was lost).
+  // Model + peer fields update in place; the full re-render moved to onchange.
+  const q0=Math.max(0,Number(val)||0);
+  v.qty = v.isLS ? q0 : Math.min(q0, v.remaining);
+  if(el){
+    if(!v.isLS && q0>v.remaining+1e-9) el.value=_fmtQin(v.qty);   // snap when capped
+    const head=el.closest('.mp-ci')?.querySelector('.mp-ci-head .mp-qbox input');
+    if(head && document.activeElement!==head){ let s=0; _mpCart.forEach(x=>{ if(x.code===v.code) s+=Number(x.qty)||0; }); head.value=_fmtQin(s); }
+  }
+}
+function _mpSetCumulative(code,val,el){
   let left=Math.max(0,Number(val)||0);
   const grp=_mpCartGroups().find(g=>g.code===code); if(!grp) return;
   grp.locs.slice().sort((a,b)=>(a.locPath||'').localeCompare(b.locPath||'')).forEach(l=>{
     const cap=l.isLS?left:l.remaining;   // v148: LS lines take freely (\u20b9-gated at PO)
     const take=Math.max(0,Math.min(left,cap)); l.qty=take; left-=take;   // hard cap: overflow discarded
   });
-  _mpRenderCart();
+  // v153: surgical fan-out into the visible chip inputs (see _mpSetLocQtyK note);
+  // full re-render moved to onchange so typing keeps focus.
+  if(el){ const box=el.closest('.mp-ci');
+    box?.querySelectorAll('.mp-ci-locs input[data-mpk]').forEach(inp=>{
+      const v=_mpCart.get(inp.dataset.mpk);
+      if(v && document.activeElement!==inp) inp.value=_fmtQin(v.qty);
+    });
+  }
 }
 function _mpToggleExp(code){ _mpExp.has(code)?_mpExp.delete(code):_mpExp.add(code); _mpRenderCart(); }
 
@@ -20749,11 +20769,16 @@ async function _poPopulateFromMir(mirRecs, opts){
       const ln=locMap[String(r.loc_node_id)];
       // v148: headroom at the (wbs, material, loc) TRIPLE — the line's own
       // package slice, matching the server gate.
+      // v154 FIX: estMap is keyed by _mpKey = code|loc|wbs; the old lookup used
+      // k3 = wbs|code|loc (the comMap key order), so EVERY estimate lookup
+      // missed \u2192 estRemaining computed as 0 and each MIR-sourced line flagged
+      // its full qty as \u201cover estimate headroom\u201d. k3 stays for comMap.
       const k3=r.wbs_node_id+'|'+(r.material_code||'')+'|'+r.loc_node_id;
+      const kE=_mpKey(r.material_code||'', r.loc_node_id, r.wbs_node_id);
       return { wbs:r.wbs_node_id, loc:r.loc_node_id, plid:r.procurement_line_id,
                locName:ln?ln.name:'', locPath:ln?ln.path:'',
                mirBalance:(Number(r.demand)||0),
-               estRemaining:((r.loc_node_id && r.wbs_node_id!=null) ? ((estMap[k3]||0)-((comMap.qty3||{})[k3]||0)) : (Number(r.demand)||0)),
+               estRemaining:((r.loc_node_id && r.wbs_node_id!=null) ? ((estMap[kE]||0)-((comMap.qty3||{})[k3]||0)) : (Number(r.demand)||0)),
                qty:0 };
     });
     const total=_poAlloc[rn].reduce((t,e)=>t+(e.mirBalance||0),0);
@@ -21827,6 +21852,7 @@ async function openMirEstimatePicker(){ return _ppOpenPicker('mir'); }
 async function _ppOpenPicker(mode){
   _mpMode=mode;
   if(mode==='po') await Promise.all([_loadMirEstimateTree(true), _loadPoCommitted(true)]);
+  else if(mode==='mis') await Promise.all([_loadMirEstimateTree(true), _refreshMISStockMap()]);   // v153: stock shown alongside issue meters
   else await _loadMirEstimateTree(true);
   if(!(puState.materials||[]).length){ try{ await apiLoadMaterials(); }catch(e){} }
   _mpCells=_mirPooledCells();          // remaining basis follows _mpMode
@@ -21836,15 +21862,22 @@ async function _ppOpenPicker(mode){
   _ppMode='pkg'; _ppMat=null; _ppSelPkg=null; _ppSelNode=null;
   _ppExp=new Set(); _ppGrp=new Set(); _mpExp=new Set();
   _ppTwOpen=new Set(); _ppTwCells={};
-  if(mode==='po') _poSeedCartFromRows(); else _mirSeedCartFromGroups();
+  if(mode==='po') _poSeedCartFromRows(); else if(mode==='mis') _misSeedCartFromGroups(); else _mirSeedCartFromGroups();
   window._ppActive=true;
   const T = mode==='po'
     ? {title:'Add to PO from estimate', cart:'Selected for this PO',
        basis:'remaining = package estimate \u2212 consumed (MIR + direct PO + cash GRN)',
-       commit:'_poCommitFromCart()', commitLbl:'Add to PO'}
+       commit:'_poCommitFromCart()', commitLbl:'Add to PO',
+       ls:'<span class="wo-ls-pill" style="cursor:default;">LS \u20b9</span> = rupee pool, gated in \u20b9 at PO'}
+    : mode==='mis'
+    ? {title:'Add to Material Issue from estimate', cart:'Selected for this Issue',
+       basis:'issuable = approved estimate \u2212 already issued (MIS) \u00b7 stock caps the final issue',
+       commit:'_misCommitFromCart()', commitLbl:'Add to MIS',
+       ls:'<span class="wo-ls-pill" style="cursor:default;">LS</span> = stock-only line (no estimate ceiling)'}
     : {title:'Add from material estimate', cart:'Selected for this MIR',
        basis:'remaining = package estimate \u2212 consumed (MIR + direct PO + cash GRN)',
-       commit:'_mpCommit()', commitLbl:'Add to MIR'};
+       commit:'_mpCommit()', commitLbl:'Add to MIR',
+       ls:'<span class="wo-ls-pill" style="cursor:default;">LS \u20b9</span> = rupee pool, gated in \u20b9 at PO'};
   openModal(
     '<div class="mp-modal">'
     + '<div class="mp-head" style="display:flex;align-items:flex-start;gap:10px;"><div style="flex:1;min-width:0;"><h3>'+T.title+'</h3>'
@@ -21876,7 +21909,7 @@ async function _ppOpenPicker(mode){
     +   '</div>'
     + '</div>'
     + '<div class="mp-foot">'
-    +   '<span class="mp-legend"><span class="mp-dot">\u25cf</span> approved estimate &nbsp;\u00b7&nbsp; '+T.basis+' &nbsp;\u00b7&nbsp; <span class="wo-ls-pill" style="cursor:default;">LS \u20b9</span> = rupee pool, gated in \u20b9 at PO</span>'
+    +   '<span class="mp-legend"><span class="mp-dot">\u25cf</span> approved estimate &nbsp;\u00b7&nbsp; '+T.basis+' &nbsp;\u00b7&nbsp; '+T.ls+'</span>'
     +   '<div class="mp-spacer"></div>'
     +   '<button class="btn btn-ghost btn-sm" onclick="_mpClear()">Clear</button>'
     +   '<button class="btn btn-primary btn-sm" onclick="'+T.commit+'">'+T.commitLbl+' <span class="mp-pill" id="mpCommitCount">0</span></button>'
@@ -21980,7 +22013,9 @@ function _ppPickMat(code){
   if(chip){ chip.style.display='';
     chip.innerHTML='<span class="pp-chip"><span class="c">'+esc(code)+'</span><span class="n">'+esc(a.name)+'</span><span class="u">'+esc(a.uom||'')+'</span>'
       + '<span class="x" title="Clear material scope" onclick="_ppClearMat()">\u2715</span></span>'; }
-  _ppAutoExpand(); _ppRenderCols();
+  _ppAutoExpand();
+  if(_mpMode==='mis'){ const cs=[..._mpCells.byKey.values()].filter(c=>c.code===code); _misEnsureIRThen(cs, _ppRenderCols); }
+  else _ppRenderCols();
 }
 function _ppClearMat(){
   _ppMat=null; _ppSelPkg=null; _ppSelNode=null; _ppGrp.clear();
@@ -22128,16 +22163,16 @@ function _ppTowerRows(rows, ctxKey, labelFn, ctxSet){
   }).join('');
 }
 
-function _ppPickPkg(i){ _ppSelPkg=i; _ppSelNode=null; _ppGrp.clear(); _ppRenderCols(); }
-function _ppPickNode(id){ _ppSelNode=String(id); _ppSelPkg=null; _ppGrp.clear(); _ppRenderCols(); }
+function _ppPickPkg(i){ _ppSelPkg=i; _ppSelNode=null; _ppGrp.clear(); _misEnsureIRThen(_ppDrillCells(), _ppRenderCols); }
+function _ppPickNode(id){ _ppSelNode=String(id); _ppSelPkg=null; _ppGrp.clear(); _misEnsureIRThen(_ppDrillCells(), _ppRenderCols); }
 
 // ---- bulk selection (skips zero-remaining; pooled cells added once) ----
-function _ppBulkPkg(i,on){ _ppScope(_ppPkgArr[i].cells).forEach(c=> on?_mpAddCell(c):_mpDelK(c.key||_mpKey(c.code,c.locId,c.leafId))); _ppRefresh(); }
-function _ppBulkNode(id,on){ _ppScope(_mpNodeCells[String(id)]||[]).forEach(c=> on?_mpAddCell(c):_mpDelK(c.key||_mpKey(c.code,c.locId,c.leafId))); _ppRefresh(); }
+function _ppBulkPkg(i,on){ const cs=_ppScope(_ppPkgArr[i].cells); _misEnsureIRThen(cs, ()=>{ cs.forEach(c=> on?_mpAddCell(c):_mpDelK(c.key||_mpKey(c.code,c.locId,c.leafId))); _ppRefresh(); }); }
+function _ppBulkNode(id,on){ const cs=_ppScope(_mpNodeCells[String(id)]||[]); _misEnsureIRThen(cs, ()=>{ cs.forEach(c=> on?_mpAddCell(c):_mpDelK(c.key||_mpKey(c.code,c.locId,c.leafId))); _ppRefresh(); }); }
 function _ppBulkGrp(code,on){
   code=code.replace(/&#39;/g,"'");
-  _ppDrillCells().filter(c=>c.code===code).forEach(c=> on?_mpAddCell(c):_mpDelK(c.key||_mpKey(c.code,c.locId,c.leafId)));
-  _ppRefresh();
+  const cs=_ppDrillCells().filter(c=>c.code===code);
+  _misEnsureIRThen(cs, ()=>{ cs.forEach(c=> on?_mpAddCell(c):_mpDelK(c.key||_mpKey(c.code,c.locId,c.leafId))); _ppRefresh(); });
 }
 function _ppToggleCellK(k,on){
   k=k.replace(/&#39;/g,"'").replace(/&quot;/g,'"');
@@ -22244,8 +22279,8 @@ function _ppLocRow(c,subText){
   const qty=inCart?_mpCart.get(k).qty:'';
   const lsPill=c.isLS?' <span class="wo-ls-pill">LS \u20b9</span>':'';
   const remTxt=c.isLS
-    ? ('pool <b>\u20b9'+_fmtQ(c.lsRem)+'</b>')
-    : ('rem <b>'+_fmtQ(c.remaining)+'</b> '+esc(c.uom||''));
+    ? (_mpMode==='mis' ? '<b>LS</b> \u00b7 from stock' : ('pool <b>\u20b9'+_fmtQ(c.lsRem)+'</b>'))
+    : ((_mpMode==='mis'?'issuable <b>':'rem <b>')+_fmtQ(c.remaining)+'</b> '+esc(c.uom||''));
   return '<div class="pp-lrow'+(inCart?' added':'')+'">'
     + '<input type="checkbox" class="mp-cb" data-pcell="'+_mpAttr(k)+'" '+(inCart?'checked':'')+' '+(zero?'disabled':'')
     +   ' onchange="_ppToggleCellK(\''+_mpAttr(k)+'\',this.checked)">'
@@ -22505,7 +22540,11 @@ function _poAllocate(alloc, total){
   const arr=[...alloc].sort((a,b)=>(a.locPath||'').localeCompare(b.locPath||''));
   alloc.forEach(a=>a.qty=0);
   let rem=Math.max(0,Number(total)||0);
-  for(const a of arr){ const cap=Math.max(0,Math.min(a.mirBalance||0,a.estRemaining||0)); const take=Math.min(rem,cap); a.qty=take; rem-=take; if(rem<=1e-9)break; }
+  // v154: pass 1 fills MIR demand capped at the MIR BALANCE ONLY \u2014 the
+  // ceiling was consumed when the MIR was raised, so the MIR-sourced portion
+  // is estimate-exempt (exactly rpc_save_po's MIR exemption). The estimate
+  // headroom gates only the EXTRA beyond MIR demand (pass 2 below).
+  for(const a of arr){ const cap=Math.max(0,a.mirBalance||0); const take=Math.min(rem,cap); a.qty=take; rem-=take; if(rem<=1e-9)break; }
   if(rem>1e-9){ for(const a of arr){ const cap=Math.max(0,(a.estRemaining||0)-(a.qty||0)); const take=Math.min(rem,cap); a.qty=(a.qty||0)+take; rem-=take; if(rem<=1e-9)break; } }
   return Math.max(0,rem);
 }
@@ -22810,10 +22849,14 @@ async function savePO() {
                                    && (it.procurement_source||'')!=='mir');
   if(_capItems.length){
     pbShow('Checking estimate caps…');
-    let estMap={}, comMap={qty3:{},rupees2:{}}, grnMapsC={qty3:{},rupees2:{}}, lsPairs=new Set();
+    let estMap={}, comMap={qty3:{},rupees2:{}}, grnMapsC={qty3:{},rupees2:{}}, lsPairs=new Set(); const _remMap={};
     try{
       await _loadMirEstimateTree(true); estMap=_flatEstMap();
       comMap=await _loadPoCommitted(true); grnMapsC=await _loadCashGrnMaps(true);
+      // v155: server-exact remaining per (package, material, location) triple
+      (_mirEstTreeCache||[]).forEach(L=>(L.locArr||[]).forEach(LO=>(LO.skuArr||[]).forEach(S=>{
+        if(S.code) _remMap[_mpKey(S.code,LO.locId,L.leafId)]=S.remaining;
+      })));
       (_mirEstTreeCache||[]).forEach(L=>(L.locArr||[]).forEach(LO=>{ if(LO.isLS&&LO.status==='approved') lsPairs.add(L.leafId+'|'+LO.locId); }));
     }
     catch(e){ console.warn('cap precheck:',e); }
@@ -22829,8 +22872,14 @@ async function savePO() {
         if(amt > lsRem + 0.01) _over.push(it.material_name+': \u20b9'+amt+' vs LS pool remaining \u20b9'+lsRem);
         return;
       }
-      const k3=it.wbs_node_id+'|'+it.material_code+'|'+it.loc_node_id;
-      const rem=(estMap[k3]||0)-((comMap.qty3||{})[k3]||0)-((grnMapsC.qty3||{})[k3]||0);
+      // v155: remaining from the estimate tree \u2014 S.remaining is
+      // est \u2212 (MIR + direct PO + cash GRN) at the triple, byte-mirroring
+      // fn_material_remaining_pkg, so the client verdict == server verdict.
+      // (v154 fixed the estMap key order; this closes the residual gap where
+      // the pre-check omitted the MIR leg and could pass a PO the server
+      // would then reject.)
+      const kE=_mpKey(it.material_code||'', it.loc_node_id, it.wbs_node_id);
+      const rem=(_remMap[kE]!=null ? _remMap[kE] : 0);
       if((it.qty||0) > rem + 1e-6) _over.push(it.material_name+': ordering '+it.qty+', package remaining '+(Math.round(rem*1000)/1000));
     });
     if(_over.length){ toast('Exceeds approved estimate — '+_over.join('  \u00b7  ')+'. Reduce qty or revise the estimate.','error',9000); return; }
@@ -26301,15 +26350,17 @@ async function newMIS() {
   document.getElementById('misListCard').style.display='none';
   document.getElementById('mis_date').value=today();
   document.getElementById('mis_issuedBy').value=state.userName;
-  document.getElementById('mis_number').value='MIS/'+currentFY()+'/—— (auto)';
+  document.getElementById('mis_number').value='MIS/'+currentFY()+'/\u2014\u2014 (auto)';
   ['mis_issuedTo','mis_remarks'].forEach(id=>{const e=document.getElementById(id);if(e)e.value='';});
   document.getElementById('mis_issuedTo').readOnly=false;
   mis_contractor_locked=false;
   const misCClear=document.getElementById('mis_contractorCode');
   if(misCClear) misCClear.value='';
-  document.getElementById('misItemsBody').innerHTML=''; _misItemC=0;
-  _misStockMap = {};  // force refresh of stock balances on next addMISItem
-  await addMISItem();
+  // v153: grouped model + fresh issue meters + fresh stock balances
+  _misGroups=[]; _misOpen=new Set(); _misIRCache={};
+  if(!(puState.materials||[]).length){ try{ await apiLoadMaterials(); }catch(e){} }
+  await _refreshMISStockMap();
+  _renderMisItems();
   window.scrollTo(0,0);
 }
 
@@ -26902,13 +26953,17 @@ function recalcMISRow(i) {
 }
 
 function _misRefreshOverrideUI(){
-  const overRows=[...document.querySelectorAll('#misItemsBody tr')].filter(tr=>tr.dataset.over==='1');
+  // v153: over-estimate lines counted from the grouped model
+  let overLines=0;
+  _misGroups.forEach(g=>g.locs.forEach(l=>{
+    if(!l.isLS && (Number(l.qty)||0)>num(l.rem)+0.001) overLines++;
+  }));
   const box=document.getElementById('misOverrideBox');
   const btn=document.getElementById('mis_saveBtn');
   const sum=document.getElementById('misOverrideSummary');
-  if(overRows.length){
+  if(overLines){
     if(box) box.style.display='';
-    if(sum) sum.textContent=overRows.length+' line(s) exceed the approved estimate — Admin override approval required.';
+    if(sum) sum.textContent=overLines+' line(s) exceed the approved estimate — Admin override approval required.';
     if(btn){ btn.textContent='⤴ Submit for Admin Override Approval'; btn.classList.remove('btn-primary'); btn.classList.add('btn-warn'); }
   } else {
     if(box) box.style.display='none';
@@ -26926,6 +26981,209 @@ function closeMISForm() {
   document.getElementById('misListCard').style.display='block';
 }
 
+// ============================================================
+// v153: GROUPED MIS — issue lines come from the estimate picker (mode 'mis'),
+// clubbed per material like the PO/MIR screens, split-view expander for the
+// per-location breakdown. Issuable meter = fn_material_issue_remaining
+// (approved estimate − already issued), hydrated live per material + cached;
+// pooled per (material, location) — the same meter the old row UI displayed.
+// Stock caps the per-material TOTAL (hard block at save); over-ESTIMATE lines
+// stay editable and route through the existing Admin override flow.
+// The old row-based entry (addMISItem / misWL* / recalcMISRow) is retired from
+// the form but left as dead code for one increment.
+// ============================================================
+let _misGroups=[];            // [{code,name,uom,rate,locs:[{locId,leafId,locName,locPath,pkgName,qty,rem,isLS}]}]
+let _misOpen=new Set();
+let _misIRCache={};           // material_code (lower) → Map(locId → {rem,est,issued})
+
+async function openMisEstimatePicker(){ return _ppOpenPicker('mis'); }
+
+async function _misHydrateIR(codes){
+  const todo=[...new Set((codes||[]).filter(Boolean))].filter(c=>!_misIRCache[c.toLowerCase()]);
+  const CHUNK=6;
+  for(let i=0;i<todo.length;i+=CHUNK){
+    await Promise.all(todo.slice(i,i+CHUNK).map(async code=>{
+      try{
+        const {data,error}=await sb.rpc('fn_material_issue_remaining',{p_material_code:code});
+        if(error) throw error;
+        const m=new Map();
+        (data||[]).forEach(x=>m.set(String(x.loc_node_id),{rem:num(x.issue_remaining),est:num(x.estimate),issued:num(x.issued)}));
+        _misIRCache[code.toLowerCase()]=m;
+      }catch(e){ console.warn('issue-remaining load failed for',code,e); _misIRCache[code.toLowerCase()]=new Map(); }
+    }));
+  }
+}
+// Overwrite picker-cell remaining with the ISSUE meter. Cells whose location
+// has no meter row keep the estimate-based figure (same fallback the row UI used).
+function _misPatchCellsIR(cells){
+  (cells||[]).forEach(c=>{
+    if(c.isLS) return;                                   // LS: stock-only, no meter
+    const m=_misIRCache[(c.code||'').toLowerCase()]; if(!m || !m.size) return;
+    const x=m.get(String(c.locId)); if(x) c.remaining=Math.round(x.rem*1e6)/1e6;
+  });
+}
+// Hydrate-then-continue gate used by the picker's drill / bulk / scope paths.
+// No-op outside mis mode.
+function _misEnsureIRThen(cells, then){
+  if(_mpMode!=='mis'){ then(); return; }
+  const codes=[...new Set((cells||[]).map(c=>c.code))].filter(c=>c && !_misIRCache[c.toLowerCase()]);
+  if(!codes.length){ _misPatchCellsIR(cells); then(); return; }
+  const host=document.getElementById('ppC2Body');
+  if(host) host.innerHTML='<div class="mp-empty">Loading issuable quantities…</div>';
+  _misHydrateIR(codes).then(()=>{ _misPatchCellsIR([..._mpCells.byKey.values()]); then(); });
+}
+
+function _misSeedCartFromGroups(){
+  _mpCart=new Map();
+  _misGroups.forEach(g=>g.locs.forEach(l=>{
+    const k=_mpKey(g.code,l.locId,l.leafId); const cell=_mpCells.byKey.get(k);
+    if(cell){ _mpCart.set(k,{...cell,remaining:(l.rem!=null?l.rem:cell.remaining),qty:l.qty}); }
+    else { _mpCart.set(k,{code:g.code,name:g.name,uom:g.uom,locId:String(l.locId),locName:l.locName,locPath:l.locPath,
+        status:'approved',remaining:(l.rem!=null?l.rem:l.qty),leafId:l.leafId,pkgs:[],pkgName:l.pkgName||'',qty:l.qty,orphan:true,isLS:!!l.isLS}); }
+  }));
+}
+
+function _misFindGroup(code){ return _misGroups.find(g=>g.code===code); }
+function _msLk(g,l){ return String(g.code)+'~'+String(l.locId)+'@'+String(l.leafId==null?'':l.leafId); }
+function _msFindLoc(g,lk){ return g && g.locs.find(x=>_msLk(g,x)===String(lk)); }
+function _misGroupCum(g){ return g.locs.reduce((s,l)=>s+(Number(l.qty)||0),0); }
+function _misStockFor(name){ const s=_misStockMap[(name||'').toLowerCase()]; return s?num(s.balance_qty):0; }
+
+// ---- commit: reconcile picker cart into the grouped MIS model ----
+function _misCommitFromCart(){
+  const cartKeys=new Set([..._mpCart.keys()]);
+  _misGroups.forEach(g=>{
+    g.locs=g.locs.filter(l=>{
+      const k=_mpKey(g.code,l.locId,l.leafId);
+      if(cartKeys.has(k)){ const v=_mpCart.get(k);
+        if(v.remaining!=null) l.rem=v.remaining;
+        l.isLS=!!v.isLS;
+        if(v.pkgName) l.pkgName=v.pkgName; if(v.locPath) l.locPath=v.locPath; if(v.locName) l.locName=v.locName;
+        l.qty=Number(v.qty)||0;
+        cartKeys.delete(k); return true; }
+      return false;
+    });
+  });
+  _misGroups=_misGroups.filter(g=>g.locs.length>0);
+  for(const k of cartKeys){ const v=_mpCart.get(k);
+    let g=_misFindGroup(v.code);
+    if(!g){ g={code:v.code,name:v.name,uom:v.uom,rate:_fifoRateFor(v.name,v.code),locs:[]}; _misGroups.push(g); }
+    g.locs.push({locId:String(v.locId),leafId:(v.leafId!=null?v.leafId:null),locName:v.locName||'',locPath:v.locPath||'',
+      pkgName:v.pkgName||'',qty:Number(v.qty)||0,rem:(v.remaining!=null?v.remaining:null),isLS:!!v.isLS});
+    g.locs.sort((a,b)=>(a.locPath||'').localeCompare(b.locPath||'',undefined,{numeric:true}));
+  }
+  _misGroups.forEach(g=>{ if(g.rate==null||isNaN(g.rate)) g.rate=_fifoRateFor(g.name,g.code); });
+  closeModal(); _mpMode='mir'; window._ppActive=false;
+  _renderMisItems();
+  toast('Issue lines updated from estimate','success',2500);
+}
+
+// ---- render: clubbed cards, per-location split rows ----
+function _misInjectCss(){
+  if(document.getElementById('mscss')) return;
+  const css=document.createElement('style'); css.id='mscss';
+  css.textContent=`
+  .ms-head{display:grid;grid-template-columns:30px minmax(180px,1fr) 56px 120px 150px 170px 36px;gap:10px;align-items:center;padding:9px 12px;background:var(--panel-2);}
+  .ms-locrow{display:grid;grid-template-columns:30px minmax(180px,1fr) 56px 120px 150px 170px 36px;gap:10px;align-items:center;padding:7px 12px;border-bottom:1px solid #f1f5f9;}
+  .ms-locrow:last-child{border-bottom:none;}
+  .ms-stk{font-size:11px;text-align:right;color:var(--muted);white-space:nowrap;}
+  .ms-stk b{font-variant-numeric:tabular-nums;font-size:12px;color:var(--accent);}
+  .ms-stk.bad b{color:#dc2626;}
+  .ms-amt{font-size:12px;text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap;}
+  .ms-amt b{font-size:13px;}
+  .ms-rate{font-size:10px;color:var(--muted);}
+  .mi-cap.overhard{color:#b91c1c;font-weight:600;}
+  `;
+  document.head.appendChild(css);
+}
+function _msCapText(g,l){
+  if(l.isLS) return 'LS · stock-only (no estimate ceiling)';
+  const q=Number(l.qty)||0, rem=num(l.rem);
+  return q>rem+0.001 ? '⚠ +'+_fmtQ(q-rem)+' over estimate ('+_fmtQ(rem)+' issuable)' : '/ '+_fmtQ(rem)+' issuable';
+}
+function _msCapCls(g,l){
+  if(l.isLS) return 'mi-cap';
+  return (Number(l.qty)||0)>num(l.rem)+0.001 ? 'mi-cap overhard' : 'mi-cap';
+}
+function _msStockHtml(g){
+  const stock=_misStockFor(g.name), total=_misGroupCum(g);
+  const bad=total>stock+1e-6;
+  return '<div class="ms-stk'+(bad?' bad':'')+'" id="msStk_'+esc(g.code)+'">stock <b>'+_fmtQ(stock)+'</b> '+esc(g.uom)
+    +(bad?'<div style="color:#dc2626;font-weight:600;">⚠ issue exceeds stock</div>':'')+'</div>';
+}
+function _renderMisItems(){
+  _misInjectCss();
+  const host=document.getElementById('misItemsHost'); if(!host) return;
+  if(!_misGroups.length){
+    host.innerHTML='<div class="mi-empty">No materials yet — use <b>＋ Add from estimate</b> to pick approved estimate cells to issue against.</div>';
+    _misRefreshOverrideUI(); return;
+  }
+  host.innerHTML=_misGroups.map((g,gi)=>{
+    g.multiPkg=new Set(g.locs.map(l=>String(l.leafId))).size>1;
+    const total=_misGroupCum(g);
+    const multi=g.locs.length>1, ex=_misOpen.has(g.code);
+    const exp=multi?'<span class="mi-exp" onclick="_msToggle(\''+esc(g.code)+'\')">'+(ex?'▾':'▸')+'</span>':'<span class="mi-exp"></span>';
+    const l0=g.locs[0], lk0=_msLk(g,l0);
+    const headQty=multi
+      ? '<div class="mi-cum"><span class="mi-q" id="msCum_'+esc(g.code)+'">'+_fmtQ(total)+'</span> <span class="mi-l">'+esc(g.uom)+' · '+g.locs.length+' loc</span></div>'
+      : '<div class="mi-cum"><input class="mi-qh num" type="number" step="0.001" value="'+_fmtQin(l0.qty)+'" onwheel="this.blur()" onkeydown="if(event.key===\'ArrowUp\'||event.key===\'ArrowDown\')event.preventDefault()" oninput="_msSetQty(\''+esc(g.code)+'\',\''+esc(lk0)+'\',this.value,this)"><div class="'+_msCapCls(g,l0)+'" id="msCal_'+esc(lk0)+'">'+_msCapText(g,l0)+'</div></div>';
+    const headAmt='<div class="ms-amt"><div class="ms-rate">@ ₹'+fmtINR(num(g.rate))+' (FIFO)</div><b id="msGAmt_'+esc(g.code)+'">₹'+fmtINR(total*num(g.rate))+'</b></div>';
+    const singleLocPill=!multi
+      ? '<span class="mi-locpill" style="margin-left:6px;">📍 '+esc(_miTail(l0.locPath)||l0.locName)+(l0.isLS?' <span class="wo-ls-pill">LS</span>':'')+'</span>'
+      : '';
+    let locBlock='';
+    if(multi){
+      locBlock='<div class="mi-locs'+(ex?' open':'')+'">'+g.locs.map(l=>{
+        const lk=_msLk(g,l);
+        return '<div class="ms-locrow">'
+        + '<span></span>'
+        + '<div class="mi-lp" style="grid-column:2;"><span class="mi-arr">↳</span> 📍 <span class="mi-ppath">'+esc(_miLabel3(l.locPath))+'</span>'
+        +   (g.multiPkg?' <span class="mp-mini">📦 '+esc(l.pkgName||'')+'</span>':'')
+        +   (l.isLS?' <span class="wo-ls-pill">LS</span>':'')+'</div>'
+        + '<span></span><span></span>'
+        + '<div class="mi-qwrap" style="grid-column:5;"><input class="mi-ql num" type="number" step="0.001" value="'+_fmtQin(l.qty)+'" onwheel="this.blur()" onkeydown="if(event.key===\'ArrowUp\'||event.key===\'ArrowDown\')event.preventDefault()" oninput="_msSetQty(\''+esc(g.code)+'\',\''+esc(lk)+'\',this.value,this)"><div class="'+_msCapCls(g,l)+'" id="msCal_'+esc(lk)+'">'+_msCapText(g,l)+'</div></div>'
+        + '<div class="ms-amt" id="msLAmt_'+esc(lk)+'">₹'+fmtINR((Number(l.qty)||0)*num(g.rate))+'</div>'
+        + '<span class="mi-lx" title="Remove this location" onclick="_msDropLoc(\''+esc(g.code)+'\',\''+esc(lk)+'\')">✕</span>'
+        + '</div>';
+      }).join('')+'</div>';
+    }
+    return '<div class="mi-mat">'
+      + '<div class="ms-head">'
+      +   '<div class="mi-gi">'+(gi+1)+'</div>'
+      +   '<div class="mi-nm">'+exp+'<span class="mi-del" title="Remove material" onclick="_msDropMat(\''+esc(g.code)+'\')">🗑</span>'
+      +     '<div class="mi-nb"><div class="mi-t">'+esc(g.name)+singleLocPill+'</div><div class="mi-s"><span class="mi-code">'+esc(g.code)+'</span>'+(multi?' · '+g.locs.length+' locations':'')+'</div></div></div>'
+      +   '<div class="mi-uom">'+esc(g.uom)+'</div>'
+      +   _msStockHtml(g)
+      +   headQty
+      +   headAmt
+      +   '<span></span>'
+      + '</div>'
+      + locBlock
+      + '</div>';
+  }).join('');
+  _misRefreshOverrideUI();
+}
+function _msToggle(code){ _misOpen.has(code)?_misOpen.delete(code):_misOpen.add(code); _renderMisItems(); }
+function _misSetAll(open){ _misGroups.forEach(g=>{ if(g.locs.length>1){ open?_misOpen.add(g.code):_misOpen.delete(g.code); } }); _renderMisItems(); }
+function _msDropLoc(code,lk){ const g=_misFindGroup(code); if(!g) return; g.locs=g.locs.filter(x=>_msLk(g,x)!==String(lk)); if(!g.locs.length){ _msDropMat(code); return; } _renderMisItems(); }
+function _msDropMat(code){ const i=_misGroups.findIndex(g=>g.code===code); if(i>=0) _misGroups.splice(i,1); _renderMisItems(); }
+// Surgical qty edit — over-ESTIMATE is allowed (amber → Admin override flow),
+// so no clamp against the meter; stock breach is repainted per material.
+function _msSetQty(code,lk,val,el){
+  const g=_misFindGroup(code); const l=_msFindLoc(g,lk); if(!l) return;
+  l.qty=Math.max(0,Number(val)||0);
+  const cap=document.getElementById('msCal_'+lk);
+  if(cap){ cap.textContent=_msCapText(g,l); cap.className=_msCapCls(g,l); }
+  const la=document.getElementById('msLAmt_'+lk); if(la) la.textContent='₹'+fmtINR(l.qty*num(g.rate));
+  const cum=document.getElementById('msCum_'+code); if(cum) cum.textContent=_fmtQ(_misGroupCum(g));
+  const ga=document.getElementById('msGAmt_'+code); if(ga) ga.textContent='₹'+fmtINR(_misGroupCum(g)*num(g.rate));
+  const stk=document.getElementById('msStk_'+code);
+  if(stk){ const stock=_misStockFor(g.name), bad=_misGroupCum(g)>stock+1e-6;
+    stk.className='ms-stk'+(bad?' bad':'');
+    stk.innerHTML='stock <b>'+_fmtQ(stock)+'</b> '+esc(g.uom)+(bad?'<div style="color:#dc2626;font-weight:600;">⚠ issue exceeds stock</div>':''); }
+  _misRefreshOverrideUI();
+}
+
 async function saveMIS() {
   if(!hasPerm('canCreateMIS')){toast('Not permitted','error');return;}
   const date=document.getElementById('mis_date').value;
@@ -26938,68 +27196,23 @@ async function saveMIS() {
     document.getElementById('mis_issuedTo')?.focus();
     return;
   }
-  const locSel=document.getElementById('mis_location');
-  const locOpt=locSel?.options[locSel.selectedIndex];
+// v153: collect from the grouped model (picker-fed) — every line carries
+  // (wbs_node_id, loc_node_id) by construction.
   const items=[];
   const overInfo=[];   // lines exceeding the issue ceiling
-  const trsAll = [...document.querySelectorAll('#misItemsBody tr')];
-  // Validate every populated line: material must be selected from master
-  for (let i=0; i<trsAll.length; i++) {
-    const tr = trsAll[i];
-    const matInp = tr.querySelector('.pu_material');
-    const mat = matInp?.value?.trim();
-    const qty = parseFloat(tr.querySelector('input[type="number"]')?.value)||0;
-    if (mat && qty > 0) {
-      // Material field must be locked (readOnly === true) — i.e., user picked from the dropdown,
-      // not typed freely. This mirrors the contractor field guard above.
-      if (!matInp.readOnly) {
-        toast('Material must be selected from the master — type and choose from dropdown','error');
-        matInp.focus();
-        return;
-      }
-      // v90: WBS package + location are MANDATORY for every issued line.
-      // UI save-blocker (RPC backstop p_require_tags flips on after WBS build-out).
-      const idM = matInp.id.match(/^misMat_(\d+)$/);
-      const ri2 = idM ? idM[1] : null;
-      const pkgV = ri2!=null ? document.getElementById('misPkg_'+ri2)?.value : '';
-      const locV = ri2!=null ? document.getElementById('misLoc_'+ri2)?.value : '';
-      if (!pkgV) {
-        toast(`Line ${i+1} (${mat}): select a Work Package — WBS tagging is mandatory`,'error');
-        document.getElementById('misWL_'+ri2)?.focus();
-        return;
-      }
-      if (!locV) {
-        toast(`Line ${i+1} (${mat}): select a Location Unit — location tagging is mandatory`,'error');
-        document.getElementById('misWL_'+ri2)?.focus();
-        return;
-      }
+  for(const g of _misGroups){ for(const l of g.locs){
+    const qty=Number(l.qty)||0; if(qty<=0) continue;
+    if(l.leafId==null || !l.locId){
+      toast(g.name+': line lost its WBS/location tag — remove it and re-add from the estimate picker','error');
+      return;
     }
-  }
-  document.querySelectorAll('#misItemsBody tr').forEach((tr,i)=>{
-    const matInp = tr.querySelector('.pu_material');
-    if (!matInp) return;
-    const mat = matInp.value?.trim();
-    const qty = parseFloat(tr.querySelector('input[type="number"]')?.value)||0;
-    if (!mat || qty<=0) return;
-    // Read row metadata from hidden fields populated by selectMISMaterial
-    const idMatch = matInp.id.match(/^misMat_(\d+)$/);
-    const ri = idMatch ? idMatch[1] : null;
-    const uom     = ri!=null ? (document.getElementById('misUom_'+ri)?.value || '') : '';
-    const balance = ri!=null ? parseFloat(document.getElementById('misMatBal_'+ri)?.value || 0) : 0;
-    const rate    = ri!=null ? parseFloat(document.getElementById('misMatRate_'+ri)?.value || 0) : 0;
-    const pkgSel = document.getElementById('misPkg_'+ri);
-    const locSel = document.getElementById('misLoc_'+ri);
-    const wbsNodeId = pkgSel?.value ? Number(pkgSel.value) : null;
-    const locNodeId = locSel?.value || null;
-    const matCode  = matInp?.dataset?.matCode||null;
-    const _ir=_misIssueRem[ri]; if(_ir && !_ir.isLS && qty > num(_ir.rem)+0.001) overInfo.push({mat, over:qty-num(_ir.rem), rem:num(_ir.rem)});   // v130: LS lines have no estimate ceiling
-    items.push({sno:items.length+1, material_code:matCode, material_name:mat, uom:uom,
-      qty_issued:qty, stock_before:balance,
-      stock_after:Math.max(0, balance - qty),
-      unit_rate:rate, amount:qty*rate,
-      wbs_node_id:wbsNodeId, loc_node_id:locNodeId,
-      wbs_activity:wbsNodeId ? (pkgSel?.dataset?.pkgName||null) : null});
-  });
+    if(!l.isLS && qty>num(l.rem)+0.001) overInfo.push({mat:g.name, over:qty-num(l.rem), rem:num(l.rem)});
+    items.push({sno:items.length+1, material_code:g.code||null, material_name:g.name, uom:g.uom||'',
+      qty_issued:qty, stock_before:0, stock_after:0,     // stamped from live stock below
+      unit_rate:num(g.rate), amount:qty*num(g.rate),
+      wbs_node_id:Number(l.leafId), loc_node_id:l.locId,
+      wbs_activity:l.pkgName||null});
+  }}
   if(!items.length){toast('Add at least one item','error');return;}
   // over-issue override: store must supply a reason; routes to Admin approval
   let overrideReason=null;
@@ -27031,17 +27244,26 @@ async function saveMIS() {
   if (stockErr) { toast('Stock check failed: '+stockErr.message,'error'); return; }
   const liveMap = {};
   (liveStock||[]).forEach(s => { liveMap[s.material_name.toLowerCase().trim()] = parseFloat(s.balance_qty||0); });
+// v153: gate per MATERIAL SUM, not per line — two lines of the same material
+  // could each pass a per-line check while together exceeding stock. Balances
+  // then stamp sequentially so stock_before/after are truthful per line.
+  const _needByMat={};
+  items.forEach(it=>{ const k=it.material_name.toLowerCase().trim(); _needByMat[k]=(_needByMat[k]||0)+it.qty_issued; });
   for (const it of items) {
-    const available = liveMap[it.material_name.toLowerCase().trim()] ?? 0;
-    if (it.qty_issued > available) {
-      toast(`Cannot issue ${it.material_name}: only ${fmtINR(available)} ${it.uom} available right now (includes reservations from other pending MIS). Reduce qty or wait for pending approvals to clear.`,'error',8000);
+    const k=it.material_name.toLowerCase().trim();
+    const available = liveMap[k] ?? 0;
+    if (_needByMat[k] > available + 1e-9) {
+      toast(`Cannot issue ${it.material_name}: only ${fmtINR(available)} ${it.uom} available right now (includes reservations from other pending MIS) against ${fmtINR(_needByMat[k])} requested across its lines. Reduce qty or wait for pending approvals to clear.`,'error',8000);
       return;
     }
   }
   // Update stock_before from live values so the MIS record is accurate
+  const _runBal={...liveMap};
   items.forEach(it => {
-    it.stock_before = liveMap[it.material_name.toLowerCase().trim()] ?? it.stock_before;
+    const k=it.material_name.toLowerCase().trim();
+    it.stock_before = _runBal[k] ?? 0;
     it.stock_after  = Math.max(0, it.stock_before - it.qty_issued);
+    _runBal[k]=it.stock_after;
   });
   pbShow('Saving MIS…');
   try {
@@ -28251,23 +28473,35 @@ async function reviseMIS(misNum) {
     if (clearBtn) clearBtn.style.display = '';
   }
 
-  // Pre-fill items — clear the auto-added blank row first
-  document.getElementById('misItemsBody').innerHTML = '';
-  _misItemC = 0;
-  for (const it of (items||[])) {
-    await addMISItem();
-    const i = _misItemC - 1;
-    const matEl = document.getElementById('misMat_'+i);
-    const uomEl = document.getElementById('misUom_'+i);
-    const balEl = document.getElementById('misMatBal_'+i);
-    const rateEl = document.getElementById('misMatRate_'+i);
-    const qtyEl  = document.querySelector('#misItem_'+i+' input[type="number"]');
-    if (matEl)  { matEl.value = it.material_name; matEl.readOnly = true; matEl.dataset.matCode = it.material_code||''; }
-    if (uomEl)  uomEl.value = it.uom||'';
-    if (balEl)  balEl.value = it.stock_before||0;
-    if (rateEl) rateEl.value = it.unit_rate||0;
-    if (qtyEl)  { qtyEl.value = it.qty_issued||0; qtyEl.dispatchEvent(new Event('input')); }
+  // v153: rebuild the grouped model from the saved items. (The old row
+  // pre-fill never restored the pkg/loc tags, so revised MIS could not pass
+  // the mandatory-WBS guard — the group rebuild carries them natively.)
+  _misGroups=[]; _misOpen=new Set(); _misIRCache={};
+  const _codes=[...new Set((items||[]).map(it=>it.material_code).filter(Boolean))];
+  pbShow('Loading issue meters…');
+  await _misHydrateIR(_codes);
+  const _wlByCode={};
+  for(const code of _codes){
+    try{ const {data}=await sb.rpc('fn_material_wbs_locations',{p_material_code:code}); _wlByCode[code]=data||[]; }
+    catch(e){ _wlByCode[code]=[]; }
   }
+  pbDone();
+  for(const it of (items||[])){
+    const code=it.material_code||'';
+    const gKey=code||it.material_name;
+    let g=_misFindGroup(gKey);
+    if(!g){ g={code:gKey,name:it.material_name,uom:it.uom||'',rate:num(it.unit_rate),locs:[]}; _misGroups.push(g); }
+    const wlArr=_wlByCode[code]||[];
+    const wl=wlArr.find(r=>String(r.loc_node_id)===String(it.loc_node_id) && String(r.package_id)===String(it.wbs_node_id))
+          || wlArr.find(r=>String(r.loc_node_id)===String(it.loc_node_id));
+    const ir=(_misIRCache[code.toLowerCase()]||new Map()).get(String(it.loc_node_id));
+    g.locs.push({locId:String(it.loc_node_id), leafId:(it.wbs_node_id!=null?it.wbs_node_id:null),
+      locName:wl?(wl.loc_name||''):'', locPath:wl?(wl.loc_path||''):('loc #'+it.loc_node_id),
+      pkgName:it.wbs_activity||(wl?(wl.package_name||''):''),
+      qty:num(it.qty_issued), rem:(ir?ir.rem:(wl?num(wl.remaining):0)), isLS:!!(wl&&wl.is_ls===true)});
+  }
+  _misGroups.forEach(g=>{ if(g.locs.length>1) _misOpen.add(g.code); });
+  _renderMisItems();
 }
 
 // ============================================================
