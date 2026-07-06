@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Penguin-Procurement Suite v151 — Urban Excellence LLP · Poetry of Earth</title>
+<title>Penguin-Procurement Suite v152 — Urban Excellence LLP · Poetry of Earth</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <style>
@@ -20526,9 +20526,12 @@ async function viewQuoteComparison(rfqNum) {
 // v141: optional excludePo — a PO viewing its own history must not count itself.
 async function fetchHistoricalPOPrices(matNames, excludePo) {
   if (!matNames||!matNames.length) return {};
-  const {data:poItems} = await sb.from('pu_po_items')
+  // v152: per-material .eq() — the old in-list filter breaks on names
+  // containing " , ( ) (PostgREST quoting), silently blanking rate history.
+  const _resArr = await Promise.all(matNames.map(nm => sb.from('pu_po_items')
     .select('material_name,unit_rate,po_number')
-    .in('material_name', matNames);
+    .eq('material_name', nm)));
+  const poItems = _resArr.flatMap(r => r.data || []);
   if (!poItems||!poItems.length) return {};
   // Get corresponding PO headers for date, vendor, status
   const poNums = [...new Set(poItems.map(i=>i.po_number))];
@@ -27011,10 +27014,19 @@ async function saveMIS() {
   // The view already deducts reserved_qty (pending MIS) from balance_qty.
   pbShow('Checking live stock availability…');
   const matNames = [...new Set(items.map(it => it.material_name))];
-  const matNamesLower = matNames.map(n => n.toLowerCase().trim());
+  // v152: full-view read + client-side match. The previous
+  // server filter [.in with matNamesLower] failed two ways:
+  //   (a) PostgREST in-list quoting breaks on names containing " , ( )
+  //       — supabase-js wraps such values in double quotes but never
+  //       escapes an embedded quote, so a name like `(size 09")` is
+  //       truncated server-side and matches NOTHING;
+  //   (b) it compared lowercased names against the view's stored casing.
+  // Either way the row silently went missing and the line was refused with
+  // "0.00 available" despite live stock. The view is one row per material
+  // (small), so a full read — exactly what _refreshMISStockMap already
+  // does — is cheap and immune to name contents.
   const {data:liveStock, error:stockErr} = await sb.from('pu_stock_balance')
-    .select('material_name,balance_qty,reserved_qty,uom')
-    .in('material_name', matNamesLower);
+    .select('material_name,balance_qty,reserved_qty,uom');
   pbDone();
   if (stockErr) { toast('Stock check failed: '+stockErr.message,'error'); return; }
   const liveMap = {};
@@ -27045,11 +27057,17 @@ async function saveMIS() {
         if (m.material_name && m.material_code) matCodeMap[m.material_name] = m.material_code;
       });
 
-      const [grnLayerRes, fifoRes] = await Promise.all([
-        sb.from('pu_grn_items')
+      // v152: per-material .eq() fetches — the old in-list filter has the
+      // same PostgREST quoting failure as the stock check above, which
+      // silently dropped the FIFO/GRN linkage for names containing " , ( )
+      // (line then saved as procurement_source 'legacy_unmatched'). MIS
+      // carries few lines, so parallel .eq() queries are fine; .eq() is
+      // quote-safe.
+      const [grnLayerResList, fifoRes] = await Promise.all([
+        Promise.all(matNames.map(nm => sb.from('pu_grn_items')
           .select('material_name,grn_number,this_grn_qty,procurement_line_id,procurement_source,is_cash_purchase,unit_rate')
-          .in('material_name', matNames)
-          .order('grn_number', {ascending: true}),   // oldest GRN first = FIFO
+          .eq('material_name', nm)
+          .order('grn_number', {ascending: true}))),   // oldest GRN first = FIFO
         sb.from('material_fifo_layers')
           .select('material_id,unit_rate,qty_remaining,is_exhausted,received_date,created_at')
           .eq('is_exhausted', false)
@@ -27057,7 +27075,7 @@ async function saveMIS() {
           .order('created_at',    { ascending: true }),
       ]);
 
-      const grnLayers = grnLayerRes.data || [];
+      const grnLayers = grnLayerResList.flatMap(r => r.data || []);
 
       // Build FIFO layer rate map: material_id (code) → unit_rate of oldest non-exhausted layer
       const fifoRateByCode = {};
