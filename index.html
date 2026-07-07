@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Penguin-Procurement Suite v158 — Urban Excellence LLP · Poetry of Earth</title>
+<title>Penguin-Procurement Suite v162 — Urban Excellence LLP · Poetry of Earth</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <style>
@@ -23600,35 +23600,12 @@ async function cancelPO(poNum) {
 async function confirmCancelPO(poNum) {
   const reason=(document.getElementById('poActionReason')?.value||'').trim();
   if(!reason){toast('Reason is mandatory','error');return;}
-  // Race-guard: re-check GRNs and advance just before update
-  const [{data:grns},{data:advRows}]=await Promise.all([
-    sb.from('pu_grn').select('grn_number').eq('po_number',poNum),
-    sb.from('ho_arr').select('arr_number').eq('order_type','PO').eq('order_number',poNum).in('status',['Unpaid','Partial Paid','Paid']),
-  ]);
-  if((grns||[]).length>0){toast('Cannot cancel — GRN already exists for this PO','error');closeModal();return;}
-  if((advRows||[]).length>0){
-    const refs=(advRows||[]).map(r=>r.arr_number).join(', ');
-    toast(`Cannot cancel — advance release request exists (${refs}). Cancel the ARR or recover the advance before cancelling this PO.`,'error');closeModal();return;
-  }
-  pbShow('Cancelling PO…');
-  // Capture MIR number BEFORE update so we can roll up after
-  const {data:poHdr}=await sb.from('pu_po_orders').select('mir_number,qc_number').eq('po_number',poNum).single();
-  const {error}=await sb.from('pu_po_orders').update({
-    status:'Cancelled',
-    closed_by:state.userName, closed_by_id:state.userId,
-    closed_at:new Date().toISOString(), close_reason:reason
-  }).eq('po_number',poNum).eq('status','Open');
-  if(error){pbDone();toast('Update failed: '+error.message,'error');return;}
-  // Resolve MIR number — direct field, or trace via QC → RFQ → MIR
-  let mirNum = poHdr?.mir_number || null;
-  if (!mirNum && poHdr?.qc_number) {
-    const {data:qcH} = await sb.from('pu_quote_comparison').select('rfq_number').eq('qc_number',poHdr.qc_number).maybeSingle();
-    if (qcH?.rfq_number) {
-      const {data:rfqH} = await sb.from('pu_rfq').select('mir_number').eq('rfq_number',qcH.rfq_number).maybeSingle();
-      mirNum = rfqH?.mir_number || null;
-    }
-  }
-  if (mirNum) await _rollupMIRAfterPOTermination(mirNum, poNum, 'cancel');
+  // v162 (S2b): atomic — guards, status, link cleanup, MIR rollup in ONE call.
+  // The server re-validates GRN-count and status; the ARR advance guard is a
+  // DB trigger that fires inside the same transaction.
+  pbShow('Cancelling PO\u2026');
+  try { await puRPC('rpc_po_cancel', { po_number: poNum, reason, closed_by_id: state.userId }); }
+  catch(e){ pbDone(); toast(e.message,'error'); return; }
   pbDone();
   closeModal();
   flashSuccess('PO '+poNum+' Cancelled');
@@ -23662,55 +23639,12 @@ async function shortClosePO(poNum) {
 async function confirmShortClosePO(poNum) {
   const reason=(document.getElementById('poActionReason')?.value||'').trim();
   if(!reason){toast('Reason is mandatory','error');return;}
-  const {data:grns}=await sb.from('pu_grn').select('grn_number').eq('po_number',poNum);
-  if((grns||[]).length<1){toast('Short Close needs at least one GRN entry','error');closeModal();return;}
-  pbShow('Short-closing PO…');
-  const {data:poHdr}=await sb.from('pu_po_orders').select('mir_number,qc_number').eq('po_number',poNum).single();
-  const {error}=await sb.from('pu_po_orders').update({
-    status:'Short-Closed',
-    closed_by:state.userName, closed_by_id:state.userId,
-    closed_at:new Date().toISOString(), close_reason:reason
-  }).eq('po_number',poNum).eq('status','Partial Receipt');
-  if(error){pbDone();toast('Update failed: '+error.message,'error');return;}
-
-  // v73: write short_closed_qty to pu_po_items for each material on this PO
-  // SC qty per material = po_items.qty - actual received via GRN
-  try {
-    const [{data:poItems},{data:grnData}] = await Promise.all([
-      sb.from('pu_po_items').select('id,material_name,material_code,qty,loc_node_id,sno').eq('po_number',poNum),
-      sb.from('pu_grn_items').select('material_name,material_code,loc_node_id,this_grn_qty')
-        .in('grn_number', (grns||[]).map(g=>g.grn_number)),
-    ]);
-    // v122: received per (material, location); legacy null-loc receipts bucketed per material
-    const locatedByMatLoc={}, unlocByMat={};
-    (grnData||[]).forEach(r => {
-      const mk=(r.material_code!=null?('c'+r.material_code):('n'+r.material_name));
-      if(r.loc_node_id){ (locatedByMatLoc[mk]=locatedByMatLoc[mk]||{})[String(r.loc_node_id)]=(locatedByMatLoc[mk][String(r.loc_node_id)]||0)+num(r.this_grn_qty); }
-      else unlocByMat[mk]=(unlocByMat[mk]||0)+num(r.this_grn_qty);
-    });
-    // group PO lines by material -> received-per-line (located + progressive unlocated) -> SC per line, written BY ID
-    const byMat={};
-    (poItems||[]).forEach(pi=>{ const mk=(pi.material_code!=null?('c'+pi.material_code):('n'+pi.material_name)); (byMat[mk]=byMat[mk]||[]).push(pi); });
-    const updates=[];
-    Object.keys(byMat).forEach(mk=>{
-      _grnReceivedPerLine(byMat[mk], locatedByMatLoc[mk]||{}, unlocByMat[mk]||0).forEach(pi=>{
-        const sc=Math.max(0, num(pi.qty)-num(pi.received));
-        if(sc>0) updates.push(sb.from('pu_po_items').update({short_closed_qty:sc}).eq('id',pi.id));
-      });
-    });
-    await Promise.all(updates);
-  } catch(e) { console.error('SC qty write error:', e.message); }
-
-  // Resolve MIR number and run legacy rollup (keeps pu_mir_item_po_links in sync)
-  let mirNum = poHdr?.mir_number || null;
-  if (!mirNum && poHdr?.qc_number) {
-    const {data:qcH} = await sb.from('pu_quote_comparison').select('rfq_number').eq('qc_number',poHdr.qc_number).maybeSingle();
-    if (qcH?.rfq_number) {
-      const {data:rfqH} = await sb.from('pu_rfq').select('mir_number').eq('rfq_number',qcH.rfq_number).maybeSingle();
-      mirNum = rfqH?.mir_number || null;
-    }
-  }
-  if (mirNum) await _rollupMIRAfterPOTermination(mirNum, poNum, 'short-close');
+  // v162 (S2b): atomic — status, per-line short-closed qty (progressive GRN
+  // allocation server-side), link stamping, legacy bootstrap, MIR rollup —
+  // formerly ~8 sequential client writes that could die mid-chain.
+  pbShow('Short-closing PO\u2026');
+  try { await puRPC('rpc_po_short_close', { po_number: poNum, reason, closed_by_id: state.userId }); }
+  catch(e){ pbDone(); toast(e.message,'error'); return; }
   pbDone();
   closeModal();
   flashSuccess('PO '+poNum+' Short-Closed');
@@ -24970,57 +24904,15 @@ async function saveCashGRN() {
 
 async function verifyGRN(grnNum) {
   if(!hasPerm('canApproveGRN')){toast('Only Site Manager can verify GRNs','error');return;}
-  pbShow('Verifying GRN…');
-  await sb.from('pu_grn').update({
-    status:'Verified', verified_by:state.userName, verified_by_id:state.userId
-  }).eq('grn_number',grnNum);
-
-  // Trace GRN → PO → MIR: update po_link received qtys and recompute item statuses
-  try {
-    const {data:grn}=await sb.from('pu_grn').select('po_number').eq('grn_number',grnNum).single();
-    if(grn?.po_number) {
-      const {data:po}=await sb.from('pu_po_orders').select('mir_number,qc_number').eq('po_number',grn.po_number).single();
-      let mirNum = po?.mir_number || null;
-      if (!mirNum && po?.qc_number) {
-        const {data:qcH}=await sb.from('pu_quote_comparison').select('rfq_number').eq('qc_number',po.qc_number).maybeSingle();
-        if(qcH?.rfq_number){
-          const {data:rfqH}=await sb.from('pu_rfq').select('mir_number').eq('rfq_number',qcH.rfq_number).maybeSingle();
-          mirNum=rfqH?.mir_number||null;
-        }
-      }
-      // Fallback: look up MIR directly from po_links table (covers legacy POs where
-      // mir_number and qc_number were never stored on the PO header)
-      if (!mirNum) {
-        const {data:plRow}=await sb.from('pu_mir_item_po_links')
-          .select('mir_number').eq('po_number',grn.po_number).limit(1).maybeSingle();
-        mirNum = plRow?.mir_number || null;
-      }
-      if(mirNum) {
-        // Sum all active GRN items for this PO by material (exclude rejected variants)
-        const {data:verifiedGRNs}=await sb.from('pu_grn').select('grn_number').eq('po_number',grn.po_number).not('status','in','("Rejected","Rejected - Correction")');
-        const receivedByMat={};
-        if((verifiedGRNs||[]).length){
-          const {data:grnItems}=await sb.from('pu_grn_items')
-            .select('material_name,this_grn_qty').in('grn_number',(verifiedGRNs||[]).map(g=>g.grn_number));
-          (grnItems||[]).forEach(it=>{
-            receivedByMat[it.material_name]=(receivedByMat[it.material_name]||0)+(it.this_grn_qty||0);
-          });
-        }
-        // Update po_links for this PO with cumulative received qty per material
-        const {data:poLinks}=await sb.from('pu_mir_item_po_links')
-          .select('id,material_name').eq('po_number',grn.po_number).eq('mir_number',mirNum);
-        if((poLinks||[]).length){
-          await Promise.all((poLinks||[]).map(l=>
-            sb.from('pu_mir_item_po_links').update({qty_received:receivedByMat[l.material_name]||0}).eq('id',l.id)
-          ));
-        }
-        await _refreshAllMIRItems(mirNum);
-      }
-    }
-  } catch(e){ console.error('MIR Received update error:',e.message); }
-
+  // v162 (S2b): one atomic server call — status flip + per-line received
+  // distribution + MIR recompute in a single transaction. Also FIXES the
+  // multi-link double-count (the old code stamped the material's FULL total
+  // on every link row of that material).
+  pbShow('Verifying GRN\u2026');
+  try { await puRPC('rpc_grn_verify', { grn_number: grnNum, verified_by_id: state.userId }); }
+  catch(e){ pbDone(); toast(e.message,'error'); return; }
   pbDone();
-  flashSuccess('GRN '+grnNum+' Verified — MIR item statuses updated to Received');
+  flashSuccess('GRN '+grnNum+' Verified \u2014 MIR item statuses updated');
   loadGRNList(); loadMIRList();
 }
 
@@ -25112,37 +25004,11 @@ async function confirmRejectGRN(grnNum) {
   const reason = (document.getElementById('grnRejectReason')?.value || '').trim();
   if (!reason) { toast('Enter the correction reason', 'error'); return; }
   closeModal();
-  const {error} = await sb.from('pu_grn').update({
-    status: 'Rejected - Correction', rejection_reason: reason
-  }).eq('grn_number', grnNum);
-  if (error) { toast(error.message, 'error'); return; }
-
-  // ── Rollback parent PO status — this GRN is now excluded from active quantities ──
-  // MIR items stay at PO Raised (verifyGRN sets them to Received; rejection happens
-  // at Pending Verification stage so verify was never called) — no MIR rollback needed.
-  const {data:grnH} = await sb.from('pu_grn')
-    .select('po_number,is_cash_purchase').eq('grn_number',grnNum).maybeSingle();
-  if (grnH?.po_number && !grnH?.is_cash_purchase) {
-    const poNum = grnH.po_number;
-    const {data:activeGRNs} = await sb.from('pu_grn').select('grn_number')
-      .eq('po_number',poNum).not('status','in','("Rejected","Rejected - Correction")');
-    const activeNums = (activeGRNs||[]).map(g=>g.grn_number);
-    let totalRecvd = 0;
-    if (activeNums.length) {
-      const {data:grnItems} = await sb.from('pu_grn_items')
-        .select('this_grn_qty').in('grn_number',activeNums);
-      totalRecvd = (grnItems||[]).reduce((s,r)=>s+num(r.this_grn_qty),0);
-    }
-    const {data:poItems} = await sb.from('pu_po_items').select('qty').eq('po_number',poNum);
-    const poTotalQty = (poItems||[]).reduce((s,r)=>s+num(r.qty),0);
-    const newPOStatus = totalRecvd <= 0              ? 'Open'
-                      : totalRecvd >= poTotalQty-0.005 ? 'Fully Received'
-                      :                                  'Partial Receipt';
-    const {error:poErr} = await sb.from('pu_po_orders').update({status:newPOStatus}).eq('po_number',poNum);
-    if (poErr) console.warn('GRN correction: PO rollback failed:', poErr.message);
-    else toast('PO '+poNum+' rolled back to "'+newPOStatus+'"','info',3500);
-  }
-
+  // v162 (S2b): atomic — GRN status + arithmetic PO rollback in one transaction
+  try {
+    const r = await puRPC('rpc_grn_reject', { grn_number: grnNum, reason });
+    if (r.po_status) toast('PO rolled back to "'+r.po_status+'"','info',3500);
+  } catch(e){ toast(e.message,'error'); return; }
   flashSuccess('GRN '+grnNum+' returned for correction');
   loadGRNList();
 }
@@ -27064,7 +26930,22 @@ function _misGroupCum(g){ return g.locs.reduce((s,l)=>s+(Number(l.qty)||0),0); }
 function _misStockFor(name){ const s=_misStockMap[(name||'').toLowerCase()]; return s?num(s.balance_qty):0; }
 
 // ---- commit: reconcile picker cart into the grouped MIS model ----
-function _misCommitFromCart(){
+// v159: rpc_save_mis validates wbs_node_id as a PACKAGE node — the convention
+// the old row flow satisfied via fn_material_wbs_locations.package_id. Picker
+// cells carry the raw scope-leaf node (fine for MIR/PO, whose gates key on the
+// leaf), so MIS lines must CLIMB to the package ancestor before save. Diesel's
+// scope hangs on node 248 under package "Fuel" — leafId there fails the check.
+function _misClimbPkg(wm, leafId){
+  let cur=wm[String(leafId)], g=0;
+  while(cur && g++<50){
+    if((cur.node_type||'')==='package') return cur;
+    cur=(cur.parent_id!=null)?wm[String(cur.parent_id)]:null;
+  }
+  return null;
+}
+async function _misCommitFromCart(){
+  let _wm={};
+  try{ const wt=await _loadWbsTree(); _wm=Object.fromEntries((wt||[]).map(n=>[String(n.id),n])); }catch(e){}
   const cartKeys=new Set([..._mpCart.keys()]);
   _misGroups.forEach(g=>{
     g.locs=g.locs.filter(l=>{
@@ -27072,7 +26953,9 @@ function _misCommitFromCart(){
       if(cartKeys.has(k)){ const v=_mpCart.get(k);
         if(v.remaining!=null) l.rem=v.remaining;
         l.isLS=!!v.isLS;
-        if(v.pkgName) l.pkgName=v.pkgName; if(v.locPath) l.locPath=v.locPath; if(v.locName) l.locName=v.locName;
+        if(v.locPath) l.locPath=v.locPath; if(v.locName) l.locName=v.locName;
+        if(l.pkgId==null){ const _pk=_misClimbPkg(_wm, v.leafId);
+          if(_pk){ l.pkgId=Number(_pk.id); l.pkgName=_pk.name; } else if(v.pkgName) l.pkgName=v.pkgName; }
         l.qty=Number(v.qty)||0;
         cartKeys.delete(k); return true; }
       return false;
@@ -27082,8 +26965,10 @@ function _misCommitFromCart(){
   for(const k of cartKeys){ const v=_mpCart.get(k);
     let g=_misFindGroup(v.code);
     if(!g){ g={code:v.code,name:v.name,uom:v.uom,rate:_fifoRateFor(v.name,v.code),locs:[]}; _misGroups.push(g); }
-    g.locs.push({locId:String(v.locId),leafId:(v.leafId!=null?v.leafId:null),locName:v.locName||'',locPath:v.locPath||'',
-      pkgName:v.pkgName||'',qty:Number(v.qty)||0,rem:(v.remaining!=null?v.remaining:null),isLS:!!v.isLS});
+    const _pk=_misClimbPkg(_wm, v.leafId);   // v159: package ancestor for the MIS tag
+    g.locs.push({locId:String(v.locId),leafId:(v.leafId!=null?v.leafId:null),
+      pkgId:(_pk?Number(_pk.id):null),locName:v.locName||'',locPath:v.locPath||'',
+      pkgName:(_pk?_pk.name:(v.pkgName||'')),qty:Number(v.qty)||0,rem:(v.remaining!=null?v.remaining:null),isLS:!!v.isLS});
     g.locs.sort((a,b)=>(a.locPath||'').localeCompare(b.locPath||'',undefined,{numeric:true}));
   }
   _misGroups.forEach(g=>{ if(g.rate==null||isNaN(g.rate)) g.rate=_fifoRateFor(g.name,g.code); });
@@ -27224,7 +27109,7 @@ async function saveMIS() {
     items.push({sno:items.length+1, material_code:g.code||null, material_name:g.name, uom:g.uom||'',
       qty_issued:qty, stock_before:0, stock_after:0,     // stamped from live stock below
       unit_rate:num(g.rate), amount:qty*num(g.rate),
-      wbs_node_id:Number(l.leafId), loc_node_id:l.locId,
+      wbs_node_id:Number(l.leafId!=null?l.leafId:l.pkgId), loc_node_id:l.locId,   // v160 (pairs with S1 leaf flip): store the estimate LEAF; server climbs for the package name
       wbs_activity:l.pkgName||null});
   }}
   if(!items.length){toast('Add at least one item','error');return;}
@@ -28330,15 +28215,37 @@ async function confirmRejectDoc(docType, docNum) {
   const reason=(document.getElementById('rejectDocReason')?.value||'').trim();
   if(!reason){toast('Enter rejection reason','error');return;}
   closeModal();
-  const tableMap={MIR:'pu_mir',QC:'pu_quote_comparison',PO:'pu_po_orders',GRN:'pu_grn',POB:'pu_po_bills',MIS:'pu_mis'};
-  const colMap={MIR:'mir_number',QC:'qc_number',PO:'po_number',GRN:'grn_number',POB:'bill_number',MIS:'mis_number'};
-  // MIS: check whether Site Manager wants Correction or permanent Reject
   const misMode = docType === 'MIS'
     ? (document.querySelector('input[name="misRejectMode"]:checked')?.value || 'correction')
     : null;
   const newStatus = (docType === 'MIS' && misMode === 'correction') ? 'Rejected - Correction' : 'Rejected';
-  const {error}=await sb.from(tableMap[docType]).update({status:newStatus,rejection_reason:reason}).eq(colMap[docType],docNum);
-  if(error){ toast(error.message,'error'); return; }
+  // v161 (S2a): MIR/QC/PO/POB/MIS rejection is ONE atomic server call —
+  // rpc_reject_doc performs the status flip + every cascade (link cleanup,
+  // QC restore, RFQ reopen, GRN rollback, MIR recompute) in a single
+  // transaction, with idempotency. The old client chain (up to ~10 sequential
+  // writes) could die mid-way and strand MIR balances. GRN keeps its
+  // dedicated legacy path until S2b.
+  if (docType !== 'GRN') {
+    pbShow('Rejecting '+docType+'\u2026');
+    try {
+      const r = await puRPC('rpc_reject_doc',
+        { doc_type: docType, doc_number: docNum, reason, mis_mode: misMode || undefined });
+      pbDone();
+      if (r.cascade?.qc_restored) toast('QC '+r.cascade.qc_restored+' restored to Approved \u2014 create a new PO from it','info',4000);
+      if (r.cascade?.rfq_reopened) toast('RFQ '+r.cascade.rfq_reopened+' reopened \u2014 quotes are ready to compare again','info',4000);
+      if (r.cascade?.grns_rolled_back) toast('GRNs rolled back to Verified \u2014 create a new POB','info',4000);
+    } catch(e) { pbDone(); toast(e.message,'error'); return; }
+    const successMsg = (docType === 'MIS' && newStatus === 'Rejected - Correction')
+      ? 'MIS '+docNum+' returned for correction \u2014 Store Executive can revise and resubmit'
+      : docType+' '+docNum+' Rejected';
+    flashSuccess(successMsg);
+    const reloadMap={MIR:loadMIRList,QC:()=>{loadQCList();loadRFQList();},PO:loadPOList,POB:loadPOBList,MIS:loadMISList};
+    if(reloadMap[docType]) reloadMap[docType]();
+    return;
+  }
+  // v162: GRN goes through the atomic RPC as well (correction + PO rollback)
+  try { await puRPC('rpc_grn_reject', { grn_number: docNum, reason }); }
+  catch(e){ toast(e.message,'error'); return; }
 
   // ── MIR rejection: cascade item_status to Pending, clear all links ──────────
   if (docType === 'MIR') {
@@ -28510,6 +28417,7 @@ async function reviseMIS(misNum) {
           || wlArr.find(r=>String(r.loc_node_id)===String(it.loc_node_id));
     const ir=(_misIRCache[code.toLowerCase()]||new Map()).get(String(it.loc_node_id));
     g.locs.push({locId:String(it.loc_node_id), leafId:(it.wbs_node_id!=null?it.wbs_node_id:null),
+      pkgId:(it.wbs_node_id!=null?it.wbs_node_id:null),   // v159: saved MIS lines carry the package id
       locName:wl?(wl.loc_name||''):'', locPath:wl?(wl.loc_path||''):('loc #'+it.loc_node_id),
       pkgName:it.wbs_activity||(wl?(wl.package_name||''):''),
       qty:num(it.qty_issued), rem:(ir?ir.rem:(wl?num(wl.remaining):0)), isLS:!!(wl&&wl.is_ls===true)});
