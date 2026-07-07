@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Penguin-Procurement Suite v162 — Urban Excellence LLP · Poetry of Earth</title>
+<title>Penguin-Procurement Suite v163 — Urban Excellence LLP · Poetry of Earth</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <style>
@@ -5479,29 +5479,21 @@ async function apiGetPRRList(outstanding) {
 
 async function apiSavePRR(data) {
   pbShow('Saving PRR\u2026');
+  // v163 (S3): header + items in ONE atomic RPC \u2014 retires the manual
+  // compensating-delete rollback this function used to hand-roll.
   try {
-    data.prrNumber = await nextDocNumber('PRR');
+    const r = await puRPC('rpc_save_prr', {
+      fin_year: currentFY(),
+      header: { prr_date: data.prrDate, requested_by: data.requestedBy,
+                requested_by_id: state.userId, remarks: data.remarks||null, status: 'Unpaid' },
+      items: (data.bills||[]).map((b,i) => ({
+        sno: i+1, bill_number: b.billNumber, ho_number: b.hoNumber||null,
+        vendor_name: b.vendor, requested_amount: b.requestedAmount,
+        paid_amount: 0, status: 'Unpaid', bill_type: b.billType || 'HOB' })),
+    });
+    data.prrNumber = r.doc_number;
     const numEl = document.getElementById('prr_number');
     if (numEl) numEl.value = data.prrNumber;
-    const { error: he } = await sb.from('ho_prr').insert({
-      prr_number: data.prrNumber, prr_date: data.prrDate,
-      requested_by: data.requestedBy, requested_by_id: state.userId,
-      remarks: data.remarks||null, status: 'Unpaid'
-    });
-    if (he) return { ok: false, error: he.message };
-    if ((data.bills||[]).length) {
-      const { error: ie } = await sb.from('ho_prr_items').insert(data.bills.map((b,i) => ({
-        prr_number: data.prrNumber, sno: i+1, bill_number: b.billNumber,
-        ho_number: b.hoNumber||null, vendor_name: b.vendor,
-        requested_amount: b.requestedAmount, paid_amount: 0, status: 'Unpaid',
-        bill_type: b.billType || 'HOB'
-      })));
-      if (ie) {
-        // Roll back the PRR header so we don't leave an orphan
-        await sb.from('ho_prr').delete().eq('prr_number', data.prrNumber);
-        return { ok: false, error: 'Failed to save bill items: ' + ie.message };
-      }
-    }
     _cacheBust('prrList','allRequests','unpaidBills');
     return { ok: true };
   } catch(e) { return { ok: false, error: e.message }; }
@@ -19797,52 +19789,25 @@ async function confirmMIRShortClose() {
   if (!hasPerm('canShortCloseMIR')) { toast('Not permitted','error'); return; }
   const reason = (document.getElementById('mirSCReason')?.value||'').trim();
   if (!reason) { toast('Enter a reason','error'); document.getElementById('mirSCReason')?.focus(); return; }
-
   const selected = [...document.querySelectorAll('.mir_sc_chk')]
     .map((c,i) => ({ checked: c.checked, line: (window._mirSCLines||[])[i] }))
-    .filter(x => x.checked && x.line)
-    .map(x => x.line);
-
+    .filter(x => x.checked && x.line).map(x => x.line);
   if (!selected.length) {
-    const w = document.getElementById('mir_sc_none_warn');
-    if (w) w.style.display = 'block';
+    const w = document.getElementById('mir_sc_none_warn'); if (w) w.style.display = 'block';
     toast('Select at least one line','error'); return;
   }
-
   const mirNum = window._mirSCMirNum;
   closeModal();
-  pbShow(`Short-closing ${selected.length} line${selected.length>1?'s':''}…`);
-
-  // Write is_balance_closed=true + item_status='Closed' on each selected line.
-  // item_status='Closed' drives _rollupMIRHeaderFromItems correctly (PO Issued when mixed).
-  // is_balance_closed=true prevents _refreshAllMIRItems from overwriting Closed status,
-  // and (after DB fn update) gates fn_material_mir_used from counting this line.
-  const writes = selected.map(it =>
-    sb.from('pu_mir_items').update({
-      is_balance_closed: true,
-      item_status:       'Closed',
-    }).eq('mir_number', mirNum).eq('sno', it.sno)
-  );
-  const results = await Promise.all(writes);
-  const failed  = results.find(r => r.error);
-  if (failed) {
-    pbDone();
-    toast('Short-close failed: ' + failed.error.message + ' — ensure DB migration has run', 'error');
-    return;
-  }
-
-  // Re-roll MIR header from current item_status values
-  const {data:allItems} = await sb.from('pu_mir_items')
-    .select('item_status').eq('mir_number', mirNum);
-  const newHeader = _rollupMIRHeaderFromItems(allItems||[]);
-  await sb.from('pu_mir').update({ status: newHeader }).eq('mir_number', mirNum);
-
+  pbShow(`Short-closing ${selected.length} line${selected.length>1?'s':''}\u2026`);
+  // v163 (S3): flags + header recompute in ONE server transaction
+  let r;
+  try { r = await puRPC('rpc_mir_short_close', { mir_number: mirNum, snos: selected.map(it=>it.sno), reason }); }
+  catch(e){ pbDone(); toast('Short-close failed: '+e.message,'error'); return; }
   pbDone();
-  const n = selected.length;
-  flashSuccess(`${n} balance line${n>1?'s':''} short-closed on ${mirNum} — qty returned to estimation ceiling`);
-  window._mirSCLines  = null;
-  window._mirSCMirNum = null;
-  _mirEstTreeCache = null;   // v116: bust picker cache so remaining recalculates immediately
+  const n = r.lines_closed || selected.length;
+  flashSuccess(`${n} balance line${n>1?'s':''} short-closed on ${mirNum} \u2014 qty returned to estimation ceiling`);
+  window._mirSCLines = null; window._mirSCMirNum = null;
+  _mirEstTreeCache = null;
   await loadMIRList();
   viewMIR(mirNum);
 }
@@ -20285,31 +20250,20 @@ async function saveRFQQuote(rfqNum, sno, itemCount) {
   });
   pbShow('Saving quote…');
   try {
-    const {data:quote, error:qErr} = await sb.from('pu_rfq_quotes').insert({
-      rfq_number:rfqNum, sno,
-      vendor_name:vendorName, vendor_code:vendorCode,
-      quote_ref:document.getElementById('rqQuoteRef')?.value?.trim()||null,
-      delivery_days:parseInt(document.getElementById('rqDeliveryDays')?.value)||null,
-      payment_terms:document.getElementById('rqPayTerms')?.value?.trim()||null,
-      tech_specs:document.getElementById('rqTechSpecs')?.value?.trim()||null,
-      grand_total:grand,
-      created_by:state.userName, created_by_id:state.userId,
-    }).select().single();
-    if (qErr||!quote) throw new Error(qErr?.message||'Insert failed');
-    // v73: carry procurement_line_id from rfq_items into rfq_quote_items
-    const {data:rfqLineIds} = await sb.from('pu_rfq_items')
-      .select('material_name,procurement_line_id,procurement_source')
-      .eq('rfq_number', quote.rfq_number || rfqNum);
-    const rfqLineIdMap = {};
-    (rfqLineIds||[]).forEach(r => { rfqLineIdMap[r.material_name] = r; });
-    const itemsWithId = items.map(it=>({
-      ...it,
-      rfq_quote_id:        quote.id,
-      procurement_line_id: rfqLineIdMap[it.material_name]?.procurement_line_id || null,
-      procurement_source:  rfqLineIdMap[it.material_name]?.procurement_source  || null,
-    }));
-    const {error:iErr} = await sb.from('pu_rfq_quote_items').insert(itemsWithId);
-    if (iErr) throw new Error(iErr.message);
+    // v163 (S3): header + items in ONE atomic RPC; procurement_line_id is
+    // carried from pu_rfq_items server-side (v73 semantics, now transactional).
+    await puRPC('rpc_save_rfq_quote', {
+      header: {
+        rfq_number: rfqNum, sno,
+        vendor_name: vendorName, vendor_code: vendorCode,
+        quote_ref: document.getElementById('rqQuoteRef')?.value?.trim()||null,
+        delivery_days: parseInt(document.getElementById('rqDeliveryDays')?.value)||null,
+        payment_terms: document.getElementById('rqPayTerms')?.value?.trim()||null,
+        tech_specs: document.getElementById('rqTechSpecs')?.value?.trim()||null,
+        grand_total: grand, created_by: state.userName, created_by_id: state.userId,
+      },
+      items,
+    });
     flashSuccess(`Quote Q${sno} saved for ${vendorName}`);
     closeModal();
     await loadRFQList();  // reloads quotes + re-renders pills
@@ -21086,40 +21040,17 @@ async function approveQC(qcNum) {
 // Hard-blocks if ANY PO references this QC (per spec: once a PO exists, no cancel).
 async function cancelApprovedQC(qcNum){
   if(!mergedPerms().canApproveQC){ toast('Only the approver can cancel an approved QC','error'); return; }
-  pbShow('Checking…');
-  const {data:qcH, error:qcErr}=await sb.from('pu_quote_comparison')
-    .select('status,rfq_number,approver_remarks').eq('qc_number',qcNum).single();
-  if(qcErr||!qcH){ pbDone(); toast('Could not load QC '+qcNum,'error'); return; }
-  if(qcH.status!=='Approved'){ pbDone(); toast('Only an Approved QC can be cancelled (this one is '+qcH.status+')','error'); return; }
-  // PO guard — any PO raised from this QC blocks cancellation outright
-  const {data:pos}=await sb.from('pu_po_orders').select('po_number').eq('qc_number',qcNum);
-  if((pos||[]).length){
-    pbDone();
-    toast('Cannot cancel — PO '+pos.map(p=>p.po_number).join(', ')+' already raised from this QC.','error',7000);
-    return;
-  }
-  pbDone();
-  const raw=prompt('Reason for cancelling QC '+qcNum+'.\nThis reopens RFQ '+(qcH.rfq_number||'')+' so the quotes can be compared again:','');
-  if(raw===null) return;                 // user dismissed the dialog
+  const raw=prompt('Reason for cancelling QC '+qcNum+'.\nThis reopens its RFQ so the quotes can be compared again:','');
+  if(raw===null) return;
   const reason=raw.trim();
   if(!reason){ toast('A reason is required to cancel the QC','error'); return; }
-  pbShow('Cancelling QC…');
-  // 1) Status write FIRST — riskiest write, so a constraint rejection fails clean (no partial state)
-  const newRemarks=(qcH.approver_remarks?qcH.approver_remarks+' || ':'')+'CANCELLED: '+reason;
-  const {error:qcUpdErr}=await sb.from('pu_quote_comparison')
-    .update({ status:'Cancelled', approver_remarks:newRemarks })
-    .eq('qc_number',qcNum).eq('status','Approved');   // guard against a race
-  if(qcUpdErr){ pbDone(); toast('Cancel failed: '+qcUpdErr.message,'error',8000); return; }
-  // 2) Undo the approved-vendor flag
-  await sb.from('pu_quotes').update({is_recommended:false}).eq('qc_number',qcNum);
-  // 3) Reopen the parent RFQ for a fresh comparison
-  if(qcH.rfq_number){
-    const {error:rfqErr}=await sb.from('pu_rfq').update({status:'Open'}).eq('rfq_number',qcH.rfq_number);
-    if(rfqErr) console.warn('QC cancel: RFQ reopen failed:',rfqErr.message);
-  }
-  pbDone();
-  closeModal();
-  flashSuccess('QC '+qcNum+' cancelled — RFQ '+(qcH.rfq_number||'')+' reopened for a new comparison');
+  pbShow('Cancelling QC\u2026');
+  // v163 (S3): server guards status + PO-raised, then cancels + reopens RFQ atomically
+  let r;
+  try { r = await puRPC('rpc_qc_cancel', { qc_number: qcNum, reason }); }
+  catch(e){ pbDone(); toast(e.message,'error',8000); return; }
+  pbDone(); closeModal();
+  flashSuccess('QC '+qcNum+' cancelled \u2014 RFQ '+(r.rfq_reopened||'')+' reopened for a new comparison');
   await Promise.all([loadQCList(), loadRFQList()]);
 }
 
@@ -21548,42 +21479,17 @@ async function confirmApproveQC(qcNum) {
   const recCode = sel?.value ? (sel.options[sel.selectedIndex]?.dataset?.code||null) : null;
   const approverRemarks = document.getElementById('qc_view_recRemarks')?.value?.trim() || null;
   if (!sel?.value || !recName) {
-    toast('Approved Vendor is mandatory — please select a vendor','error');
-    if (sel) sel.style.borderColor = '#dc2626';
-    sel?.focus();
-    return;
+    toast('Approved Vendor is mandatory \u2014 please select a vendor','error');
+    if (sel) sel.style.borderColor = '#dc2626'; sel?.focus(); return;
   }
-  if (!approverRemarks) {
-    toast('Approver Remarks is mandatory','error');
-    document.getElementById('qc_view_recRemarks')?.focus();
-    return;
-  }
+  if (!approverRemarks) { toast('Approver Remarks is mandatory','error'); document.getElementById('qc_view_recRemarks')?.focus(); return; }
   closeModal();
-  pbShow('Approving QC…');
-  // Update is_recommended flag on pu_quotes
-  await sb.from('pu_quotes').update({is_recommended:false}).eq('qc_number',qcNum);
-  await sb.from('pu_quotes').update({is_recommended:true}).eq('qc_number',qcNum).eq('vendor_name',recName);
-  // Store approved vendor separately — preserve creator's recommended_vendor and creator_remarks
-  const { error } = await sb.from('pu_quote_comparison').update({
-    status:'Approved',
-    approved_vendor_name:recName,
-    approved_vendor_code:recCode,
-    approver_remarks:approverRemarks,
-    approved_by:state.userName,
-    approved_by_id:state.userId,
-    approved_at:new Date().toISOString()
-  }).eq('qc_number',qcNum);
-  // Update the parent RFQ status to Approved
-  if (!error) {
-    const {data:qcHeader} = await sb.from('pu_quote_comparison')
-      .select('rfq_number').eq('qc_number',qcNum).single();
-    if (qcHeader?.rfq_number) {
-      await sb.from('pu_rfq').update({status:'Approved'}).eq('rfq_number',qcHeader.rfq_number);
-    }
-  }
+  pbShow('Approving QC\u2026');
+  // v163 (S3): one atomic call \u2014 vendor flags + QC approval + RFQ advance
+  try { await puRPC('rpc_qc_approve', { qc_number: qcNum, vendor_name: recName, vendor_code: recCode, approver_remarks: approverRemarks, approved_by_id: state.userId }); }
+  catch(e){ pbDone(); toast(e.message,'error'); return; }
   pbDone();
-  if(!error){ flashSuccess('QC '+qcNum+' Approved — '+recName+' selected'); loadQCList(); loadRFQList(); }
-  else toast(error.message,'error');
+  flashSuccess('QC '+qcNum+' Approved \u2014 '+recName+' selected'); loadQCList(); loadRFQList();
 }
 
 // ============================================================
@@ -25713,31 +25619,12 @@ async function viewPOB(billNum) {
 async function approvePOB(billNum) {
   if(!hasPerm('canApprovePOB')){toast('Only PM can approve bills','error');return;}
   pbShow('Approving POB\u2026');
-  try {
-    const {error:billErr} = await sb.from('pu_po_bills').update({
-      status:'Unpaid', approved_by:state.userName, approved_by_id:state.userId, approved_at:new Date().toISOString()
-    }).eq('bill_number',billNum);
-    if(billErr) throw new Error('Bill update failed: '+billErr.message);
-    const {data:bill, error:readErr} = await sb.from('pu_po_bills').select('grn_numbers').eq('bill_number',billNum).single();
-    if(readErr) throw new Error('Could not read bill after approval: '+readErr.message);
-    if(bill?.grn_numbers){
-      const gnums = bill.grn_numbers.split(',').map(function(s){return s.trim();}).filter(Boolean);
-      if(gnums.length){
-        console.log('[approvePOB] Updating GRNs to Billed:', gnums);
-        const {error:grnErr} = await sb.from('pu_grn').update({status:'Billed'}).in('grn_number',gnums);
-        if(grnErr){
-          console.error('[approvePOB] GRN update blocked:', grnErr);
-          throw new Error('GRN status update failed: '+grnErr.message);
-        }
-        console.log('[approvePOB] GRN Billed update succeeded for:', gnums);
-      }
-    }
-    flashSuccess('POB '+billNum+' Approved \u2014 available in PRR');
-    loadPOBList();
-  } catch(e){
-    toast('Approval error: '+e.message,'error');
-    console.error('approvePOB error:', e);
-  } finally { pbDone(); }
+  // v163 (S3): bill approval + GRN billing flags in ONE transaction
+  try { await puRPC('rpc_pob_approve', { bill_number: billNum, approved_by_id: state.userId }); }
+  catch(e){ pbDone(); toast('Approval error: '+e.message,'error'); return; }
+  pbDone();
+  flashSuccess('POB '+billNum+' Approved \u2014 available in PRR');
+  loadPOBList();
 }
 
 
