@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Penguin-Procurement Suite v155 — Urban Excellence LLP · Poetry of Earth</title>
+<title>Penguin-Procurement Suite v158 — Urban Excellence LLP · Poetry of Earth</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <style>
@@ -20740,10 +20740,19 @@ async function newRFQ() {
 // plid=MIR line's procurement_line_id so the link forms per location).
 async function _poPopulateFromMir(mirRecs, opts){
   opts = opts||{};
-  let locMap={};
+  let locMap={}, wbsMap={};
   try{ const lt=await _loadLocTree(); locMap=Object.fromEntries((lt||[]).map(n=>[String(n.id),n])); }catch(e){}
+  try{ const wt=await _loadWbsTree(); wbsMap=Object.fromEntries((wt||[]).map(n=>[String(n.id),n])); }catch(e){}
   let estMap={}, comMap={};
   try{ await _loadMirEstimateTree(true); estMap=_flatEstMap(); comMap=await _loadPoCommitted(true); }catch(e){ console.warn('cap data:',e); }
+  // v158: server-exact remaining per triple — est \u2212 (MIR + direct PO + cash
+  // GRN), the same figure rpc_save_po gates on. The old caption formula
+  // (est \u2212 direct PO only) ignored the MIR's own consumption, so a fully
+  // MIR-consumed slice still displayed its whole estimate as \u201cest rem\u201d.
+  const _remMap={};
+  (_mirEstTreeCache||[]).forEach(L=>(L.locArr||[]).forEach(LO=>(LO.skuArr||[]).forEach(S=>{
+    if(S.code) _remMap[_mpKey(S.code,LO.locId,L.leafId)]=S.remaining;
+  })));
   const byMat={};
   (mirRecs||[]).forEach(r=>{ const k=(r.material_code||r.material_name||'').toString(); (byMat[k]=byMat[k]||[]).push(r); });
   Object.values(byMat).forEach(group=>{
@@ -20775,10 +20784,14 @@ async function _poPopulateFromMir(mirRecs, opts){
       // its full qty as \u201cover estimate headroom\u201d. k3 stays for comMap.
       const k3=r.wbs_node_id+'|'+(r.material_code||'')+'|'+r.loc_node_id;
       const kE=_mpKey(r.material_code||'', r.loc_node_id, r.wbs_node_id);
+      const wn=wbsMap[String(r.wbs_node_id)];
       return { wbs:r.wbs_node_id, loc:r.loc_node_id, plid:r.procurement_line_id,
+               pkgName:(wn?wn.name:(r.wbs_node_id!=null?('WBS #'+r.wbs_node_id):'')),   // v157: package visible per split row
                locName:ln?ln.name:'', locPath:ln?ln.path:'',
                mirBalance:(Number(r.demand)||0),
-               estRemaining:((r.loc_node_id && r.wbs_node_id!=null) ? ((estMap[kE]||0)-((comMap.qty3||{})[k3]||0)) : (Number(r.demand)||0)),
+               estRemaining:((r.loc_node_id && r.wbs_node_id!=null)
+                 ? (_remMap[kE]!=null ? _remMap[kE] : ((estMap[kE]||0)-((comMap.qty3||{})[k3]||0)))
+                 : (Number(r.demand)||0)),
                qty:0 };
     });
     const total=_poAlloc[rn].reduce((t,e)=>t+(e.mirBalance||0),0);
@@ -22797,7 +22810,7 @@ async function savePO() {
   // v83: duplicate-line gate (entry block is bypassable via later edits)
   const _poSeen={}; let _poDup=null;
   for(let i=0;i<items.length;i++){
-    const k=((items[i].material_code||items[i].material_name||'')+'').toLowerCase()+'|'+(items[i].loc_node_id||'');
+    const k=((items[i].material_code||items[i].material_name||'')+'').toLowerCase()+'|'+(items[i].loc_node_id||'')+'|'+(items[i].wbs_node_id==null?'':items[i].wbs_node_id);   // v156: triple grain \u2014 two WBS slices at one loc are distinct lines
     if(_poSeen[k]!=null){ _poDup={name:items[i].material_name,rows:[_poSeen[k]+1,i+1]}; break; }
     _poSeen[k]=i;
   }
@@ -22846,7 +22859,8 @@ async function savePO() {
   // MIR-sourced lines pass (counted at the MIR head); LS lines are \u20b9-gated
   // server-side and get an advisory \u20b9 check here.
   const _capItems = items.filter(it=>it.material_code && it.loc_node_id && it.wbs_node_id!=null
-                                   && (it.procurement_source||'')!=='mir');
+                                   && (it.procurement_source||'')!=='mir'
+                                   && !it.procurement_line_id);   // v156: MIR-linked \u2014 server gates at the MIR head, not the estimate
   if(_capItems.length){
     pbShow('Checking estimate caps…');
     let estMap={}, comMap={qty3:{},rupees2:{}}, grnMapsC={qty3:{},rupees2:{}}, lsPairs=new Set(); const _remMap={};
