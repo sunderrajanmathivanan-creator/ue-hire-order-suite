@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Penguin-Procurement Suite v163 — Urban Excellence LLP · Poetry of Earth</title>
+<title>Penguin-Procurement Suite v166 — Urban Excellence LLP · Poetry of Earth</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <style>
@@ -617,6 +617,18 @@ input[type="number"] {
 .mi-colhdr .r{text-align:right;}
 .mi-empty{padding:18px;text-align:center;color:var(--muted);font-size:13px;border:1px dashed var(--border);border-radius:8px;}
 .mi-mat{border:1px solid var(--border);border-radius:9px;margin-bottom:9px;overflow:hidden;background:#fff;}
+/* v165: Material-Master group bands on the MIR form item list */
+.mi-grpband{display:flex;align-items:center;gap:8px;padding:5px 8px;background:linear-gradient(90deg,var(--panel-2),transparent);border-left:3px solid var(--accent);border-radius:4px;cursor:pointer;margin:2px 0 8px;}
+.mi-grpband .g{font-size:10.5px;font-weight:800;text-transform:uppercase;letter-spacing:.6px;color:#0f766e;}
+.mi-grpband .gc{font-size:10px;color:var(--muted);}
+.mi-grpband .tw{margin-left:auto;color:var(--muted);font-size:11px;}
+.mi-grpbody{display:block;}
+.mi-grpbody.mi-closed{display:none;}
+.mi-grpbody .mi-mat{margin-left:6px;}
+.mi-grpsubh{display:flex;align-items:center;gap:6px;margin:2px 0 7px 6px;padding:3px 8px;background:var(--input-bg);border-left:2px solid rgba(13,148,136,.45);border-radius:3px;font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:#0f766e;}
+.mi-grpsubh .gc{font-weight:400;text-transform:none;letter-spacing:0;color:var(--muted);font-size:10px;}
+.mi-grpsubh.mi-oth{color:var(--muted);border-left-color:var(--border);}
+.mi-grpsub .mi-mat{margin-left:14px;}
 .mi-head{display:grid;grid-template-columns:30px 1fr 70px 140px 1fr 36px;gap:10px;align-items:center;padding:9px 12px;background:var(--panel-2);}
 .mi-gi{font-size:12px;color:var(--muted);text-align:center;}
 .mi-nm{min-width:0;display:flex;align-items:center;gap:8px;}
@@ -3701,6 +3713,12 @@ async function _printOrderDoc(docType, docNumber, h, items, vmOverride) {
       amount = it['Amount'] || it.amount;
     }
     grandTotal += num(amount);
+    if (isPO && it._grpBand) {   // v164: material-group band (tagged by printPO)
+      rowsHTML += `<tr><td colspan="7" style="background:#eef6f5;border-top:1.2pt solid #0d9488;padding:3pt 6pt;font-size:8pt;font-weight:700;text-transform:uppercase;letter-spacing:.5pt;color:#0f766e;">${esc(it._grpBand)}</td></tr>`;
+    }
+    if (isPO && it._subBand) {   // v166: sub-head band
+      rowsHTML += `<tr><td colspan="7" style="background:#f6fafa;padding:2pt 6pt 2pt 14pt;font-size:7pt;font-weight:700;text-transform:uppercase;letter-spacing:.4pt;color:#57837d;">${esc(it._subBand)}</td></tr>`;
+    }
     rowsHTML += `<tr>
       <td class="c">${(it.sno||it['S.No']||i+1)}</td>
       <td>${esc(desc||'')}</td>
@@ -17555,7 +17573,14 @@ function selectMaterialItem(inputId, resultsId, name, uom, matCode) {
     if (uomEl) uomEl.value = uom;
   }
   if (input) blockDupMaterial(input);
-  if (input && input.classList.contains('po_material')) _poRefreshHistory();   // v140: rate history strip
+  if (input && input.classList.contains('po_material')) {
+    _poRefreshHistory();   // v140: rate history strip
+    // v164: keep rows physically sorted by material group; the row moves, so
+    // hand focus to its qty input to keep the typing flow unbroken.
+    const _rn=(input.closest('tr')?.id||'').split('_')[1];
+    _poRegroupRows();
+    const _q=document.getElementById('poQty_'+_rn); if(_q) _q.focus();
+  }
 }
 
 // v83: duplicate material lines are BLOCKED at entry in MIR and PO forms.
@@ -17844,7 +17869,7 @@ function _draftRestoreMIR(pl) {
   if (h.project)     document.getElementById('mir_project').value    = h.project;
   if (h.purpose)     document.getElementById('mir_purpose').value    = h.purpose;
   if (h.remarks)     document.getElementById('mir_remarks').value    = h.remarks;
-  _mirGroups = []; _mirOpen = new Set();
+  _mirGroups = []; _mirOpen = new Set(); _mirGrpClosed = new Set();
   const locMap = Object.fromEntries((_locTreeCache || []).map(n => [String(n.id), n]));
   (pl.items || []).forEach(it => {
     const ln = locMap[String(it.loc_node_id)];
@@ -17968,6 +17993,7 @@ function _draftRestorePO(pl) {
   });
   recalcPOTotals();
   _poRefreshHistory();   // v140
+  _poRegroupRows();      // v164
 }
 
 // ---- HO adapter (estimate-sourced tree: _hoTree + _hoSel + _hoSpec) ----
@@ -18542,7 +18568,7 @@ async function newMIR() {
   document.getElementById('mir_raisedBy').value = state.userName;
   document.getElementById('mir_number').value = 'MIR/' + currentFY() + '/—— (auto)';
   ['mir_purpose','mir_remarks'].forEach(id => { const e=document.getElementById(id); if(e) e.value=''; });
-  _mirGroups = []; _mirOpen = new Set(); _renderMirItems();
+  _mirGroups = []; _mirOpen = new Set(); _mirGrpClosed = new Set(); _renderMirItems();
   window.scrollTo(0,0);
 }
 
@@ -18797,6 +18823,48 @@ function _mpTri(cells){
 const _mpAttr = s => String(s).replace(/'/g,'&#39;').replace(/"/g,'&quot;');
 
 // ---- cart ----
+// v164: Material-Master group lookup \u2014 memoized on the materials array
+// reference (same caching discipline as the Intl.NumberFormat/_scopeMap fix).
+// Fallback chain: material_code \u2192 material_name \u2192 'Ungrouped'.
+let _matGrpIdx={ref:null, byCode:null, byName:null};
+function _matGrpEnsure(){
+  const arr=puState.materials||[];
+  if(_matGrpIdx.ref===arr) return;
+  const bc=new Map(), bn=new Map();
+  arr.forEach(m=>{ const rec={g:(m.material_group||'').trim(), s:(m.sub_head||'').trim()};
+    if(m.material_code!=null && m.material_code!=='') bc.set(String(m.material_code),rec);
+    if(m.material_name) bn.set(String(m.material_name).trim().toLowerCase(),rec); });
+  _matGrpIdx={ref:arr, byCode:bc, byName:bn};
+}
+// v166: group + sub_head come from the SAME master record — code first, name
+// fallback only when the code row has no group (v164 fallback semantics kept).
+function _matRecOf(code, name){
+  _matGrpEnsure();
+  const byC=(code!=null&&code!=='')?_matGrpIdx.byCode.get(String(code)):null;
+  if(byC&&byC.g) return byC;
+  const byN=name?_matGrpIdx.byName.get(String(name).trim().toLowerCase()):null;
+  if(byN&&byN.g) return byN;
+  return byC||byN||{g:'',s:''};
+}
+function _matGroupOf(code, name){ return _matRecOf(code,name).g||'Ungrouped'; }
+function _matSubHeadOf(code, name){ const r=_matRecOf(code,name); return r.g?(r.s||''):''; }   // sub-head meaningless without a group
+// v166: two-level bucketer shared by all six banded surfaces.
+// Returns [{g, mats:[all items], subs:[{s, items}]}] — groups A\u2192Z with
+// 'Ungrouped' last; subs A\u2192Z with '' (no sub-head) last; item order preserved.
+function _matBandize(list, codeOf, nameOf){
+  const G=new Map();
+  list.forEach(it=>{ const g=_matGroupOf(codeOf(it),nameOf(it)), sh=_matSubHeadOf(codeOf(it),nameOf(it));
+    if(!G.has(g)) G.set(g,new Map()); const S=G.get(g);
+    if(!S.has(sh)) S.set(sh,[]); S.get(sh).push(it); });
+  return [...G.keys()]
+    .sort((a,b)=>((a==='Ungrouped')-(b==='Ungrouped'))||a.localeCompare(b))
+    .map(g=>{ const S=G.get(g);
+      const subs=[...S.keys()].sort((a,b)=>((a==='')-(b===''))||a.localeCompare(b)).map(sh=>({s:sh, items:S.get(sh)}));
+      return {g, subs, mats:subs.flatMap(x=>x.items), single:(subs.length===1&&subs[0].s==='')};
+    });
+}
+function _mpTogCartGrp(gn){ gn=gn.replace(/&#39;/g,"'").replace(/&quot;/g,'"');
+  _mpCartGrpClosed.has(gn)?_mpCartGrpClosed.delete(gn):_mpCartGrpClosed.add(gn); _mpRenderCart(); }
 function _mpCartGroups(){
   const g=new Map();
   for(const v of _mpCart.values()){ if(!g.has(v.code)) g.set(v.code,{code:v.code,name:v.name,uom:v.uom,locs:[]}); g.get(v.code).locs.push(v); }
@@ -18812,9 +18880,12 @@ function _mpRenderCart(){
   const cc=document.getElementById('mpCartCount'); if(cc) cc.textContent=groups.length+' material'+(groups.length===1?'':'s');
   const cm=document.getElementById('mpCommitCount'); if(cm) cm.textContent=lines;
   if(!groups.length){ host.innerHTML='<div class="mp-empty"><div style="font-size:30px;">\ud83e\uddfa</div>Nothing selected yet.<br>Tick a floor or a material on the left.</div>'; return; }
-  host.innerHTML=groups.map(g=>{
+  // v164: card body unchanged; adds the active highlight (accent ring +
+  // 'current' pill + auto-open locs) on the material being worked on.
+  const _cardHTML = g => {
     const total=g.locs.reduce((s,l)=>s+(Number(l.qty)||0),0);
-    const multi=g.locs.length>1, ex=_mpExp.has(g.code)||!multi;
+    const isAct=g.code===_mpActiveMat;
+    const multi=g.locs.length>1, ex=isAct||_mpExp.has(g.code)||!multi;
     const orphan=g.locs.some(l=>l.orphan);
     const chips=g.locs.map(l=>{
       const K=_mpAttr(l.key);
@@ -18825,16 +18896,36 @@ function _mpRenderCart(){
         + '<span class="mp-mini">'+(l.isLS?('pool \u20b9'+_fmtQ(l.lsRem)):('/ '+_fmtQ(l.remaining)))+'</span>'
         + '<span class="mp-x" onclick="_mpDelK(\''+K+'\');_mpRefresh();">\u2715</span></span>';
     }).join('');
-    return '<div class="mp-ci">'
+    return '<div class="mp-ci'+(isAct?' mp-active':'')+'">'
       + '<div class="mp-ci-head">'
-      +   '<div class="mp-nm2"><div class="mp-t">'+esc(g.name)+' <span class="mp-code">'+esc(g.code)+'</span>'+(orphan?' <span class="mp-warnpill">not in approved estimate</span>':'')+'</div>'
+      +   '<div class="mp-nm2"><div class="mp-t">'+esc(g.name)+' <span class="mp-code">'+esc(g.code)+'</span>'+(isAct?'<span class="mp-nowpill">current</span>':'')+(orphan?' <span class="mp-warnpill">not in approved estimate</span>':'')+'</div>'
       +     '<div class="mp-s">'+(multi?g.locs.length+' locations':esc(_mpLabel3(g.locs[0].locPath)||g.locs[0].locName||''))+'</div></div>'
       +   '<div class="mp-qbox"><input type="number" step="0.001" value="'+_fmtQin(total)+'" onwheel="this.blur()" title="Cumulative \u2014 distributes across locations, capped at remaining" oninput="_mpSetCumulative(\''+esc(g.code)+'\',this.value,this)" onchange="_mpRenderCart()"><span class="mp-uom">'+esc(g.uom)+'</span></div>'
       +   (multi?'<span class="mp-exp" onclick="_mpToggleExp(\''+esc(g.code)+'\')">'+(ex?'\u25be':'\u25b8')+'</span>':'')
       +   '<span class="mp-trash" onclick="_mpDropMat(\''+esc(g.code)+'\')">\ud83d\uddd1</span>'
       + '</div>'
       + '<div class="mp-ci-locs'+(ex?' open':'')+'">'+chips+'</div></div>';
+  };
+  // v164: band the cart by Material-Master group \u2014 groups A\u2192Z, Ungrouped
+  // last, materials A\u2192Z inside (order comes from _mpCartGroups). The band
+  // holding the active material is forced open.
+  host.innerHTML=_matBandize(groups, g=>g.code, g=>g.name).map(B=>{
+    const hasAct=_mpActiveMat!=null && B.mats.some(m=>m.code===_mpActiveMat);
+    const closed=!hasAct && _mpCartGrpClosed.has(B.g);
+    const body=B.single ? B.mats.map(_cardHTML).join('')
+      : B.subs.map(sb=>'<div class="mp-cartsub">'
+          + '<div class="mp-cartsubh'+(sb.s?'':' mp-oth')+'">'+(sb.s?esc(sb.s):'Others \u00b7 no sub-head in master')+'<span class="gc">\u00b7 '+sb.items.length+'</span></div>'
+          + sb.items.map(_cardHTML).join('')+'</div>').join('');
+    return '<div class="mp-cartgrp">'
+      + '<div class="mp-cartgrph" onclick="_mpTogCartGrp(\''+_mpAttr(B.g)+'\')">'
+      +   '<span class="g">'+esc(B.g)+'</span><span class="gc">'+B.mats.length+' material'+(B.mats.length===1?'':'s')+(B.g==='Ungrouped'?' \u00b7 no group in master':'')+'</span>'
+      +   '<span class="tw">'+(closed?'\u25b8':'\u25be')+'</span></div>'
+      + '<div class="mp-cartgrpb'+(closed?' mp-closed':'')+'">'+body+'</div></div>';
   }).join('');
+  if(_mpActiveMat && _mpActiveScrolledFor!==_mpActiveMat){
+    const el=host.querySelector('.mp-ci.mp-active');
+    if(el){ el.scrollIntoView({block:'nearest'}); _mpActiveScrolledFor=_mpActiveMat; }
+  }
 }
 function _mpSetLocQtyK(k,val,el){ const v=_mpCart.get(k); if(!v) return;
   // v148: LS lines carry no qty ceiling (gated in \u20b9 at PO); QTY lines cap at the package slice
@@ -18878,6 +18969,7 @@ function _mpRefresh(){ _mpRenderCart(); if(window._ppActive) _ppRenderCols(); }
 // ============================================================
 let _mirGroups = [];   // [{code,name,uom,spec,locs:[{locId,locName,locPath,status,remaining,leafId,qty,rmk}]}]
 let _mirOpen   = new Set();
+let _mirGrpClosed = new Set();   // v165: collapsed Material-Master group bands on the MIR form
 
 const _miLabel3 = p => (p||'').split(' \u203a ').slice(-3).join(' \u00b7 ');
 const _miTail   = p => ((p||'').split(' \u203a ').slice(-1)[0])||'';
@@ -18902,7 +18994,11 @@ function _mirModelUpsert(cell, qty){
 function _renderMirItems(){
   const host=document.getElementById('mirItemsHost'); if(!host) return;
   if(!_mirGroups.length){ host.innerHTML='<div class="mi-empty">No materials yet \u2014 use <b>\uff0b Add from estimate</b> to pick approved estimate cells.</div>'; return; }
-  host.innerHTML=_mirGroups.map((g,gi)=>{
+  // v165: cards banded by Material-Master group (A\u2192Z, Ungrouped last),
+  // materials A\u2192Z inside; the # badge renumbers in display order. Bands
+  // are render-only \u2014 _mirGroups (the saveMIR source of truth) untouched.
+  let _miNo=0;
+  const _miCardHTML=(g)=>{ const gi=_miNo++;
     g.multiPkg = new Set(g.locs.map(l=>String(l.leafId))).size>1;   // v148
     const total=_mirGroupCum(g);
     const multi=g.locs.length>1, ex=_mirOpen.has(g.code);
@@ -18939,11 +19035,26 @@ function _renderMirItems(){
       + '</div>'
       + locBlock
       + '</div>';
-  }).join('');
+  };
+  host.innerHTML=_matBandize(
+      _mirGroups.slice().sort((x,y)=>(x.name||'').localeCompare(y.name||'')),
+      g=>g.code, g=>g.name)
+    .map(B=>{
+      const closed=_mirGrpClosed.has(B.g);
+      const body=closed?'':(B.single ? B.mats.map(_miCardHTML).join('')   // numbering only advances through open bands
+        : B.subs.map(sb=>'<div class="mi-grpsub">'
+            + '<div class="mi-grpsubh'+(sb.s?'':' mi-oth')+'">'+(sb.s?esc(sb.s):'Others \u00b7 no sub-head in master')+'<span class="gc">\u00b7 '+sb.items.length+'</span></div>'
+            + sb.items.map(_miCardHTML).join('')+'</div>').join(''));
+      return '<div class="mi-grpband" onclick="_miTogGrp(\''+_mpAttr(B.g)+'\')">'
+        +   '<span class="g">'+esc(B.g)+'</span><span class="gc">'+B.mats.length+' material'+(B.mats.length===1?'':'s')+(B.g==='Ungrouped'?' \u00b7 no group in master':'')+'</span>'
+        +   '<span class="tw">'+(closed?'\u25b8':'\u25be')+'</span></div>'
+        + '<div class="mi-grpbody'+(closed?' mi-closed':'')+'">'+body+'</div>';
+    }).join('');
 }
 function _miApprDot(l){ return l.status==='approved'?'<span class="mi-appr">\u25cf approved</span>':'<span class="mi-draft">\u25cf draft</span>'; }
 
 function _miToggle(code){ _mirOpen.has(code)?_mirOpen.delete(code):_mirOpen.add(code); _renderMirItems(); }
+function _miTogGrp(gn){ gn=gn.replace(/&#39;/g,"'").replace(/&quot;/g,'"'); _mirGrpClosed.has(gn)?_mirGrpClosed.delete(gn):_mirGrpClosed.add(gn); _renderMirItems(); }   // v165
 function _miSetAll(open){ _mirGroups.forEach(g=>{ if(g.locs.length>1){ open?_mirOpen.add(g.code):_mirOpen.delete(g.code); } }); _renderMirItems(); }
 function _miSetSpec(code,val){ const g=_mirFindGroup(code); if(g) g.spec=val; }
 function _miSetRmk(code,lk,val){ const g=_mirFindGroup(code); const l=_miFindLoc(g,lk); if(l) l.rmk=val; }
@@ -19009,9 +19120,24 @@ function _mpInjectCss(){
   .mp-code{font-family:ui-monospace,Menlo,monospace;font-size:10px;color:var(--accent);}
   .mp-empty{display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;color:var(--muted);text-align:center;gap:6px;padding:20px;}
   .mp-ci{border:1px solid var(--border);border-radius:8px;margin-bottom:8px;overflow:hidden;}
-  .mp-ci-head{display:flex;align-items:center;gap:9px;padding:8px 10px;background:var(--panel-2);}
+  .mp-ci-head{display:flex;align-items:flex-start;gap:9px;padding:8px 10px;background:var(--panel-2);}
   .mp-nm2{flex:1;min-width:0;}
-  .mp-t{font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .mp-t{font-weight:600;white-space:normal;overflow-wrap:anywhere;line-height:1.3;}
+  .mp-ci.mp-active{border-color:var(--accent);box-shadow:0 0 0 2px rgba(13,148,136,.15),0 2px 8px rgba(13,148,136,.18);}
+  .mp-ci.mp-active .mp-ci-head{background:rgba(13,148,136,.08);}
+  .mp-nowpill{display:inline-block;font-size:8.5px;font-weight:800;letter-spacing:.5px;color:#fff;background:var(--accent);border-radius:8px;padding:1px 6px;margin-left:6px;vertical-align:2px;text-transform:uppercase;}
+  .mp-cartgrp{margin-bottom:10px;}
+  .mp-cartgrph{display:flex;align-items:center;gap:8px;padding:5px 8px;background:linear-gradient(90deg,var(--panel-2),transparent);border-left:3px solid var(--accent);border-radius:4px;cursor:pointer;margin-bottom:6px;}
+  .mp-cartgrph .g{font-size:10.5px;font-weight:800;text-transform:uppercase;letter-spacing:.6px;color:#0f766e;}
+  .mp-cartgrph .gc{font-size:10px;color:var(--muted);}
+  .mp-cartgrph .tw{margin-left:auto;color:var(--muted);font-size:11px;}
+  .mp-cartgrpb{display:block;}
+  .mp-cartgrpb.mp-closed{display:none;}
+  .mp-cartgrpb .mp-ci{margin-left:6px;}
+  .mp-cartsubh{display:flex;align-items:center;gap:6px;margin:2px 0 6px 6px;padding:3px 8px;background:var(--input-bg);border-left:2px solid rgba(13,148,136,.45);border-radius:3px;font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:#0f766e;}
+  .mp-cartsubh .gc{font-weight:400;text-transform:none;letter-spacing:0;color:var(--muted);font-size:10px;}
+  .mp-cartsubh.mp-oth{color:var(--muted);border-left-color:var(--border);}
+  .mp-cartsub .mp-ci{margin-left:14px;}
   .mp-s{font-size:10px;color:var(--muted);}
   .mp-qbox{display:flex;align-items:center;gap:5px;}
   .mp-qbox input{width:76px;padding:5px 6px;border:1px solid var(--border);border-radius:4px;font-size:13px;text-align:right;font-variant-numeric:tabular-nums;}
@@ -19099,7 +19225,7 @@ async function viewMIR(mirNum) {
   const [{data:h},{data:items}] = await Promise.all([
     sb.from('pu_mir').select('*').eq('mir_number',mirNum).single(),
     sb.from('pu_mir_items')
-      .select('sno,material_name,uom,qty_required,rfq_number,po_number,specification,procurement_line_id,is_balance_closed,loc_node_id')
+      .select('sno,material_code,material_name,uom,qty_required,rfq_number,po_number,specification,procurement_line_id,is_balance_closed,loc_node_id')
       .eq('mir_number',mirNum).order('sno'),
   ]);
   pbDone();
@@ -19206,7 +19332,7 @@ async function viewMIR(mirNum) {
     const balClosed = !!it.is_balance_closed;
     const isActionable = !balClosed && !poPendingLock && balance > 0 && !['Received','Closed'].includes(ist);
     const poNums = plid ? [...(poNumMap[plid]||new Set())] : (it.po_number ? [it.po_number] : []);
-    return { sno:it.sno, mat:it.material_name, uom:it.uom, spec:it.specification||'',
+    return { sno:it.sno, code:it.material_code, mat:it.material_name, uom:it.uom, spec:it.specification||'',
              locPath, qtyReq, poQty, scQty, grnQty, effPoQty, balance,
              apprPo:_apprPo, pendPo:_pendPo, label9, label9Col, poPendingLock, balClosed, isActionable, poNums };
   });
@@ -19222,8 +19348,12 @@ async function viewMIR(mirNum) {
 
   const _vGrpMap = new Map();
   _vLines.forEach(l => { const k=l.mat+'|'+l.uom; if(!_vGrpMap.has(k)) _vGrpMap.set(k,[]); _vGrpMap.get(k).push(l); });
+  // v165: rows banded by Material-Master group \u2014 same pattern as viewPO.
+  // Band shows name + material count only: MIR has no amount column and
+  // qty subtotals across mixed UOMs would be meaningless.
+  if(!(puState.materials||[]).length){ try{ await apiLoadMaterials(); }catch(e){} }
   let _vgSno = 0;
-  const itemRows = [..._vGrpMap.values()].map(gl => {
+  const _vRowMIR = gl => {
     _vgSno++;
     const gid='mirVG_'+_vgSno, splitId='mirVSplit_'+_vgSno;
     const f=gl[0];
@@ -19295,7 +19425,24 @@ async function viewMIR(mirNum) {
       </td>
       <td style="font-size:11px;"><div style="display:flex;flex-wrap:wrap;gap:3px;">${gPoNums.length?gPoNums.map(_vPoPill).join(''):'—'}</div></td>
     </tr>`;
-  }).join('');
+  };
+  const itemRows=_matBandize(
+      [..._vGrpMap.values()].sort((x,y)=>((x[0].mat)||'').localeCompare((y[0].mat)||'')),
+      gl=>gl[0].code, gl=>gl[0].mat)
+    .map(B=>{
+      const band=`<tr><td colspan="12" style="background:linear-gradient(90deg,#e6f4f2,#f6fbfa);border-top:2px solid var(--accent);border-bottom:1px solid rgba(13,148,136,.4);padding:6px 8px;">`
+        + `<span style="font-size:10.5px;font-weight:800;text-transform:uppercase;letter-spacing:.6px;color:#0f766e;">${esc(B.g)}</span>`
+        + `<span style="font-size:10px;color:var(--muted);margin-left:8px;">${B.mats.length} material${B.mats.length===1?'':'s'}${B.g==='Ungrouped'?' \u2014 no group set in Material Master':''}</span>`
+        + `</td></tr>`;
+      if(B.single) return band + B.mats.map(_vRowMIR).join('');
+      return band + B.subs.map(sb=>{
+        const sub=`<tr><td colspan="12" style="background:#f6fafa;border-bottom:1px solid var(--border);padding:4px 8px 4px 18px;">`
+          + `<span style="font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:${sb.s?'#0f766e':'var(--muted)'};">${sb.s?esc(sb.s):'Others \u2014 no sub-head in master'}</span>`
+          + `<span style="font-size:10px;color:var(--muted);margin-left:7px;">${sb.items.length}</span>`
+          + `</td></tr>`;
+        return sub + sb.items.map(_vRowMIR).join('');
+      }).join('');
+    }).join('');
 
   const selectAllRow = canAct ? `
     <tr style="background:#f8fafc;">
@@ -20753,6 +20900,7 @@ async function _poPopulateFromMir(mirRecs, opts){
     _poRowRealloc(rn);
   });
   _poRefreshHistory();   // v140: rate history strips for populated lines
+  _poRegroupRows();      // v164: group bands
 }
 
 async function directPOFromSelection(mirNum, confirmedItems) {
@@ -21636,6 +21784,7 @@ async function newPOFromQC(qcNum) {
         document.getElementById('poMat_'+i).value=qi.material_name; document.getElementById('poUom_'+i).value=qi.uom;
         document.getElementById('poQty_'+i).value=qi.qty_required; document.getElementById('poRate_'+i).value=qi.unit_rate||0; recalcPORow(i); });
       recalcPOTotals();
+      _poRegroupRows();   // v164
     }
   }
   pbDone();
@@ -21759,6 +21908,9 @@ let _ppPkgArr=[];       // [{leafId,name,path,cells:[]}] sorted by name
 let _ppPkgTree=null;    // area trie over package wbs paths
 let _ppTreeNodes=[];    // flat ref array for onclick-by-index (pkg tree areas)
 let _ppMatAgg=null;     // Map(code -> {name,uom,pkgN,rem}) over pooled cells
+let _mpActiveMat=null;          // v164: material currently being worked on \u2014 cart highlight
+let _mpActiveScrolledFor=null;  // v164: scroll the active card into view once per activation
+let _mpCartGrpClosed=new Set(); // v164: collapsed Material-Master group bands in the cart
 
 const _ppScope = cells => _ppMat ? cells.filter(c=>c.code===_ppMat) : cells;
 const _ppLive  = cells => cells.filter(c=>_mpCellLive(c));   // v148: LS pool cells are live while \u20b9 remains
@@ -21780,6 +21932,7 @@ async function _ppOpenPicker(mode){
   _mpInjectCss(); _ppInjectCss();
   _ppMode='pkg'; _ppMat=null; _ppSelPkg=null; _ppSelNode=null;
   _ppExp=new Set(); _ppGrp=new Set(); _mpExp=new Set();
+  _mpActiveMat=null; _mpActiveScrolledFor=null; _mpCartGrpClosed=new Set();   // v164
   _ppTwOpen=new Set(); _ppTwCells={};
   if(mode==='po') _poSeedCartFromRows(); else if(mode==='mis') _misSeedCartFromGroups(); else _mirSeedCartFromGroups();
   window._ppActive=true;
@@ -21834,7 +21987,7 @@ async function _ppOpenPicker(mode){
     +   '<button class="btn btn-primary btn-sm" onclick="'+T.commit+'">'+T.commitLbl+' <span class="mp-pill" id="mpCommitCount">0</span></button>'
     + '</div></div>',
     'large');
-  const box=document.getElementById('modalBox'); if(box) box.style.maxWidth='1240px';   // three panes need width
+  const box=document.getElementById('modalBox'); if(box) box.style.maxWidth='1320px';   // three panes need width (v164: wider cart)
   window._modalNoBackdropClose = true;   // v144: cart state — close only via \u2715 / commit
   _ppRenderCols(); _mpRenderCart();
 }
@@ -21925,6 +22078,7 @@ function _ppPickMat(code){
   code=code.replace(/&#39;/g,"'");
   if(!_ppMatAgg.has(code)) return;
   _ppMat=code; _ppSelPkg=null; _ppSelNode=null; _ppGrp.clear();
+  _mpActiveMat=code; _mpRenderCart();   // v164: scope chip drives the cart highlight
   const a=_ppMatAgg.get(code);
   const si=document.getElementById('ppMatSearch'); if(si){ si.value=''; si.style.display='none'; }
   const dd=document.getElementById('ppMatDrop'); if(dd) dd.classList.remove('open');
@@ -21967,7 +22121,7 @@ function _ppAutoExpand(){
   }
 }
 function _ppTogTree(key){ key=String(key); _ppExp.has(key)?_ppExp.delete(key):_ppExp.add(key); _ppRenderCols(); }
-function _ppTogGrp(code){ code=code.replace(/&#39;/g,"'"); _ppGrp.has(code)?_ppGrp.delete(code):_ppGrp.add(code); _ppRenderCols(); }
+function _ppTogGrp(code){ code=code.replace(/&#39;/g,"'"); _ppGrp.has(code)?_ppGrp.delete(code):_ppGrp.add(code); _mpActiveMat=code; _ppRenderCols(); _mpRenderCart(); }   // v164: expanding a material marks it active
 // v144: tower sub-groups inside column 2 — fold flat floor lists by tower
 let _ppTwOpen=new Set();   // open tower groups ('ctx@towerKey')
 let _ppTwCells={};         // render-time registry: id -> rows
@@ -22090,12 +22244,14 @@ function _ppBulkPkg(i,on){ const cs=_ppScope(_ppPkgArr[i].cells); _misEnsureIRTh
 function _ppBulkNode(id,on){ const cs=_ppScope(_mpNodeCells[String(id)]||[]); _misEnsureIRThen(cs, ()=>{ cs.forEach(c=> on?_mpAddCell(c):_mpDelK(c.key||_mpKey(c.code,c.locId,c.leafId))); _ppRefresh(); }); }
 function _ppBulkGrp(code,on){
   code=code.replace(/&#39;/g,"'");
+  _mpActiveMat=code;   // v164
   const cs=_ppDrillCells().filter(c=>c.code===code);
   _misEnsureIRThen(cs, ()=>{ cs.forEach(c=> on?_mpAddCell(c):_mpDelK(c.key||_mpKey(c.code,c.locId,c.leafId))); _ppRefresh(); });
 }
 function _ppToggleCellK(k,on){
   k=k.replace(/&#39;/g,"'").replace(/&quot;/g,'"');
   const c=_mpCells.byKey.get(k); if(!c) return;
+  _mpActiveMat=c.code;   // v164
   on?_mpAddCell(c):_mpDelK(k);
   _ppRefresh();
 }
@@ -22103,6 +22259,7 @@ function _ppSetQtyK(k,el){
   k=k.replace(/&#39;/g,"'").replace(/&quot;/g,'"');
   const v=_mpCart.get(k);
   const cell=_mpCells.byKey.get(k); if(!cell) return;
+  _mpActiveMat=cell.code;   // v164
   let q=Math.max(0,Number(el.value)||0);
   if(!cell.isLS && q>cell.remaining) q=cell.remaining;   // v148: LS lines are \u20b9-gated at PO, not qty-capped
   if(q<=0){ _mpCart.delete(k); } else if(v){ v.qty=q; } else { _mpCart.set(k,{...cell, key:k, qty:q}); }
@@ -22286,7 +22443,7 @@ function _ppInjectCss(){
   if(document.getElementById('ppcss')) return;
   const css=document.createElement('style'); css.id='ppcss';
   css.textContent=`
-  .pp-split{display:grid;grid-template-columns:300px minmax(0,1fr) 350px;border:1px solid var(--border);border-radius:10px;overflow:hidden;min-height:56vh;}
+  .pp-split{display:grid;grid-template-columns:280px minmax(0,1fr) minmax(400px,460px);border:1px solid var(--border);border-radius:10px;overflow:hidden;min-height:56vh;}   /* v164: cart pane 350 -> 400-460, names wrap */
   .pp-split .mp-pane{min-width:0;}
   .pp-split .mp-body{min-width:0;}
   .pp-split .mp-pane{border-right:1px solid var(--border);}
@@ -22446,6 +22603,7 @@ function _poCommitFromCart(){
   });
   if(typeof recalcPOTotals==='function') recalcPOTotals();
   _poRefreshHistory();   // v140: rate history strips for newly added lines
+  _poRegroupRows();      // v164: group bands
   closeModal();
   _mpMode='mir';
   window._ppActive=false;   // v139
@@ -22501,6 +22659,75 @@ function _poRowRealloc(rn){
 }
 
 // ============================================================
+// v164: PO FORM GROUP BANDS \u2014 rows are kept physically sorted by
+// Material-Master group with display-only band rows between them.
+// Pure DOM re-order run at settle points only (populate / picker
+// commit / typeahead pick / row delete / draft resume) so focus is
+// never stolen mid-typing. Row ids, _poAlloc, and GST math untouched.
+// Blank-material rows sit last, un-banded. Also sweeps orphan
+// alloc-detail rows left behind by a deleted line (pre-v164 leak).
+// ============================================================
+function _poRegroupRows(){
+  const tb=document.getElementById('poItemsBody'); if(!tb) return;
+  tb.querySelectorAll('tr.po-grp-band').forEach(tr=>tr.remove());
+  tb.querySelectorAll('tr.po-alloc-detail').forEach(dr=>{
+    const rn=(dr.id||'').split('_')[1];
+    if(!document.getElementById('poItem_'+rn)) dr.remove();
+  });
+  const rows=[...tb.querySelectorAll('tr')].filter(tr=>(tr.id||'').startsWith('poItem_'));
+  if(!rows.length) return;
+  const rec=rows.map((tr,i)=>{
+    const matEl=tr.querySelector('.po_material');
+    const name=(matEl?.value||'').trim();
+    const code=tr.dataset.matCode||matEl?.dataset?.matCode||'';
+    return {tr, i, name, grp: name?_matGroupOf(code,name):null, sub: name?_matSubHeadOf(code,name):''};
+  });
+  rec.sort((a,b)=>{
+    const ra=a.name?(a.grp==='Ungrouped'?1:0):2, rb=b.name?(b.grp==='Ungrouped'?1:0):2;
+    if(ra!==rb) return ra-rb;
+    if(ra<2 && a.grp!==b.grp) return a.grp.localeCompare(b.grp);
+    const qa=(a.sub==='')?1:0, qb=(b.sub==='')?1:0;   // v166: no-sub-head last within group
+    if(ra<2 && qa!==qb) return qa-qb;
+    if(ra<2 && a.sub!==b.sub) return a.sub.localeCompare(b.sub);
+    return a.i-b.i;   // stable inside a sub-head / among blanks
+  });
+  const ncols=rows[0].children.length;
+  const frag=document.createDocumentFragment();
+  let last=null, lastSub=null, n=0;
+  rec.forEach(r=>{
+    if(r.name && r.grp!==last){
+      last=r.grp; lastSub=null;
+      const cnt=rec.filter(x=>x.name && x.grp===r.grp).length;
+      const band=document.createElement('tr'); band.className='po-grp-band';
+      band.innerHTML='<td colspan="'+ncols+'" style="background:linear-gradient(90deg,#e6f4f2,#f6fbfa);border-top:2px solid var(--accent);border-bottom:1px solid rgba(13,148,136,.4);padding:5px 8px;">'
+        +'<span style="font-size:10.5px;font-weight:800;text-transform:uppercase;letter-spacing:.6px;color:#0f766e;">'+esc(r.grp)+'</span>'
+        +'<span style="font-size:10px;color:var(--muted);margin-left:8px;">'+cnt+' material'+(cnt===1?'':'s')+(r.grp==='Ungrouped'?' \u2014 no group set in Material Master':'')+'</span></td>';
+      frag.appendChild(band);
+    }
+    // v166: sub-head band \u2014 skipped entirely when the group has no sub-heads
+    // (first sub in a group is ''), otherwise emitted per sub-head change with
+    // no-sub-head rows under a trailing 'Others'.
+    if(r.name && r.sub!==lastSub){
+      const groupHasSubs=rec.some(x=>x.name && x.grp===r.grp && x.sub!=='');
+      if(groupHasSubs){
+        const scnt=rec.filter(x=>x.name && x.grp===r.grp && x.sub===r.sub).length;
+        const sband=document.createElement('tr'); sband.className='po-grp-band po-sub-band';
+        sband.innerHTML='<td colspan="'+ncols+'" style="background:#f6fafa;border-bottom:1px solid var(--border);padding:3px 8px 3px 18px;">'
+          +'<span style="font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:'+(r.sub?'#0f766e':'var(--muted)')+';">'+esc(r.sub||'Others \u2014 no sub-head in master')+'</span>'
+          +'<span style="font-size:10px;color:var(--muted);margin-left:7px;">'+scnt+'</span></td>';
+        frag.appendChild(sband);
+      }
+      lastSub=r.sub;
+    }
+    frag.appendChild(r.tr);
+    const det=document.getElementById('poAllocRow_'+((r.tr.id||'').split('_')[1]));
+    if(det) frag.appendChild(det);
+    const td=r.tr.children[0]; if(td) td.textContent=++n;
+  });
+  tb.appendChild(frag);
+}
+
+// ============================================================
 // PO MIR-INHERITANCE (v96, part 2) — MIR-sourced PO lines inherit
 // material_code + wbs_node_id + loc_node_id + procurement_line_id from their
 // MIR line (read-only). Manual picker handles only off-MIR / standalone lines.
@@ -22527,7 +22754,7 @@ function addPOItem() {
     <td class="po_perlineGST num" style="display:none;" id="poIGSTAmt_${i}">0.00</td>
     <td class="num" id="poTotalAmt_${i}">0.00</td>
     <td><input id="poRmk_${i}" style="width:100px;" placeholder="Remarks"></td>
-    <td><button class="btn btn-ghost btn-sm" onclick="this.closest('tr').remove();recalcPOTotals()">✕</button></td>`;
+    <td><button class="btn btn-ghost btn-sm" onclick="var _r=this.closest('tr');var _rn=(_r.id||'').split('_')[1];var _d=document.getElementById('poAllocRow_'+_rn);if(_d)_d.remove();delete _poAlloc[_rn];_r.remove();recalcPOTotals();_poRegroupRows()">✕</button></td>`;
   document.getElementById('poItemsBody').appendChild(tr);
 }
 
@@ -22686,12 +22913,13 @@ async function savePO() {
   if(!vendor){toast('Vendor required','error');return;}
   if(!date){toast('PO Date required','error');return;}
   // v99: a line with material + qty but no rate would be SILENTLY dropped by getPOItemsData — block instead.
-  const _noRate=[];
-  document.querySelectorAll('#poItemsBody tr').forEach((tr,idx)=>{
+  const _noRate=[]; let _lnNo=0;   // v164: count item rows only \u2014 band rows would skew the line number
+  document.querySelectorAll('#poItemsBody tr').forEach(tr=>{
+    if(!/^poItem_/.test(tr.id||'')) return; _lnNo++;
     const m=(tr.querySelector('.po_material')?.value||'').trim();
     const q=parseFloat(tr.querySelector('.po_qty')?.value)||0;
     const r=parseFloat(tr.querySelector('.po_rate')?.value)||0;
-    if(m && q>0 && r<=0) _noRate.push(idx+1);
+    if(m && q>0 && r<=0) _noRate.push(_lnNo);
   });
   if(_noRate.length){ toast('Enter a rate for line '+_noRate.join(', ')+' — a line with quantity but no rate can\'t be saved.','error',6500); return; }
   const items=getPOItemsData();
@@ -23245,8 +23473,11 @@ async function viewPO(poNum) {
   try{ _vHist=await fetchHistoricalPOPrices([...new Set((items||[]).map(i=>i.material_name).filter(Boolean))], h.po_number); }catch(e){ console.warn('PO view history:',e); }
   const _vGroups={};
   (items||[]).forEach(it=>{ const k=(it.material_code!=null?('c'+it.material_code):('n'+it.material_name)); (_vGroups[k]=_vGroups[k]||[]).push(it); });
+  // v164: line items banded by Material-Master group \u2014 groups A\u2192Z (Ungrouped
+  // last), materials A\u2192Z inside, continuous sno, per-group subtotal on the band.
+  if(!(puState.materials||[]).length){ try{ await apiLoadMaterials(); }catch(e){} }
   let _vSno=0;
-  const itemsHTML = Object.values(_vGroups).map(group => {
+  const _vRowHTML = group => {
     _vSno++;
     const first=group[0];
     const ordered = group.reduce((t,x)=>t+num(x.qty),0);
@@ -23293,7 +23524,27 @@ async function viewPO(poNum) {
       <td class="num">${fmtINR(baseAmt)}</td>
       <td class="num">${fmtINR(totAmt)}</td>
     </tr>${histRow}`;
-  }).join('');
+  };
+  const _vSum=(grps,f)=>grps.reduce((s,g)=>s+g.reduce((t,x)=>t+num(x[f]),0),0);
+  const itemsHTML=_matBandize(
+      Object.values(_vGroups).sort((x,y)=>((x[0].material_name)||'').localeCompare((y[0].material_name)||'')),
+      g=>g[0].material_code, g=>g[0].material_name)
+    .map(B=>{
+      const band=`<tr><td colspan="9" style="background:linear-gradient(90deg,#e6f4f2,#f6fbfa);border-top:2px solid var(--accent);border-bottom:1px solid rgba(13,148,136,.4);padding:6px 8px;">`
+        + `<span style="font-size:10.5px;font-weight:800;text-transform:uppercase;letter-spacing:.6px;color:#0f766e;">${esc(B.g)}</span>`
+        + `<span style="font-size:10px;color:var(--muted);margin-left:8px;">${B.mats.length} material${B.mats.length===1?'':'s'}${B.g==='Ungrouped'?' \u2014 no group set in Material Master':''}</span>`
+        + `<span style="float:right;font-size:11px;color:#0f766e;font-weight:700;font-variant-numeric:tabular-nums;">base ${fmtINR(_vSum(B.mats,'base_amount'))} \u00b7 total ${fmtINR(_vSum(B.mats,'total_amount'))}</span>`
+        + `</td></tr>`;
+      if(B.single) return band + B.mats.map(_vRowHTML).join('');
+      return band + B.subs.map(sb=>{
+        const sub=`<tr><td colspan="9" style="background:#f6fafa;border-bottom:1px solid var(--border);padding:4px 8px 4px 18px;">`
+          + `<span style="font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:${sb.s?'#0f766e':'var(--muted)'};">${sb.s?esc(sb.s):'Others \u2014 no sub-head in master'}</span>`
+          + `<span style="font-size:10px;color:var(--muted);margin-left:7px;">${sb.items.length}</span>`
+          + `<span style="float:right;font-size:10px;color:#0f766e;font-variant-numeric:tabular-nums;">base ${fmtINR(_vSum(sb.items,'base_amount'))} \u00b7 total ${fmtINR(_vSum(sb.items,'total_amount'))}</span>`
+          + `</td></tr>`;
+        return sub + sb.items.map(_vRowHTML).join('');
+      }).join('');
+    }).join('');
 
   // Lifecycle action buttons (cancel / short-close) at the bottom
   let closeActions='';
@@ -23381,6 +23632,25 @@ async function printPO(poNum) {
       base_amount:  group.reduce((t,x)=>t+num(x.base_amount),0),
       total_amount: group.reduce((t,x)=>t+num(x.total_amount),0),
     };
+  });
+  // v164: physical group order + band tags \u2014 print matches the view modal
+  if(!(puState.materials||[]).length){ try{ await apiLoadMaterials(); }catch(e){} }
+  clubbed.sort((a,b)=>{
+    const ga=_matGroupOf(a.material_code,a.material_name), gb=_matGroupOf(b.material_code,b.material_name);
+    const ra=(ga==='Ungrouped')?1:0, rb=(gb==='Ungrouped')?1:0;
+    if(ra!==rb) return ra-rb;
+    if(ga!==gb) return ga.localeCompare(gb);
+    const sa=_matSubHeadOf(a.material_code,a.material_name), sbh=_matSubHeadOf(b.material_code,b.material_name);
+    const qa=(sa==='')?1:0, qb=(sbh==='')?1:0;   // v166: no-sub-head last within group
+    if(qa!==qb) return qa-qb;
+    if(sa!==sbh) return sa.localeCompare(sbh);
+    return (a.material_name||'').localeCompare(b.material_name||'');
+  });
+  let _pgLast=null, _psLast=null;
+  clubbed.forEach((r,i)=>{ r.sno=i+1;
+    const g=_matGroupOf(r.material_code,r.material_name), sh=_matSubHeadOf(r.material_code,r.material_name);
+    if(g!==_pgLast){ r._grpBand=g; _pgLast=g; _psLast=null; }
+    if(sh!==_psLast){ if(sh!=='' || _psLast!==null) r._subBand=(sh||'Others'); _psLast=sh; }   // suppress 'Others' when the group has no sub-heads at all
   });
   await _printOrderDoc('PO', poNum, h, clubbed, null);
 }
