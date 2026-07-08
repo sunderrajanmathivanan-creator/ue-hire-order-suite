@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Penguin-Procurement Suite v166 — Urban Excellence LLP · Poetry of Earth</title>
+<title>Penguin-Procurement Suite v167 — Urban Excellence LLP · Poetry of Earth</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <style>
@@ -6617,10 +6617,17 @@ async function doLogout() {
   showLoginPanel();
 }
 
+// ── Recovery-flow flag ────────────────────────────────────────
+// v167: captured synchronously at script load, BEFORE supabase-js consumes
+// the recovery token and strips the URL hash. Checking window.location.hash
+// later (e.g. inside onAuthStateChange) fails because the hash is already gone.
+const _isRecoveryFlow = (window.location.hash || '').includes('type=recovery');
+
 // ── Session restore on page load ─────────────────────────────
 // Check if user already has a valid session (e.g. reopened the file)
 // If yes, skip the login screen entirely
 (async () => {
+  if (_isRecoveryFlow) return; // v167: recovery link — stay on update-password panel
   const { data: { session } } = await sb.auth.getSession();
   if (session && session.user && !_authHandled) {
     _authHandled = true;
@@ -6652,7 +6659,7 @@ sb.auth.onAuthStateChange(async (event, session) => {
     document.getElementById('authPanel-update').style.display = 'block';
     return;
   }
-  if (event === 'SIGNED_IN' && window.location.hash.includes('type=recovery')) {
+  if (event === 'SIGNED_IN' && (_isRecoveryFlow || window.location.hash.includes('type=recovery'))) {  // v167
     // Supabase signed the user in via recovery token — show update panel
     document.getElementById('authPanel-login').style.display  = 'none';
     document.getElementById('authPanel-update').style.display = 'block';
