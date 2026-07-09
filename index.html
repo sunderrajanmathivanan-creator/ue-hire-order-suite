@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Penguin-Procurement Suite v167 — Urban Excellence LLP · Poetry of Earth</title>
+<title>Penguin-Procurement Suite v168 — Urban Excellence LLP · Poetry of Earth</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <style>
@@ -6617,8 +6617,43 @@ async function doLogout() {
   showLoginPanel();
 }
 
+// v168: session-expiry wall. When the refresh token dies (laptop asleep,
+// long-idle tab), supabase-js downgrades requests to the anon key; post-
+// hardening anon has zero grants, so every call fails with
+// "permission denied". This forces the user back to the login panel
+// instead of leaving a dead-session UI that looks alive.
+function _forceRelogin(msg) {
+  _authHandled = false;
+  state.user = state.role = state.userName = state.userId = null; state.roles = [];
+  Object.keys(_cache).forEach(k => delete _cache[k]);
+  document.getElementById('authGate').style.display = 'flex';
+  document.getElementById('app').classList.add('hidden');
+  document.getElementById('authError').textContent = msg || '';
+  showLoginPanel();
+  if (msg) toast(msg, 'error', 6000);
+}
+
+// v168: translate a raw "permission denied" into a session check — if the
+// session is gone, wall the UI and raise a human message instead of the
+// cryptic PostgREST error.
+async function _maybeSessionExpired(errMsg) {
+  if (!/permission denied/i.test(errMsg || '')) return;
+  try {
+    const { data: { session } } = await sb.auth.getSession();
+    if (!session) {
+      _forceRelogin('Your session expired \u2014 please sign in again.');
+      throw new Error('Session expired \u2014 please sign in again.');
+    }
+  } catch (e) {
+    if (/Session expired/.test(e.message)) throw e;
+    // getSession itself failed — treat as expired
+    _forceRelogin('Your session expired \u2014 please sign in again.');
+    throw new Error('Session expired \u2014 please sign in again.');
+  }
+}
+
 // ── Recovery-flow flag ────────────────────────────────────────
-// v167: captured synchronously at script load, BEFORE supabase-js consumes
+// v168: captured synchronously at script load, BEFORE supabase-js consumes
 // the recovery token and strips the URL hash. Checking window.location.hash
 // later (e.g. inside onAuthStateChange) fails because the hash is already gone.
 const _isRecoveryFlow = (window.location.hash || '').includes('type=recovery');
@@ -6627,7 +6662,7 @@ const _isRecoveryFlow = (window.location.hash || '').includes('type=recovery');
 // Check if user already has a valid session (e.g. reopened the file)
 // If yes, skip the login screen entirely
 (async () => {
-  if (_isRecoveryFlow) return; // v167: recovery link — stay on update-password panel
+  if (_isRecoveryFlow) return; // v168: recovery link — stay on update-password panel
   const { data: { session } } = await sb.auth.getSession();
   if (session && session.user && !_authHandled) {
     _authHandled = true;
@@ -6659,14 +6694,17 @@ sb.auth.onAuthStateChange(async (event, session) => {
     document.getElementById('authPanel-update').style.display = 'block';
     return;
   }
-  if (event === 'SIGNED_IN' && (_isRecoveryFlow || window.location.hash.includes('type=recovery'))) {  // v167
+  if (event === 'SIGNED_IN' && (_isRecoveryFlow || window.location.hash.includes('type=recovery'))) {  // v168
     // Supabase signed the user in via recovery token — show update panel
     document.getElementById('authPanel-login').style.display  = 'none';
     document.getElementById('authPanel-update').style.display = 'block';
     return;
   }
   if (event === 'SIGNED_OUT' && !_loginInProgress) {
-    // Only handle external sign-out (not triggered by our own doLogin/doLogout)
+    // v168: external sign-out = refresh token expired/revoked. Previously we
+    // only flipped _authHandled and the UI stayed usable while every request
+    // silently ran as anon (now locked out). Wall it immediately.
+    if (_authHandled) _forceRelogin('Your session expired \u2014 please sign in again.');
     _authHandled = false;
   }
 });
@@ -28305,7 +28343,7 @@ async function puRPC(name, payload, extra={}) {
     p_user: state.userName,
     ...extra,
   });
-  if (error) throw new Error(error.message);
+  if (error) { await _maybeSessionExpired(error.message); throw new Error(error.message); }
   return data || {};
 }
 
