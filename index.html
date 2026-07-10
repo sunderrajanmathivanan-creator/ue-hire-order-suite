@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Penguin-Procurement Suite v168 — Urban Excellence LLP · Poetry of Earth</title>
+<title>Penguin-Procurement Suite v171 — Urban Excellence LLP · Poetry of Earth</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <style>
@@ -6999,9 +6999,10 @@ function filterMasterTable(inputId, tbodyId) {
   rows.forEach(tr => {
     if (!q) { tr.style.display = ''; return; }
     const text = tr.textContent.toLowerCase();
-    // Fuzzy: all tokens must appear somewhere in the row text
+    const collapsed = text.replace(/\s+/g, '');   // v169: match across spaces in names
+    // Fuzzy: all tokens must appear somewhere in the row text (spaced or collapsed)
     const tokens = q.split(/\s+/).filter(Boolean);
-    tr.style.display = tokens.every(t => text.includes(t)) ? '' : 'none';
+    tr.style.display = tokens.every(t => text.includes(t) || collapsed.includes(t)) ? '' : 'none';
   });
 }
 
@@ -7684,22 +7685,34 @@ function _editDistance(a, b, maxDist) {
 function _fuzzyMatch(haystackRaw, tokens, _wordsIgnored) {
   if (!tokens.length) return false;
   const hayNorm = _normForSearch(haystackRaw);
+  const hayJoined = hayNorm.replace(/ /g, '');                // v169: space-collapsed haystack
   const w = hayNorm.split(' ').filter(Boolean);
+  // v169: adjacent-word joins ("sri"+"ram" → "sriram") so a typo'd joined
+  // query can still edit-distance-match a name that contains a space.
+  const joins = [];
+  for (let i = 0; i < w.length - 1; i++) joins.push(w[i] + w[i + 1]);
   for (const t of tokens) {
-    if (hayNorm.includes(t)) continue;                        // (a)
+    if (hayNorm.includes(t)) continue;                        // (a)  substring
+    if (t.length >= 2 && hayJoined.includes(t)) continue;     // (a2) v169: token spans a space in the name ("sriram" ↔ "sri ram", "bb" ↔ "b b")
     const isNum = _isNumericToken(t);
     if (isNum) return false;                                  // numbers must match exactly
     let matched = false;
     if (t.length >= 3) {
       for (const word of w) {
-        if (word.startsWith(t)) { matched = true; break; }   // (b)
+        if (word.startsWith(t)) { matched = true; break; }   // (b)  word prefix
       }
     }
     if (!matched && t.length >= 5) {
       const maxDist = t.length >= 7 ? 2 : 1;
       for (const word of w) {
         if (Math.abs(word.length - t.length) > maxDist) continue;
-        if (_editDistance(t, word, maxDist) <= maxDist) { matched = true; break; }  // (c)
+        if (_editDistance(t, word, maxDist) <= maxDist) { matched = true; break; }  // (c)  edit distance vs words
+      }
+      if (!matched) {
+        for (const jw of joins) {                             // (c2) v169: edit distance vs joined adjacent pairs
+          if (Math.abs(jw.length - t.length) > maxDist) continue;
+          if (_editDistance(t, jw, maxDist) <= maxDist) { matched = true; break; }
+        }
       }
     }
     if (!matched) return false;
@@ -14494,8 +14507,9 @@ async function arrOrderTypeahead() {
     if (num.includes(q))      return 3;
     if (vendor.includes(q))   return 2;
     if (scope.includes(q))    return 1;
-    const words = q.split(/\s+/);
-    if (words.length > 1 && words.every(w => vendor.includes(w) || num.includes(w))) return 1;
+    // v169: space-tolerant fallback — tokenised fuzzy across num+vendor+scope
+    // (handles "sriram" ↔ "Sri Ram", double spaces, tokens split across fields)
+    if (_fuzzyMatch(num + '|' + vendor + '|' + scope, _fuzzyTokens(q))) return 1;
     return 0;
   }
 
@@ -18292,20 +18306,26 @@ async function loadMIRList() {
   // same source-of-truth the View modal uses, so cancelled POs never appear
   // in the table PO column.  Legacy fallback: items with po_number but no
   // po_links row are also included only when the PO is approved.
-  const [mirRes, itemsRes, poLinksRes] = await Promise.all([
-    sb.from('pu_mir').select('*').order('created_at', { ascending: false }),
-    sb.from('pu_mir_items').select(
-      'mir_number,sno,material_name,uom,qty_required,rfq_number,po_number,specification,procurement_line_id,is_balance_closed'
-    ).order('sno'),
-    sb.from('pu_mir_item_po_links').select('mir_number,sno,po_number'),
+  // v171: all three bulk reads paginated past the 1000-row cap (_fetchAllRows).
+  // The old single-shot selects silently truncated once row counts crossed 1000,
+  // starving the coverage maps below and pinning every header at "PO Pending".
+  const [mirRows, itemRows, poLinkRows] = await Promise.all([
+    _fetchAllRows('pu_mir', '*'),
+    _fetchAllRows('pu_mir_items',
+      'mir_number,sno,material_name,uom,qty_required,rfq_number,po_number,specification,procurement_line_id,is_balance_closed'),
+    _fetchAllRows('pu_mir_item_po_links', 'mir_number,sno,po_number'),
   ]);
-  puState.mirList = mirRes.data || [];
+  mirRows.sort((a,b) => (b.created_at||'').localeCompare(a.created_at||''));   // newest first
+  itemRows.sort((a,b) => (a.sno||0) - (b.sno||0));
+  const itemsRes = { data: itemRows }, poLinksRes = { data: poLinkRows };   // keep names below unchanged
+  puState.mirList = mirRows;
   puState.mirItemsMap         = {};
   puState.mirSCSet            = new Set();
   puState.mirItemStatusSummary = {};
   puState.mirBalanceSet       = new Set();
   puState.mirPOMap            = {};
   puState.mirCancelledPOMap   = {};  // v74: cancelled POs per MIR — shown as struck-through pills
+  puState.mirLabel9Summary    = {};  // v171: was never reset — pill counts doubled on every refresh
 
   // ── Identify approved POs (same whitelist as viewMIR) ─────────────────────
   // Collect every PO number referenced: from po_links + legacy po_number on items
@@ -18321,8 +18341,7 @@ async function loadMIRList() {
   let approvedPOs  = new Set();
   let cancelledPOs = new Set();
   if (allPONums.length) {
-    const {data: poSt} = await sb.from('pu_po_orders')
-      .select('po_number,status').in('po_number', allPONums);
+    const poSt = await _puInChunks('pu_po_orders', 'po_number,status', 'po_number', allPONums, 300);   // v171: chunked
     (poSt||[]).forEach(p => {
       if (['Open','Partial Receipt','Fully Received','Short-Closed','Closed'].includes(p.status))
         approvedPOs.add(p.po_number);
@@ -18367,23 +18386,22 @@ async function loadMIRList() {
   const pendPoQtyMap = {};  // -> SUM(qty) from PENDING POs (raised, not approved)
 
   if (allPlIds.length) {
-    const [poItemsRes, grnItemsRes, grnHdrRes] = await Promise.all([
-      sb.from('pu_po_items')
-        .select('procurement_line_id,qty,short_closed_qty,po_number')
-        .in('procurement_line_id', allPlIds),
-      sb.from('pu_grn_items')
-        .select('procurement_line_id,this_grn_qty,grn_number')
-        .in('procurement_line_id', allPlIds),
-      sb.from('pu_grn')
-        .select('grn_number,status')
-        .in('status', ['Verified','Partially Billed','Billed']),
+    // v171: the old single .in() carried EVERY plid across ALL MIRs — the URL
+    // outgrew server limits as data grew, the request failed, the error was
+    // silently discarded, and the empty maps mislabeled every line "PO Pending".
+    // Now chunked (150 ids/request) and paginated; errors throw and surface.
+    const [poItemsData, grnItemsData, grnHdrData] = await Promise.all([
+      _puInChunks('pu_po_items',  'procurement_line_id,qty,short_closed_qty,po_number', 'procurement_line_id', allPlIds),
+      _puInChunks('pu_grn_items', 'procurement_line_id,this_grn_qty,grn_number',        'procurement_line_id', allPlIds),
+      _puInChunks('pu_grn',       'grn_number,status', 'status', ['Verified','Partially Billed','Billed']),
     ]);
-    const validGRNs = new Set((grnHdrRes.data||[]).map(g => g.grn_number));
+    const poItemsRes = { data: poItemsData }, grnItemsRes = { data: grnItemsData };   // keep names below unchanged
+    const validGRNs = new Set((grnHdrData||[]).map(g => g.grn_number));
     // v114: fetch status of every PO referenced, to split approved vs pending.
     const _poNums = [...new Set((poItemsRes.data||[]).map(r=>r.po_number).filter(Boolean))];
     const poStatusMap = {};
     if (_poNums.length) {
-      const {data:poSt} = await sb.from('pu_po_orders').select('po_number,status').in('po_number', _poNums);
+      const poSt = await _puInChunks('pu_po_orders', 'po_number,status', 'po_number', _poNums, 300);   // v171: chunked
       (poSt||[]).forEach(p => { poStatusMap[p.po_number] = p.status; });
     }
     (poItemsRes.data||[]).forEach(r => {
@@ -19281,18 +19299,15 @@ async function viewMIR(mirNum) {
   const apprPoQtyMap = {}, pendPoQtyMap = {}, poStatusMap = {};   // v114
 
   if (plids.length) {
-    const [poItemsRes, grnItemsRes, grnHdrRes] = await Promise.all([
-      sb.from('pu_po_items')
-        .select('procurement_line_id,qty,short_closed_qty,po_number')
-        .in('procurement_line_id', plids),
-      sb.from('pu_grn_items')
-        .select('procurement_line_id,this_grn_qty,grn_number')
-        .in('procurement_line_id', plids),
-      sb.from('pu_grn')
-        .select('grn_number,status')
-        .in('status',['Verified','Partially Billed','Billed']),
+    // v171: per-MIR plids stay small, but chunked+paginated anyway — and the
+    // pu_grn status set was unbounded (would truncate at 1000 GRNs).
+    const [poItemsData, grnItemsData, grnHdrData] = await Promise.all([
+      _puInChunks('pu_po_items',  'procurement_line_id,qty,short_closed_qty,po_number', 'procurement_line_id', plids),
+      _puInChunks('pu_grn_items', 'procurement_line_id,this_grn_qty,grn_number',        'procurement_line_id', plids),
+      _puInChunks('pu_grn',       'grn_number,status', 'status', ['Verified','Partially Billed','Billed']),
     ]);
-    const validGRNs = new Set((grnHdrRes.data||[]).map(g=>g.grn_number));
+    const poItemsRes = { data: poItemsData }, grnItemsRes = { data: grnItemsData };   // keep names below unchanged
+    const validGRNs = new Set((grnHdrData||[]).map(g=>g.grn_number));
     // v114: status of every referenced PO → split approved vs pending
     const _poNums = [...new Set((poItemsRes.data||[]).map(r=>r.po_number).filter(Boolean))];
     if (_poNums.length) {
@@ -23678,25 +23693,9 @@ async function printPO(poNum) {
       total_amount: group.reduce((t,x)=>t+num(x.total_amount),0),
     };
   });
-  // v164: physical group order + band tags \u2014 print matches the view modal
-  if(!(puState.materials||[]).length){ try{ await apiLoadMaterials(); }catch(e){} }
-  clubbed.sort((a,b)=>{
-    const ga=_matGroupOf(a.material_code,a.material_name), gb=_matGroupOf(b.material_code,b.material_name);
-    const ra=(ga==='Ungrouped')?1:0, rb=(gb==='Ungrouped')?1:0;
-    if(ra!==rb) return ra-rb;
-    if(ga!==gb) return ga.localeCompare(gb);
-    const sa=_matSubHeadOf(a.material_code,a.material_name), sbh=_matSubHeadOf(b.material_code,b.material_name);
-    const qa=(sa==='')?1:0, qb=(sbh==='')?1:0;   // v166: no-sub-head last within group
-    if(qa!==qb) return qa-qb;
-    if(sa!==sbh) return sa.localeCompare(sbh);
-    return (a.material_name||'').localeCompare(b.material_name||'');
-  });
-  let _pgLast=null, _psLast=null;
-  clubbed.forEach((r,i)=>{ r.sno=i+1;
-    const g=_matGroupOf(r.material_code,r.material_name), sh=_matSubHeadOf(r.material_code,r.material_name);
-    if(g!==_pgLast){ r._grpBand=g; _pgLast=g; _psLast=null; }
-    if(sh!==_psLast){ if(sh!=='' || _psLast!==null) r._subBand=(sh||'Others'); _psLast=sh; }   // suppress 'Others' when the group has no sub-heads at all
-  });
+  // v170: material-group / sub-head bands removed from PO print (per user ruling
+  // 10-Jul-2026). v113 clubbing retained; lines print in natural sno order.
+  // Band renderer in _printOrderDoc left intact but inert (no _grpBand/_subBand tags).
   await _printOrderDoc('PO', poNum, h, clubbed, null);
 }
 
@@ -26551,6 +26550,28 @@ async function _misFillPackageSelect(i){
 let _wbsTreeCache = null;     // [{id,name,parent_id,node_type,uom,default_rate, path}]
 let _locTreeCache = null;     // [{id,name,parent_id,is_leaf,is_active, path}]
 
+// v171: .in()-filtered fetch that is safe at scale — chunks the value list
+// (keeps request URLs small) AND paginates every chunk past the 1000-row cap.
+// Throws on error so failures surface instead of silently returning nothing.
+async function _puInChunks(table, columns, col, vals, chunkSize) {
+  const CH = chunkSize || 150, P = 1000;
+  const uniq = [...new Set((vals || []).filter(v => v !== null && v !== undefined))];
+  let all = [];
+  for (let c = 0; c < uniq.length; c += CH) {
+    const slice = uniq.slice(c, c + CH);
+    let from = 0;
+    for (let g = 0; g < 100; g++) {
+      const { data, error } = await sb.from(table).select(columns)
+        .in(col, slice).range(from, from + P - 1);
+      if (error) throw error;
+      all = all.concat(data || []);
+      if (!data || data.length < P) break;
+      from += P;
+    }
+  }
+  return all;
+}
+
 // Fetch ALL rows from a table, paginating past PostgREST's 1000-row cap.
 async function _fetchAllRows(table, columns) {
   // v145: first page carries an exact count, remaining pages fetched in
@@ -27996,9 +28017,9 @@ function downloadStockBalanceCSV() {
   const q       = (document.getElementById('stockSearch')?.value || '').toLowerCase();
   const lowOnly = document.getElementById('stockLowOnly')?.checked || false;
   let filtered  = rows;
+  const _stToks = _fuzzyTokens(q);   // v169: space/joined tolerant stock search
   if (q)       filtered = filtered.filter(s =>
-                  (s.material_name||'').toLowerCase().includes(q) ||
-                  (s.material_code||'').toLowerCase().includes(q));
+                  _fuzzyMatch((s.material_name||'')+'|'+(s.material_code||''), _stToks));
   if (lowOnly) filtered = filtered.filter(s => num(s.balance_qty||0) <= 0);
 
   const headers = [
@@ -28056,8 +28077,9 @@ function renderStockBalance() {
   const q       = (document.getElementById('stockSearch')?.value || '').toLowerCase();
   const lowOnly = document.getElementById('stockLowOnly')?.checked || false;
   let rows = puState.stockBalance;
-  if (q)       rows = rows.filter(s => (s.material_name||'').toLowerCase().includes(q)
-                                    || (s.material_code||'').toLowerCase().includes(q));
+  const _stToks2 = _fuzzyTokens(q);   // v169: keep in lockstep with render filter
+  if (q)       rows = rows.filter(s =>
+                  _fuzzyMatch((s.material_name||'')+'|'+(s.material_code||''), _stToks2));
   if (lowOnly) rows = rows.filter(s => num(s.balance_qty || 0) <= 0);
 
   // Column getters — order must match thead column order exactly:
@@ -28942,8 +28964,9 @@ async function cpobVendorTypeahead() {
     window._cpobVendorCandidates = candidates;
   }
   const q = (inp.value||'').trim().toLowerCase();
+  const _cpobToks = _fuzzyTokens(q);   // v169: tokenised fuzzy — space/joined tolerant
   const matches = q
-    ? candidates.filter(v => v.toLowerCase().includes(q)).slice(0, 15)
+    ? candidates.filter(v => _fuzzyMatch(v, _cpobToks)).slice(0, 15)
     : candidates.slice(0, 15);
   if (!matches.length) {
     res.innerHTML = '<div style="padding:10px;color:var(--muted);font-size:12px;">No vendor with billable cash GRNs.</div>';
