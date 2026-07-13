@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Penguin-Procurement Suite v171 — Urban Excellence LLP · Poetry of Earth</title>
+<title>Penguin-Procurement Suite v172 — Urban Excellence LLP · Poetry of Earth</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <style>
@@ -5670,34 +5670,35 @@ async function apiGetRequestDetail(number, type) {
 
 // ── PAYMENTS ──────────────────────────────────────────────────
 async function apiSavePaymentConfirmation(payload) {
+  // v172 (P0-A): entire payment chain is now atomic via rpc_confirm_payment.
+  // Previously: ho_payments.insert + _applyPayment/_applyPRRPaymentPerInvoice
+  // were separate sequential writes — mid-chain failure left orphaned vouchers
+  // or balances never updated. Now all happen in one PG transaction.
+  // Also fixes: RRR payments were silently blocked by missing 'RRR' in the
+  // ho_payments.payment_type CHECK constraint (now amended in migration P0-A).
   pbShow('Saving payment\u2026');
   try {
-    const { data: last } = await sb.from('ho_payments')
-      .select('payment_id').order('created_at', { ascending: false }).limit(1);
-    let nextNum = 1;
-    if (last && last.length) {
-      const m = String(last[0].payment_id).match(/PAY(\d+)/);
-      if (m) nextNum = parseInt(m[1]) + 1;
-    }
-    const payId = 'PAY' + String(nextNum).padStart(4,'0');
-    const vendor = payload.directVendor ||
-      await _vendorFromRef(payload.type, payload.reference);
-
-    const { error: pe } = await sb.from('ho_payments').insert({
-      payment_id: payId, payment_date: payload.date, payment_type: payload.type,
-      reference: payload.reference||'DIRECT', vendor,
-      amount_paid: payload.amount, mode: payload.mode||'NEFT', utr: payload.utr||null,
-      remarks: payload.remarks||null, entered_by: state.userName, entered_by_id: state.userId
+    const res = await puRPC('rpc_confirm_payment', {
+      type:      payload.type,
+      reference: payload.reference || 'DIRECT',
+      date:      payload.date,
+      amount:    payload.amount,
+      mode:      payload.mode   || 'NEFT',
+      utr:       payload.utr    || null,
+      remarks:   payload.remarks || null,
+      vendor:    payload.directVendor || await _vendorFromRef(payload.type, payload.reference),
+      entered_by_id: state.userId,
+      // per_invoice: passed through for PRR per-invoice mode
+      per_invoice: (payload.type === 'PRR' && payload.perInvoice?.length)
+        ? payload.perInvoice.map(e => ({
+            bill_number: e.billNumber,
+            bill_type:   e.billType || 'HOB',
+            amount:      e.amount,
+          }))
+        : null,
     });
-    if (pe) return { ok: false, error: pe.message };
-
-    if (payload.type === 'PRR' && payload.perInvoice?.length) {
-      await _applyPRRPaymentPerInvoice(payload.reference, payload.perInvoice);
-    } else {
-      await _applyPayment(payload.type, payload.reference, payload.amount);
-    }
     _cacheBust('allRequests','prrList','arrList','hrrList','rrrList','hobList','wobList','unpaidBills');
-    return { ok: true };
+    return { ok: true, pay_id: res.pay_id };
   } catch(e) {
     return { ok: false, error: e.message };
   } finally {
@@ -5705,125 +5706,14 @@ async function apiSavePaymentConfirmation(payload) {
   }
 }
 
-// Per-invoice PRR payment — each bill gets its own specified amount.
-// Handles all three bill types (HOB → ho_bills, WOB → wo_bills, POB → pu_po_bills) inline.
-// Earlier versions split this with a POB override using _orig_applyPRRPayment; that pattern
-// is unsafe because function-declaration hoisting makes the "original" reference capture the
-// override itself, causing infinite recursion (same bug we hit on apiGetUnpaidBills).
-async function _applyPRRPaymentPerInvoice(prrNumber, perInvoice) {
-  for (const entry of perInvoice) {
-    const { data: prrItem } = await sb.from('ho_prr_items')
-      .select('id, requested_amount, paid_amount, bill_type')
-      .eq('prr_number', prrNumber)
-      .eq('bill_number', entry.billNumber)
-      .single();
-    if (!prrItem) continue;
-
-    const newPaid = num(prrItem.paid_amount) + num(entry.amount);
-    const itemStatus = newPaid >= num(prrItem.requested_amount) - 0.005 ? 'Paid' : 'Partial';
-    await sb.from('ho_prr_items')
-      .update({ paid_amount: newPaid, status: itemStatus })
-      .eq('id', prrItem.id);
-
-    // Update the bill's own status based on total paid across ALL PRR items vs net_payable.
-    // Bill source table is keyed off bill_type — prefer entry.billType (passed in by caller)
-    // and fall back to the value stored on the PRR item itself.
-    const billType = entry.billType || prrItem.bill_type || 'HOB';
-    const billTable = billType === 'POB' ? 'pu_po_bills'
-                    : billType === 'WOB' ? 'wo_bills'
-                    : 'ho_bills';
-    const { data: bill } = await sb.from(billTable).select('net_payable').eq('bill_number', entry.billNumber).single();
-    if (bill) {
-      const { data: allItems } = await sb.from('ho_prr_items').select('paid_amount').eq('bill_number', entry.billNumber);
-      const totalBillPaid = (allItems||[]).reduce((s,r) => s + num(r.paid_amount), 0);
-      const netPayable = num(bill.net_payable);
-      const billStatus = totalBillPaid >= netPayable - 0.005 ? 'Paid' : totalBillPaid > 0 ? 'Partial' : 'Unpaid';
-      await sb.from(billTable).update({ status: billStatus }).eq('bill_number', entry.billNumber);
-    }
-  }
-
-  // Recompute PRR header status
-  const { data: updated } = await sb.from('ho_prr_items')
-    .select('requested_amount, paid_amount').eq('prr_number', prrNumber);
-  const totalReq  = (updated||[]).reduce((s,r) => s + num(r.requested_amount), 0);
-  const totalPaid = (updated||[]).reduce((s,r) => s + num(r.paid_amount), 0);
-  const prrStatus = totalPaid >= totalReq - 0.005 ? 'Paid'
-    : totalPaid > 0 ? 'Partial' : 'Unpaid';
-  await sb.from('ho_prr').update({ status: prrStatus }).eq('prr_number', prrNumber);
-}
-
+// Vendor lookup helper — read-only, unchanged from v171.
+// Still needed by apiSavePaymentConfirmation above for the vendor field.
 async function _vendorFromRef(type, ref) {
   if (type === 'ARR') { const { data } = await sb.from('ho_arr').select('vendor').eq('arr_number', ref).single(); return data?.vendor || ''; }
   if (type === 'HRR') { const { data } = await sb.from('ho_hrr').select('vendor_name').eq('hrr_number', ref).single(); return data?.vendor_name || ''; }
   if (type === 'PRR') { const { data } = await sb.from('ho_prr_items').select('vendor_name').eq('prr_number', ref).limit(1); return data?.[0]?.vendor_name || ''; }
   if (type === 'RRR') { const { data } = await sb.from('wo_retention_releases').select('vendor_name').eq('rrr_number', ref).single(); return data?.vendor_name || ''; }
   return '';
-}
-
-async function _applyPayment(type, ref, amount) {
-  if (type === 'PRR') {
-    // Get all items for this PRR, distribute payment
-    const { data: items } = await sb.from('ho_prr_items').select('*').eq('prr_number', ref).order('sno');
-    let remaining = amount;
-    for (const it of (items||[])) {
-      const due = Math.max(0, num(it.requested_amount) - num(it.paid_amount));
-      if (due <= 0 || remaining <= 0) continue;
-      const thisPayment = Math.min(due, remaining);
-      const newPaid = num(it.paid_amount) + thisPayment;
-      const newStatus = newPaid >= num(it.requested_amount) - 0.005 ? 'Paid' : 'Partial';
-      await sb.from('ho_prr_items').update({ paid_amount: newPaid, status: newStatus }).eq('id', it.id);
-
-      // ── Also update the underlying ho_bill status ──
-      if (it.bill_number) {
-        const { data: bill } = await sb.from('ho_bills')
-          .select('net_payable').eq('bill_number', it.bill_number).single();
-        if (bill) {
-          // Re-fetch all PRR items for this bill after the update above
-          const { data: allBillItems } = await sb.from('ho_prr_items')
-            .select('paid_amount').eq('bill_number', it.bill_number);
-          const totalPaidForBill = (allBillItems||[]).reduce((s,r) => s + num(r.paid_amount), 0);
-          const netPayable = num(bill.net_payable);
-          const billStatus = totalPaidForBill >= netPayable - 0.005 ? 'Paid'
-            : totalPaidForBill > 0 ? 'Partial' : 'Unpaid';
-          await sb.from('ho_bills').update({ status: billStatus })
-            .eq('bill_number', it.bill_number);
-        }
-      }
-
-      remaining -= thisPayment;
-    }
-    // Recompute PRR header status
-    const { data: updated } = await sb.from('ho_prr_items').select('requested_amount, paid_amount').eq('prr_number', ref);
-    const totalReq  = (updated||[]).reduce((s,r) => s + num(r.requested_amount), 0);
-    const totalPaid = (updated||[]).reduce((s,r) => s + num(r.paid_amount), 0);
-    const newStatus = totalPaid >= totalReq - 0.005 ? 'Paid' : totalPaid > 0 ? 'Partial' : 'Unpaid';
-    await sb.from('ho_prr').update({ status: newStatus }).eq('prr_number', ref);
-    _cacheBust('hobList','unpaidBills','prrList','allRequests');
-  } else if (type === 'ARR') {
-    const { data } = await sb.from('ho_arr').select('amount, paid_amount').eq('arr_number', ref).single();
-    if (data) {
-      const newPaid = Math.min(num(data.amount), num(data.paid_amount) + amount);
-      const newStatus = newPaid >= num(data.amount) - 0.005 ? 'Paid' : 'Partial Paid';
-      await sb.from('ho_arr').update({ paid_amount: newPaid, status: newStatus }).eq('arr_number', ref);
-      _cacheBust('arrList','allRequests');
-    }
-  } else if (type === 'HRR') {
-    const { data } = await sb.from('ho_hrr').select('amount, paid_amount').eq('hrr_number', ref).single();
-    if (data) {
-      const newPaid = Math.min(num(data.amount), num(data.paid_amount) + amount);
-      const newStatus = newPaid >= num(data.amount) - 0.005 ? 'Paid' : 'Partial Paid';
-      await sb.from('ho_hrr').update({ paid_amount: newPaid, status: newStatus }).eq('hrr_number', ref);
-      _cacheBust('hrrList','allRequests');
-    }
-  } else if (type === 'RRR') {
-    const { data } = await sb.from('wo_retention_releases').select('amount, paid_amount').eq('rrr_number', ref).single();
-    if (data) {
-      const newPaid = Math.min(num(data.amount), num(data.paid_amount) + amount);
-      const newStatus = newPaid >= num(data.amount) - 0.005 ? 'Paid' : 'Partial Paid';
-      await sb.from('wo_retention_releases').update({ paid_amount: newPaid, status: newStatus }).eq('rrr_number', ref);
-      _cacheBust('rrrList','allRequests');
-    }
-  }
 }
 
 async function apiGetPaymentHistory(typeFilter) {
