@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Penguin-Procurement Suite v172 — Urban Excellence LLP · Poetry of Earth</title>
+<title>Penguin-Procurement Suite v173 — Urban Excellence LLP · Poetry of Earth</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <style>
@@ -25026,6 +25026,55 @@ async function verifyGRN(grnNum) {
   loadGRNList(); loadMIRList();
 }
 
+// ============================================================
+// v173: clubbed line display for GRN / POB views (mock-approved).
+// Pure helpers below are display-only — stored per-leaf rows unchanged.
+// ============================================================
+function _v173MatKey(it){
+  return ((it.material_code!=null&&it.material_code!=='')?('c'+it.material_code):('n'+(it.material_name||'')))
+    + '|' + (it.uom||'') + '|' + num(it.unit_rate).toFixed(4);
+}
+function _v173Club(items, keyFn){
+  const g={}; const order=[];
+  (items||[]).forEach(it=>{ const k=keyFn(it); if(!g[k]){ g[k]=[]; order.push(k); } g[k].push(it); });
+  return order.map(k=>g[k]);
+}
+function _v173Sum(gl, f){ return gl.reduce((s,x)=>s+num(x[f]),0); }
+// tower-compact split lines: group leaves by their Tower segment
+function _v173TowerSplit(rows, locMap, uom, qtyField){
+  const by={}; const order=[];
+  (rows||[]).forEach(x=>{
+    const ln=locMap[String(x.loc_node_id)]; const path=ln?(ln.path||ln.name):'';
+    const parts=path?path.split(' › '):[];
+    const tw=parts.find(p=>/^tower/i.test(p))||parts[Math.max(0,parts.length-3)]||'—';
+    const leaf=parts.length?parts[parts.length-1]:(ln&&ln.name)||'?';
+    if(!by[tw]){ by[tw]={units:[],qty:0}; order.push(tw); }
+    by[tw].units.push(leaf); by[tw].qty+=num(x[qtyField]);
+  });
+  return order.map(tw=>{ const o=by[tw];
+    return '📍 '+esc(tw)+' › <span class="mono">'+o.units.map(esc).join(', ')
+      +'</span> — <span class="mono">'+fmtINR(o.qty)+'</span> '+esc(uom||'');
+  }).join('<br>');
+}
+// unit-per-row split lines (GRN view)
+function _v173UnitSplit(rows, locMap, uom, qtyField){
+  return (rows||[]).map(x=>{
+    const ln=locMap[String(x.loc_node_id)];
+    const lp=ln?(ln.path||ln.name):(x.loc_node_id?('loc '+x.loc_node_id):'— no location');
+    return '📍 '+esc(lp)+' — <span class="mono">'+fmtINR(num(x[qtyField]))+'</span> '+esc(uom||'');
+  }).join('<br>');
+}
+function _v173SplitToggle(id, label){
+  return ' <span style="cursor:pointer;color:var(--accent);font-size:11px;white-space:nowrap;" '
+    + 'onclick="var d=document.getElementById(\''+id+'\');d.style.display=d.style.display===\'none\'?\'block\':\'none\';">ⓘ '+label+'</span>';
+}
+function _v173LocPill(path){
+  if(!path) return '';
+  return ' <span style="display:inline-block;margin-left:6px;padding:1px 8px;font-size:10px;font-weight:700;'
+    + 'color:#3730a3;background:#e0e7ff;border:1px solid #c7d2fe;border-radius:10px;vertical-align:middle;">📍 '
+    + esc(path) + '</span>';
+}
+
 async function viewGRN(grnNum) {
   pbShow('Loading…');
   const [{data:h},{data:items}]=await Promise.all([
@@ -25041,16 +25090,43 @@ async function viewGRN(grnNum) {
   const refField = isCash
     ? `<div><label class="muted" style="font-size:11px;">DIRECT PURCHASE REF</label><div style="font-style:italic;">${esc(h?.cash_purchase_ref||'Direct Purchase')}</div></div>`
     : `<div><label class="muted" style="font-size:11px;">PO</label><div class="mono">${esc(h?.po_number||'')}</div></div>`;
-  // Cash GRN has simplified item table (no PO Qty / Prev / Balance)
+  // v173: club per-location leaf lines into one row per (material, uom, rate).
+  // Display-only — per-leaf rows remain the stored truth.
+  let _gLocMap={};
+  try{ const _glt=await _loadLocTree(); _gLocMap=Object.fromEntries((_glt||[]).map(n=>[String(n.id),n])); }catch(e){}
+  let _gSno=0;
+  const _gRowHTML = gl => {
+    _gSno++;
+    const f=gl[0];
+    const sThis=_v173Sum(gl,'this_grn_qty'), sAmt=_v173Sum(gl,'base_amount');
+    const withLoc=gl.filter(x=>x.loc_node_id);
+    let locHtml='';
+    if(gl.length===1 && withLoc.length===1){
+      const _ln=_gLocMap[String(f.loc_node_id)];
+      locHtml=_v173LocPill(_ln?_grnLabel3(_ln.path||_ln.name):'');
+    } else if(withLoc.length){
+      const sid='grnVSplit_'+_gSno;
+      locHtml=_v173SplitToggle(sid, gl.length+' location'+(gl.length>1?'s':''))
+        + '<div id="'+sid+'" style="display:none;font-size:11px;color:var(--muted);margin-top:4px;line-height:1.6;">'
+        + _v173UnitSplit(gl,_gLocMap,f.uom,'this_grn_qty') + '</div>';
+    }
+    if(isCash){
+      const remarks=[...new Set(gl.map(x=>x.remarks).filter(Boolean))].join(' · ')||'—';
+      return `<tr><td>${_gSno}</td><td>${esc(f.material_name)}${locHtml}</td><td>${esc(f.uom)}</td><td class="num">${fmtINR(sThis)}</td><td class="num">${fmtINR(f.unit_rate)}</td><td class="num">${fmtINR(sAmt)}</td><td>${esc(remarks)}</td></tr>`;
+    }
+    const sPo=_v173Sum(gl,'po_qty'), sPrev=_v173Sum(gl,'prev_received_qty'), sBal=_v173Sum(gl,'balance_qty');
+    return `<tr><td>${_gSno}</td><td>${esc(f.material_name)}${locHtml}</td><td>${esc(f.uom)}</td><td class="num">${fmtINR(sPo)}</td><td class="num">${fmtINR(sPrev)}</td><td class="num">${fmtINR(sThis)}</td><td class="num">${fmtINR(sBal)}</td><td class="num">${fmtINR(f.unit_rate)}</td><td class="num">${fmtINR(sAmt)}</td></tr>`;
+  };
+  const _gRowsHtml=_v173Club(items,_v173MatKey).map(_gRowHTML).join('');
   const itemTable = isCash
     ? `<div class="table-wrap"><table>
         <thead><tr><th>#</th><th>Material</th><th>UOM</th><th class="num">Qty</th><th class="num">Rate</th><th class="num">Amount</th><th>Remarks</th></tr></thead>
-        <tbody>${(items||[]).map(it=>`<tr><td>${it.sno}</td><td>${esc(it.material_name)}</td><td>${esc(it.uom)}</td><td class="num">${fmtINR(it.this_grn_qty)}</td><td class="num">${fmtINR(it.unit_rate)}</td><td class="num">${fmtINR(it.base_amount)}</td><td>${esc(it.remarks||'—')}</td></tr>`).join('')}
+        <tbody>${_gRowsHtml}
         <tr style="background:#fff7e6;font-weight:700;"><td colspan="5" style="text-align:right;padding:6px 8px;">Total</td><td class="num">${fmtINRSym(total)}</td><td></td></tr>
         </tbody></table></div>`
     : `<div class="table-wrap"><table>
         <thead><tr><th>#</th><th>Material</th><th>UOM</th><th class="num">PO Qty</th><th class="num">Prev Recd</th><th class="num">This GRN</th><th class="num">Balance</th><th class="num">Rate</th><th class="num">Amount</th></tr></thead>
-        <tbody>${(items||[]).map(it=>`<tr><td>${it.sno}</td><td>${esc(it.material_name)}</td><td>${esc(it.uom)}</td><td class="num">${fmtINR(it.po_qty)}</td><td class="num">${fmtINR(it.prev_received_qty)}</td><td class="num">${fmtINR(it.this_grn_qty)}</td><td class="num">${fmtINR(it.balance_qty)}</td><td class="num">${fmtINR(it.unit_rate)}</td><td class="num">${fmtINR(it.base_amount)}</td></tr>`).join('')}
+        <tbody>${_gRowsHtml}
         <tr style="background:#e6f4f1;font-weight:700;"><td colspan="8" style="text-align:right;padding:6px 8px;">Total</td><td class="num">${fmtINRSym(total)}</td></tr>
         </tbody></table></div>`;
   // Show "Create POB" only for Verified non-cash GRNs and users with POB permission
@@ -25381,24 +25457,33 @@ async function onPOBGRNSelect() {
   });
   let grossAmt=0;
   const pobOverLines=[];
-  document.getElementById('pob_itemsBody').innerHTML=_pobLineItems.map((it,i)=>{
-    grossAmt+=num(it.base_amount);
+  // v173: clubbed display per (grn, material, uom, rate); _pobLineItems stays
+  // per-line underneath — saved bill rows are unchanged.
+  document.getElementById('pob_itemsBody').innerHTML=_v173Club(_pobLineItems, it=>(it.grn_number||'')+'|'+_v173MatKey(it)).map((gl,i)=>{
+    const it=gl[0];
+    const sQty=_v173Sum(gl,'this_grn_qty'), sBase=_v173Sum(gl,'base_amount');
+    const sTot=gl.reduce((s,x)=>s+num(x._total_amt),0);
+    grossAmt+=sBase;
     const gstDetail = isPerLine
       ? `<span style="font-size:10px;color:var(--muted);">${it._cgst_pct>0?'C:'+it._cgst_pct+'% ':''}${it._sgst_pct>0?'S:'+it._sgst_pct+'% ':''}${it._igst_pct>0?'I:'+it._igst_pct+'%':''}</span>`
       : '';
-    const isOver=it.remarks&&it.remarks.includes('⚠ Over-receipt');
-    if(isOver) pobOverLines.push(`<strong>${esc(it.grn_number)}</strong> — ${esc(it.material_name)}: ${esc(it.remarks)}`);
+    const overLines=gl.filter(x=>x.remarks&&x.remarks.includes('⚠ Over-receipt'));
+    overLines.forEach(x=>pobOverLines.push(`<strong>${esc(x.grn_number)}</strong> — ${esc(x.material_name)}: ${esc(x.remarks)}`));
+    const isOver=overLines.length>0;
     const rowBg=isOver?'background:#fffbeb;':'';
     const flagCell=isOver
-      ?`<td title="${esc(it.remarks)}" style="color:#92400e;font-size:11px;font-weight:600;white-space:nowrap;cursor:help;">⚠ Over-receipt</td>`
+      ?`<td title="${esc(overLines.map(x=>x.remarks).join(' · '))}" style="color:#92400e;font-size:11px;font-weight:600;white-space:nowrap;cursor:help;">⚠ Over-receipt</td>`
       :`<td></td>`;
+    const linesPill = gl.length>1
+      ? ` <span style="display:inline-block;margin-left:6px;padding:1px 8px;font-size:10px;font-weight:600;color:#475569;background:#f1f5f9;border:1px solid #e2e8f0;border-radius:10px;vertical-align:middle;">${gl.length} lines</span>`
+      : '';
     return `<tr style="${rowBg}">
       <td>${i+1}</td><td class="mono" style="font-size:11px;">${esc(it.grn_number)}</td>
-      <td>${esc(it.material_name)}</td><td>${esc(it.uom)}</td>
-      <td class="num">${fmtINR(it.this_grn_qty)}</td>
+      <td>${esc(it.material_name)}${linesPill}</td><td>${esc(it.uom)}</td>
+      <td class="num">${fmtINR(sQty)}</td>
       <td class="num">${fmtINR(it.unit_rate)}</td>
-      <td class="num">${fmtINR(it.base_amount)}</td>
-      <td class="num" style="color:var(--muted);font-size:12px;">${fmtINR(it._total_amt)}${gstDetail}</td>
+      <td class="num">${fmtINR(sBase)}</td>
+      <td class="num" style="color:var(--muted);font-size:12px;">${fmtINR(sTot)}${gstDetail}</td>
       ${flagCell}
     </tr>`;
   }).join('')||'<tr><td colspan="9" class="center muted">No items</td></tr>';
@@ -25684,15 +25769,53 @@ async function viewPOB(billNum) {
     </div>` : `<div style="margin-bottom:14px;padding:8px 14px;background:var(--panel-2);border:1px solid var(--border);border-radius:6px;font-size:12px;color:var(--muted);">No prior approved bills for this vendor.</div>`;
 
   // ── Bill Line Items ──────────────────────────────────────────────────────
-  const lineRows = (items||[]).map((it,i)=>`<tr>
-    <td style="text-align:center;">${it.sno||i+1}</td>
-    <td class="mono" style="font-size:11px;">${esc(it.grn_number||'')}</td>
-    <td>${esc(it.material_name)}</td>
-    <td style="text-align:center;">${esc(it.uom)}</td>
-    <td style="text-align:right;">${fmtINR(it.qty)}</td>
-    <td style="text-align:right;">${fmtINR(it.unit_rate)}</td>
-    <td style="text-align:right;font-weight:600;">${fmtINR(it.base_amount)}</td>
-  </tr>`).join('');
+  // v173: club per-leaf lines per (grn, material, uom, rate); 📍 split traced
+  // from the source GRN lines (tower-compact); fallback = "n lines" pill.
+  let _bLocMap={}, _bGrnLoc={};
+  try{
+    const _blt=await _loadLocTree(); _bLocMap=Object.fromEntries((_blt||[]).map(n=>[String(n.id),n]));
+    const _bgn=[...new Set((items||[]).map(it=>it.grn_number).filter(Boolean))];
+    if(_bgn.length){
+      const {data:_bgi}=await sb.from('pu_grn_items')
+        .select('grn_number,material_code,material_name,uom,unit_rate,loc_node_id,this_grn_qty')
+        .in('grn_number',_bgn);
+      (_bgi||[]).forEach(x=>{
+        const k=(x.grn_number||'')+'|'+_v173MatKey(x);
+        (_bGrnLoc[k]=_bGrnLoc[k]||[]).push(x);
+      });
+    }
+  }catch(e){ console.warn('POB loc trace:',e); }
+  let _bSno=0;
+  const lineRows = _v173Club(items, it=>(it.grn_number||'')+'|'+_v173MatKey(it)).map(gl=>{
+    _bSno++;
+    const f=gl[0];
+    const sQty=_v173Sum(gl,'qty'), sBase=_v173Sum(gl,'base_amount');
+    const trace=(_bGrnLoc[(f.grn_number||'')+'|'+_v173MatKey(f)]||[]).filter(x=>x.loc_node_id);
+    let splitHtml='';
+    if(trace.length && Math.abs(_v173Sum(trace,'this_grn_qty')-sQty)<0.001){
+      if(trace.length===1){
+        const _ln=_bLocMap[String(trace[0].loc_node_id)];
+        splitHtml=_v173LocPill(_ln?_grnLabel3(_ln.path||_ln.name):'');
+      } else {
+        const sid='pobVSplit_'+_bSno;
+        splitHtml=_v173SplitToggle(sid, trace.length+' locations')
+          + ' <span style="display:inline-block;margin-left:4px;padding:1px 8px;font-size:10px;font-weight:600;color:#92400e;background:#fef3c7;border:1px solid #fde68a;border-radius:10px;vertical-align:middle;" title="Locations resolved from the source GRN lines">via GRN</span>'
+          + '<div id="'+sid+'" style="display:none;font-size:11px;color:var(--muted);margin-top:4px;line-height:1.65;">'
+          + _v173TowerSplit(trace,_bLocMap,f.uom,'this_grn_qty') + '</div>';
+      }
+    } else if(gl.length>1){
+      splitHtml=' <span style="display:inline-block;margin-left:6px;padding:1px 8px;font-size:10px;font-weight:600;color:#475569;background:#f1f5f9;border:1px solid #e2e8f0;border-radius:10px;vertical-align:middle;">'+gl.length+' lines</span>';
+    }
+    return `<tr>
+    <td style="text-align:center;">${_bSno}</td>
+    <td class="mono" style="font-size:11px;">${esc(f.grn_number||'')}</td>
+    <td>${esc(f.material_name)}${splitHtml}</td>
+    <td style="text-align:center;">${esc(f.uom)}</td>
+    <td style="text-align:right;">${fmtINR(sQty)}</td>
+    <td style="text-align:right;">${fmtINR(f.unit_rate)}</td>
+    <td style="text-align:right;font-weight:600;">${fmtINR(sBase)}</td>
+  </tr>`;
+  }).join('');
 
   // ── Extra / Deduction Lines ──────────────────────────────────────────────
   const extraRows = (extraLines||[]).length ? (extraLines||[]).map(el=>`<tr>
