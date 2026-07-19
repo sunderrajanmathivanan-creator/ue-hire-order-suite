@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Penguin-Procurement Suite v173 — Urban Excellence LLP · Poetry of Earth</title>
+<title>Penguin-Procurement Suite v174 — Urban Excellence LLP · Poetry of Earth</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <style>
@@ -22818,6 +22818,38 @@ function recalcPOTotals() {
   document.getElementById('po_grandTotal').textContent=fmtINR(grand);
 }
 
+// v174: per-leg source stamping. Root cause of the "direct PO doesn't consume
+// the estimate" bug: since v148 every est-picker leg carries a client-generated
+// plid, and savePO's mapping inferred procurement_source='mir' from plid
+// presence — so est lines were estimate-exempt at the gate AND invisible to
+// fn_material_consumed_pkg. Provenance now travels explicitly on each item:
+//   src:'est' leg            -> 'direct_po' (keeps its picker plid)
+//   MIR leg, qty <= balance  -> 'mir'       (keeps its MIR plid)
+//   MIR leg pass-2 overflow  -> emitted as a SEPARATE 'direct_po' item with a
+//                               fresh plid, so the extra-beyond-MIR portion is
+//                               estimate-gated and counted (closes the v154
+//                               pass-2 leak).
+// mk() must be called immediately before its push (sno = items.length+1), so
+// the helper pushes straight into the live items array.
+function _poExplodeAllocLeg(a, mk, items){
+  const q = Number(a.qty)||0; if(q<=0) return;
+  const isEst  = (a.src==='est');
+  const mirQty = isEst ? 0 : Math.min(q, Math.max(0, Number(a.mirBalance)||0));
+  const extQty = q - mirQty;                       // exact — sums preserve row total
+  const stamp = (qq, srcTag, plid) => {
+    const it = mk(qq);
+    it.wbs_node_id = a.wbs ? Number(a.wbs) : null;
+    it.loc_node_id = a.loc || null;
+    it.procurement_line_id = plid;
+    it.procurement_source  = srcTag;
+    items.push(it);
+  };
+  if(mirQty > 1e-9) stamp(mirQty, 'mir', a.plid||null);
+  if(extQty > 1e-9) stamp(extQty, 'direct_po',
+    isEst ? (a.plid||null)
+          : ((typeof crypto!=='undefined' && crypto.randomUUID) ? crypto.randomUUID() : null));
+}
+
 function getPOItemsData() {
   const items=[];
   document.querySelectorAll('#poItemsBody tr').forEach(tr=>{
@@ -22848,7 +22880,7 @@ function getPOItemsData() {
         total_amount:base+cgst+sgst+igst,remarks:_rmk}; };
     const _alloc=_poAlloc[rn];
     if(_alloc && _alloc.length){
-      _alloc.forEach(a=>{ if((a.qty||0)<=0) return; const it=_mk(a.qty); it.wbs_node_id=a.wbs?Number(a.wbs):null; it.loc_node_id=a.loc||null; it.procurement_line_id=a.plid||null; items.push(it); });
+      _alloc.forEach(a=>_poExplodeAllocLeg(a, _mk, items));   // v174: per-leg source stamp + overflow split
     } else {
       const it=_mk(qty); it.wbs_node_id=wbsNode; it.loc_node_id=locNode; it.procurement_line_id=tr.dataset.plid||null; items.push(it);
     }
@@ -22894,7 +22926,7 @@ async function savePO() {
   // v83: duplicate-line gate (entry block is bypassable via later edits)
   const _poSeen={}; let _poDup=null;
   for(let i=0;i<items.length;i++){
-    const k=((items[i].material_code||items[i].material_name||'')+'').toLowerCase()+'|'+(items[i].loc_node_id||'')+'|'+(items[i].wbs_node_id==null?'':items[i].wbs_node_id);   // v156: triple grain \u2014 two WBS slices at one loc are distinct lines
+    const k=((items[i].material_code||items[i].material_name||'')+'').toLowerCase()+'|'+(items[i].loc_node_id||'')+'|'+(items[i].wbs_node_id==null?'':items[i].wbs_node_id)+'|'+(items[i].procurement_source||'');   // v156: triple grain; v174: + source — a mir/direct overflow split pair at one triple is one logical line, not a dup \u2014 two WBS slices at one loc are distinct lines
     if(_poSeen[k]!=null){ _poDup={name:items[i].material_name,rows:[_poSeen[k]+1,i+1]}; break; }
     _poSeen[k]=i;
   }
@@ -22943,8 +22975,7 @@ async function savePO() {
   // MIR-sourced lines pass (counted at the MIR head); LS lines are \u20b9-gated
   // server-side and get an advisory \u20b9 check here.
   const _capItems = items.filter(it=>it.material_code && it.loc_node_id && it.wbs_node_id!=null
-                                   && (it.procurement_source||'')!=='mir'
-                                   && !it.procurement_line_id);   // v156: MIR-linked \u2014 server gates at the MIR head, not the estimate
+                                   && (it.procurement_source||'')!=='mir');   // v174: source stamp is authoritative — est-picker legs carry plids too, so plid presence no longer exempts. v156: MIR-linked \u2014 server gates at the MIR head, not the estimate
   if(_capItems.length){
     pbShow('Checking estimate caps…');
     let estMap={}, comMap={qty3:{},rupees2:{}}, grnMapsC={qty3:{},rupees2:{}}, lsPairs=new Set(); const _remMap={};
@@ -23133,7 +23164,7 @@ async function savePO() {
         return {
           ...it,
           procurement_line_id: it.procurement_line_id || resolved?.procurement_line_id || crypto.randomUUID(),
-          procurement_source:  it.procurement_line_id ? (it.procurement_source||'mir') : (resolved?.procurement_source || 'direct_po'),
+          procurement_source:  it.procurement_source || resolved?.procurement_source || (it.procurement_line_id ? 'mir' : 'direct_po'),   // v174: explicit per-leg stamp wins; plid-implies-mir demoted to last fallback (v148 regression fix)
         };
       }),
     };
