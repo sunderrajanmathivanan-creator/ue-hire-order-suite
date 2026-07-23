@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Penguin Suite v7 — Urban Excellence LLP</title>
+<title>Penguin Suite v8 — Urban Excellence LLP</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <style>
@@ -31083,39 +31083,31 @@ async function pgsEnterProject(p){
   pgsEl('pgs-sb-proj').textContent = p.project_name;
   pgsEl('pgs-sb-switch').style.display = pgsS.accessible.length > 1 ? '' : 'none';
 
-  const gated = p.id !== PGS_BRIDGE_PROJECT_ID;
-  document.body.classList.toggle('pgs-gated', gated);
-
-  if (gated) {
-    // Migration-5 gate: no v174 data loads fire. Deactivate all modules so the
-    // 60s dashboard interval stays idle, fill the foot from claims, show gate.
-    document.querySelectorAll('.module').forEach(function(m){ m.classList.remove('active'); });
-    pgsEl('pgs-gate-proj').textContent = p.project_name;
-    pgsEl('currentUser').textContent = pgsS.userName || '';
-    pgsEl('currentRole').textContent = pgsRoleLabel(pgsS.claimsRole);
-    pgsEl('authGate').style.display = 'none';
-    pgsEl('app').classList.remove('hidden');
-    pgsArmTabWall(p.id);   // v7: arm cross-tab wall (claims untouched when gated)
+  // v8 (M5 Wave 3): read-side isolation is live — the project claim
+  // decides what this session can SEE, so entry requires a verified
+  // claim. Handshake is mandatory and blocking for every project.
+  const claimOk = await pgsClaimHandshake(p);
+  if (!claimOk) {
+    if (typeof toast === 'function') toast('Could not activate this project — please try again', 'error', 4500);
+    pgsShowSelector();
     return;
   }
-
-  // Bridge project: hand over to the untouched v174 entry chain
-  // (profile fetch -> state.roles -> applyRoleUI -> initApp -> dashboard
-  //  activation + applyRoleTabVisibility via the dashboard wrapper).
-  await pgsClaimHandshake(p);   // v7 Wave-2: bridge-only, failure-tolerant
   pgsArmTabWall(p.id);
+
+  // Hand over to the untouched v174 entry chain (profile fetch ->
+  // state.roles -> applyRoleUI -> initApp -> dashboard activation).
+  // RLS scopes every read and write to the claimed project.
   await _pgsOrigOnSignedIn(pgsS.authedUser);
   // v4: state.roles is populated now — align shell chrome with it
   pgsApplyPlanTabVisibility();
   pgsSyncSectionHeaders();
 }
 
-// ---- Wave 2 (Migration 5): project-claim handshake ----
+// ---- Migration 5: project-claim handshake (Wave 3: blocking) ----
 // Sets the active project server-side, refreshes the session so the
 // hook mints the project_id claim, then verifies it via rpc_whoami.
-// Wave-2 policy: called ONLY for the bridge project, whose claim value
-// equals jwt_project_id()'s fallback — a handshake failure therefore
-// cannot change write behaviour. Failures log + toast, never block.
+// Since Wave 3, read-side RLS keys off this claim — callers treat a
+// false return as a hard stop and never enter the project.
 async function pgsClaimHandshake(p){
   try {
     const setRes = await sb.rpc('rpc_set_active_project', { p_project_id: p.id });
