@@ -3,9 +3,12 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Penguin Suite v38 — Urban Excellence LLP</title>
+<title>Penguin Suite v45</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
 <style>
 /* ============================================================
    Penguin-Procurement Suite — Screen Styles (Light / Soft Blue-Grey)
@@ -971,6 +974,8 @@ table.pgp-roles, table.pgp-mx{ border-collapse:collapse; width:100%; }
     <div class="tab" data-tab="wo">🔨 Work Order</div>
     <div class="pgs-sbsec">Finance</div>
     <div class="tab" data-tab="payments">💳 Payments</div>
+    <div class="pgs-sbsec">Insights</div>
+    <div class="tab" data-tab="reports">📊 Reports</div>
     <div class="pgs-sbsec">Reference</div>
     <div class="tab" data-tab="masters">🗂️ Masters</div>
     <div class="pgs-sbsec">Administration</div>
@@ -1018,6 +1023,349 @@ table.pgp-roles, table.pgp-mx{ border-collapse:collapse; width:100%; }
 
 
 <!-- ==================== DASHBOARD ==================== -->
+<div class="module" id="mod-reports">
+<style>
+#mod-reports{
+  --r-navy:#1B2A47;--r-navy2:#22395c;--r-teal:#0d9488;--r-teal-d:#0f766e;
+  --r-border:#cbd5e1;--r-muted:#64748b;--r-gold:#D4AF37;
+  --r-est:#1e40af;--r-po:#7c3a14;--r-grn:#065f46;--r-mis:#5b1a6b;
+  --r-ok:#15803d;--r-warn:#b45309;--r-bad:#b91c1c;color:#1e293b;
+}
+#mod-reports .rpt-crumbs{font-size:12px;color:var(--r-muted);margin-bottom:6px;}
+#mod-reports .rpt-h1{font-size:22px;font-weight:700;color:var(--r-navy);margin-bottom:2px;}
+#mod-reports .rpt-sub{color:var(--r-muted);font-size:13px;margin-bottom:18px;}
+#mod-reports .rpt-catalog{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:14px;}
+#mod-reports .rpt-card{background:#fff;border:1px solid var(--r-border);border-radius:10px;padding:16px 18px;cursor:pointer;transition:.12s;position:relative;overflow:hidden;}
+#mod-reports .rpt-card:hover{border-color:var(--r-teal);box-shadow:0 6px 18px rgba(13,148,136,.10);transform:translateY(-1px);}
+#mod-reports .rpt-card .ic{font-size:24px;margin-bottom:8px;}
+#mod-reports .rpt-card h3{font-size:15px;color:var(--r-navy);margin-bottom:5px;}
+#mod-reports .rpt-card p{font-size:12.5px;color:var(--r-muted);line-height:1.5;}
+#mod-reports .rpt-card .go{margin-top:12px;font-size:12px;font-weight:700;color:var(--r-teal-d);}
+#mod-reports .rpt-card.soon{opacity:.55;cursor:default;}
+#mod-reports .rpt-card.soon:hover{border-color:var(--r-border);box-shadow:none;transform:none;}
+#mod-reports .rpt-card .pill{position:absolute;top:12px;right:12px;font-size:9px;font-weight:700;padding:2px 8px;border-radius:99px;background:#fef3c7;color:#92400e;}
+#mod-reports .rpt-card.live .pill{background:#d1fae5;color:#065f46;}
+
+#mod-reports .rpt-hd{display:flex;align-items:flex-start;gap:14px;flex-wrap:wrap;margin-bottom:14px;}
+#mod-reports .rpt-back{border:1px solid var(--r-border);background:#fff;border-radius:7px;padding:7px 12px;font-size:12.5px;cursor:pointer;color:var(--r-muted);font-family:inherit;}
+#mod-reports .rpt-back:hover{border-color:var(--r-teal);color:var(--r-teal-d);}
+#mod-reports .rpt-title{flex:1;min-width:220px;}
+#mod-reports .rpt-title h2{font-size:18px;color:var(--r-navy);}
+#mod-reports .rpt-title .m{font-size:12px;color:var(--r-muted);margin-top:2px;}
+#mod-reports .rpt-actions{display:flex;gap:8px;flex-wrap:wrap;}
+#mod-reports .rbtn{border:none;border-radius:7px;padding:8px 14px;font-size:12.5px;font-weight:600;cursor:pointer;font-family:inherit;display:inline-flex;align-items:center;gap:6px;}
+#mod-reports .rbtn-xl{background:#207245;color:#fff;}
+#mod-reports .rbtn-pdf{background:#b30b00;color:#fff;}
+#mod-reports .rbtn-print,#mod-reports .rbtn-ghost{background:#fff;border:1px solid var(--r-border);color:var(--r-muted);}
+#mod-reports .rbtn:hover{filter:brightness(1.06);}
+#mod-reports .rbtn-print:hover,#mod-reports .rbtn-ghost:hover{border-color:var(--r-teal);color:var(--r-teal-d);filter:none;}
+
+/* config */
+#mod-reports .cfg{display:grid;grid-template-columns:1fr 1fr;gap:14px;align-items:start;}
+#mod-reports .rpanel{background:#fff;border:1px solid var(--r-border);border-radius:10px;}
+#mod-reports .rpanel .ph{background:var(--r-navy);color:#dbe7f8;padding:9px 14px;font-size:12.5px;font-weight:600;display:flex;align-items:center;gap:8px;border-radius:9px 9px 0 0;}
+#mod-reports .rpanel-mat{position:relative;z-index:30;}
+#mod-reports .rpanel .ph .cnt{margin-left:auto;font-size:10.5px;color:#93a7c9;font-weight:500;}
+#mod-reports .rpanel .pb{padding:10px 12px;}
+#mod-reports .rfull{grid-column:1 / span 2;}
+#mod-reports .rmeasure{margin-left:auto;display:inline-flex;border:1px solid #33507a;border-radius:7px;overflow:hidden;}
+#mod-reports .rmeasure span{padding:4px 11px;font-size:11px;font-weight:700;cursor:pointer;color:#9db2d4;background:transparent;}
+#mod-reports .rmeasure span.on{background:#0d9488;color:#fff;}
+#mod-reports #rpt_searchbox{position:relative;}
+#mod-reports #rpt_searchbox>.wrap{position:relative;}
+#mod-reports #rpt_searchbox input{width:100%;padding:8px 12px 8px 32px;border:1px solid var(--r-border);border-radius:8px;font-size:13px;background:#f8fafc;font-family:inherit;}
+#mod-reports #rpt_searchbox input:focus{outline:none;border-color:var(--r-teal);background:#fff;}
+#mod-reports #rpt_searchbox .mag{position:absolute;left:10px;top:9px;color:var(--r-muted);}
+#mod-reports #rpt_searchbox .clr{position:absolute;right:9px;top:7px;cursor:pointer;color:var(--r-muted);display:none;}
+#mod-reports .rpt-matlist{position:absolute;top:40px;left:0;right:0;background:#fff;border:1px solid var(--r-border);border-radius:8px;box-shadow:0 12px 30px rgba(20,28,46,.14);max-height:300px;overflow:auto;z-index:70;display:none;}
+#mod-reports .rmatrow{padding:8px 12px;cursor:pointer;border-bottom:1px solid #f1f5f9;font-size:13px;display:flex;gap:8px;align-items:center;}
+#mod-reports .rmatrow:hover,#mod-reports .rmatrow.hi{background:#f0fdfa;}
+#mod-reports .rmatrow .rcode{font-family:monospace;font-size:10px;font-weight:700;color:var(--r-teal-d);background:#ccfbf1;padding:1px 6px;border-radius:3px;}
+#mod-reports .rtsearch{position:relative;margin-bottom:8px;}
+#mod-reports .rtsearch input{width:100%;padding:6px 10px 6px 28px;border:1px solid var(--r-border);border-radius:7px;font-size:12px;background:#f8fafc;font-family:inherit;}
+#mod-reports .rtsearch .mag{position:absolute;left:8px;top:7px;color:var(--r-muted);font-size:12px;}
+#mod-reports .rseg{display:inline-flex;border:1px solid var(--r-border);border-radius:7px;overflow:hidden;}
+#mod-reports .rseg span{padding:7px 14px;font-size:12.5px;font-weight:600;cursor:pointer;color:var(--r-muted);background:#fff;}
+#mod-reports .rseg span.on{background:var(--r-navy);color:#fff;}
+#mod-reports .rpt-hint{font-size:11.5px;color:var(--r-muted);margin-top:8px;}
+#mod-reports .rtree{max-height:260px;overflow:auto;font-size:12.5px;}
+#mod-reports .rtrow{display:flex;align-items:center;gap:6px;padding:4px 6px;border-radius:5px;cursor:pointer;}
+#mod-reports .rtrow:hover{background:#f0fdfa;}
+#mod-reports .rtrow.sel{background:#ccfbf1;font-weight:600;color:var(--r-teal-d);}
+#mod-reports .rtw{width:14px;text-align:center;color:#94a3b8;font-size:10px;cursor:pointer;user-select:none;flex-shrink:0;}
+#mod-reports .rtnm{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+#mod-reports .rtnm mark{background:#fde68a;color:#7a5c00;border-radius:2px;padding:0 1px;}
+#mod-reports .rtbadge{font-size:9.5px;color:#475569;background:#eef2f7;padding:1px 6px;border-radius:99px;flex-shrink:0;}
+#mod-reports .rtpkg{font-size:8.5px;font-weight:700;color:#dbe7f8;background:#1e3a5f;border-radius:99px;padding:1px 6px;}
+#mod-reports .rtkids{margin-left:16px;border-left:1px dashed var(--r-border);padding-left:6px;}
+#mod-reports .rtclr{font-size:11px;color:var(--r-teal-d);cursor:pointer;padding:2px 4px 6px;}
+#mod-reports .rstages{display:flex;gap:10px;flex-wrap:wrap;}
+#mod-reports .rstg{display:flex;align-items:center;gap:8px;border:1.5px solid var(--r-border);border-radius:9px;padding:9px 14px;cursor:pointer;font-weight:600;font-size:13px;user-select:none;background:#fff;color:var(--r-muted);}
+#mod-reports .rstg .sw{width:11px;height:11px;border-radius:3px;flex-shrink:0;}
+#mod-reports .rstg .ck{font-size:12px;width:14px;}
+#mod-reports .rstg.est.on{color:var(--r-est);background:#eff2fb;border-color:var(--r-est);}
+#mod-reports .rstg.po.on{color:var(--r-po);background:#fbf2ec;border-color:var(--r-po);}
+#mod-reports .rstg.grn.on{color:var(--r-grn);background:#eefaf3;border-color:var(--r-grn);}
+#mod-reports .rstg.mis.on{color:var(--r-mis);background:#f7eefb;border-color:var(--r-mis);}
+#mod-reports .rdaterow{display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
+#mod-reports .rdaterow label{font-size:11.5px;font-weight:700;color:var(--r-muted);text-transform:uppercase;letter-spacing:.4px;}
+#mod-reports .rdaterow input[type=date]{padding:7px 9px;border:1px solid var(--r-border);border-radius:7px;font-size:13px;font-family:inherit;background:#f8fafc;}
+#mod-reports .rqpick{font-size:11px;border:1px solid var(--r-border);background:#fff;border-radius:99px;padding:4px 11px;cursor:pointer;color:var(--r-muted);}
+#mod-reports .rqpick:hover{border-color:var(--r-teal);color:var(--r-teal-d);}
+#mod-reports .rest-note{font-size:11px;color:#a07d10;background:#fffbe9;border:1px solid #e6cf7a;border-radius:7px;padding:7px 11px;grid-column:1 / span 2;}
+#mod-reports .cfg-foot{display:flex;align-items:center;gap:12px;margin-top:16px;padding:14px 16px;background:#fff;border:1px solid var(--r-border);border-radius:10px;}
+#mod-reports .rpt-chips{display:flex;gap:8px;flex-wrap:wrap;flex:1;}
+#mod-reports .rpt-chip{font-size:11.5px;background:#eef2f7;border-radius:99px;padding:4px 11px;color:#334155;}
+#mod-reports .rpt-chip b{color:var(--r-navy);}
+#mod-reports .rgen{border:none;border-radius:8px;padding:10px 20px;font-size:13.5px;font-weight:700;cursor:pointer;font-family:inherit;background:var(--r-teal);color:#fff;display:inline-flex;gap:7px;align-items:center;}
+#mod-reports .rgen:hover{background:var(--r-teal-d);}
+#mod-reports .rgen:disabled{background:#94a3b8;cursor:not-allowed;}
+
+/* report table */
+#mod-reports .rpt-toolbar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;}
+#mod-reports .rpt-legend{display:flex;gap:16px;flex-wrap:wrap;font-size:11.5px;color:var(--r-muted);padding:6px 4px 12px;}
+#mod-reports .rpt-legend .lg{display:flex;align-items:center;gap:6px;}
+#mod-reports .rpt-legend .sw{width:13px;height:13px;border-radius:3px;display:inline-block;}
+#mod-reports .rt-wrap{background:#fff;border:1px solid var(--r-border);border-radius:10px;overflow:auto;}
+#mod-reports table.rt{width:100%;border-collapse:collapse;font-size:12.5px;}
+#mod-reports table.rt thead th{position:sticky;top:0;z-index:3;background:var(--r-navy);color:#dbe7f8;padding:8px 10px;font-size:10.5px;text-transform:uppercase;letter-spacing:.4px;text-align:right;white-space:nowrap;border-right:1px solid rgba(255,255,255,.08);}
+#mod-reports table.rt thead th.lbl{text-align:left;position:sticky;left:0;z-index:4;min-width:320px;}
+#mod-reports table.rt thead th.g-est{background:var(--r-est);}
+#mod-reports table.rt thead th.g-po{background:var(--r-po);}
+#mod-reports table.rt thead th.g-grn{background:var(--r-grn);}
+#mod-reports table.rt thead th.g-mis{background:var(--r-mis);}
+#mod-reports table.rt thead th.g-var{background:var(--r-navy2);}
+#mod-reports table.rt tbody td{padding:5px 10px;border-bottom:1px solid #eef2f6;text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap;}
+#mod-reports table.rt tbody td.lbl{text-align:left;position:sticky;left:0;background:#fff;z-index:1;}
+#mod-reports table.rt tbody tr.r-stage td.lbl,#mod-reports table.rt tbody tr.r-stage td{background:#dde6f0;font-weight:700;}
+#mod-reports table.rt tbody tr.r-stage td.lbl{color:var(--r-navy);}
+#mod-reports table.rt tbody tr.r-tower td.lbl,#mod-reports table.rt tbody tr.r-tower td{background:#e8eef7;}
+#mod-reports table.rt tbody tr.r-tower td.lbl{color:#1e3a5f;font-weight:600;}
+#mod-reports table.rt tbody tr.r-floor td.lbl,#mod-reports table.rt tbody tr.r-floor td{background:#f2f6fb;}
+#mod-reports table.rt tbody tr.r-floor td.lbl{color:#334155;font-weight:600;}
+#mod-reports table.rt tbody tr.r-pkg td.lbl,#mod-reports table.rt tbody tr.r-pkg td{background:#f0f7f5;font-weight:700;}
+#mod-reports table.rt tbody tr.r-pkg td.lbl{color:var(--r-teal-d);}
+#mod-reports table.rt tbody tr.r-mat td.lbl{background:#fff;}
+#mod-reports table.rt tbody tr.r-mat:hover td,#mod-reports table.rt tbody tr.r-mat:hover td.lbl{background:#fafcff;}
+#mod-reports table.rt tbody tr.grand td,#mod-reports table.rt tbody tr.grand td.lbl{background:var(--r-navy);color:var(--r-gold);font-weight:700;border-top:2px solid var(--r-gold);}
+#mod-reports table.rt tbody tr.grand td.lbl{position:sticky;left:0;}
+#mod-reports .rtw2{cursor:pointer;user-select:none;display:inline-block;width:14px;color:#94a3b8;font-size:10px;}
+#mod-reports .rnode-code{font-family:monospace;font-size:9px;color:#94a3b8;background:#eef2f7;padding:1px 5px;border-radius:3px;margin-left:5px;}
+#mod-reports .rmat-code{font-family:monospace;font-size:9.5px;font-weight:700;color:var(--r-teal-d);background:#ccfbf1;padding:1px 5px;border-radius:3px;margin-left:6px;}
+#mod-reports .ruom{font-size:10px;color:var(--r-muted);background:#eef2f7;padding:1px 5px;border-radius:3px;margin-left:6px;}
+#mod-reports .rvar{font-weight:700;}
+#mod-reports .rvar.ok{color:var(--r-ok);}#mod-reports .rvar.warn{color:var(--r-warn);}#mod-reports .rvar.bad{color:var(--r-bad);}
+#mod-reports .rdot{display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:5px;vertical-align:middle;}
+#mod-reports .rdot.ok{background:var(--r-ok);}#mod-reports .rdot.warn{background:var(--r-warn);}#mod-reports .rdot.bad{background:var(--r-bad);}
+#mod-reports .rzero{color:#c2c9d4;}
+#mod-reports .rpt-note{font-size:11px;color:var(--r-muted);margin-top:10px;line-height:1.6;background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:10px 14px;}
+@media print{
+  .pgs-sidebar{display:none!important;}
+  #mod-reports .rpt-actions,#mod-reports .rpt-toolbar,#mod-reports .rpt-back,#mod-reports .rpt-note{display:none!important;}
+  #mod-reports .rt-wrap{border:none;overflow:visible;}
+  #mod-reports table.rt{font-size:9px;}
+  #mod-reports table.rt thead th{position:static;}
+  #mod-reports table.rt tbody td.lbl{position:static;}
+}
+@media(max-width:820px){#mod-reports .cfg{grid-template-columns:1fr;}#mod-reports .rfull,#mod-reports .rest-note{grid-column:auto;}}
+</style>
+
+  <!-- Landing -->
+  <div id="rpt_landing">
+    <div class="rpt-crumbs">Reports</div>
+    <div class="rpt-h1">Reports</div>
+    <div class="rpt-sub">Generate presentation-ready reports across the full project lifecycle. Export to formatted Excel or PDF.</div>
+    <div class="rpt-catalog">
+      <div class="rpt-card live" onclick="RPT.config()">
+        <span class="pill">Ready</span>
+        <div class="ic">🧱</div>
+        <h3>Material — Estimation vs PO vs GRN vs MIS</h3>
+        <p>Reconcile materials through estimated → ordered → received → consumed. Choose location, WBS, material, stages, measure and date range before generating.</p>
+        <div class="go">Configure &amp; open →</div>
+      </div>
+      <div class="rpt-card live" onclick="RPT.delAudit()">
+        <span class="pill">Ready</span>
+        <div class="ic">🗑</div>
+        <h3>Deletion Audit</h3>
+        <p>Every deleted GRN and PO Bill — who deleted it, when, why, and the full pre-delete snapshot. Restores are logged here too.</p>
+        <div class="go">Open →</div>
+      </div>
+      <div class="rpt-card soon"><span class="pill">Soon</span><div class="ic">💳</div><h3>Vendor Payment Ledger</h3><p>PO / GRN / bill / payment position per vendor with ageing.</p></div>
+      <div class="rpt-card soon"><span class="pill">Soon</span><div class="ic">🏗️</div><h3>Work &amp; Hire Order Certification</h3><p>Ordered vs certified vs billed, per WO/HO and location.</p></div>
+      <div class="rpt-card soon"><span class="pill">Soon</span><div class="ic">📈</div><h3>Budget vs Committed vs Actual</h3><p>Estimate budget against committed and actual spend per package.</p></div>
+    </div>
+  </div>
+
+
+  <!-- Deletion Audit (v44) — own pane, managed by the delAudit IIFE; never touched by showLanding() -->
+  <div id="rpt_delaudit" class="hidden">
+    <div class="rpt-crumbs">Reports › Deletion Audit</div>
+    <div class="rpt-hd">
+      <button class="rpt-back" onclick="RPT.delAuditBack()">← Reports</button>
+      <div>
+        <div class="rpt-h1">🗑 Deletion Audit</div>
+        <div class="rpt-sub">Deleted GRNs &amp; PO Bills with reason, actor and full snapshot. Rows starting with RESTORE record a reversal.</div>
+      </div>
+    </div>
+    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:10px;">
+      <select id="da_type" onchange="RPT.delAuditType(this.value)" style="padding:6px 10px;border:1px solid var(--r-border);border-radius:7px;font-size:12.5px;background:#fff;font-family:inherit;">
+        <option value="all">All types</option>
+        <option value="GRN">GRN only</option>
+        <option value="POB">PO Bill only</option>
+      </select>
+      <input id="da_search" placeholder="🔍 Doc number / reason…" autocomplete="off" oninput="RPT.delAuditSearch(this.value)"
+        style="padding:6px 10px;border:1px solid var(--r-border);border-radius:7px;font-size:12.5px;width:230px;font-family:inherit;">
+      <button class="rpt-back" onclick="RPT.delAuditRefresh()" title="Reload from database">↻ Refresh</button>
+      <span id="da_count" style="margin-left:auto;font-size:12px;color:var(--r-muted);"></span>
+    </div>
+    <div style="background:#fff;border:1px solid var(--r-border);border-radius:10px;overflow:hidden;">
+      <div style="overflow-x:auto;">
+        <table style="width:100%;border-collapse:collapse;font-size:12.5px;">
+          <thead><tr style="background:#f1f5f9;">
+            <th style="text-align:left;padding:8px 12px;font-size:10.5px;text-transform:uppercase;color:var(--r-muted);white-space:nowrap;">When</th>
+            <th style="text-align:left;padding:8px 12px;font-size:10.5px;text-transform:uppercase;color:var(--r-muted);">Type</th>
+            <th style="text-align:left;padding:8px 12px;font-size:10.5px;text-transform:uppercase;color:var(--r-muted);white-space:nowrap;">Doc No</th>
+            <th style="text-align:left;padding:8px 12px;font-size:10.5px;text-transform:uppercase;color:var(--r-muted);">Action</th>
+            <th style="text-align:left;padding:8px 12px;font-size:10.5px;text-transform:uppercase;color:var(--r-muted);">Reason</th>
+            <th style="text-align:left;padding:8px 12px;font-size:10.5px;text-transform:uppercase;color:var(--r-muted);white-space:nowrap;">Deleted By</th>
+            <th style="padding:8px 12px;"></th>
+          </tr></thead>
+          <tbody id="da_tbody"><tr><td colspan="7" style="padding:24px;text-align:center;color:var(--r-muted);">Loading…</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+    <div style="font-size:11px;color:var(--r-muted);margin-top:8px;">Snapshots load on demand per row (👁 Details) — they can be large. List shows the latest 200 records.</div>
+  </div>
+
+  <!-- Config -->
+  <div id="rpt_config" class="hidden">
+    <div class="rpt-crumbs">Reports › Material — Estimation vs PO vs GRN vs MIS</div>
+    <div class="rpt-hd">
+      <button class="rpt-back" onclick="RPT.toLanding()">← Reports</button>
+      <div class="rpt-title">
+        <h2>Material — Estimation vs PO vs GRN vs MIS</h2>
+        <div class="m">Choose what to reconcile, then Generate. Narrowing the scope fetches far less data and renders instantly.</div>
+      </div>
+    </div>
+    <div class="cfg">
+      <div class="rpanel rfull rpanel-mat">
+        <div class="ph">🧱 Material
+          <span class="rmeasure">
+            <span id="rpt_me_both" class="on" onclick="RPT.setMeasure('both')">Qty + ₹</span>
+            <span id="rpt_me_qty" onclick="RPT.setMeasure('qty')">Qty only</span>
+            <span id="rpt_me_amt" onclick="RPT.setMeasure('amt')">₹ only</span>
+          </span>
+        </div>
+        <div class="pb">
+          <div id="rpt_searchbox"><div class="wrap">
+            <span class="mag">🔍</span>
+            <input id="rpt_matSearch" type="text" placeholder="All materials — type to filter (e.g. cement, steel)" autocomplete="off" oninput="RPT.onMatInput()" onfocus="RPT.onMatInput()" onkeydown="RPT.matKeydown(event)">
+            <span class="clr" id="rpt_matClr" onclick="RPT.clrMat()">✕</span>
+            <div class="rpt-matlist" id="rpt_matList"></div>
+          </div></div>
+          <div class="rpt-hint">Leave as “All materials”, or pick one. The <b>Qty + ₹ / Qty only / ₹ only</b> toggle controls which columns the report shows.</div>
+        </div>
+      </div>
+
+      <div class="rpanel">
+        <div class="ph">📍 Location scope <span class="cnt" id="rpt_loc_state">Whole project</span></div>
+        <div class="pb">
+          <div class="rtsearch"><span class="mag">🔍</span><input id="rpt_locSearch" placeholder="Find a location…" oninput="RPT.locSearch()"></div>
+          <div class="rtclr" onclick="RPT.locWhole()">↺ Whole project (all locations)</div>
+          <div class="rtree" id="rpt_locTree"></div>
+          <div class="rpt-hint">Pick any node — the report covers it and everything under it. Filtered server-side on indexed <code>loc_node_id</code>.</div>
+        </div>
+      </div>
+
+      <div class="rpanel">
+        <div class="ph">🧩 WBS scope <span class="cnt" id="rpt_wbs_state">Whole project</span></div>
+        <div class="pb">
+          <div class="rtsearch"><span class="mag">🔍</span><input id="rpt_wbsSearch" placeholder="Find a WBS node / package…" oninput="RPT.wbsSearch()"></div>
+          <div class="rtclr" onclick="RPT.wbsWhole()">↺ Whole project (all WBS)</div>
+          <div class="rtree" id="rpt_wbsTree"></div>
+          <div class="rpt-hint">Pick a group or package — the report covers its descendants. Filtered server-side on indexed <code>wbs_node_id</code>.</div>
+        </div>
+      </div>
+
+      <div class="rpanel rfull">
+        <div class="ph">📊 Stages to compare <span class="cnt" id="rpt_stg_state">All four</span></div>
+        <div class="pb">
+          <div class="rstages">
+            <div class="rstg est on" id="rpt_st_est" onclick="RPT.tglStage('est')"><span class="ck">✓</span><span class="sw" style="background:var(--r-est)"></span>Estimation</div>
+            <div class="rstg po on"  id="rpt_st_po"  onclick="RPT.tglStage('po')"><span class="ck">✓</span><span class="sw" style="background:var(--r-po)"></span>PO (Ordered)</div>
+            <div class="rstg grn on" id="rpt_st_grn" onclick="RPT.tglStage('grn')"><span class="ck">✓</span><span class="sw" style="background:var(--r-grn)"></span>GRN (Received)</div>
+            <div class="rstg mis on" id="rpt_st_mis" onclick="RPT.tglStage('mis')"><span class="ck">✓</span><span class="sw" style="background:var(--r-mis)"></span>MIS (Consumed)</div>
+          </div>
+          <div class="rpt-hint">Pick <b>2–4</b> stages — the report shows only those columns, with a variance between each adjacent selected pair. All four keeps the standard PO−Est &amp; MIS−GRN variances.</div>
+        </div>
+      </div>
+
+      <div class="rpanel rfull">
+        <div class="ph">📑 Document scope &amp; date range</div>
+        <div class="pb">
+          <div class="rseg" style="margin-bottom:12px;">
+            <span id="rpt_sc_appr" class="on" onclick="RPT.setScope('approved')">Approved only</span>
+            <span id="rpt_sc_all" onclick="RPT.setScope('all')">Include estimation drafts</span>
+          </div>
+          <div class="rdaterow">
+            <label>Date range</label>
+            <input type="date" id="rpt_dFrom" onchange="RPT.setDate()"><span style="color:var(--r-muted);">→</span><input type="date" id="rpt_dTo" onchange="RPT.setDate()">
+            <span class="rqpick" onclick="RPT.quick('fy')">This FY</span>
+            <span class="rqpick" onclick="RPT.quick('90')">Last 90 days</span>
+            <span class="rqpick" onclick="RPT.quick('clear')">All dates</span>
+          </div>
+          <div class="rpt-hint">Filters <b>PO (po_date)</b>, <b>GRN (grn_date)</b> and <b>MIS (issue_date)</b>. Estimation has no document date, so it is unaffected. Leave blank for all dates.</div>
+        </div>
+      </div>
+
+      <div class="rest-note" id="rpt_estNote">⚡ Scanning <b>everything</b> — for a large project this is the slow path. Narrow Location or WBS, pick a material, or set a date range for an instant report.</div>
+    </div>
+
+    <div class="cfg-foot">
+      <div class="rpt-chips" id="rpt_chips"></div>
+      <button class="rgen" id="rpt_genBtn" onclick="RPT.generate()">⚙ Generate report</button>
+    </div>
+  </div>
+
+  <!-- Report -->
+  <div id="rpt_view" class="hidden">
+    <div class="rpt-hd">
+      <button class="rpt-back" onclick="RPT.toConfig()">← Filters</button>
+      <div class="rpt-title">
+        <h2>Material — Estimation vs PO vs GRN vs MIS</h2>
+        <div class="m"><span id="rpt_scopeline"></span> · generated <span id="rpt_genstamp"></span></div>
+      </div>
+      <div class="rpt-actions">
+        <button class="rbtn rbtn-xl" onclick="RPT.excel()">⬇ Excel</button>
+        <button class="rbtn rbtn-pdf" onclick="RPT.pdf()">⬇ PDF</button>
+        <button class="rbtn rbtn-print" onclick="RPT.print()">🖨 Print</button>
+      </div>
+    </div>
+    <div class="rpt-toolbar">
+      <button class="rbtn rbtn-ghost" onclick="RPT.expandAll(true)">⊞ Expand all</button>
+      <button class="rbtn rbtn-ghost" onclick="RPT.expandAll(false)">⊟ Collapse all</button>
+    </div>
+    <div class="rpt-legend">
+      <div class="lg"><span class="sw" style="background:#f0fdf4;border:1px solid #bbf7d0;"></span> healthy</div>
+      <div class="lg"><span class="rdot warn"></span> watch — variance beyond tolerance</div>
+      <div class="lg"><span class="rdot bad"></span> breach — consumed &gt; received, or received &gt; ordered</div>
+      <div class="lg"><span class="sw" style="background:var(--r-est);"></span>Est
+        &nbsp;<span class="sw" style="background:var(--r-po);"></span>PO
+        &nbsp;<span class="sw" style="background:var(--r-grn);"></span>GRN
+        &nbsp;<span class="sw" style="background:var(--r-mis);"></span>MIS</div>
+    </div>
+    <div class="rt-wrap">
+      <table class="rt">
+        <thead id="rpt_head"></thead>
+        <tbody id="rpt_body"></tbody>
+      </table>
+    </div>
+    <div class="rpt-note">
+      Reconciled at <b>(package × material_code × location leaf)</b> — every stage's <code>wbs_node_id</code> is climbed to its package ancestor. Estimation qty = Σ <code>wbs_material_buildup.qty_total</code>; PO = Σ <code>pu_po_items.qty</code>; GRN = Σ <code>this_grn_qty</code>; MIS = Σ <code>qty_issued</code>. Aggregated server-side by <code>rpt_material_reconcile</code>; the report projects your selected stages, measure, dates and scope.
+    </div>
+  </div>
+</div>
+
 <div class="module active" id="mod-dashboard">
 
   <!-- SECTION 1: PENDING ACTIONS -->
@@ -6967,6 +7315,7 @@ document.querySelectorAll('.tabs .tab').forEach(t => {
     else if (tab === 'masters')  { apiLoadMasters().then(renderAllMasters); }
     else if (tab === 'purchase') { switchPUTab('mir'); }
     else if (tab === 'users')    { loadUsersList(); }
+    else if (tab === 'reports')  { reportsInit(); }
   });
 });
 
@@ -6979,6 +7328,767 @@ function _resetSubTabs() {
     if (wo) wo.style.display = 'none';
   });
 }
+
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   REPORTS MODULE (v43) — DB-backed via rpt_material_reconcile RPC — Material · Estimation vs PO vs GRN vs MIS
+   Config-gated: card → filter screen → Generate → report.
+   Server-side filtering on indexed columns (loc_node_id / wbs_node_id pair
+   indexes, po_date/grn_date/issue_date, material_code). Only selected stages
+   are fetched. Render is O(n): build() rolls totals up once; render reads them
+   directly (no per-node subtotal/branchVisible recursion).
+   IIFE-scoped; exposes window.reportsInit + window.RPT.* only.
+   ═══════════════════════════════════════════════════════════════════════════ */
+(function(){
+"use strict";
+
+/* ── formatters (IIFE-local; must not collide with shell globals) ── */
+const RINR=v=>new Intl.NumberFormat('en-IN',{maximumFractionDigits:0}).format(Math.round(v||0));
+const RRND=v=>Math.round((v||0)*100)/100;
+const _q  =v=>v?new Intl.NumberFormat('en-IN',{maximumFractionDigits:2}).format(v):'—';
+const _money=v=>v?'₹'+new Intl.NumberFormat('en-IN',{maximumFractionDigits:0}).format(Math.round(v)):'—';
+const _sgn =v=>!v?'0':(v>0?'+':'')+new Intl.NumberFormat('en-IN',{maximumFractionDigits:2}).format(v);
+const _sgnMoney=v=>!v?'₹0':(v>0?'+₹':'−₹')+new Intl.NumberFormat('en-IN',{maximumFractionDigits:0}).format(Math.abs(Math.round(v)));
+function RSTAMP(){const d=new Date();return d.getFullYear()+String(d.getMonth()+1).padStart(2,'0')+String(d.getDate()).padStart(2,'0')+'_'+String(d.getHours()).padStart(2,'0')+String(d.getMinutes()).padStart(2,'0');}
+function RDL(blob,name){const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),4000);}
+function _escR(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+function _escA(s){return _escR(s).replace(/'/g,'&#39;').replace(/"/g,'&quot;');}
+function RTOAST(m,t){ try{ toast(m,t||'info'); }catch(e){ console.warn(m); } }
+function RPB(l){ try{ pbShow(l); }catch(e){} }
+function RPBD(){ try{ pbDone(); }catch(e){} }
+function G(id){ return document.getElementById(id); }
+
+/* ── committed-status sets ── */
+const PO_OK=['Open','Partial Receipt','Fully Received','Closed','Short-Closed'], MIS_OK='Approved';
+const GRN_OK=['Verified','Partially Billed','Billed'];
+
+/* ── stage metadata ── */
+const STAGE_META={
+  est:{name:'Estimation',    short:'Est', q:'est',a:'eA',cls:'g-est'},
+  po :{name:'PO (Ordered)',  short:'PO',  q:'po', a:'pA',cls:'g-po'},
+  grn:{name:'GRN (Received)',short:'GRN', q:'grn',a:'gA',cls:'g-grn'},
+  mis:{name:'MIS (Consumed)',short:'MIS', q:'mis',a:'mA',cls:'g-mis'}
+};
+const STAGE_ORDER=['est','po','grn','mis'];
+
+/* ── config state ── */
+let selLoc=null, selLocName='Whole project';
+let selWbs=null, selWbsName='Whole project';
+let selMat=null, selMatName='All materials';
+let SCOPE='approved', MEASURE='both';
+let dateFrom='', dateTo='';
+const STG={est:true,po:true,grn:true,mis:true};
+let HI=-1;
+
+/* ── report state ── */
+let TREE=[], COLLAPSED=new Set();
+let _parentOf=new Map();
+
+/* ── config caches (small tables, loaded once) ── */
+let _cfgLoaded=false;
+let _wnodes=[], _lnodes=[], _materials=[];
+let _wmap=new Map(), _lmap=new Map();
+let _wChildren=new Map(), _lChildren=new Map();
+let _pkgCache=new Map();
+const openL=new Set(), openW=new Set();
+
+/* ── generic paginated query ── */
+async function pageQuery(build){
+  const PAGE=1000; let all=[], from=0;
+  while(true){
+    const{data,error}=await build(from,from+PAGE-1);
+    if(error) throw new Error(error.message);
+    all=all.concat(data||[]);
+    if(!data||data.length<PAGE) break;
+    from+=PAGE;
+  }
+  return all;
+}
+/* ── .in() chunked (≤150 ids) + paginated, with optional extra filters ── */
+async function inChunks(table, cols, col, ids, extra){
+  const CH=150; let all=[];
+  for(let i=0;i<ids.length;i+=CH){
+    const chunk=ids.slice(i,i+CH);
+    const rows=await pageQuery((f,t)=>{ let qb=sb.from(table).select(cols).in(col,chunk); if(extra) qb=extra(qb); return qb.range(f,t); });
+    all=all.concat(rows);
+  }
+  return all;
+}
+
+/* ── tree helpers over loaded node sets ── */
+function _buildNodeMaps(){
+  _wmap=new Map(_wnodes.map(n=>[String(n.id),n]));
+  _lmap=new Map(_lnodes.map(n=>[String(n.id),n]));
+  _wChildren=new Map(); _wnodes.forEach(n=>{const p=n.parent_id==null?'∅':String(n.parent_id);(_wChildren.get(p)||_wChildren.set(p,[]).get(p)).push(n);});
+  _lChildren=new Map(); _lnodes.forEach(n=>{const p=n.parent_id==null?'∅':String(n.parent_id);(_lChildren.get(p)||_lChildren.set(p,[]).get(p)).push(n);});
+  _pkgCache=new Map();
+}
+function _wbsDescendantIds(id){ // strings, incl self
+  const out=[]; const stack=[String(id)];
+  while(stack.length){ const cur=stack.pop(); out.push(cur); (_wChildren.get(cur)||[]).forEach(c=>stack.push(String(c.id))); }
+  return out;
+}
+function _locLeafIdsUnder(id){ // leaf descendant loc ids (strings); if id is leaf → [id]
+  const self=_lmap.get(String(id));
+  if(self&&self.is_leaf) return [String(id)];
+  const out=[]; const stack=[String(id)];
+  while(stack.length){ const cur=stack.pop(); const kids=_lChildren.get(cur)||[]; if(!kids.length){ const n=_lmap.get(cur); if(n&&n.is_leaf) out.push(cur); } else kids.forEach(c=>{ if(c.is_leaf) out.push(String(c.id)); else stack.push(String(c.id)); }); }
+  return out;
+}
+function pkgOf(wbsId){
+  if(wbsId==null) return null;
+  const key=String(wbsId);
+  if(_pkgCache.has(key)) return _pkgCache.get(key);
+  let cur=_wmap.get(key), out=null;
+  while(cur){ if((cur.node_type||'group')==='package'){ out={id:String(cur.id),name:cur.name}; break; } cur=cur.parent_id!=null?_wmap.get(String(cur.parent_id)):null; }
+  _pkgCache.set(key,out); return out;
+}
+function locChain(leafId){
+  const out=[]; let cur=_lmap.get(String(leafId));
+  while(cur){ out.unshift({id:String(cur.id),name:cur.name,sort:cur.sort_order||0}); cur=cur.parent_id!=null?_lmap.get(String(cur.parent_id)):null; }
+  return out;
+}
+
+/* ── load small config tables ── */
+async function cfgLoad(){
+  RPB('Loading filters…');
+  try{
+    const [wn,ln,mm]=await Promise.all([
+      pageQuery((f,t)=>sb.from('wbs_nodes').select('id,parent_id,node_type,name,is_leaf').range(f,t)),
+      pageQuery((f,t)=>sb.from('location_nodes').select('id,parent_id,name,is_leaf,sort_order').range(f,t)),
+      pageQuery((f,t)=>sb.from('pu_material_master').select('material_code,material_name').range(f,t))
+    ]);
+    _wnodes=wn; _lnodes=ln;
+    _materials=(mm||[]).filter(m=>m.material_code).sort((a,b)=>(a.material_name||'').localeCompare(b.material_name||''));
+    _buildNodeMaps();
+    _lnodes.filter(n=>n.parent_id==null).forEach(n=>openL.add(String(n.id)));
+    _wnodes.filter(n=>n.parent_id==null).forEach(n=>openW.add(String(n.id)));
+    _cfgLoaded=true;
+  } finally { RPBD(); }
+}
+
+/* ═══════════ CONFIG SCREEN ═══════════ */
+function showLanding(){ G('rpt_landing').classList.remove('hidden'); G('rpt_config').classList.add('hidden'); G('rpt_view').classList.add('hidden'); }
+async function openConfig(){
+  G('rpt_landing').classList.add('hidden'); G('rpt_view').classList.add('hidden'); G('rpt_config').classList.remove('hidden');
+  if(!_cfgLoaded){
+    try{ await cfgLoad(); }
+    catch(e){ RTOAST('Filter load failed: '+e.message,'error'); return; }
+  }
+  renderLocTree(); renderWbsTree(); renderChips();
+}
+function _hi(name,q){ if(!q) return _escR(name); const i=name.toLowerCase().indexOf(q); if(i<0) return _escR(name); return _escR(name.slice(0,i))+'<mark>'+_escR(name.slice(i,i+q.length))+'</mark>'+_escR(name.slice(i+q.length)); }
+function _matchSet(nodes,q){ if(!q) return null; const byId=new Map(nodes.map(n=>[String(n.id),n])); const show=new Set(); nodes.forEach(n=>{ if((n.name||'').toLowerCase().includes(q)){ let c=n; while(c){ show.add(String(c.id)); c=c.parent_id!=null?byId.get(String(c.parent_id)):null; } } }); return show; }
+
+function renderLocTree(){
+  const box=G('rpt_locTree'); if(!box)return;
+  const q=(G('rpt_locSearch').value||'').trim().toLowerCase();
+  const ms=_matchSet(_lnodes,q);
+  const leafCount=id=>_locLeafIdsUnder(id).length;
+  const row=n=>{
+    const id=String(n.id);
+    if(ms&&!ms.has(id)) return '';
+    const kids=(_lChildren.get(id)||[]).slice().sort((a,b)=>(a.sort_order||0)-(b.sort_order||0));
+    const op=ms?true:openL.has(id);
+    const lc=n.is_leaf?1:leafCount(id);
+    return `<div><div class="rtrow ${selLoc===id?'sel':''}" onclick="RPT.pickLoc('${_escA(id)}','${_escA(n.name)}')">
+      <span class="rtw" onclick="event.stopPropagation();RPT.togL('${_escA(id)}')">${kids.length?(op?'▾':'▸'):''}</span>
+      <span>${n.is_leaf?'📍':'📂'}</span><span class="rtnm">${_hi(n.name,q)}</span>
+      <span class="rtbadge">${n.is_leaf?'unit':lc+' units'}</span></div>
+      ${kids.length&&op?`<div class="rtkids">${kids.map(row).join('')}</div>`:''}</div>`;
+  };
+  const roots=(_lChildren.get('∅')||[]).slice().sort((a,b)=>(a.sort_order||0)-(b.sort_order||0));
+  box.innerHTML=roots.map(row).join('')||'<div class="rpt-hint" style="padding:8px;">No match.</div>';
+}
+function renderWbsTree(){
+  const box=G('rpt_wbsTree'); if(!box)return;
+  const q=(G('rpt_wbsSearch').value||'').trim().toLowerCase();
+  const ms=_matchSet(_wnodes,q);
+  const row=n=>{
+    const id=String(n.id);
+    if(ms&&!ms.has(id)) return '';
+    const kids=(_wChildren.get(id)||[]);
+    const op=ms?true:openW.has(id);
+    const t=n.node_type||'group';
+    const ic=t==='package'?'📦':t==='material'?'🧱':t==='hire_equipment'?'🏗':t==='activity'?'📄':'🗂';
+    return `<div><div class="rtrow ${selWbs===id?'sel':''}" onclick="RPT.pickWbs('${_escA(id)}','${_escA(n.name)}')">
+      <span class="rtw" onclick="event.stopPropagation();RPT.togW('${_escA(id)}')">${kids.length?(op?'▾':'▸'):''}</span>
+      <span>${ic}</span><span class="rtnm">${_hi(n.name,q)}</span>
+      ${t==='package'?'<span class="rtpkg">PKG</span>':''}</div>
+      ${kids.length&&op?`<div class="rtkids">${kids.map(row).join('')}</div>`:''}</div>`;
+  };
+  const roots=(_wChildren.get('∅')||[]);
+  box.innerHTML=roots.map(row).join('')||'<div class="rpt-hint" style="padding:8px;">No match.</div>';
+}
+function togL(id){ if(openL.has(id))openL.delete(id); else openL.add(id); renderLocTree(); }
+function togW(id){ if(openW.has(id))openW.delete(id); else openW.add(id); renderWbsTree(); }
+function pickLoc(id,name){ selLoc=id; selLocName=name; G('rpt_loc_state').textContent=name; renderLocTree(); renderChips(); }
+function pickWbs(id,name){ selWbs=id; selWbsName=name; G('rpt_wbs_state').textContent=name; renderWbsTree(); renderChips(); }
+function locWhole(){ selLoc=null; selLocName='Whole project'; G('rpt_loc_state').textContent='Whole project'; renderLocTree(); renderChips(); }
+function wbsWhole(){ selWbs=null; selWbsName='Whole project'; G('rpt_wbs_state').textContent='Whole project'; renderWbsTree(); renderChips(); }
+
+/* material picker */
+function onMatInput(){
+  const box=G('rpt_matSearch'); if(!box)return;
+  const q=box.value.trim().toLowerCase();
+  const clr=G('rpt_matClr'); if(clr)clr.style.display=q?'block':'none';
+  const list=G('rpt_matList'); if(!list)return;
+  const rows=_materials.filter(m=>!q||(m.material_name||'').toLowerCase().includes(q)||(m.material_code||'').toLowerCase().includes(q)).slice(0,60);
+  list.innerHTML=(q?'':'<div class="rmatrow" onclick="RPT.clrMat()"><b>All materials</b></div>')+
+    rows.map(m=>`<div class="rmatrow" data-code="${_escA(m.material_code)}" onclick="RPT.pickMat('${_escA(m.material_code)}','${_escA(m.material_name)}')">
+      <span class="rcode">${_escR(m.material_code)}</span><span>${_escR(m.material_name)}</span></div>`).join('');
+  list.style.display=(rows.length||!q)?'block':'none'; HI=-1;
+}
+function pickMat(code,name){ selMat=code; selMatName=name; G('rpt_matSearch').value=name; G('rpt_matList').style.display='none'; G('rpt_matClr').style.display='block'; renderChips(); }
+function clrMat(){ selMat=null; selMatName='All materials'; G('rpt_matSearch').value=''; G('rpt_matList').style.display='none'; G('rpt_matClr').style.display='none'; renderChips(); }
+function matKeydown(e){ const rows=[...document.querySelectorAll('#rpt_matList .rmatrow')]; if(!rows.length)return;
+  if(e.key==='ArrowDown'){HI=Math.min(HI+1,rows.length-1);e.preventDefault();}
+  else if(e.key==='ArrowUp'){HI=Math.max(HI-1,0);e.preventDefault();}
+  else if(e.key==='Enter'){if(HI>=0){const c=rows[HI].dataset.code;c?pickMat(c,rows[HI].textContent.replace(c,'').trim()):clrMat();}e.preventDefault();return;}
+  else if(e.key==='Escape'){G('rpt_matList').style.display='none';return;}
+  rows.forEach((r,i)=>r.classList.toggle('hi',i===HI)); }
+document.addEventListener('click',e=>{ if(!e.target.closest('#rpt_searchbox')){const l=G('rpt_matList'); if(l)l.style.display='none';} });
+
+/* measure / stages / scope / date */
+function setMeasure(m){ MEASURE=m; ['both','qty','amt'].forEach(x=>{const el=G('rpt_me_'+x); if(el)el.classList.toggle('on',x===m);}); renderChips(); }
+function tglStage(k){
+  const on=STAGE_ORDER.filter(s=>STG[s]).length;
+  if(STG[k]&&on<=2){ RTOAST('Keep at least 2 stages to compare','warn'); return; }
+  STG[k]=!STG[k];
+  const el=G('rpt_st_'+k); if(el){ el.classList.toggle('on',STG[k]); const ck=el.querySelector('.ck'); if(ck)ck.textContent=STG[k]?'✓':''; }
+  const sel=STAGE_ORDER.filter(s=>STG[s]);
+  G('rpt_stg_state').textContent=sel.length===4?'All four':sel.map(s=>STAGE_META[s].short).join(' vs ');
+  renderChips();
+}
+function setScope(s){ SCOPE=s; const a=G('rpt_sc_appr'),b=G('rpt_sc_all'); if(a)a.classList.toggle('on',s==='approved'); if(b)b.classList.toggle('on',s==='all'); renderChips(); }
+function setDate(){ dateFrom=G('rpt_dFrom').value; dateTo=G('rpt_dTo').value; renderChips(); }
+function quick(k){
+  const f=G('rpt_dFrom'),t=G('rpt_dTo');
+  if(k==='clear'){f.value='';t.value='';}
+  else if(k==='90'){const d=new Date();t.value=d.toISOString().slice(0,10);d.setDate(d.getDate()-90);f.value=d.toISOString().slice(0,10);}
+  else if(k==='fy'){const y=new Date();const yr=y.getMonth()>=3?y.getFullYear():y.getFullYear()-1;f.value=yr+'-04-01';t.value=(yr+1)+'-03-31';}
+  setDate();
+}
+function renderChips(){
+  const me={both:'Qty + ₹',qty:'Qty only',amt:'₹ only'}[MEASURE];
+  const sel=STAGE_ORDER.filter(s=>STG[s]);
+  const stg=sel.length===4?'All four':sel.map(s=>STAGE_META[s].short).join(' vs ');
+  const dr=(dateFrom||dateTo)?((dateFrom||'…')+' → '+(dateTo||'…')):'All dates';
+  const chips=[
+    ['📍',selLocName],['🧩',selWbsName],['🧱',selMatName],['📊',stg],['📐',me],
+    ['📑',SCOPE==='approved'?'Approved':'Incl. drafts'],['📅',dr]
+  ].map(c=>`<span class="rpt-chip">${c[0]} <b>${_escR(c[1])}</b></span>`).join('');
+  const cw=G('rpt_chips'); if(cw)cw.innerHTML=chips;
+  const wide=!selLoc&&!selWbs&&!selMat&&!dateFrom&&!dateTo;
+  const note=G('rpt_estNote'); if(note)note.style.display=wide?'':'none';
+  const gb=G('rpt_genBtn'); if(gb)gb.disabled=sel.length<2;
+}
+
+/* ═══════════ GENERATE (server-filtered fetch → build → render → show) ═══════════ */
+let _locLeafArr=null,_locLeafSet=null,_wbsDescArr=null,_wbsDescSet=null;
+async function _fetchItems(table, cols){
+  const extra=qb=>{ if(selMat) qb=qb.eq('material_code',selMat); return qb; };
+  let rows;
+  if(_locLeafArr){ rows=await inChunks(table,cols,'loc_node_id',_locLeafArr,extra);
+    if(_wbsDescSet) rows=rows.filter(r=>_wbsDescSet.has(String(r.wbs_node_id))); }
+  else if(_wbsDescArr){ rows=await inChunks(table,cols,'wbs_node_id',_wbsDescArr,extra); }
+  else { rows=await pageQuery((f,t)=>{ let qb=sb.from(table).select(cols); if(selMat)qb=qb.eq('material_code',selMat); return qb.range(f,t); }); }
+  return rows;
+}
+async function _fetchScope(){
+  const extra=qb=>{ if(SCOPE==='approved') qb=qb.eq('scope_status','approved'); return qb; };
+  const cols='id,wbs_node_id,loc_node_id,scope_status';
+  let rows;
+  if(_locLeafArr){ rows=await inChunks('wbs_scope',cols,'loc_node_id',_locLeafArr,extra);
+    if(_wbsDescSet) rows=rows.filter(r=>_wbsDescSet.has(String(r.wbs_node_id))); }
+  else if(_wbsDescArr){ rows=await inChunks('wbs_scope',cols,'wbs_node_id',_wbsDescArr,extra); }
+  else { rows=await pageQuery((f,t)=>{ let qb=sb.from('wbs_scope').select(cols); if(SCOPE==='approved')qb=qb.eq('scope_status','approved'); return qb.range(f,t); }); }
+  return rows;
+}
+async function _fetchHeaderSet(table, keyCol, statusFn, dateCol){
+  const rows=await pageQuery((f,t)=>{ let qb=statusFn(sb.from(table).select(keyCol)); if(dateFrom)qb=qb.gte(dateCol,dateFrom); if(dateTo)qb=qb.lte(dateCol,dateTo); return qb.range(f,t); });
+  return new Set(rows.map(r=>r[keyCol]));
+}
+
+async function generate(){
+  const sel=STAGE_ORDER.filter(s=>STG[s]);
+  if(sel.length<2){ RTOAST('Pick at least 2 stages','warn'); return; }
+  RPB('Generating report…');
+  try{
+    if(!_cfgLoaded){ await cfgLoad(); }   // need node maps for tree build
+    const UNMAT='(no material)', UNLOC='(unmapped location)', UNPKG='(unmapped package)';
+
+    const {data,error}=await sb.rpc('rpt_material_reconcile',{
+      p_loc_node_id: selLoc || null,
+      p_wbs_node_id: (selWbs!=null && selWbs!=='') ? Number(selWbs) : null,
+      p_material:    selMat || null,
+      p_date_from:   dateFrom || null,
+      p_date_to:     dateTo   || null,
+      p_include_draft_est: SCOPE!=='approved'
+    });
+    if(error) throw new Error(error.message);
+    const rows=data||[];
+
+    /* rows are pre-aggregated at (loc_leaf, package, material) — one row per key.
+       Build the same rec map the tree builder expects; the package climb, status/
+       date filtering, net short-close and unmapped bucketing were done server-side. */
+    const rec=new Map();
+    const MATERIALS=new Map();
+    const pkgName=new Map();
+    rows.forEach(r=>{
+      const loc = r.loc_node_id!=null ? String(r.loc_node_id) : UNLOC;
+      const pkg = r.package_id!=null  ? String(r.package_id)  : UNPKG;
+      const mat = r.material_code || UNMAT;
+      if(r.package_id!=null){ const wn=_wmap.get(String(r.package_id)); if(wn) pkgName.set(String(r.package_id), wn.name); }
+      if(r.material_code){ MATERIALS.set(r.material_code, r.material_name||r.material_code); }
+      rec.set(loc+'¦'+pkg+'¦'+mat, {
+        est:Number(r.est_qty)||0, po:Number(r.po_qty)||0, grn:Number(r.grn_qty)||0, mis:Number(r.mis_qty)||0,
+        eA:Number(r.est_amt)||0,  pA:Number(r.po_amt)||0,  gA:Number(r.grn_amt)||0, mA:Number(r.mis_amt)||0,
+        uom:r.uom||'', mname:r.material_name||mat
+      });
+    });
+
+    _buildTree(rec, MATERIALS, {UNMAT,UNLOC,UNPKG}, pkgName);
+    _showReport();
+  }catch(e){
+    RTOAST('Report failed: '+e.message,'error'); console.error(e);
+    const body=G('rpt_body'); if(body)body.innerHTML=`<tr><td colspan="20" style="padding:24px;color:#b91c1c;">Report failed: ${_escR(e.message)}</td></tr>`;
+    _showReport();
+  } finally { RPBD(); }
+}
+
+/* ── build location-first tree; roll totals up ONCE; precompute parent + dot path ── */
+function _buildTree(rec, MATERIALS, U, pkgName){
+  const {UNMAT,UNLOC,UNPKG}=U;
+  TREE=[]; let _sid=0;
+  const mk=(type,name,depth,pid,sort)=>({id:'n'+(_sid++),type,name,depth,pid,_sort:sort||0,dot:'',
+    est:0,po:0,grn:0,mis:0,eA:0,pA:0,gA:0,mA:0,code:null,uom:null});
+  const locNodeIdx=new Map(), pkgNodeIdx=new Map();
+  const roll=(n,o)=>{ n.est+=o.est;n.po+=o.po;n.grn+=o.grn;n.mis+=o.mis;n.eA+=o.eA;n.pA+=o.pA;n.gA+=o.gA;n.mA+=o.mA; };
+  const locType=d=> d===0?'stage':d===1?'tower':'floor';
+
+  rec.forEach((o,k)=>{
+    const [locLeaf,pkgId,matCode]=k.split('¦');
+    let chain;
+    if(locLeaf===UNLOC) chain=[{id:UNLOC,name:UNLOC,sort:1e9}];
+    else { chain=locChain(locLeaf); if(!chain.length) chain=[{id:locLeaf,name:'(loc)',sort:0}]; }
+    let parentId=null, depth=0, ancestors=[];
+    chain.forEach((ln,i)=>{
+      let nodeId=locNodeIdx.get(ln.id);
+      if(!nodeId){ const nd=mk(locType(i),ln.name,i,parentId,ln.sort); TREE.push(nd); nodeId=nd.id; locNodeIdx.set(ln.id,nodeId); }
+      ancestors.push(nodeId); parentId=nodeId; depth=i;
+    });
+    const pkKey=locLeaf+'|'+pkgId;
+    let pkgNodeId=pkgNodeIdx.get(pkKey);
+    if(!pkgNodeId){ const pnm=pkgId===UNPKG?UNPKG:(pkgName.get(pkgId)||(_wmap.get(pkgId)?_wmap.get(pkgId).name:pkgId)); const pn=mk('pkg',pnm,depth+1,parentId,0); TREE.push(pn); pkgNodeId=pn.id; pkgNodeIdx.set(pkKey,pkgNodeId); }
+    const mnm=matCode===UNMAT?UNMAT:(o.mname||(MATERIALS.get(matCode)||matCode));
+    const leaf=mk('mat',mnm,depth+2,pkgNodeId,0);
+    Object.assign(leaf,{code:(matCode===UNMAT?'—':matCode),uom:o.uom||'',est:o.est,po:o.po,grn:o.grn,mis:o.mis,eA:o.eA,pA:o.pA,gA:o.gA,mA:o.mA});
+    TREE.push(leaf);
+    const pkgNode=TREE.find(x=>x.id===pkgNodeId); if(pkgNode)roll(pkgNode,o);
+    ancestors.forEach(aid=>{const an=TREE.find(x=>x.id===aid);if(an)roll(an,o);});
+  });
+
+  /* order pre-order DFS with sibling sort; precompute parent + dot path */
+  const childrenOf=new Map(); TREE.forEach(n=>{const p=n.pid||'∅';(childrenOf.get(p)||childrenOf.set(p,[]).get(p)).push(n);});
+  const sortKids=arr=>arr.sort((a,b)=>{ const rank={stage:0,tower:0,floor:0,pkg:1,mat:2}; if(a.type!==b.type&&(rank[a.type]!==rank[b.type]))return rank[a.type]-rank[b.type];
+    if(a.type==='mat'||a.type==='pkg')return (a.name||'').localeCompare(b.name||''); return (a._sort-b._sort)||(a.name||'').localeCompare(b.name||''); });
+  const ordered=[]; _parentOf=new Map();
+  const walk=(pid,dotPrefix)=>{ const kids=sortKids((childrenOf.get(pid||'∅')||[]).slice()); kids.forEach((n,i)=>{ n.dot=dotPrefix?dotPrefix+'.'+(i+1):String(i+1); _parentOf.set(n.id,pid); ordered.push(n); walk(n.id,n.dot); }); };
+  walk(null,'');
+  TREE=ordered;
+  COLLAPSED=new Set();
+}
+
+/* ── column model from selected stages + measure ── */
+function _columns(){
+  const sel=STAGE_ORDER.filter(s=>STG[s]);
+  const cols=[];
+  sel.forEach(s=>{ if(MEASURE==='both'){cols.push({kind:'stage',stage:s,m:'q'});cols.push({kind:'stage',stage:s,m:'a'});}
+    else if(MEASURE==='qty')cols.push({kind:'stage',stage:s,m:'q'}); else cols.push({kind:'stage',stage:s,m:'a'}); });
+  // variance pairs
+  let pairs;
+  if(sel.length===4) pairs=[['est','po'],['grn','mis']];
+  else { pairs=[]; for(let i=0;i<sel.length-1;i++)pairs.push([sel[i],sel[i+1]]); }
+  const vm=MEASURE==='amt'?'a':'q';
+  pairs.forEach(p=>cols.push({kind:'var',from:p[0],to:p[1],m:vm,label:STAGE_META[p[1]].short+'−'+STAGE_META[p[0]].short}));
+  return {sel,cols,pairs,vm};
+}
+function _val(node,stage,m){ return m==='a'?node[STAGE_META[stage].a]:node[STAGE_META[stage].q]; }
+function _fmt(v,m){ return m==='a'?(v?'₹'+RINR(v):'<span class=rzero>—</span>'):_q(v); }
+function _fmtSign(v,m){ return m==='a'?_sgnMoney(v):(v>0?'+':'')+_q(v); }
+function _varClass(delta,base){ if(!base&&!delta)return'ok'; const pct=base?Math.abs(delta)/base:1; if(delta>0&&pct>0.001)return pct>0.05?'bad':'warn'; return delta<0&&pct>0.10?'warn':'ok'; }
+function rowDot(n){ if(n.grn>n.po+1e-6||n.mis>n.grn+1e-6)return'bad'; if(n.po>n.est*1.05||(n.mis>n.grn*0.98&&n.mis>0))return'warn'; return'ok'; }
+
+/* ── render (O(n): read node totals directly) ── */
+function render(){
+  const head=G('rpt_head'), body=G('rpt_body'); if(!head||!body)return;
+  const {sel,cols,pairs}=_columns();
+
+  /* header: 2 rows (stage groups + sub labels) */
+  let h1='<tr><th class="lbl" rowspan="2">Location / WBS → Material</th>';
+  sel.forEach(s=>{ const span=MEASURE==='both'?2:1; h1+=`<th class="${STAGE_META[s].cls}" colspan="${span}">${STAGE_META[s].name}</th>`; });
+  if(pairs.length) h1+=`<th class="g-var" colspan="${pairs.length}">Variance</th>`;
+  h1+='</tr><tr>';
+  sel.forEach(s=>{ const c=STAGE_META[s].cls; if(MEASURE==='both')h1+=`<th class="${c}">Qty</th><th class="${c}">₹</th>`; else h1+=`<th class="${c}">${MEASURE==='qty'?'Qty':'₹'}</th>`; });
+  pairs.forEach(p=>h1+=`<th class="g-var">${STAGE_META[p[1]].short}−${STAGE_META[p[0]].short}</th>`);
+  h1+='</tr>';
+  head.innerHTML=h1;
+  const ncol=1+cols.length;
+
+  /* body */
+  const isHidden=n=>{ let p=_parentOf.get(n.id); while(p){ if(COLLAPSED.has(p))return true; p=_parentOf.get(p); } return false; };
+  let html='';
+  const Gt={est:0,po:0,grn:0,mis:0,eA:0,pA:0,gA:0,mA:0};
+  const childrenExist=new Set(TREE.map(n=>n.pid).filter(Boolean));
+  TREE.forEach(n=>{
+    if(n.depth===0){ ['est','po','grn','mis','eA','pA','gA','mA'].forEach(k=>Gt[k]+=n[k]); }
+    if(isHidden(n))return;
+    const hasKids=childrenExist.has(n.id)&&n.type!=='mat';
+    const col=COLLAPSED.has(n.id);
+    const cls={stage:'r-stage',tower:'r-tower',floor:'r-floor',pkg:'r-pkg',mat:'r-mat'}[n.type];
+    const icon={stage:'🏢',tower:'🏗️',floor:'▦',pkg:'📦',mat:''}[n.type];
+    const indent=8+n.depth*16;
+    const tw=hasKids?`<span class="rtw2" onclick="RPT.tog('${n.id}')">${col?'▸':'▾'}</span>`:`<span class="rtw2"></span>`;
+    let label;
+    if(n.type==='mat'){ const d=rowDot(n); label=`<span class="rdot ${d}"></span>${_escR(n.name)}<span class="rmat-code">${_escR(n.code)}</span><span class="ruom">${_escR(n.uom)}</span>`; }
+    else label=`${icon} ${_escR(n.name)}<span class="rnode-code">${_escR(n.dot)}</span>`;
+    let tds='';
+    cols.forEach(c=>{
+      if(c.kind==='stage'){ tds+=`<td>${_fmt(_val(n,c.stage,c.m),c.m)}</td>`; }
+      else { const d=_val(n,c.to,c.m)-_val(n,c.from,c.m); const base=_val(n,c.from,c.m);
+        const vc=(c.to==='mis'&&c.from==='grn')?(d>0?'bad':'ok'):_varClass(d,base);
+        tds+=`<td class="rvar ${vc}">${_fmtSign(d,c.m)}</td>`; }
+    });
+    html+=`<tr class="${cls}"><td class="lbl" style="padding-left:${indent}px;">${tw}${label}</td>${tds}</tr>`;
+  });
+  /* grand total */
+  const gnode={est:Gt.est,po:Gt.po,grn:Gt.grn,mis:Gt.mis,eA:Gt.eA,pA:Gt.pA,gA:Gt.gA,mA:Gt.mA};
+  let gtds='';
+  cols.forEach(c=>{ if(c.kind==='stage')gtds+=`<td>${_fmt(_val(gnode,c.stage,c.m),c.m)}</td>`;
+    else { const d=_val(gnode,c.to,c.m)-_val(gnode,c.from,c.m); gtds+=`<td>${_fmtSign(d,c.m)}</td>`; } });
+  const gmat=selMat?' — '+_escR(selMatName):'';
+  html+=`<tr class="grand"><td class="lbl" style="padding-left:8px;">Σ Grand Total${gmat}</td>${gtds}</tr>`;
+  if(!TREE.length) html=`<tr><td class="lbl" colspan="${ncol}" style="padding:26px;text-align:center;color:var(--r-muted);">No matching documents for these filters.</td></tr>`;
+  body.innerHTML=html;
+}
+function tog(id){ if(COLLAPSED.has(id))COLLAPSED.delete(id); else COLLAPSED.add(id); render(); }
+function expandAll(open){ COLLAPSED.clear(); if(!open)TREE.filter(n=>n.type==='stage'||n.type==='tower'||n.type==='floor').forEach(n=>COLLAPSED.add(n.id)); render(); }
+
+/* ── show report view + subtitle ── */
+function _scopeLine(){
+  const sel=STAGE_ORDER.filter(s=>STG[s]).map(s=>STAGE_META[s].short).join(' vs ');
+  const me={both:'Qty + ₹',qty:'Qty only',amt:'₹ only'}[MEASURE];
+  const dr=(dateFrom||dateTo)?((dateFrom||'…')+'→'+(dateTo||'…')):'all dates';
+  return `${selLocName} · ${selWbsName} · ${selMatName} · ${sel} · ${me} · ${SCOPE==='approved'?'approved':'incl. drafts'} · ${dr}`;
+}
+function _showReport(){
+  G('rpt_landing').classList.add('hidden'); G('rpt_config').classList.add('hidden'); G('rpt_view').classList.remove('hidden');
+  const gs=G('rpt_genstamp'); if(gs)gs.textContent=new Date().toLocaleString('en-IN',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'});
+  const sub=G('rpt_scopeline'); if(sub)sub.textContent=_scopeLine();
+  render();
+}
+
+/* ═══════════ EXCEL ═══════════ */
+async function exportExcel(){
+  if(typeof ExcelJS==='undefined'){RTOAST('Excel engine still loading — try again','warn');return;}
+  RPB('Building Excel…');
+  try{
+    const {sel,cols,pairs}=_columns();
+    const wb=new ExcelJS.Workbook();
+    const ws=wb.addWorksheet('Reconciliation',{views:[{state:'frozen',ySplit:4,xSplit:1}]});
+    const NAVY='FF1B2A47',GOLD='FFD4AF37',WHITE='FFFFFFFF';
+    const stageFill={est:'FF1E40AF',po:'FF7C3A14',grn:'FF065F46',mis:'FF5B1A6B'}, VARF='FF22395C';
+    const rowFill={stage:'FFDDE6F0',tower:'FFE8EEF7',floor:'FFF2F6FB',pkg:'FFF0F7F5',mat:WHITE};
+    const ncol=1+cols.length;
+    const colLetter=i=>{ let s=''; i++; while(i>0){const m=(i-1)%26;s=String.fromCharCode(65+m)+s;i=Math.floor((i-1)/26);} return s; };
+    const last=colLetter(ncol-1);
+
+    ws.mergeCells('A1:'+last+'1');
+    const t=ws.getCell('A1'); t.value='Material — Estimation vs PO vs GRN vs MIS'; t.font={bold:true,size:15,color:{argb:NAVY}};
+    ws.mergeCells('A2:'+last+'2');
+    const s2=ws.getCell('A2');
+    const mat=selMat?selMatName:null;
+    s2.value={richText:[{text:'Poetry of Earth, Phase 01 · Urban Excellence LLP · '+_scopeLine(),font:{size:10,color:{argb:'FF64748B'}}},
+      ...(mat?[{text:'  ·  ',font:{size:10,color:{argb:'FF64748B'}}},{text:mat,font:{size:10,bold:true,color:{argb:'FF0F766E'}}}]:[])]};
+    ws.getRow(1).height=22; ws.getRow(2).height=16; ws.addRow([]);
+
+    // header rows 4 (group) + 5 (labels) — we merge stage groups across row4-? keep simple: single header row 4
+    const hdr=['Location / WBS → Material'];
+    const fillByCol=[''];
+    cols.forEach(c=>{ if(c.kind==='stage'){ hdr.push(STAGE_META[c.stage].short+(c.m==='a'?' ₹':' Qty')); fillByCol.push(stageFill[c.stage]); }
+      else { hdr.push(c.label); fillByCol.push(VARF); } });
+    const hr=ws.getRow(4); hr.values=hdr;
+    hr.eachCell((c,i)=>{ c.font={bold:true,color:{argb:WHITE},size:9}; c.alignment={horizontal:i===1?'left':'right',vertical:'middle'};
+      c.fill={type:'pattern',pattern:'solid',fgColor:{argb:fillByCol[i-1]||NAVY}}; c.border={bottom:{style:'thin',color:{argb:'FF334155'}}}; });
+    hr.height=18;
+
+    const isHidden=()=>false; // export full tree regardless of collapse
+    const rowVals=n=>{ const out=['']; cols.forEach(c=>{ if(c.kind==='stage')out.push(RRND(_val(n,c.stage,c.m))); else out.push(RRND(_val(n,c.to,c.m)-_val(n,c.from,c.m))); }); return out; };
+    const Gt={est:0,po:0,grn:0,mis:0,eA:0,pA:0,gA:0,mA:0};
+    TREE.forEach(n=>{
+      if(n.depth===0)['est','po','grn','mis','eA','pA','gA','mA'].forEach(k=>Gt[k]+=n[k]);
+      const prefix={stage:'🏢 ',tower:'🏗 ',floor:'▦ ',pkg:'📦 ',mat:'   '}[n.type];
+      const lbl=n.type==='mat'?'      '+n.name+'  ['+n.code+(n.uom?' · '+n.uom:'')+']':'  '.repeat(n.depth)+prefix+n.name;
+      const vals=rowVals(n); vals[0]=lbl;
+      const r=ws.addRow(vals); r.outlineLevel=Math.min(n.depth,7);
+      const fg=rowFill[n.type];
+      r.eachCell((c,i)=>{ c.alignment={horizontal:i===1?'left':'right'};
+        if(fg!==WHITE)c.fill={type:'pattern',pattern:'solid',fgColor:{argb:fg}};
+        c.font={bold:n.type!=='mat',color:{argb:n.type==='pkg'?'FF0F766E':'FF1E293B'},size:10};
+        if(i>=2){ const cc=cols[i-2]; if(cc&&cc.kind==='var'){ const d=_val(n,cc.to,cc.m)-_val(n,cc.from,cc.m);
+            const bad=(cc.to==='mis'&&cc.from==='grn')?d>0:(_val(n,cc.from,cc.m)&&d/_val(n,cc.from,cc.m)>0.05);
+            c.font={bold:true,color:{argb:bad?'FFB91C1C':d>0?'FFB45309':'FF15803D'},size:10}; c.numFmt=cc.m==='a'?'+#,##0;-#,##0;0':'+#,##0;-#,##0;0'; }
+          else c.numFmt='#,##0'; } });
+    });
+    const gnode={est:Gt.est,po:Gt.po,grn:Gt.grn,mis:Gt.mis,eA:Gt.eA,pA:Gt.pA,gA:Gt.gA,mA:Gt.mA};
+    const gv=rowVals(gnode); gv[0]='Σ Grand Total'+(mat?' — '+mat:'');
+    const gr=ws.addRow(gv);
+    gr.eachCell((c,i)=>{ c.fill={type:'pattern',pattern:'solid',fgColor:{argb:NAVY}}; c.font={bold:true,color:{argb:GOLD},size:10}; c.alignment={horizontal:i===1?'left':'right'}; if(i>=2)c.numFmt='#,##0'; c.border={top:{style:'medium',color:{argb:GOLD}}}; });
+
+    ws.getColumn(1).width=46; for(let i=2;i<=ncol;i++)ws.getColumn(i).width=13;
+    ws.properties.outlineLevelRow=4;
+    const buf=await wb.xlsx.writeBuffer();
+    RDL(new Blob([buf],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'}),'Material_Reconciliation_'+RSTAMP()+'.xlsx');
+    RTOAST('Excel exported','success');
+  }catch(e){ RTOAST('Excel failed: '+e.message,'error'); console.error(e); }
+  finally{ RPBD(); }
+}
+
+/* ═══════════ PDF ═══════════ */
+function exportPDF(){
+  if(!window.jspdf||typeof window.jspdf.jsPDF==='undefined'){RTOAST('PDF engine still loading — try again','warn');return;}
+  RPB('Building PDF…');
+  try{
+    const {sel,cols,pairs}=_columns();
+    const {jsPDF}=window.jspdf;
+    const doc=new jsPDF({orientation:'landscape',unit:'pt',format:'a4'});
+    const W=doc.internal.pageSize.getWidth();
+    const mat=selMat?selMatName:null;
+    doc.setFont('helvetica','bold');doc.setFontSize(14);doc.setTextColor(27,42,71);
+    doc.text('Material — Estimation vs PO vs GRN vs MIS',40,34);
+    doc.setFont('helvetica','normal');doc.setFontSize(9);doc.setTextColor(100,116,139);
+    let x=40; const base='Poetry of Earth · '+_scopeLine();
+    doc.text(base,40,50); x+=doc.getTextWidth(base);
+    if(mat){ doc.text('  ·  ',x,50); x+=doc.getTextWidth('  ·  '); doc.setFont('helvetica','bold');doc.setTextColor(15,118,110); doc.text(mat,x,50); }
+
+    const head=['Location / WBS → Material'];
+    cols.forEach(c=>head.push(c.kind==='stage'?STAGE_META[c.stage].short+(c.m==='a'?' ₹':' Qty'):c.label));
+    const rows=[]; const meta=[]; const Gt={est:0,po:0,grn:0,mis:0,eA:0,pA:0,gA:0,mA:0};
+    const cellVals=n=>{ const out=[]; cols.forEach(c=>{ if(c.kind==='stage')out.push(c.m==='a'?_money(_val(n,c.stage,'a')):_q(_val(n,c.stage,'q')));
+      else { const d=_val(n,c.to,c.m)-_val(n,c.from,c.m); out.push(c.m==='a'?_sgnMoney(d):_sgn(d)); } }); return out; };
+    TREE.forEach(n=>{ if(n.depth===0)['est','po','grn','mis','eA','pA','gA','mA'].forEach(k=>Gt[k]+=n[k]);
+      const ind='   '.repeat(n.depth); const lbl=n.type==='mat'?ind+n.name+'  ['+n.code+']':ind+n.name;
+      rows.push([lbl,...cellVals(n)]); meta.push({type:n.type,dot:n.type==='mat'?rowDot(n):null,node:n}); });
+    const gnode={est:Gt.est,po:Gt.po,grn:Gt.grn,mis:Gt.mis,eA:Gt.eA,pA:Gt.pA,gA:Gt.gA,mA:Gt.mA};
+    rows.push(['Σ  Grand Total'+(mat?' — '+mat:''),...cellVals(gnode)]); meta.push({type:'grand'});
+
+    const nNum=cols.length; const usable=W-80-230; const numW=Math.max(40,Math.min(70,Math.floor(usable/Math.max(1,nNum))));
+    const columnStyles={0:{halign:'left',cellWidth:230,overflow:'linebreak'}};
+    for(let i=1;i<=nNum;i++)columnStyles[i]={halign:'right',cellWidth:numW};
+    doc.autoTable({
+      startY:62, margin:{left:40,right:40}, tableWidth:'wrap',
+      head:[head], body:rows,
+      styles:{fontSize:7,cellPadding:2.5,overflow:'linebreak',lineColor:[230,235,242],lineWidth:.4,valign:'middle'},
+      headStyles:{fillColor:[27,42,71],textColor:[219,231,248],fontSize:6.8,halign:'right',overflow:'linebreak'},
+      columnStyles,
+      didParseCell:d=>{ if(d.section!=='body')return; const m=meta[d.row.index]; if(!m)return;
+        const fill={stage:[221,230,240],tower:[232,238,247],floor:[242,246,251],pkg:[240,247,245],mat:[255,255,255]};
+        if(m.type==='grand'){d.cell.styles.fillColor=[27,42,71];d.cell.styles.textColor=[212,175,55];d.cell.styles.fontStyle='bold';return;}
+        d.cell.styles.fillColor=fill[m.type]||[255,255,255];
+        if(m.type!=='mat')d.cell.styles.fontStyle='bold';
+        if(m.type==='pkg')d.cell.styles.textColor=[15,118,110];
+        if(m.type==='mat'&&m.dot!=='ok'&&d.column.index===0)d.cell.styles.fillColor=(m.dot==='bad'?[254,236,236]:[255,247,237]);
+        if(d.column.index>=1){ const c=cols[d.column.index-1]; if(c&&c.kind==='var'){ const dd=_val(m.node,c.to,c.m)-_val(m.node,c.from,c.m);
+          const bad=(c.to==='mis'&&c.from==='grn')?dd>0:(_val(m.node,c.from,c.m)&&dd/_val(m.node,c.from,c.m)>0.05);
+          d.cell.styles.textColor=bad?[185,28,28]:dd>0?[180,83,9]:[21,128,61]; d.cell.styles.fontStyle='bold'; } } },
+      didDrawPage:()=>{ doc.setFontSize(7);doc.setTextColor(150);
+        doc.text('Penguin Suite · Reports',40,doc.internal.pageSize.getHeight()-14);
+        doc.text('Page '+doc.internal.getNumberOfPages(),W-70,doc.internal.pageSize.getHeight()-14); }
+    });
+    doc.save('Material_Reconciliation_'+RSTAMP()+'.pdf');
+    RTOAST('PDF exported','success');
+  }catch(e){ RTOAST('PDF failed: '+e.message,'error'); console.error(e); }
+  finally{ RPBD(); }
+}
+
+/* ── entry + expose ── */
+function reportsInit(){ showLanding(); }
+window.reportsInit=reportsInit;
+window.RPT={
+  config:openConfig, toLanding:showLanding, toConfig:openConfig,
+  pickLoc, togL, locWhole, pickWbs, togW, wbsWhole,
+  onMatInput, matKeydown, pickMat, clrMat,
+  setMeasure, tglStage, setScope, setDate, quick,
+  locSearch:renderLocTree, wbsSearch:renderWbsTree,
+  generate, tog, expandAll,
+  excel:exportExcel, pdf:exportPDF, print:()=>window.print()
+};
+
+})();
+
+
+/* ══════════════════════════════════════════════════════════════════
+   DELETION AUDIT (v44) — separate IIFE, merged into window.RPT via
+   Object.assign. Zero edits inside the reports IIFE above. Reads
+   pu_doc_deletion_audit (RLS org-scoped, read-only). List query is
+   metadata-only; the jsonb snapshot is fetched per-row on Details.
+   ══════════════════════════════════════════════════════════════════ */
+(function(){
+'use strict';
+const DA={rows:null,type:'all',q:''};
+const $=id=>document.getElementById(id);
+const E=s=>String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+const DT=new Intl.DateTimeFormat('en-IN',{day:'2-digit',month:'short',year:'2-digit',hour:'2-digit',minute:'2-digit'});
+const NUM=new Intl.NumberFormat('en-IN',{maximumFractionDigits:3});
+function isRestore(r){return /^RESTORE\b/i.test(String(r.reason||''));}
+
+function daShow(){
+  window.RPT.toLanding();                       // reset the 3-pane machine first
+  $('rpt_landing').classList.add('hidden');
+  $('rpt_delaudit').classList.remove('hidden');
+}
+function daBack(){
+  $('rpt_delaudit').classList.add('hidden');
+  window.RPT.toLanding();
+}
+async function daOpen(){
+  daShow();
+  if(DA.rows===null)await daLoad();else daRender();
+}
+async function daLoad(){
+  pbShow('Loading deletion audit…');
+  try{
+    const{data,error}=await sb.from('pu_doc_deletion_audit')
+      .select('id,doc_type,doc_number,reason,deleted_by,deleted_at')
+      .order('deleted_at',{ascending:false})
+      .limit(200);
+    if(error)throw error;
+    DA.rows=data||[];
+  }catch(e){
+    toast('Deletion audit: '+e.message,'error',6000);
+    DA.rows=DA.rows||[];
+  }finally{pbDone();}
+  daRender();
+}
+function daRender(){
+  const tb=$('da_tbody');if(!tb)return;
+  const all=DA.rows||[];
+  const restoredDocs=new Set(all.filter(isRestore).map(r=>r.doc_type+'|'+r.doc_number));
+  const rows=all.filter(r=>{
+    if(DA.type!=='all'&&r.doc_type!==DA.type)return false;
+    if(DA.q){
+      const hay=(String(r.doc_number||'')+' '+String(r.reason||'')+' '+String(r.deleted_by||'')).toLowerCase();
+      if(!DA.q.split(/\s+/).every(w=>!w||hay.includes(w)))return false;
+    }
+    return true;
+  });
+  const c=$('da_count');if(c)c.textContent=rows.length+' of '+all.length+' record(s)';
+  if(!rows.length){
+    tb.innerHTML='<tr><td colspan="7" style="padding:24px;text-align:center;color:var(--r-muted);">'
+      +(all.length?'No records match the filter.':'No deletions recorded yet.')+'</td></tr>';
+    return;
+  }
+  tb.innerHTML=rows.map(r=>{
+    const rest=isRestore(r);
+    const laterRestored=!rest&&restoredDocs.has(r.doc_type+'|'+r.doc_number);
+    const action=rest
+      ?'<span style="font-size:10px;font-weight:700;background:#d1fae5;color:#065f46;padding:2px 8px;border-radius:99px;white-space:nowrap;">↩ RESTORED</span>'
+      :'<span style="font-size:10px;font-weight:700;background:#fee2e2;color:#b91c1c;padding:2px 8px;border-radius:99px;white-space:nowrap;">🗑 DELETED</span>'
+       +(laterRestored?'<div style="font-size:9.5px;color:#0f766e;margin-top:2px;white-space:nowrap;">later restored</div>':'');
+    const typePill=r.doc_type==='GRN'
+      ?'<span style="font-size:10px;font-weight:700;background:#dbeafe;color:#1e40af;padding:2px 7px;border-radius:5px;">GRN</span>'
+      :'<span style="font-size:10px;font-weight:700;background:#f3e8ff;color:#6b21a8;padding:2px 7px;border-radius:5px;">PO BILL</span>';
+    return '<tr style="border-bottom:1px solid #f1f5f9;'+(rest?'background:#f0fdf4;':'')+'">'
+      +'<td style="padding:7px 12px;white-space:nowrap;">'+DT.format(new Date(r.deleted_at))+'</td>'
+      +'<td style="padding:7px 12px;">'+typePill+'</td>'
+      +'<td style="padding:7px 12px;font-weight:600;white-space:nowrap;">'+E(r.doc_number)+'</td>'
+      +'<td style="padding:7px 12px;">'+action+'</td>'
+      +'<td style="padding:7px 12px;max-width:340px;white-space:normal;word-break:break-word;color:var(--r-muted);">'+E(r.reason)+'</td>'
+      +'<td style="padding:7px 12px;white-space:nowrap;">'+E(r.deleted_by||'—')+'</td>'
+      +'<td style="padding:7px 12px;white-space:nowrap;"><button class="rpt-back" style="padding:4px 10px;font-size:11.5px;" onclick="RPT.delAuditView(\''+E(r.id)+'\')">👁 Details</button></td>'
+      +'</tr>';
+  }).join('');
+}
+async function daView(id){
+  pbShow('Loading snapshot…');
+  let row=null;
+  try{
+    const{data,error}=await sb.from('pu_doc_deletion_audit').select('*').eq('id',id).single();
+    if(error)throw error;
+    row=data;
+  }catch(e){pbDone();toast('Snapshot load: '+e.message,'error',6000);return;}
+  pbDone();
+  const snap=row.snapshot||{};
+  const hdr=snap.header||{};
+  const items=Array.isArray(snap.items)?snap.items:[];
+  const layers=Array.isArray(snap.fifo_layers)?snap.fifo_layers:[];
+  const mirLinks=Array.isArray(snap.mir_links_before)?snap.mir_links_before:[];
+  const rest=isRestore(row);
+  // header key fields — show whichever exist
+  const HFIELDS=[
+    ['grn_number','GRN No'],['bill_number','Bill No'],['po_number','PO No'],
+    ['vendor_name','Vendor'],['grn_date','GRN Date'],['bill_date','Bill Date'],
+    ['status','Status at deletion'],['grand_total','Grand Total ₹'],['total_amount','Total ₹'],
+    ['invoice_number','Invoice No'],['is_cash_purchase','Cash Purchase'],['created_by_name','Created By']
+  ];
+  const hcells=HFIELDS.filter(([k])=>hdr[k]!==undefined&&hdr[k]!==null&&hdr[k]!=='').map(([k,lbl])=>{
+    let v=hdr[k];
+    if(typeof v==='boolean')v=v?'Yes':'No';
+    else if(typeof v==='number')v=NUM.format(v);
+    return '<div style="min-width:140px;"><div style="font-size:9.5px;text-transform:uppercase;color:var(--r-muted);font-weight:700;">'+E(lbl)+'</div>'
+      +'<div style="font-size:12.5px;font-weight:600;">'+E(v)+'</div></div>';
+  }).join('');
+  // items table — pick columns actually present
+  const ICOLS=[
+    ['material_code','Code'],['material_name','Material'],['uom','UOM'],
+    ['po_qty','PO Qty'],['prev_received_qty','Prev Recd'],
+    ['this_grn_qty','Qty'],['qty','Qty'],['qty_received','Qty'],
+    ['balance_qty','Balance'],
+    ['unit_rate','Rate ₹'],['rate','Rate ₹'],
+    ['base_amount','Amount ₹'],['amount','Amount ₹'],['total_amount','Amount ₹'],
+    ['line_total','Line Total ₹']
+  ];
+  const present=ICOLS.filter(([k])=>items.some(it=>it&&it[k]!==undefined&&it[k]!==null));
+  const seen=new Set();
+  const cols=present.filter(([,lbl])=>{if(seen.has(lbl))return false;seen.add(lbl);return true;});
+  const itbl=items.length?(
+    '<table style="width:100%;border-collapse:collapse;font-size:11.5px;margin-top:6px;">'
+    +'<thead><tr>'+cols.map(([,l])=>'<th style="text-align:left;padding:4px 8px;background:#f1f5f9;font-size:9.5px;text-transform:uppercase;color:var(--r-muted);">'+E(l)+'</th>').join('')+'</tr></thead><tbody>'
+    +items.map(it=>'<tr>'+cols.map(([k])=>{
+      let v=it[k];if(v===undefined||v===null)v='—';
+      else if(typeof v==='number')v=NUM.format(v);
+      return '<td style="padding:4px 8px;border-top:1px solid #f1f5f9;">'+E(v)+'</td>';
+    }).join('')+'</tr>').join('')
+    +'</tbody></table>'
+  ):'<div style="font-size:12px;color:var(--r-muted);margin-top:4px;">No line items in snapshot.</div>';
+  const html=
+    '<h3 style="margin-bottom:4px;">'+(rest?'↩ Restore record':'🗑 Deletion record')+' — '+E(row.doc_number)+'</h3>'
+    +'<div style="font-size:11.5px;color:var(--r-muted);margin-bottom:10px;">'+E(row.doc_type)+' · '+(rest?'restored':'deleted')+' by <b>'+E(row.deleted_by||'—')+'</b> on '+DT.format(new Date(row.deleted_at))+'</div>'
+    +'<div style="background:'+(rest?'#f0fdf4;border:1px solid #bbf7d0':'#fff7ed;border:1px solid #fed7aa')+';border-radius:7px;padding:8px 12px;font-size:12px;margin-bottom:12px;"><b>Reason:</b> '+E(row.reason)+'</div>'
+    +'<div style="display:flex;gap:16px;flex-wrap:wrap;margin-bottom:6px;">'+(hcells||'<span style="font-size:12px;color:var(--r-muted);">No header snapshot.</span>')+'</div>'
+    +'<div style="font-size:10.5px;text-transform:uppercase;color:var(--r-muted);font-weight:700;margin-top:10px;">Line items ('+items.length+')</div>'
+    +itbl
+    +'<div style="display:flex;gap:16px;margin-top:10px;font-size:12px;color:var(--r-muted);">'
+    +'<span>Stock layers in snapshot: <b>'+layers.length+'</b></span>'
+    +'<span>MIR links before deletion: <b>'+mirLinks.length+'</b></span>'
+    +'</div>'
+    +'<details style="margin-top:12px;"><summary style="font-size:11.5px;color:#2563eb;cursor:pointer;font-weight:700;">Raw snapshot JSON (forensics)</summary>'
+    +'<pre style="max-height:320px;overflow:auto;background:#0f172a;color:#e2e8f0;font-size:10.5px;padding:10px;border-radius:7px;margin-top:6px;white-space:pre-wrap;word-break:break-all;">'+E(JSON.stringify(snap,null,2))+'</pre></details>'
+    +'<div style="display:flex;justify-content:flex-end;margin-top:14px;"><button class="btn btn-primary" onclick="closeModal()">Close</button></div>';
+  openModal(html,'large');
+}
+Object.assign(window.RPT,{
+  delAudit:daOpen,
+  delAuditBack:daBack,
+  delAuditRefresh:function(){DA.rows=null;daLoad();},
+  delAuditType:function(v){DA.type=v||'all';daRender();},
+  delAuditSearch:function(v){DA.q=String(v||'').toLowerCase().trim();daRender();},
+  delAuditView:daView
+});
+})();
+
+
 
 function switchHOTab(tab) {
   ['orders','cert','billing'].forEach(t => {
