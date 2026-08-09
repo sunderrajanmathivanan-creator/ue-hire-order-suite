@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Penguin Suite v47</title>
+<title>Penguin Suite v50</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js"></script>
@@ -3014,10 +3014,12 @@ table.pgp-roles, table.pgp-mx{ border-collapse:collapse; width:100%; }
   <div class="pgp-err" id="pgp_err"></div>
 
   <!-- add new user (owner only) -->
-  <div class="card" id="pgp_addcard">
+  <!-- v49: invite form lives in a modal, opened from Team members → + Add user -->
+  <div id="pgp_invite_ovl" style="display:none;position:fixed;inset:0;background:rgba(20,28,46,.55);z-index:4700;align-items:center;justify-content:center;">
+  <div class="card" id="pgp_addcard" style="width:760px;max-width:94vw;margin:0;max-height:90vh;overflow-y:auto;">
     <h3>Add a user <span style="flex:1"></span>
-      <button class="btn btn-ghost btn-sm" id="pgp_addtoggle" onclick="pgpToggleInvite()">Show form</button></h3>
-    <div class="pgp-adduser" id="pgp_invite" style="display:none;">
+      <button class="btn btn-ghost btn-sm" onclick="pgpToggleInvite()" title="Close">&#10005;</button></h3>
+    <div class="pgp-adduser" id="pgp_invite">
       <div class="grid-3">
         <div class="field"><label class="req">Full Name</label>
           <input id="inv_name" placeholder="e.g. Ramesh Kumar"></div>
@@ -3040,8 +3042,37 @@ table.pgp-roles, table.pgp-mx{ border-collapse:collapse; width:100%; }
         <button class="btn btn-ghost" onclick="pgpToggleInvite()">Cancel</button>
       </div>
       <p style="color:var(--muted);font-size:12px;margin-top:8px;">
-        The user receives an email to set their password, then appears in the table below ready to assign.
+        The user receives an email to set their password, then appears in Team members ready to assign.
         The legacy role still drives the older screens.</p>
+    </div>
+  </div>
+  </div><!-- /pgp_invite_ovl (v49) -->
+
+  <!-- ── v48 · Team members — owner controls (add / deactivate / reactivate) ── -->
+  <div class="card" id="pgp_team_card" style="display:none;">
+    <h3>Team members <span class="pgp-badge">OWNER CONTROLS</span><span style="flex:1"></span>
+      <button class="btn btn-primary btn-sm" id="pgp_team_addbtn" onclick="pgpToggleInvite()">+ Add user</button>
+      <button class="btn btn-ghost btn-sm" onclick="pgpTeamLoad()" title="Refresh">&#8635;</button></h3>
+    <div class="table-wrap">
+      <table class="pgp-roles"><thead><tr>
+        <th>User</th><th>Roles &middot; this project</th><th>Membership</th><th>Status</th><th style="text-align:right;">Action</th>
+      </tr></thead><tbody id="pgp_tbody"><tr><td colspan="5" class="center muted">Loading&hellip;</td></tr></tbody></table>
+    </div>
+    <p style="color:var(--muted);font-size:11.5px;margin:10px 2px 0;">
+      Deactivation blocks login at the next token refresh (&le;&nbsp;1&nbsp;hour); documents and history stay untouched
+      and attributed. Reactivation restores the same roles and memberships. Hard-deleting the login itself stays a
+      Supabase-dashboard action.</p>
+  </div>
+  <!-- v48 confirm overlay -->
+  <div id="pgp_confirm_ovl" style="display:none;position:fixed;inset:0;background:rgba(20,28,46,.55);z-index:4800;align-items:center;justify-content:center;">
+    <div style="background:#fff;border-radius:10px;width:460px;max-width:94vw;box-shadow:0 24px 60px rgba(0,0,0,.3);padding:22px;">
+      <h4 id="pgp_cf_title" style="margin:0 0 10px;font-size:15px;color:#1B2A47;"></h4>
+      <p id="pgp_cf_body" style="font-size:12.5px;color:#475569;line-height:1.65;margin:0;"></p>
+      <div id="pgp_cf_warn" style="display:none;background:#fef2f2;border:1px solid #fecaca;border-radius:6px;padding:9px 12px;font-size:12px;color:#b91c1c;margin:12px 0 0;"></div>
+      <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:16px;">
+        <button class="btn btn-ghost btn-sm" onclick="pgpCancelActive()">Cancel</button>
+        <button class="btn btn-sm" id="pgp_cf_go" onclick="pgpConfirmActive()" style="border:none;color:#fff;font-weight:600;"></button>
+      </div>
     </div>
   </div>
 
@@ -6974,6 +7005,8 @@ async function inviteUser() {
     });
     if (signUpErr) throw signUpErr;
     toast('Invite sent to ' + email + ' \u2014 they set their own password from the email link.', 'success', 7000);
+    const _iovl=document.getElementById('pgp_invite_ovl'); if(_iovl) _iovl.style.display='none';   // v49
+    if(typeof pgpTeamLoad==='function') pgpTeamLoad();                                             // v49
     document.getElementById('inv_name').value = '';
     document.getElementById('inv_email').value = '';
     flashSuccess('Invite recorded as ' + ((inv && inv.org_role) || role) + '. The account appears below once they confirm.');
@@ -7120,6 +7153,22 @@ async function doUpdatePassword() {
   }
 }
 
+// ── v48: screen roles from the JWT project_roles claim ──────────────
+// Minted per active project by custom_access_token_hook v2. Empty array
+// (owner, pre-pra users) → caller falls back to the legacy profile role.
+const _PGS_ROLE_LABELS = { admin:'Admin', project_manager:'Project Manager',
+  planning_qs:'Planning/ QS', procurement:'Procurement',
+  store_executive:'Store Executive', site_manager:'Site Manager' };
+async function _pgsClaimRoles(){
+  try{
+    const { data:{ session } } = await sb.auth.getSession();
+    if(!session || !session.access_token) return [];
+    const seg = session.access_token.split('.')[1].replace(/-/g,'+').replace(/_/g,'/');
+    const payload = JSON.parse(atob(seg));
+    const codes = Array.isArray(payload.project_roles) ? payload.project_roles : [];
+    return codes.map(function(c){ return _PGS_ROLE_LABELS[c]; }).filter(Boolean);
+  }catch(e){ console.warn('[v48] claim-role decode failed, using profile:', e.message); return []; }
+}
 async function onSignedIn(user) {
   // Retry profile fetch up to 3 times — RLS can take a moment to recognise new session
   let profile = null;
@@ -7154,7 +7203,8 @@ async function onSignedIn(user) {
 
   state.userId   = user.id;
   state.user     = user.email;
-  state.roles    = _parseRoles(profile.role);
+  const _claimRoles = await _pgsClaimRoles();                                  // v48
+  state.roles    = _claimRoles.length ? _claimRoles : _parseRoles(profile.role); // v48: per-project roles win
   state.role     = state.roles.join(' · '); // display string only — all logic uses state.roles
   state.userName = profile.full_name;
 
@@ -32555,14 +32605,13 @@ window.addEventListener('storage', function(ev){
 const pgpS = { loaded:false, isOwner:false, functions:[], roles:[], users:[], busy:false, openPicker:null };
 
 function pgpToggleInvite(){
-  const p=document.getElementById('pgp_invite'), b=document.getElementById('pgp_addtoggle');
-  if(!p) return;
-  // inline display beats any stylesheet rule — no cascade ambiguity
-  const isHidden = p.style.display === 'none' || getComputedStyle(p).display === 'none';
-  p.style.display = isHidden ? 'block' : 'none';
-  p.classList.remove('closed');   // drop the class entirely; inline style is authoritative
-  if(b) b.textContent = isHidden ? 'Hide form' : 'Show form';
-  if(isHidden) _invLoadProjects();   // v47: fill the project selector on open
+  // v49: the invite form is a modal — inline display on the overlay is authoritative
+  const o=document.getElementById('pgp_invite_ovl'); if(!o) return;
+  const opening = o.style.display === 'none' || o.style.display === '';
+  o.style.display = opening ? 'flex' : 'none';
+  // v50: #pgp_invite{display:none} stylesheet rule must be beaten inline
+  const p=document.getElementById('pgp_invite'); if(p) p.style.display = opening ? 'block' : 'none';
+  if(opening){ pgpErr(''); _invLoadProjects(); }   // v47: fill the project selector on open
 }
 function pgpErr(msg){
   const e=document.getElementById('pgp_err'); if(!e) return;
@@ -32609,7 +32658,9 @@ async function pgsLoadPermissions(force){
 function pgpRender(){
   const owner=pgpS.isOwner;
   document.getElementById('pgp_mode').textContent = owner ? 'OWNER' : 'ADMIN · READ-ONLY';
-  const ac=document.getElementById('pgp_addcard'); if(ac) ac.style.display = owner ? '' : 'none';
+  // v49: invite form is modal-housed — visibility owned by pgpToggleInvite (owner-only entry point)
+  const tc=document.getElementById('pgp_team_card'); if(tc) tc.style.display = owner ? '' : 'none';  // v48
+  if(owner && !pgpS.team) pgpTeamLoad();                                                             // v48
 
   const byDomain={};
   pgpS.functions.forEach(function(f){ (byDomain[f.domain]=byDomain[f.domain]||[]).push(f); });
@@ -32651,6 +32702,71 @@ function pgpRender(){
   }).join('');
 }
 
+// ── v48 · Team members: rpc_um_team / rpc_um_set_user_active ────────
+function pgpTeamLoad(){
+  if(!pgpS.isOwner) return;
+  sb.rpc('rpc_um_team').then(function(res){
+    if(res.error || !res.data || res.data.ok===false){
+      document.getElementById('pgp_tbody').innerHTML =
+        '<tr><td colspan="5" class="center muted">Could not load team'+(res.error?': '+pgsEsc(res.error.message):'')+'</td></tr>';
+      return;
+    }
+    pgpS.team = res.data.users || [];
+    pgpTeamRender();
+  });
+}
+function pgpTeamRender(){
+  const tb=document.getElementById('pgp_tbody'); if(!tb) return;
+  const rows=(pgpS.team||[]).map(function(u){
+    const inact=!u.is_active;
+    const roleChips = u.is_owner
+      ? '<span class="pgp-hchip" style="background:#fdf8e8;color:#a07d10;border:1px solid #D4AF37;">OWNER &mdash; all access</span>'
+      : (u.roles||[]).map(function(c){ return '<span class="pgp-hchip">'+pgsEsc(_PGS_ROLE_LABELS[c]||c)+'</span>'; }).join(' ')
+        || '<span class="pgp-none">'+(inact?'&mdash;':'No roles yet')+'</span>';
+    const memChips=(u.memberships||[]).map(function(m){
+      return '<span class="pgp-hchip"'+(m.is_active?'':' style="opacity:.45;text-decoration:line-through;"')+'>'+pgsEsc(m.project_code)+'</span>';
+    }).join(' ')||'<span class="pgp-none">&mdash;</span>';
+    const pill=inact
+      ? '<span style="font-size:10px;font-weight:700;border-radius:99px;padding:2px 9px;background:#fee2e2;color:#991b1b;">DEACTIVATED</span>'
+      : '<span style="font-size:10px;font-weight:700;border-radius:99px;padding:2px 9px;background:#d1fae5;color:#065f46;">ACTIVE</span>';
+    const act = u.is_owner
+      ? '<button class="btn btn-ghost btn-sm" disabled title="The owner cannot deactivate themselves">&mdash;</button>'
+      : inact
+        ? '<button class="btn btn-ghost btn-sm" style="color:#0f766e;border-color:#99f6e4;" onclick="pgpAskActive(\''+u.user_id+'\',true)">Reactivate</button>'
+        : '<button class="btn btn-ghost btn-sm" style="color:#b91c1c;border-color:#fca5a5;" onclick="pgpAskActive(\''+u.user_id+'\',false)">Deactivate</button>';
+    return '<tr'+(inact?' style="opacity:.6;"':'')+'><td><div style="font-weight:600;'+(inact?'text-decoration:line-through;color:#94a3b8;':'')+'">'
+      +pgsEsc(u.full_name)+'</div><div style="font-size:11px;color:var(--muted);">'+pgsEsc(u.email||'')+'</div></td>'
+      +'<td>'+roleChips+'</td><td>'+memChips+'</td><td>'+pill+'</td>'
+      +'<td style="text-align:right;">'+act+'</td></tr>';
+  }).join('');
+  tb.innerHTML=rows||'<tr><td colspan="5" class="center muted">No users.</td></tr>';
+}
+function pgpAskActive(uid, active){
+  const u=(pgpS.team||[]).find(function(x){return x.user_id===uid;}); if(!u) return;
+  pgpS.pendingActive={ uid:uid, active:active, name:u.full_name };
+  document.getElementById('pgp_cf_title').textContent=(active?'Reactivate ':'Deactivate ')+u.full_name+'?';
+  document.getElementById('pgp_cf_body').textContent = active
+    ? u.full_name+' will be able to log in again with the same roles and project memberships they held before.'
+    : u.full_name+' will be signed out at the next token refresh (\u2264 1 hour) and can no longer log in. Their documents, approvals and history remain untouched and attributed.';
+  const warn=document.getElementById('pgp_cf_warn');
+  const roleNames=(u.roles||[]).map(function(c){return _PGS_ROLE_LABELS[c]||c;}).join(', ');
+  if(!active && roleNames){ warn.style.display=''; warn.innerHTML='Currently holds <b>'+pgsEsc(roleNames)+'</b> on this project &mdash; check nothing is mid-approval with them first.'; }
+  else warn.style.display='none';
+  const go=document.getElementById('pgp_cf_go');
+  go.textContent=active?'Reactivate':'Deactivate';
+  go.style.background=active?'#0d9488':'#dc2626';
+  document.getElementById('pgp_confirm_ovl').style.display='flex';
+}
+function pgpCancelActive(){ pgpS.pendingActive=null; document.getElementById('pgp_confirm_ovl').style.display='none'; }
+function pgpConfirmActive(){
+  const p=pgpS.pendingActive; if(!p) return;
+  pgpCancelActive();
+  sb.rpc('rpc_um_set_user_active',{ p_user_id:p.uid, p_active:p.active }).then(function(res){
+    if(res.error){ if(typeof toast==='function') toast((p.active?'Reactivate':'Deactivate')+' failed: '+res.error.message,'error',6000); return; }
+    if(typeof toast==='function') toast(p.name+(p.active?' reactivated':' deactivated'),'success');
+    pgpTeamLoad(); pgsLoadPermissions();
+  });
+}
 function pgpClosePicker(){
   if(pgpS.openPicker){ const el=document.getElementById('pgp_pop_'+pgpS.openPicker); if(el) el.innerHTML=''; }
   pgpS.openPicker=null;
