@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Penguin Suite v45</title>
+<title>Penguin Suite v47</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js"></script>
@@ -866,6 +866,9 @@ table.pgp-roles, table.pgp-mx{ border-collapse:collapse; width:100%; }
     <div id="authPanel-login">
       <h2>🐧 Penguin Suite</h2>
       <div class="sub">Construction procurement, planning &amp; QS — one login.</div>
+      <div id="authLinkNotice" style="display:none;background:#fffbeb;border:1px solid #fde68a;color:#92400e;border-radius:6px;padding:9px 12px;font-size:12px;margin-bottom:12px;line-height:1.45;">
+        ⚠ This sign-in link was already used or has expired. Use <b>Forgot password?</b> below to set your password — your account is ready.
+      </div>
       <input type="email" id="authEmail" placeholder="Email address" autocomplete="email"
              onkeydown="if(event.key==='Enter')document.getElementById('authPass').focus()">
       <input type="password" id="authPass" placeholder="Password" autocomplete="current-password"
@@ -3029,6 +3032,8 @@ table.pgp-roles, table.pgp-mx{ border-collapse:collapse; width:100%; }
             <option value="Project Manager">Project Manager</option>
             <option value="Admin">Admin</option>
           </select></div>
+        <div class="field"><label class="req">Project</label>
+          <select id="inv_project"><option value="">Default project</option></select></div>
       </div>
       <div class="actions-row">
         <button class="btn btn-primary" onclick="inviteUser()">Send Invite</button>
@@ -6919,36 +6924,63 @@ async function loadUsersList() {
   }).join('') || '<tr><td colspan="5" class="center muted">No users found.</td></tr>';
 }
 
+let _invProjectsLoaded = false;   // v47
+async function _invLoadProjects() {
+  const sel = document.getElementById('inv_project');
+  if (!sel || _invProjectsLoaded) return;
+  const esc = s => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  try {
+    const { data, error } = await sb.from('projects')
+      .select('id,project_code,project_name,created_at')
+      .eq('is_active', true).order('created_at');
+    if (error) throw error;
+    if (!data || !data.length) return;   // keep the "Default project" fallback → RPC default
+    sel.innerHTML = data.map((p, i) =>
+      '<option value="' + p.id + '"' + (i === 0 ? ' selected' : '') + '>'
+      + esc(p.project_code) + ' — ' + esc(p.project_name) + '</option>').join('');
+    _invProjectsLoaded = true;
+  } catch (e) {
+    console.warn('invite projects load failed:', e.message);   // dropdown stays on fallback
+  }
+}
 async function inviteUser() {
   if (!hasPerm('canManageUsers')) { toast('Admin access only','error'); return; }
   const name  = document.getElementById('inv_name').value.trim();
-  const email = document.getElementById('inv_email').value.trim();
+  const email = document.getElementById('inv_email').value.trim().toLowerCase();
   const role  = document.getElementById('inv_role').value;
   if (!name || !email) { toast('Name and email required','error'); return; }
   pbShow('Inviting\u2026');
-  // Use Supabase admin invite — requires service role key
-  // We use signUp with a generated temp password instead, then user resets
-  const tempPass = Math.random().toString(36).slice(2,10) + Math.random().toString(36).slice(2,10).toUpperCase() + '!';
-  const { data: authData, error: authErr } = await sb.auth.admin?.inviteUserByEmail(email).catch(() => null) || {};
-
-  // Fallback: create via signUp with random password
-  const { data: signUpData, error: signUpErr } = await sb.auth.signUp({
-    email, password: tempPass,
-    options: { data: { full_name: name } }
-  });
-  pbDone();
-  if (signUpErr) { toast(signUpErr.message, 'error'); return; }
-
-  // Insert profile row — will be linked when user confirms email
-  // Store pending profile by email for matching after confirmation
-  toast('Invite sent to ' + email + '. They must set their password via the reset link.', 'success', 6000);
-  // Reset form
-  document.getElementById('inv_name').value = '';
-  document.getElementById('inv_email').value = '';
-
-  // Store the intended role so it can be assigned after email confirmation
-  // In practice: after user confirms, admin assigns role from the Users tab
-  flashSuccess('User created. Now send them a password reset email and assign their role below.');
+  try {
+    // v46: record the invite server-side FIRST. The auth.users trigger
+    // (mig_user_invite_v1) provisions org_users / user_profiles /
+    // user_active_project from this row at signUp time, so the user's very
+    // first JWT already carries org, role and project claims.
+    const { data: inv, error: invErr } = await sb.rpc('rpc_invite_user', {
+      p_email: email, p_full_name: name, p_legacy_role: role,
+      p_project_id: (document.getElementById('inv_project') || {}).value || null   // v47: admin-chosen project; blank → server default (oldest active)
+    });
+    if (invErr) throw invErr;
+    // Confirmation email bounces back to wherever THIS app is served from —
+    // survives the GitHub Pages → Cloudflare Pages move with zero code change.
+    // The host must be listed in Supabase Auth → URL Configuration → Redirect URLs.
+    const _rnd = crypto.getRandomValues(new Uint32Array(4));
+    const tempPass = 'Tp1!' + Array.from(_rnd, x => x.toString(36)).join('');
+    const { error: signUpErr } = await sb.auth.signUp({
+      email, password: tempPass,
+      options: {
+        data: { full_name: name },
+        emailRedirectTo: window.location.origin + window.location.pathname
+      }
+    });
+    if (signUpErr) throw signUpErr;
+    toast('Invite sent to ' + email + ' \u2014 they set their own password from the email link.', 'success', 7000);
+    document.getElementById('inv_name').value = '';
+    document.getElementById('inv_email').value = '';
+    flashSuccess('Invite recorded as ' + ((inv && inv.org_role) || role) + '. The account appears below once they confirm.');
+    loadUsersList();
+  } catch (e) {
+    toast('Invite failed: ' + (e.message || e), 'error', 8000);
+  } finally { pbDone(); }
 }
 
 async function changeUserRole(userId, name, rolesJson) {
@@ -6996,7 +7028,7 @@ async function toggleUserActive(userId, newState) {
 // v2: reset-link landing URL — CHANGE AT DEPLOY when the unified
 // app moves (Cloudflare Pages etc.). Must be an Allowed Redirect
 // URL in Supabase Auth settings.
-const PGS_RESET_REDIRECT_URL = 'https://ue-poe.github.io/ue_procurement_erp/';
+const PGS_RESET_REDIRECT_URL = window.location.origin + window.location.pathname;   // v46: self-referential — follows the app to any host in Supabase Redirect URLs
 
 function showForgotPanel() {
   document.getElementById('authPanel-login').style.display  = 'none';
@@ -7190,12 +7222,22 @@ async function _maybeSessionExpired(errMsg) {
 // the recovery token and strips the URL hash. Checking window.location.hash
 // later (e.g. inside onAuthStateChange) fails because the hash is already gone.
 const _isRecoveryFlow = (window.location.hash || '').includes('type=recovery');
+const _isSignupFlow   = /type=(signup|invite|magiclink)/.test(window.location.hash || '');   // v46: invite/confirm links land on set-password
+// v47: consumed/expired auth links (mail scanners burn one-time tokens) — show a
+// friendly self-service notice on the login card instead of a bare form.
+(function () {
+  const h = window.location.hash || '';
+  if (!/error_code=otp_expired|error=access_denied/.test(h)) return;
+  const show = () => { const n = document.getElementById('authLinkNotice'); if (n) n.style.display = 'block'; };
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', show); else show();
+  try { history.replaceState(null, '', window.location.pathname + window.location.search); } catch (_e) {}
+})();
 
 // ── Session restore on page load ─────────────────────────────
 // Check if user already has a valid session (e.g. reopened the file)
 // If yes, skip the login screen entirely
 (async () => {
-  if (_isRecoveryFlow) return; // v168: recovery link — stay on update-password panel
+  if (_isRecoveryFlow || _isSignupFlow) return; // v168/v46: recovery or invite link — stay on set-password panel
   const { data: { session } } = await sb.auth.getSession();
   if (session && session.user && !_authHandled) {
     _authHandled = true;
@@ -7206,7 +7248,7 @@ const _isRecoveryFlow = (window.location.hash || '').includes('type=recovery');
 // ── Early hash detection — runs before initApp to catch password reset tokens ──
 (function detectPasswordReset() {
   const hash = window.location.hash;
-  if (hash && hash.includes('access_token') && hash.includes('type=recovery')) {
+  if (hash && hash.includes('access_token') && (hash.includes('type=recovery') || /type=(signup|invite|magiclink)/.test(hash))) {   // v46
     // Show update panel immediately — don't wait for onAuthStateChange
     document.addEventListener('DOMContentLoaded', () => {
       const loginPanel  = document.getElementById('authPanel-login');
@@ -7227,7 +7269,7 @@ sb.auth.onAuthStateChange(async (event, session) => {
     document.getElementById('authPanel-update').style.display = 'block';
     return;
   }
-  if (event === 'SIGNED_IN' && (_isRecoveryFlow || window.location.hash.includes('type=recovery'))) {  // v168
+  if (event === 'SIGNED_IN' && (_isRecoveryFlow || _isSignupFlow || window.location.hash.includes('type=recovery'))) {  // v168/v46
     // Supabase signed the user in via recovery token — show update panel
     document.getElementById('authPanel-login').style.display  = 'none';
     document.getElementById('authPanel-update').style.display = 'block';
@@ -32520,6 +32562,7 @@ function pgpToggleInvite(){
   p.style.display = isHidden ? 'block' : 'none';
   p.classList.remove('closed');   // drop the class entirely; inline style is authoritative
   if(b) b.textContent = isHidden ? 'Hide form' : 'Show form';
+  if(isHidden) _invLoadProjects();   // v47: fill the project selector on open
 }
 function pgpErr(msg){
   const e=document.getElementById('pgp_err'); if(!e) return;
