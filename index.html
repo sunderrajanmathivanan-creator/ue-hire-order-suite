@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Penguin Suite v50</title>
+<title>Penguin Suite v55</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js"></script>
@@ -3179,6 +3179,8 @@ table.pgp-roles, table.pgp-mx{ border-collapse:collapse; width:100%; }
                 <div style="display:flex;align-items:flex-start;gap:8px;"><span style="font-size:11px;font-weight:500;padding:2px 8px;border-radius:20px;background:#eaf3de;color:#3B6D11;white-space:nowrap;min-width:148px;text-align:center;flex-shrink:0;">Full PO Approved</span><span style="font-size:11px;color:var(--text-muted);line-height:1.4;">All lines fully covered by approved POs; awaiting GRN</span></div>
                 <div style="display:flex;align-items:flex-start;gap:8px;"><span style="font-size:11px;font-weight:500;padding:2px 8px;border-radius:20px;background:#e0f2fe;color:#0369a1;white-space:nowrap;min-width:148px;text-align:center;flex-shrink:0;">Partially Received</span><span style="font-size:11px;color:var(--text-muted);line-height:1.4;">Some lines received via approved GRN; others pending</span></div>
                 <div style="display:flex;align-items:flex-start;gap:8px;"><span style="font-size:11px;font-weight:500;padding:2px 8px;border-radius:20px;background:#d1fae5;color:#065f46;white-space:nowrap;min-width:148px;text-align:center;flex-shrink:0;">Fully Received</span><span style="font-size:11px;color:var(--text-muted);line-height:1.4;">All lines fully received via GRN</span></div>
+                <div style="display:flex;align-items:flex-start;gap:8px;"><span style="font-size:11px;font-weight:500;padding:2px 8px;border-radius:20px;background:#f0fdf4;color:#15803d;white-space:nowrap;min-width:148px;text-align:center;flex-shrink:0;">Closed</span><span style="font-size:11px;color:var(--text-muted);line-height:1.4;">All lines fully received or balance-closed; MIR complete</span></div>
+                <div style="display:flex;align-items:flex-start;gap:8px;"><span style="font-size:11px;font-weight:500;padding:2px 8px;border-radius:20px;background:#fee2e2;color:#991b1b;white-space:nowrap;min-width:148px;text-align:center;flex-shrink:0;">Cancelled</span><span style="font-size:11px;color:var(--text-muted);line-height:1.4;">MIR cancelled — all POs cancelled, no active procurement; terminal</span></div>
               </div>
             </div>
             <!-- Divider -->
@@ -3194,6 +3196,7 @@ table.pgp-roles, table.pgp-mx{ border-collapse:collapse; width:100%; }
                 <div style="display:flex;align-items:flex-start;gap:8px;"><span style="font-size:11px;font-weight:500;padding:2px 8px;border-radius:20px;background:#eaf3de;color:#3B6D11;white-space:nowrap;min-width:150px;text-align:center;flex-shrink:0;">Full PO Approved</span><span style="font-size:11px;color:var(--text-muted);line-height:1.4;">Full qty covered by approved PO(s); awaiting GRN</span></div>
                 <div style="display:flex;align-items:flex-start;gap:8px;"><span style="font-size:11px;font-weight:500;padding:2px 8px;border-radius:20px;background:#e0f2fe;color:#0369a1;white-space:nowrap;min-width:150px;text-align:center;flex-shrink:0;">Partially Received</span><span style="font-size:11px;color:var(--text-muted);line-height:1.4;">Approved GRN qty &lt; required; balance pending</span></div>
                 <div style="display:flex;align-items:flex-start;gap:8px;"><span style="font-size:11px;font-weight:500;padding:2px 8px;border-radius:20px;background:#d1fae5;color:#065f46;white-space:nowrap;min-width:150px;text-align:center;flex-shrink:0;">Fully Received</span><span style="font-size:11px;color:var(--text-muted);line-height:1.4;">Approved GRN qty &ge; required; fully received</span></div>
+                <div style="display:flex;align-items:flex-start;gap:8px;"><span style="font-size:11px;font-weight:500;padding:2px 8px;border-radius:20px;background:#fce7f3;color:#9d174d;white-space:nowrap;min-width:150px;text-align:center;flex-shrink:0;">Balance Closed</span><span style="font-size:11px;color:var(--text-muted);line-height:1.4;">Leftover balance short-closed and released back to estimate; line resolved</span></div>
               </div>
 
               <div style="margin-top:10px;padding:8px 10px;background:#fffbeb;border-radius:6px;border:1px solid #fde68a;">
@@ -3244,6 +3247,8 @@ table.pgp-roles, table.pgp-mx{ border-collapse:collapse; width:100%; }
                   <option value="Full PO Approved">Full PO Approved</option>
                   <option value="Partially Received">Partially Received</option>
                   <option value="Fully Received">Fully Received</option>
+                  <option value="Closed">Closed</option>
+                  <option value="Cancelled">Cancelled</option>
                   <option value="__qty_available__">Qty Available only</option>
                 </select>
               </td>
@@ -19748,6 +19753,7 @@ async function _draftRestoreWOC(pl) {
 
 async function loadMIRList() {
   _renderDraftsPanel('MIR');
+  if (window._USE_MIR_LIST_RPC) return _loadMIRListRPC();
   // v74: fetch mir_items + po_links + po_orders status in one shot.
   // mirPOMap is built from pu_mir_item_po_links filtered by approvedPOs —
   // same source-of-truth the View modal uses, so cancelled POs never appear
@@ -19832,7 +19838,27 @@ async function loadMIRList() {
   const apprPoQtyMap = {};  // -> SUM(qty) from APPROVED POs
   const pendPoQtyMap = {};  // -> SUM(qty) from PENDING POs (raised, not approved)
 
-  if (allPlIds.length) {
+  if (allPlIds.length && window._USE_MIR_COV_RPC) {
+    // v53: server-side coverage aggregation (rpc_mir_coverage) replaces the
+    // per-plid pu_po_items / pu_grn_items sweeps below. On any error, flip the
+    // flag so the verbatim legacy block runs as fallback for this session.
+    try {
+      const { data: _cov, error: _covErr } = await sb.rpc('rpc_mir_coverage');
+      if (_covErr) throw _covErr;
+      (_cov || []).forEach(r => {
+        const plid = r.procurement_line_id;
+        poQtyMap[plid]     = Number(r.po_qty)      || 0;
+        scQtyMap[plid]     = Number(r.sc_qty)      || 0;
+        grnQtyMap[plid]    = Number(r.grn_qty)     || 0;
+        apprPoQtyMap[plid] = Number(r.appr_po_qty) || 0;
+        pendPoQtyMap[plid] = Number(r.pend_po_qty) || 0;
+      });
+    } catch (e) {
+      console.warn('[mir] rpc_mir_coverage failed, using legacy path:', e && e.message);
+      window._USE_MIR_COV_RPC = false;
+    }
+  }
+  if (allPlIds.length && !window._USE_MIR_COV_RPC) {
     // v171: the old single .in() carried EVERY plid across ALL MIRs — the URL
     // outgrew server limits as data grew, the request failed, the error was
     // silently discarded, and the empty maps mislabeled every line "PO Pending".
@@ -19907,7 +19933,7 @@ async function loadMIRList() {
 
   // Qty Available is meaningless for Rejected MIRs — strip them out
   puState.mirList
-    .filter(m => m.status === 'Rejected')
+    .filter(m => ['Rejected','Cancelled'].includes(m.status))
     .forEach(m => puState.mirBalanceSet.delete(m.mir_number));
 
   // Compute live header status for each MIR and write to puState.mirList
@@ -19987,7 +20013,7 @@ function renderMIRList() {
   if (fRaised)  rows = rows.filter(m => (m.raised_by||'').toLowerCase().includes(fRaised));
   // v73: filter and sort use the same live status logic as display
   // _mirLiveSt: Pending Approval and Rejected use DB value; all others use _liveStatus
-  const _mirLiveSt = m => (['Pending Approval','Rejected'].includes(m.status||''))
+  const _mirLiveSt = m => (['Pending Approval','Rejected','Cancelled'].includes(m.status||''))
     ? (m.status||'Pending Approval')
     : (m._liveStatus || 'PO Pending');
 
@@ -20021,7 +20047,7 @@ function renderMIRList() {
     const st = _mirLiveSt(m);  // v73: uses shared helper defined above
     const stCls = st.toLowerCase().replace(/[\s/()]+/g,'-');
     const summary = puState.mirLabel9Summary?.[m.mir_number] || {};
-    const _lineCount = (puState.mirItemsMap?.[m.mir_number]||[]).length;
+    const _lineCount = (puState.mirLineCount?.[m.mir_number] ?? (puState.mirItemsMap?.[m.mir_number]||[]).length);
     const hasBalance = puState.mirBalanceSet?.has(m.mir_number);
     // PO numbers for this MIR — approved (purple) + cancelled (red, struck-through)
     const poNums      = puState.mirPOMap?.[m.mir_number]          ? [...puState.mirPOMap[m.mir_number]]          : [];
@@ -20099,6 +20125,7 @@ function _fmtQ(n){ return (Math.round((Number(n)||0)*1000)/1000).toLocaleString(
 function _fmtQin(n){ return (Math.round((Number(n)||0)*1000)/1000); }
 
 async function _loadMirEstimateTree(force){
+  if (window._USE_EST_RPC) return _loadMirEstimateTreeRPC(force);
   if (_mirEstTreeCache && !force) return _mirEstTreeCache;
   pbShow('Loading estimate…');
   try {
@@ -23429,7 +23456,7 @@ async function openMirEstimatePicker(){ return _ppOpenPicker('mir'); }
 
 async function _ppOpenPicker(mode){
   _mpMode=mode;
-  if(mode==='po') await Promise.all([_loadMirEstimateTree(true), _loadPoCommitted(true)]);
+  if(mode==='po') await _loadMirEstimateTree(true);
   else if(mode==='mis') await Promise.all([_loadMirEstimateTree(true), _refreshMISStockMap()]);   // v153: stock shown alongside issue meters
   else await _loadMirEstimateTree(true);
   if(!(puState.materials||[]).length){ try{ await apiLoadMaterials(); }catch(e){} }
@@ -32946,6 +32973,149 @@ document.querySelectorAll('.tabs .tab').forEach(function(t){
   }
 });
 
+</script>
+<script>
+// ============================================================
+// v51 · Estimate picker — server-side pooled-cells engine.
+// Replaces the client-side download-and-recompute path in
+// _loadMirEstimateTree with a single RPC call. Produces the
+// IDENTICAL _mirEstTreeCache shape, so _mirPooledCells,
+// _flatEstMap, _mpBuildTree and the cart are untouched.
+// Flag: window._USE_EST_RPC (true = RPC path). On any RPC error
+// it self-heals to the legacy path for the session.
+// ============================================================
+window._USE_EST_RPC = true;
+
+async function _loadMirEstimateTreeRPC(force){
+  if (_mirEstTreeCache && !force) return _mirEstTreeCache;
+  pbShow('Loading estimate\u2026');
+  try {
+    const [rpcRes, wbsTree, locTree] = await Promise.all([
+      sb.rpc('rpc_estimate_pooled_cells'),
+      _loadWbsTree(),
+      _loadLocTree()
+    ]);
+    if (rpcRes.error) throw rpcRes.error;
+    const rows   = rpcRes.data || [];
+    const wbsMap = Object.fromEntries((wbsTree||[]).map(n => [String(n.id), n]));
+    const locMap = Object.fromEntries((locTree||[]).map(n => [String(n.id), n]));
+
+    const leaves = {};
+    rows.forEach(r => {
+      const leafId = String(r.wbs_node_id), locId = String(r.loc_node_id);
+      const wn = wbsMap[leafId], ln = locMap[locId];
+      if (!wn || !ln) return;   // node not in the visible tree — skip (mirrors legacy guard)
+      const L = leaves[leafId] || (leaves[leafId] = {
+        leafId: r.wbs_node_id, leaf: wn.name, wbsPath: wn.path, locs: {}
+      });
+      const LO = L.locs[locId] || (L.locs[locId] = {
+        locId: r.loc_node_id, locName: ln.name, locPath: ln.path, status: 'approved',
+        skus: {},
+        isLS:     !!r.is_ls,
+        lsBudget: r.is_ls ? (Number(r.ls_budget) || 0) : 0,
+        lsRem:    r.is_ls ? (r.ls_remaining != null ? Number(r.ls_remaining)
+                                                    : (Number(r.ls_budget) || 0)) : 0
+      });
+      const code = r.material_code || ('name:' + String(r.material_name || '').toLowerCase());
+      const S = LO.skus[code] || (LO.skus[code] = {
+        code: r.material_code, name: r.material_name, uom: r.uom || '', est: 0
+      });
+      // RPC returns one row per (wbs, loc, code); accumulate defensively.
+      S.est       = Math.round(((S.est || 0) + (Number(r.est) || 0)) * 1e6) / 1e6;
+      S.consumed  = Number(r.consumed)  || 0;
+      S.remaining = Number(r.remaining) || 0;
+    });
+
+    const out = Object.values(leaves).map(L => {
+      L.locArr = Object.values(L.locs).map(LO => {
+        LO.skuArr = Object.values(LO.skus)
+          .sort((a,b)=>(a.name||'').localeCompare(b.name||''));
+        return LO;
+      }).sort((a,b)=>(a.locPath||'').localeCompare(b.locPath||''));
+      L.anyApproved = L.locArr.some(LO => LO.status === 'approved');
+      return L;
+    }).sort((a,b)=>(a.wbsPath||'').localeCompare(b.wbsPath||''));
+
+    _mirEstTreeCache = out;
+    return out;
+  } catch (e) {
+    // RPC missing / errored (e.g. HTML shipped before the migration) —
+    // fall back to the legacy path for the rest of this session.
+    console.warn('[est] rpc_estimate_pooled_cells failed, using legacy path:', e && e.message);
+    window._USE_EST_RPC = false;
+    return _loadMirEstimateTree(force);
+  } finally {
+    pbDone();
+  }
+}
+</script>
+<script>
+// v53 · MIR list coverage: true = server-side rpc_mir_coverage path.
+window._USE_MIR_COV_RPC = true;
+</script>
+<script>
+// ============================================================
+// v54 · MIR list — server-side summary (rpc_mir_list).
+// Replaces the pu_mir_items / po_links download + client rollup
+// with one summary call. Populates the SAME puState maps
+// renderMIRList reads, so the render is untouched. Per-item
+// detail is not fetched here — viewMIR already lazy-loads its
+// own items. Flag: window._USE_MIR_LIST_RPC. Self-heals to the
+// legacy loadMIRList body on any RPC error.
+// ============================================================
+window._USE_MIR_LIST_RPC = true;
+
+async function _loadMIRListRPC(){
+  // _renderDraftsPanel('MIR') already ran in loadMIRList before the redirect.
+  pbShow('Loading indents\u2026');
+  try {
+    const [mirRows, listRes] = await Promise.all([
+      _fetchAllRows('pu_mir', '*'),
+      sb.rpc('rpc_mir_list')
+    ]);
+    if (listRes.error) throw listRes.error;
+    mirRows.sort((a,b) => (b.created_at||'').localeCompare(a.created_at||''));   // newest first
+    puState.mirList             = mirRows;
+    puState.mirItemsMap         = {};   // not populated on the RPC path (viewMIR self-loads)
+    puState.mirLineCount        = {};
+    puState.mirSCSet            = new Set();
+    puState.mirItemStatusSummary = {};
+    puState.mirBalanceSet       = new Set();
+    puState.mirPOMap            = {};
+    puState.mirCancelledPOMap   = {};
+    puState.mirLabel9Summary    = {};
+
+    const rows = listRes.data || [];
+    const liveMap = {};
+    rows.forEach(r => {
+      const mir = r.mir_number;
+      puState.mirLineCount[mir]     = r.line_count || 0;
+      puState.mirLabel9Summary[mir] = r.label9 || {};
+      liveMap[mir]                  = r.live_status;
+      if (r.has_balance) puState.mirBalanceSet.add(mir);
+      if (r.approved_pos  && r.approved_pos.length)  puState.mirPOMap[mir]          = new Set(r.approved_pos);
+      if (r.cancelled_pos && r.cancelled_pos.length) puState.mirCancelledPOMap[mir] = new Set(r.cancelled_pos);
+    });
+
+    // Header live status: RPC provides it; pre-approval states keep their DB value
+    // (renderMIRList's _mirLiveSt uses m.status for Pending Approval / Rejected).
+    puState.mirList.forEach(m => {
+      if (['Pending Approval','Rejected'].includes(m.status)) return;
+      m._liveStatus = liveMap[m.mir_number] || 'PO Pending';
+    });
+    // Qty Available is meaningless for Rejected MIRs — strip (matches legacy).
+    puState.mirList.filter(m => ['Rejected','Cancelled'].includes(m.status))
+                   .forEach(m => puState.mirBalanceSet.delete(m.mir_number));
+
+    renderMIRList();
+  } catch (e) {
+    console.warn('[mir] rpc_mir_list failed, using legacy path:', e && e.message);
+    window._USE_MIR_LIST_RPC = false;
+    return loadMIRList();   // re-enter -> legacy body (flag now false)
+  } finally {
+    pbDone();
+  }
+}
 </script>
 </body>
 </html>
