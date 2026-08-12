@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Penguin Suite v55</title>
+<title>Penguin Suite v57</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js"></script>
@@ -1465,14 +1465,9 @@ table.pgp-roles, table.pgp-mx{ border-collapse:collapse; width:100%; }
       </div>
     </div>
 
-    <div class="field" style="margin-top:10px;max-width:420px;position:relative;">
-      <label>Package</label>
-      <div style="display:flex;gap:6px;align-items:center;">
-        <input id="ho_pkgPick" placeholder="Type to search a package with hire equipment…" autocomplete="off"
-               oninput="hoPackagePick()" style="flex:1;">
-        <button type="button" class="btn btn-ghost btn-sm" id="ho_pkgPickClear" onclick="hoClearPackagePick()" style="display:none;">✕</button>
-      </div>
-      <div class="typeahead-results" id="ho_pkgPickResults"></div>
+    <div style="margin-top:10px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+      <button class="btn btn-primary" onclick="openHoEquipmentPicker()">🏗 Pick hire equipment from estimate</button>
+      <span style="font-size:11px;color:var(--muted);">Select equipment across <b>multiple packages</b> — by package or by location. Qty capped at remaining.</span>
     </div>
 
     <div id="hoItemTree" style="margin-top:14px;"></div>
@@ -9785,7 +9780,7 @@ async function hoToggleLeaf(itemId, leafId) {
   try {
     const revisingHO = document.getElementById('hoForm').dataset.revisingHO || null;
     const { data, error } = await sb.rpc('fn_pair_remaining', {
-      p_wbs_node_id: wbsNodeId, p_loc_node_id: leafId, p_exclude_wo: null, p_exclude_ho: revisingHO
+      p_wbs_node_id: wbsNodeId, p_loc_node_id: (f.leaf.locId || leafId), p_exclude_wo: null, p_exclude_ho: revisingHO
     });
     if (error) { console.error('fn_pair_remaining error', error); toast('Could not load live remaining: ' + error.message, 'warn'); return; }
     if (data != null) {
@@ -9917,7 +9912,7 @@ function getHOFormData() {
           description: item.name, uom: item.uom || null,
           qty, rate, amount: (qty||0)*(rate||0),
           wbs_node_id: Number(item.id),
-          loc_node_id: l.id,
+          loc_node_id: l.locId || l.id,   // v56: .locId carries raw loc id
           specification: spec || null
         });
       });
@@ -10059,45 +10054,35 @@ async function reviseHO(hoNum) {
 
   _hoResetTreeState();
 
-  // Resolve each saved line's owning package (the equipment node's parent).
-  const tree = await _loadWbsTree();
-  const pkgOf = wbsId => {
-    const leaf = tree.find(n => Number(n.id) === Number(wbsId));
-    if (!leaf || leaf.parent_id == null) return null;
-    return tree.find(n => Number(n.id) === Number(leaf.parent_id)) || null;
-  };
-  const pkgIds = [...new Set(items.map(it => { const p = pkgOf(it['_wbs_node_id']); return p ? p.id : null; }).filter(Boolean))];
-
-  if (!pkgIds.length) {
-    toast('Could not resolve the package for this order — equipment may have been deleted from WBS.', 'error');
-    document.getElementById('hoForm').dataset.revisingHO = hoNum;
+  // v56: multi-package revise — rebuild the whole order's tree from its saved
+  // lines using composite wbsNodeId|locId keys. Set the revise flag first so
+  // fn_package_remaining excludes this order's own reservation.
+  document.getElementById('hoForm').dataset.revisingHO = hoNum;
+  const _rvSel = {};
+  items.forEach(it => {
+    const w = Number(it['_wbs_node_id']);
+    const l = it['_loc_node_id'] != null ? String(it['_loc_node_id']) : '';
+    if (!w || !l) return;
+    _rvSel[w + '|' + l] = { qty: Number(it['Qty'])||0, rate: Number(it['Unit Rate'])||0 };
+    if (it['_specification']) _hoSpec[w] = it['_specification'];
+  });
+  if (!Object.keys(_rvSel).length) {
+    toast('Could not resolve the saved lines for this order — equipment may have been deleted from WBS.', 'error');
     return;
   }
-  if (pkgIds.length > 1) {
-    toast(`This order spans ${pkgIds.length} packages. Revise shows one package at a time — only the first package's lines are loaded. Re-create multi-package orders if needed.`, 'warn', 8000);
+  try {
+    await _hoBuildTree(_rvSel);
+  } catch (e) {
+    toast('Could not rebuild the order: ' + e.message, 'error');
+    return;
   }
-
-  // Set revise flag BEFORE loading the package, so fn_package_remaining excludes
-  // this order's own reservation — letting its quantities be freely rearranged.
-  document.getElementById('hoForm').dataset.revisingHO = hoNum;
-
-  // Build the tree for the first package, then pre-select its saved leaves.
-  const firstPkg = tree.find(n => Number(n.id) === Number(pkgIds[0]));
-  await hoSelectPackage(firstPkg.id, firstPkg.name);
-
-  items.forEach(it => {
-    const p = pkgOf(it['_wbs_node_id']);
-    if (!p || Number(p.id) !== Number(pkgIds[0])) return;   // skip other-package lines
-    const itemId = Number(it['_wbs_node_id']);
-    const leafId = String(it['_loc_node_id']);
-    if (!leafId) return;
-    _hoSel[leafId] = { qty: Number(it['Qty'])||0, rate: Number(it['Unit Rate'])||0 };
-    if (it['_specification']) _hoSpec[itemId] = it['_specification'];
-    _hoOpenItem[itemId] = true;
-    // open the group that owns this leaf
-    const item = _hoFindItem(itemId);
-    if (item) item.groups.forEach(g => { if (g.leaves.some(l => l.id === leafId)) _hoOpenGrp[itemId+'::'+g.grp] = true; });
+  _hoOpenItem = {}; _hoOpenGrp = {};
+  _hoTree.items.forEach(it => {
+    _hoOpenItem[it.id] = true;
+    it.groups.forEach(g => { if (g.leaves.some(l => _hoSel[l.id])) _hoOpenGrp[it.id + '::' + g.grp] = true; });
   });
+  const _hoFoot = document.getElementById('hoItemFoot'); if (_hoFoot) _hoFoot.style.display = 'block';
+  ['ho_expandAllBtn','ho_collapseAllBtn','ho_printBtn'].forEach(id => { const el = document.getElementById(id); if (el) el.style.display = ''; });
   hoRenderTree();
 
   document.getElementById('hoForm').dataset.revisingHO = hoNum;
@@ -12225,6 +12210,9 @@ let _wpMode='pkg'; let _wpSelPkg=null; let _wpSelNode=null;
 let _wpExp=new Set(); let _wpGrpOpen=new Set();
 let _wpTwOpen=new Set(); let _wpTwCells={};   // v144: tower folding inside activity groups
 let _wpCart=new Map();   // 'act|loc' -> {actId,locId,val,rate}
+let _wpTarget='wo';        // v56: 'wo' | 'ho'
+let _wpNounP='Activities'; // v56: C2 noun
+let _wpNounIcon='\ud83d\udcd4'; // v56: C2 group icon
 const _wpKey=(a,l)=>String(a)+'|'+String(l);
 const _wpLive=cells=>cells.filter(c=>c.rem>0);
 
@@ -12248,6 +12236,7 @@ function _wpInjectCss(){
 }
 
 async function openWoActivityPicker(){
+  _wpTarget='wo'; _wpNounP='Activities'; _wpNounIcon='\ud83d\udcd4';   // v56
   pbShow('Loading approved estimate…');
   try{
     const [tree, locTree, allScopes] = await Promise.all([_loadWbsTree(), _loadLocTree(), _woFetchScopes()]);
@@ -12483,9 +12472,9 @@ function _wpRenderC1(){
 function _wpCtxSet(){ return (_wpMode==='loc'&&_wpSelNode!=null) ? _locCtxSet(_wpSelNode) : new Set(); }
 function _wpRenderC2(){
   const el=document.getElementById('wpC2Body'); if(!el) return;
-  let cells=[], ttl='Activities';
-  if(_wpMode==='pkg'&&_wpSelPkg!=null){ const P=_wpPkgArr.find(p=>String(p.pkgId)===String(_wpSelPkg)); if(P){ cells=P.cells; ttl='Activities \u2014 '+P.name; } }
-  else if(_wpMode==='loc'&&_wpSelNode!=null){ const n=_wpLocNodes[String(_wpSelNode)]; if(n){ cells=_wpNodeCellsOf(n); ttl='Activities @ '+n.path; } }
+  let cells=[], ttl=_wpNounP;
+  if(_wpMode==='pkg'&&_wpSelPkg!=null){ const P=_wpPkgArr.find(p=>String(p.pkgId)===String(_wpSelPkg)); if(P){ cells=P.cells; ttl=_wpNounP+' \u2014 '+P.name; } }
+  else if(_wpMode==='loc'&&_wpSelNode!=null){ const n=_wpLocNodes[String(_wpSelNode)]; if(n){ cells=_wpNodeCellsOf(n); ttl=_wpNounP+' @ '+n.path; } }
   const ttlEl=document.getElementById('wpC2Ttl'); if(ttlEl) ttlEl.textContent=ttl;
   if(!cells.length){
     el.innerHTML='<div class="mp-empty">\u26cf<div>Pick a '+(_wpMode==='pkg'?'package':'location')+' on the left,<br>or tick its checkbox to bulk-select.</div></div>';
@@ -12503,7 +12492,7 @@ function _wpRenderC2(){
     const locIds=JSON.stringify(cs.map(c=>c.locId)).replace(/"/g,'&quot;');
     return '<div class="pp-grp"><div class="pp-grph" onclick="_wpGrpOpen.has(\''+aid+'\')?_wpGrpOpen.delete(\''+aid+'\'):_wpGrpOpen.add(\''+aid+'\');_wpRenderC2();">'
       + _wpCb(st,'_wpBulkAct('+aid+','+(st!=='on')+',JSON.parse(this.parentElement.dataset.locs||\'null\'))')
-      + '<span>\ud83d\udcd4 '+esc(A.name)+'</span>'
+      + '<span>'+_wpNounIcon+' '+esc(A.name)+'</span>'
       + (allLS?'<span class="wo-ls-pill">LS \u20b9</span>':(anyLS?'<span class="wo-ls-pill">mixed LS</span>':'<span class="wo-qty-pill">QTY</span>'))
       + '<span class="pp-gsub">'+esc(A.pkgName)+'</span>'
       + '<span class="pp-grem">'+grem+' rem</span></div>'
@@ -12516,7 +12505,7 @@ function _wpRenderC2(){
     const aid=Object.keys(byAct)[i];
     h.dataset.locs=JSON.stringify(byAct[aid].map(c=>c.locId));
   });
-  const c2=document.getElementById('wpC2Cnt'); if(c2) c2.textContent=Object.keys(byAct).length+' activities';
+  const c2=document.getElementById('wpC2Cnt'); if(c2) c2.textContent=Object.keys(byAct).length+' '+_wpNounP.toLowerCase();
   el.querySelectorAll('input[data-ind]').forEach(i=>i.indeterminate=true);
 }
 
@@ -12676,7 +12665,237 @@ function _wpFoot(){
 function _wpClear(){ _wpCart.clear(); _wpRenderAll(); }
 function _wpRenderAll(){ _wpRenderC1(); _wpRenderC2(); _wpRenderCart(); }
 
+// ════════════════════════════════════════════════════════════
+// v56 · HIRE-EQUIPMENT ESTIMATE PICKER — multi-package parity.
+// Reuses the WO picker engine (_wp*) via _wpTarget='ho'; _wpCommit
+// routes to _hpCommitHO. Builds _hoTree with composite
+// wbsNodeId|locId leaf keys so the same location under different
+// packages never collides (the old leaf-id key did).
+// ════════════════════════════════════════════════════════════
+async function openHoEquipmentPicker(){
+  _wpTarget='ho'; _wpNounP='Equipment'; _wpNounIcon='🏗';
+  pbShow('Loading approved estimate…');
+  try{
+    const [tree, locTree, allScopes] = await Promise.all([_loadWbsTree(), _loadLocTree(), _woFetchScopes()]);
+    _buildLocTowerMap(locTree);
+    const wbsMap = Object.fromEntries(tree.map(n=>[String(n.id),n]));
+    const locMap = Object.fromEntries(locTree.map(n=>[String(n.id),n]));
+    const eqs = tree.filter(n=>n.node_type==='hire_equipment');
+    if(!eqs.length){ toast('No hire-equipment nodes in the WBS — create 🏗 Hire Equipment under packages in Planning & QS first.','warn',6000); return; }
+    const eqIds = eqs.map(n=>Number(n.id));
+    const eqSet = new Set(eqIds);
+    const revisingHO = document.getElementById('hoForm').dataset.revisingHO || null;
+    const { data: remRows, error: remErr } = await sb.rpc('fn_package_remaining', {
+      p_activity_ids: eqIds, p_exclude_wo: null, p_exclude_ho: revisingHO });
+    if(remErr) throw remErr;
+    const remByPair={};
+    (remRows||[]).forEach(r=>{ remByPair[r.wbs_node_id+'|'+r.loc_node_id]=
+      {remaining:num(r.remaining),certified:num(r.certified),reserved:num(r.reserved)}; });
+
+    _wpCells=new Map(); _wpActs=new Map();
+    allScopes.forEach(r=>{
+      if(r.scope_status!=='approved') return;
+      const aid=Number(r.wbs_node_id); if(!eqSet.has(aid)) return;
+      const eqN=wbsMap[String(aid)], locN=locMap[String(r.loc_node_id)];
+      if(!eqN||!locN) return;
+      const pkgN=eqN.parent_id!=null?wbsMap[String(eqN.parent_id)]:null;
+      const rr=remByPair[aid+'|'+r.loc_node_id];
+      const rem = rr?rr.remaining:(Number(r.est_qty)||0);
+      const cell={actId:aid, actName:eqN.name, uom:eqN.uom||'',
+        pkgId:pkgN?Number(pkgN.id):null, pkgName:pkgN?pkgN.name:'—', pkgPath:pkgN?(pkgN.path||pkgN.name):'',
+        locId:String(r.loc_node_id), locName:locN.name, locPath:locN.path||locN.name,
+        rem, rate:(Number(r.est_rate)||0), isLS:false, lsBudget:0};
+      _wpCells.set(_wpKey(aid,cell.locId),cell);
+      let A=_wpActs.get(aid);
+      if(!A){ A={id:aid,name:eqN.name,uom:cell.uom,pkgId:cell.pkgId,pkgName:cell.pkgName,pkgPath:cell.pkgPath,cells:[]}; _wpActs.set(aid,A); }
+      A.cells.push(cell);
+    });
+    if(!_wpCells.size){ toast('No approved hire-equipment estimates found — approve estimates in Planning & QS first.','warn',6000); return; }
+
+    const pkgs=new Map();
+    for(const c of _wpCells.values()){
+      const id=String(c.pkgId);
+      let Pp=pkgs.get(id);
+      if(!Pp){ Pp={pkgId:c.pkgId,name:c.pkgName,path:c.pkgPath,cells:[]}; pkgs.set(id,Pp); }
+      Pp.cells.push(c);
+    }
+    _wpPkgArr=[...pkgs.values()].sort((a,b)=>(a.name||'').localeCompare(b.name||''));
+    _wpTreeNodes=[];
+    const root={name:null,children:new Map(),pkgs:[],key:'root'};
+    _wpPkgArr.forEach(Pp=>{
+      const segs=(Pp.path||Pp.name||'').split(' › ');
+      let cur=root;
+      for(let i=0;i<segs.length-1;i++){
+        const k=cur.key+'>'+segs[i];
+        if(!cur.children.has(k)){ const n={name:segs[i],children:new Map(),pkgs:[],key:k,idx:_wpTreeNodes.length}; _wpTreeNodes.push(n); cur.children.set(k,n); }
+        cur=cur.children.get(k);
+      }
+      cur.pkgs.push(Pp);
+    });
+    _wpPkgTree=root;
+
+    _wpLocNodes={}; _wpLocRoots=[];
+    const ensure=id=>{
+      const n=locMap[String(id)]; if(!n) return null;
+      if(_wpLocNodes[String(id)]) return _wpLocNodes[String(id)];
+      const node={id:String(id),name:n.name,path:n.path||n.name,
+        parentId:n.parent_id!=null?String(n.parent_id):null,children:[],cells:[]};
+      _wpLocNodes[String(id)]=node; return node;
+    };
+    for(const c of _wpCells.values()){
+      const leaf=ensure(c.locId); if(!leaf) continue;
+      leaf.cells.push(c);
+      let cur=leaf, g=0;
+      while(cur.parentId&&g++<50){
+        const p=ensure(cur.parentId); if(!p) break;
+        if(!p.children.includes(cur)) p.children.push(cur);
+        cur=p;
+      }
+      if(!cur.parentId&&!_wpLocRoots.includes(cur)) _wpLocRoots.push(cur);
+    }
+    const sortKids=n=>{ n.children.sort((a,b)=>_siteOrder(a.name,b.name)); n.children.forEach(sortKids); };
+    _wpLocRoots.sort((a,b)=>_siteOrder(a.name,b.name)); _wpLocRoots.forEach(sortKids);
+
+    _wpCart=new Map();
+    Object.keys(_hoSel||{}).forEach(k=>{
+      const c=_wpCells.get(k); if(!c) return;
+      const s=_hoSel[k];
+      _wpCart.set(k,{actId:c.actId,locId:c.locId,val:Number(s.qty)||0,rate:Number(s.rate)||c.rate});
+    });
+
+    _wpMode='pkg'; _wpSelPkg=null; _wpSelNode=null; _wpExp=new Set(); _wpGrpOpen=new Set();
+    _wpTwOpen=new Set(); _wpTwCells={};
+    _mpInjectCss(); _ppInjectCss(); _wpInjectCss();
+    openModal(
+      '<div class="mp-modal">'
+      + '<div class="mp-head" style="display:flex;align-items:flex-start;gap:10px;"><div style="flex:1;min-width:0;"><h3>Add hire equipment from estimate</h3>'
+      +   '<div class="mp-sub">Tick a <b>package</b> for every equipment under it, or switch to <b>location</b> and tick a node for everything estimated there. Only <b>approved</b> pairs appear; qty is capped at remaining.</div></div>'
+      +   '<button class="mp-closebtn" onclick="_wpCancel()" title="Close without adding">✕</button></div>'
+      + '<div class="pp-split">'
+      +   '<div class="mp-pane">'
+      +     '<div class="mp-pane-head">'
+      +       '<div class="pp-seg"><button id="wpSegPkg" class="on" onclick="_wpSetMode(\'pkg\')">Package</button>'
+      +       '<button id="wpSegLoc" onclick="_wpSetMode(\'loc\')">Location</button></div>'
+      +       '<span class="mp-cnt" id="wpC1Cnt"></span></div>'
+      +     '<div class="pp-filter"><input id="wpC1Filter" placeholder="Filter…" oninput="_wpRenderC1()"></div>'
+      +     '<div class="mp-body pp-c1" id="wpC1Body"></div>'
+      +   '</div>'
+      +   '<div class="mp-pane">'
+      +     '<div class="mp-pane-head"><span class="mp-ttl" id="wpC2Ttl">Equipment</span><span class="mp-cnt" id="wpC2Cnt"></span></div>'
+      +     '<div class="mp-body" id="wpC2Body"></div>'
+      +   '</div>'
+      +   '<div class="mp-pane mp-right">'
+      +     '<div class="mp-pane-head"><span class="mp-ttl">Selected for this HO</span><span class="mp-cnt" id="wpCartCnt"></span></div>'
+      +     '<div class="mp-body" id="wpCart"></div>'
+      +   '</div>'
+      + '</div>'
+      + '<div class="mp-foot">'
+      +   '<span class="mp-legend"><span class="mp-dot">●</span> approved estimate · remaining = est − certified − reserved on live HOs</span>'
+      +   '<div class="mp-spacer"></div>'
+      +   '<span style="font-size:12.5px;color:var(--muted);">Gross <b id="wpFootAmt" style="color:var(--accent);font-variant-numeric:tabular-nums;">₹0.00</b></span>'
+      +   '<button class="btn btn-ghost btn-sm" onclick="_wpClear()">Clear</button>'
+      +   '<button class="btn btn-primary btn-sm" onclick="_wpCommit()">Add to HO <span class="mp-pill" id="wpCommitCnt">0</span></button>'
+      + '</div></div>',
+      'large');
+    const box=document.getElementById('modalBox'); if(box) box.style.maxWidth='1240px';
+    window._modalNoBackdropClose = true;
+    _wpRenderAll();
+  }catch(e){ toast('Picker load failed: '+e.message,'error'); }
+  finally{ pbDone(); }
+}
+
+async function _hpCommitHO(){
+  const entries=[..._wpCart.entries()].filter(([k,e])=>(Number(e.val)||0)>0);
+  if(!entries.length){ toast('Nothing selected — tick locations and set quantities first.','warn'); return; }
+  const over=entries.filter(([k,e])=>{ const c=_wpCells.get(k); return c&&(Number(e.val)||0)>c.rem+0.001; });
+  if(over.length){
+    const c0=_wpCells.get(over[0][0]);
+    toast(over.length+' line(s) exceed remaining — e.g. "'+c0.actName+'" @ '+c0.locName
+      +' ('+_woFmtQ(c0.rem)+' available). Reduce before adding.','error',7000);
+    return;
+  }
+  const selMap={};
+  entries.forEach(([k,e])=>{ selMap[k]={ qty:Number(e.val)||0, rate:Number(e.rate)||0 }; });
+  pbShow('Loading selected equipment…');
+  try{
+    await _hoBuildTree(selMap);
+    _hoOpenItem={}; _hoOpenGrp={};
+    _hoTree.items.forEach(it=>{ _hoOpenItem[it.id]=true;
+      it.groups.forEach(g=>{ if(g.leaves.some(l=>_hoSel[l.id])) _hoOpenGrp[it.id+'::'+g.grp]=true; }); });
+    const foot=document.getElementById('hoItemFoot'); if(foot) foot.style.display='block';
+    ['ho_expandAllBtn','ho_collapseAllBtn','ho_printBtn'].forEach(id=>{const el=document.getElementById(id);if(el)el.style.display='';});
+    hoRenderTree();
+    closeModal();
+    toast('HO lines updated from estimate — '+entries.length+' line(s) across '
+      +new Set(entries.map(([k])=>{const c=_wpCells.get(k);return c&&c.pkgId;})).size+' package(s).','success',3000);
+  }catch(e){ toast('Load failed: '+e.message,'error'); }
+  finally{ pbDone(); }
+}
+
+// Build _hoTree (+ _hoSel) from a composite-keyed selection map.
+// selMap: { 'wbsNodeId|locId': {qty, rate} }. Each selected equipment's
+// FULL approved location set is included so more can be added inline; only
+// the mapped (and still-approved) pairs start selected.
+async function _hoBuildTree(selMap){
+  const keys=Object.keys(selMap||{});
+  const eqIds=[...new Set(keys.map(k=>Number(k.split('|')[0])))];
+  if(!eqIds.length){ _hoTree={items:[]}; _hoSel={}; return; }
+  const [tree, locTree]=await Promise.all([_loadWbsTree(), _loadLocTree()]);
+  const wbsMap=Object.fromEntries(tree.map(n=>[String(n.id),n]));
+  const locMap=Object.fromEntries(locTree.map(n=>[String(n.id),n]));
+  const revisingHO=document.getElementById('hoForm').dataset.revisingHO || null;
+  const { data: remRows, error: remErr } = await sb.rpc('fn_package_remaining', {
+    p_activity_ids: eqIds, p_exclude_wo: null, p_exclude_ho: revisingHO });
+  if(remErr) throw remErr;
+  const remByPair={};
+  (remRows||[]).forEach(r=>{ remByPair[r.wbs_node_id+'|'+r.loc_node_id]=num(r.remaining); });
+  let scopeRows=[];
+  { const PAGE=1000; let from=0;
+    for(let guard=0; guard<100; guard++){
+      const { data, error } = await sb.from('wbs_scope')
+        .select('wbs_node_id, loc_node_id, scope_status, est_qty, est_rate')
+        .in('wbs_node_id', eqIds).range(from, from+PAGE-1);
+      if(error) throw error;
+      scopeRows=scopeRows.concat(data||[]);
+      if(!data||data.length<PAGE) break; from+=PAGE;
+    }
+  }
+  const items=[];
+  eqIds.forEach(eqId=>{
+    const eq=wbsMap[String(eqId)]; if(!eq) return;
+    const pkg=eq.parent_id!=null?wbsMap[String(eq.parent_id)]:null;
+    const pairs=scopeRows.filter(r=>Number(r.wbs_node_id)===Number(eqId)&&r.scope_status==='approved');
+    const groups={}; let tier='none';
+    pairs.forEach(r=>{
+      const loc=locMap[String(r.loc_node_id)]; if(!loc) return;
+      let cur=loc, top=loc, g=0;
+      while(cur&&cur.parent_id!=null&&g++<50){ const p=locMap[String(cur.parent_id)]; if(!p) break; top=p; cur=p; }
+      const compositeKey=eqId+'|'+r.loc_node_id;
+      const liveRem=remByPair[compositeKey];
+      const hasLive=liveRem!=null;
+      const rem=hasLive?liveRem:(Number(r.est_qty)||0);
+      tier='approved';
+      (groups[top.name]=groups[top.name]||{grp:top.name,path:top.path||top.name,leaves:[]})
+        .leaves.push({ id:compositeKey, locId:String(r.loc_node_id), name:loc.name, path:loc.path||loc.name,
+          rem, remLive:hasLive, approved:true });
+    });
+    items.push({
+      id:eq.id, name:eq.name, uom:eq.uom||'', wbsNodeId:Number(eq.id),
+      est_rate:Number(eq.default_rate)||0, spec:eq.specification||'',
+      pkgId:pkg?Number(pkg.id):null, pkgName:pkg?pkg.name:'—', tier,
+      groups:Object.values(groups)
+    });
+  });
+  _hoTree={items};
+  const validKeys=new Set();
+  items.forEach(it=>it.groups.forEach(g=>g.leaves.forEach(l=>validKeys.add(l.id))));
+  const sel={};
+  keys.forEach(k=>{ if(!validKeys.has(k)) return; const v=selMap[k]; sel[k]={qty:Number(v.qty)||0, rate:Number(v.rate)||0}; });
+  _hoSel=sel;
+}
+
 async function _wpCommit(){
+  if(_wpTarget==='ho'){ return _hpCommitHO(); }   // v56
   const entries=[..._wpCart.entries()].filter(([k,e])=>(Number(e.val)||0)>0);
   if(!entries.length){ toast('Nothing selected \u2014 tick locations and set quantities first.','warn'); return; }
   // hard ceiling at commit: nothing leaves the picker above remaining
@@ -13866,8 +14085,8 @@ async function onWOCWOChange() {
 }
 
 async function _wocBuildTree(woNum, preFill) {
-  const [detRes, prevRes, locTreeArr] = await Promise.all([
-    apiGetWODetails(woNum), apiGetWOCumulativeData(woNum), _loadLocTree()
+  const [detRes, prevRes, locTreeArr, wbsTreeArr] = await Promise.all([
+    apiGetWODetails(woNum), apiGetWOCumulativeData(woNum), _loadLocTree(), _loadWbsTree()
   ]);
   if (!detRes.ok) { toast('Failed to load WO details','error'); return null; }
   const woItems = detRes.items || [];
@@ -13875,6 +14094,7 @@ async function _wocBuildTree(woNum, preFill) {
   (prevRes.ok ? prevRes.items : []).forEach(it => { prevMap[it['_key']] = num(it['Cumulative Qty']); });
   const stageCertified = (prevRes.ok && prevRes.stageCertified) ? prevRes.stageCertified : {};
   const locMap = Object.fromEntries(locTreeArr.map(n => [String(n.id), n]));
+  const wbsMap = Object.fromEntries((wbsTreeArr||[]).map(n => [String(n.id), n]));   // v57: WBS breadcrumb source
 
   function _chain(locId) {
     const c=[]; let cur=locMap[String(locId)], g=0;
@@ -13898,7 +14118,9 @@ async function _wocBuildTree(woNum, preFill) {
     _wocCarry[oiid] = { wbs_code: it['_wbs_code']||null, wbs_activity: it['Description']||null, cost_subhead: it['_cost_subhead']||null };
     const act = byAct[actKey] || (byAct[actKey] = {
       id: actKey, wbsNodeId: (it['_wbs_node_id']!=null?Number(it['_wbs_node_id']):null),
-      name: it['Description'], uom: it['UOM']||'', rate: num(it['Unit Rate']), groups: {}
+      name: it['Description'],
+      path: (wbsMap[String(it['_wbs_node_id'])] ? (wbsMap[String(it['_wbs_node_id'])].path || wbsMap[String(it['_wbs_node_id'])].name) : (it['Description']||'')),   // v57
+      uom: it['UOM']||'', rate: num(it['Unit Rate']), groups: {}
     });
     const leaf = {
       oiid, locId: it['_loc_node_id'], locNodeId: it['_loc_node_id'], wbsNodeId: act.wbsNodeId,
@@ -13963,7 +14185,10 @@ function wocRenderTree() {
     <div class="hoi-item ${open?'open':''}" id="wociItem_${esc(item.id)}">
       <div class="hoi-head" onclick="wocToggleItem('${esc(item.id)}')">
         <span class="hoi-chev">\u25b6</span>
-        <span class="hoi-name">${esc(item.name)}</span>
+        <div style="flex:1;min-width:0;">
+          <div class="hoi-name">${esc(item.name)}</div>
+          ${_wbsCrumbLine(item.path)}
+        </div>
         <span class="hoi-meta">${esc(item.uom)} \u00b7 \u20b9${item.rate.toLocaleString('en-IN')}/unit</span>
         ${active.length?`<span class="hoi-selcount">${active.length} certified</span>`:''}
       </div>
@@ -14931,6 +15156,79 @@ async function reviseWOB(billNum) {
   window.scrollTo(0,0);
 }
 
+// ── v57: WOB modal line items grouped by WBS breadcrumb -> location breadcrumb.
+// Buckets bill items by wbs_node_id (first-seen order), sorts each bucket by
+// location site order, and emits a green WBS-breadcrumb header row, per-location
+// lines (location breadcrumb in the description cell), and an Activity Sigma
+// subtotal when a group has more than one line. Prev/Current/Cumulative columns
+// are preserved verbatim. Null wbs/loc rows fall into a "desc:" bucket so legacy
+// bills still render. Async only to pull the memoised WBS/location trees.
+async function _wobGroupedLineRows(items, prevMap) {
+  const [wbsTreeArr, locTreeArr] = await Promise.all([_loadWbsTree(), _loadLocTree()]);
+  const wbsMap = Object.fromEntries((wbsTreeArr||[]).map(n => [String(n.id), n]));
+  const locMap = Object.fromEntries((locTreeArr||[]).map(n => [String(n.id), n]));
+  const _crumb = (path) => {
+    const parts = String(path||'').split(' \u203a ');
+    const leaf = esc(parts.pop() || '');
+    const pre  = parts.length ? '<span style="color:#64748b;font-weight:500;">'+esc(parts.join(' \u203a '))+' \u203a </span>' : '';
+    return '\ud83e\udde9 '+pre+'<b style="color:#0f766e;font-weight:700;">'+leaf+'</b>';
+  };
+  const order = [], byW = {};
+  (items||[]).forEach(it => {
+    const wk = (it['_wbs_node_id']!=null) ? String(it['_wbs_node_id']) : ('desc:'+(it['Description']||''));
+    if (!byW[wk]) { byW[wk] = { wbsPath: (wbsMap[wk] ? (wbsMap[wk].path||wbsMap[wk].name) : (it['Description']||'')), rows: [] }; order.push(wk); }
+    byW[wk].rows.push(it);
+  });
+  // Compare full location paths segment-by-segment through _siteOrder so tower
+  // then floor order correctly (_siteFloorRank only keys off a bare leaf name).
+  const _lpath = it => (locMap[String(it['_loc_node_id'])] ? (locMap[String(it['_loc_node_id'])].path||'') : '');
+  const _segCmp = (pa, pb) => {
+    const A=String(pa||'').split(' \u203a '), B=String(pb||'').split(' \u203a ');
+    for (let i=0;i<Math.min(A.length,B.length);i++){ const c=_siteOrder(A[i],B[i]); if(c) return c; }
+    return A.length-B.length;
+  };
+  let sno = 0, html = '';
+  order.forEach(wk => {
+    const grp = byW[wk];
+    grp.rows.sort((a,b)=>_segCmp(_lpath(a), _lpath(b)));
+    html += `<tr style="background:#f0fdf4;"><td colspan="12" style="padding:7px 10px;font-size:11.5px;color:#0f766e;font-weight:700;border-left:3px solid var(--accent);border-bottom:1px solid #d1fae5;">${_crumb(grp.wbsPath)}</td></tr>`;
+    let gPrevA=0,gCurrQ=0,gCurrA=0,gCumQ=0,gCumA=0;
+    grp.rows.forEach(it => {
+      const _lk=(it['_order_item_id']!=null)?it['_order_item_id']:('desc:'+it['Description']);
+      const prev=prevMap[_lk]||{qty:0,amount:0};
+      const prevQty=prev.qty, prevAmt=prev.amount;
+      const prevRate=prevQty>0?prevAmt/prevQty:num(it['Unit Rate']);
+      const currQty=num(it['This Period Qty']), currRate=num(it['Unit Rate']), currAmt=num(it['Amount']);
+      const cumQty=prevQty+currQty, cumAmt=prevAmt+currAmt, cumRate=cumQty>0?cumAmt/cumQty:currRate;
+      gPrevA+=prevAmt; gCurrQ+=currQty; gCurrA+=currAmt; gCumQ+=cumQty; gCumA+=cumAmt;
+      const lp = locMap[String(it['_loc_node_id'])] ? (locMap[String(it['_loc_node_id'])].path||'') : '';
+      html += `<tr>
+    <td style="text-align:center;">${++sno}</td>
+    <td>${esc(it['Description'])}${lp?`<div style="font-size:10.5px;color:var(--muted);margin-top:1px;">\ud83d\udccd ${esc(lp)}</div>`:''}</td>
+    <td style="text-align:center;">${esc(it['UOM']||'')}</td>
+    <td style="text-align:right;background:#eef2f7;border-left:2px solid #1e3a5f;">${fmtINR(prevQty)}</td>
+    <td style="text-align:right;background:#eef2f7;">${fmtINR(prevRate)}</td>
+    <td style="text-align:right;background:#eef2f7;">${fmtINR(prevAmt)}</td>
+    <td style="text-align:right;background:#e8f1fa;border-left:2px solid #1565a0;">${fmtINR(currQty)}</td>
+    <td style="text-align:right;background:#e8f1fa;">${fmtINR(currRate)}</td>
+    <td style="text-align:right;background:#e8f1fa;font-weight:600;">${fmtINR(currAmt)}</td>
+    <td style="text-align:right;background:#e9f5ee;border-left:2px solid #155a38;">${fmtINR(cumQty)}</td>
+    <td style="text-align:right;background:#e9f5ee;">${fmtINR(cumRate)}</td>
+    <td style="text-align:right;background:#e9f5ee;font-weight:600;">${fmtINR(cumAmt)}</td>
+  </tr>`;
+    });
+    if (grp.rows.length > 1) {
+      html += `<tr style="background:#f8fafc;font-weight:700;font-size:11px;color:#1e3a5f;">
+    <td></td><td style="padding-left:10px;">Activity \u03a3</td><td></td>
+    <td style="text-align:right;">\u2014</td><td></td><td style="text-align:right;">${fmtINR(gPrevA)}</td>
+    <td style="text-align:right;">${fmtINR(gCurrQ)}</td><td></td><td style="text-align:right;">${fmtINR(gCurrA)}</td>
+    <td style="text-align:right;">${fmtINR(gCumQ)}</td><td></td><td style="text-align:right;">${fmtINR(gCumA)}</td>
+  </tr>`;
+    }
+  });
+  return html;
+}
+
 async function viewWOBById(billNum) {
   pbShow('Loading…');
   const r = await apiGetWOBDetails(billNum);
@@ -14983,28 +15281,7 @@ async function viewWOBById(billNum) {
 
   // ── Bill Line Items table — Previous / Current / Cumulative (print parity) ─
   const hasPrev = priorBillNums.length > 0;
-  const lineRows = items.map((it,i)=>{
-    const _lk=(it['_order_item_id']!=null)?it['_order_item_id']:('desc:'+it['Description']); const prev=prevMap[_lk]||{qty:0,amount:0};   // v91.5
-    const prevQty  = prev.qty, prevAmt = prev.amount;
-    const prevRate = prevQty>0 ? prevAmt/prevQty : num(it['Unit Rate']);
-    const currQty  = num(it['This Period Qty']), currRate = num(it['Unit Rate']), currAmt = num(it['Amount']);
-    const cumQty   = prevQty + currQty;
-    const cumAmt   = prevAmt + currAmt;
-    const cumRate  = cumQty>0 ? cumAmt/cumQty : currRate;
-    return `<tr>
-    <td style="text-align:center;">${it['S.No']||i+1}</td>
-    <td>${esc(it['Description'])}</td>
-    <td style="text-align:center;">${esc(it['UOM']||'')}</td>
-    <td style="text-align:right;background:#eef2f7;border-left:2px solid #1e3a5f;">${fmtINR(prevQty)}</td>
-    <td style="text-align:right;background:#eef2f7;">${fmtINR(prevRate)}</td>
-    <td style="text-align:right;background:#eef2f7;">${fmtINR(prevAmt)}</td>
-    <td style="text-align:right;background:#e8f1fa;border-left:2px solid #1565a0;">${fmtINR(currQty)}</td>
-    <td style="text-align:right;background:#e8f1fa;">${fmtINR(currRate)}</td>
-    <td style="text-align:right;background:#e8f1fa;font-weight:600;">${fmtINR(currAmt)}</td>
-    <td style="text-align:right;background:#e9f5ee;border-left:2px solid #155a38;">${fmtINR(cumQty)}</td>
-    <td style="text-align:right;background:#e9f5ee;">${fmtINR(cumRate)}</td>
-    <td style="text-align:right;background:#e9f5ee;font-weight:600;">${fmtINR(cumAmt)}</td>
-  </tr>`;}).join('');
+  const lineRows = await _wobGroupedLineRows(items, prevMap);   // v57: grouped by WBS breadcrumb -> location breadcrumb
   const prevGrossTotal = priorItemsData.reduce((s,it)=>s+num(it.amount),0);
   const cumGrossTotal  = prevGrossTotal + num(h['Gross Amount']);
 
@@ -15253,10 +15530,15 @@ async function printWOBById(billNum) {
   const _ltArr = await _loadLocTree();
   const _lMap = Object.fromEntries(_ltArr.map(n => [String(n.id), n]));
   const _lName = id => { const nd=_lMap[String(id)]; return nd?nd.name:'\u2014'; };
+  const _wtArr = await _loadWbsTree();                                    // v57: breadcrumbs
+  const _wMap = Object.fromEntries(_wtArr.map(n => [String(n.id), n]));
+  const _wPath = id => { const nd=_wMap[String(id)]; return nd?(nd.path||nd.name):''; };
+  const _lPath = id => { const nd=_lMap[String(id)]; return nd?(nd.path||nd.name):''; };
+  const _pcrumb = p => { const parts=String(p||'').split(' \u203a '); const leaf=esc(parts.pop()||''); const pre=parts.length?('<span style="color:#888;font-weight:400;">'+esc(parts.join(' \u203a '))+' \u203a </span>'):''; return pre+'<b>'+leaf+'</b>'; };
   const _pGroups = {};
   (billItems||[]).forEach((it,i) => {
     const ak = String(it.wbs_node_id ?? it.description);
-    (_pGroups[ak] = _pGroups[ak] || { name: it.description||'', uom: it.uom||'', rows: [] }).rows.push({ it, i });
+    (_pGroups[ak] = _pGroups[ak] || { name: it.description||'', wbsPath: _wPath(it.wbs_node_id), uom: it.uom||'', rows: [] }).rows.push({ it, i });   // v57
   });
   const descRows = Object.values(_pGroups).map(grp => {
     let aPrevQ=0,aPrevA=0,aCurrQ=0,aCurrA=0;
@@ -15268,7 +15550,7 @@ async function printWOBById(billNum) {
       const currQty=n(it.this_period_qty), currRate=n(it.unit_rate), currAmt=n(it.amount);
       const cumQty=prevQty+currQty, cumAmt=prevAmt+currAmt, cumRate=cumQty>0?cumAmt/cumQty:currRate;
       aPrevQ+=prevQty; aPrevA+=prevAmt; aCurrQ+=currQty; aCurrA+=currAmt;
-      const locLabel = it.loc_node_id ? esc(_lName(it.loc_node_id)) : esc(it.description||'');
+      const locLabel = it.loc_node_id ? ('\ud83d\udccd '+_pcrumb(_lPath(it.loc_node_id))) : esc(it.description||'');   // v57
       return `<tr>
         <td class="c" style="border-left:2pt solid #555;">${it.sno||i+1}</td>
         <td style="padding-left:14pt;">${locLabel}</td>
@@ -15287,7 +15569,7 @@ async function printWOBById(billNum) {
     const aCumQ=aPrevQ+aCurrQ, aCumA=aPrevA+aCurrA;
     const headRow = `<tr style="background:#eef7f1;">
       <td class="c" style="border-left:2pt solid #555;"></td>
-      <td colspan="2" style="font-weight:700;">${esc(grp.name)} <span style="color:#777;font-weight:400;">${esc(grp.uom)}</span></td>
+      <td colspan="2" style="font-weight:700;">${grp.wbsPath?('\ud83e\udde9 '+_pcrumb(grp.wbsPath)):esc(grp.name)} <span style="color:#777;font-weight:400;">${esc(grp.uom)}</span></td>
       <td class="r prev-col" style="border-left:2.5pt solid #1e3a5f;font-weight:700;">${fmtI(aPrevQ)}</td>
       <td class="r prev-col"></td>
       <td class="r prev-col" style="font-weight:700;">${fmtI(aPrevA)}</td>
@@ -19528,7 +19810,7 @@ function _draftCaptureHO() {
       item.groups.flatMap(g => g.leaves).forEach(l => {
         const s = _hoSel[l.id]; if (!s) return;
         items.push({
-          pkgId:   _hoTree.pkgId, pkgName: _hoTree.pkgName,
+          pkgId:   item.pkgId, pkgName: item.pkgName,
           itemId:  Number(item.id), itemName: item.name, uom: item.uom || null,
           leafId:  l.id, qty: Number(s.qty)||0, rate: Number(s.rate)||0,
           spec:    (_hoSpec[item.id] ?? item.spec ?? ''),
@@ -19549,28 +19831,28 @@ async function _draftRestoreHO(pl) {
   if (h.vendor) { try { ho_vendor_locked = true; lockMasterField('ho_vendor','ho_vendor_clear'); } catch(e){} }
 
   _hoResetTreeState();
-  // Group draft items by package; load each package then re-apply its selections.
-  const byPkg = {};
-  (pl.items||[]).forEach(it => { (byPkg[it.pkgId] = byPkg[it.pkgId] || { name: it.pkgName, items: [] }).items.push(it); });
-  const pkgIds = Object.keys(byPkg);
-  if (!pkgIds.length) return;
-  if (pkgIds.length > 1)
-    toast('This draft spans ' + pkgIds.length + ' packages — only the first is reloaded into the tree (HO entry is one package at a time).', 'warn', 7000);
-
-  const firstId = pkgIds[0];
-  const grp = byPkg[firstId];
-  // Pre-seed selections BEFORE building the tree (hoSelectPackage preserves _hoSel).
-  grp.items.forEach(it => {
-    _hoSel[String(it.leafId)] = { qty: it.qty, rate: it.rate };
-    if (it.spec) _hoSpec[it.itemId] = it.spec;
-    _hoOpenItem[it.itemId] = true;
+  const its = pl.items || [];
+  if (!its.length) return;
+  // v56: multi-package draft restore via composite wbsNodeId|locId keys.
+  const selMap = {};
+  its.forEach(it => {
+    const w = Number(it.itemId);
+    let key = String(it.leafId || '');
+    if (key.indexOf('|') === -1) key = w + '|' + key;   // migrate pre-v56 drafts (raw loc id)
+    if (!w || !key) return;
+    selMap[key] = { qty: Number(it.qty)||0, rate: Number(it.rate)||0 };
+    if (it.spec) _hoSpec[w] = it.spec;
   });
-  await hoSelectPackage(Number(firstId), grp.name);
-  // Open the groups that own a selected leaf.
-  grp.items.forEach(it => {
-    const item = _hoFindItem(it.itemId);
-    if (item) item.groups.forEach(g => { if (g.leaves.some(l => String(l.id) === String(it.leafId))) _hoOpenGrp[it.itemId+'::'+g.grp] = true; });
+  if (!Object.keys(selMap).length) return;
+  try { await _hoBuildTree(selMap); }
+  catch (e) { toast('Draft restore failed: ' + e.message, 'error'); return; }
+  _hoOpenItem = {}; _hoOpenGrp = {};
+  _hoTree.items.forEach(it => {
+    _hoOpenItem[it.id] = true;
+    it.groups.forEach(g => { if (g.leaves.some(l => _hoSel[l.id])) _hoOpenGrp[it.id + '::' + g.grp] = true; });
   });
+  const _hoFoot = document.getElementById('hoItemFoot'); if (_hoFoot) _hoFoot.style.display = 'block';
+  ['ho_expandAllBtn','ho_collapseAllBtn','ho_printBtn'].forEach(id => { const el = document.getElementById(id); if (el) el.style.display = ''; });
   hoRenderTree();
 }
 
