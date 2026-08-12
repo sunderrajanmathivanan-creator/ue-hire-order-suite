@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Penguin Suite v57</title>
+<title>Penguin Suite v58</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js"></script>
@@ -14085,8 +14085,8 @@ async function onWOCWOChange() {
 }
 
 async function _wocBuildTree(woNum, preFill) {
-  const [detRes, prevRes, locTreeArr, wbsTreeArr] = await Promise.all([
-    apiGetWODetails(woNum), apiGetWOCumulativeData(woNum), _loadLocTree(), _loadWbsTree()
+  const [detRes, prevRes, locTreeArr] = await Promise.all([
+    apiGetWODetails(woNum), apiGetWOCumulativeData(woNum), _loadLocTree()
   ]);
   if (!detRes.ok) { toast('Failed to load WO details','error'); return null; }
   const woItems = detRes.items || [];
@@ -14094,7 +14094,6 @@ async function _wocBuildTree(woNum, preFill) {
   (prevRes.ok ? prevRes.items : []).forEach(it => { prevMap[it['_key']] = num(it['Cumulative Qty']); });
   const stageCertified = (prevRes.ok && prevRes.stageCertified) ? prevRes.stageCertified : {};
   const locMap = Object.fromEntries(locTreeArr.map(n => [String(n.id), n]));
-  const wbsMap = Object.fromEntries((wbsTreeArr||[]).map(n => [String(n.id), n]));   // v57: WBS breadcrumb source
 
   function _chain(locId) {
     const c=[]; let cur=locMap[String(locId)], g=0;
@@ -14118,9 +14117,7 @@ async function _wocBuildTree(woNum, preFill) {
     _wocCarry[oiid] = { wbs_code: it['_wbs_code']||null, wbs_activity: it['Description']||null, cost_subhead: it['_cost_subhead']||null };
     const act = byAct[actKey] || (byAct[actKey] = {
       id: actKey, wbsNodeId: (it['_wbs_node_id']!=null?Number(it['_wbs_node_id']):null),
-      name: it['Description'],
-      path: (wbsMap[String(it['_wbs_node_id'])] ? (wbsMap[String(it['_wbs_node_id'])].path || wbsMap[String(it['_wbs_node_id'])].name) : (it['Description']||'')),   // v57
-      uom: it['UOM']||'', rate: num(it['Unit Rate']), groups: {}
+      name: it['Description'], uom: it['UOM']||'', rate: num(it['Unit Rate']), groups: {}
     });
     const leaf = {
       oiid, locId: it['_loc_node_id'], locNodeId: it['_loc_node_id'], wbsNodeId: act.wbsNodeId,
@@ -14185,10 +14182,7 @@ function wocRenderTree() {
     <div class="hoi-item ${open?'open':''}" id="wociItem_${esc(item.id)}">
       <div class="hoi-head" onclick="wocToggleItem('${esc(item.id)}')">
         <span class="hoi-chev">\u25b6</span>
-        <div style="flex:1;min-width:0;">
-          <div class="hoi-name">${esc(item.name)}</div>
-          ${_wbsCrumbLine(item.path)}
-        </div>
+        <span class="hoi-name">${esc(item.name)}</span>
         <span class="hoi-meta">${esc(item.uom)} \u00b7 \u20b9${item.rate.toLocaleString('en-IN')}/unit</span>
         ${active.length?`<span class="hoi-selcount">${active.length} certified</span>`:''}
       </div>
@@ -15156,79 +15150,6 @@ async function reviseWOB(billNum) {
   window.scrollTo(0,0);
 }
 
-// ── v57: WOB modal line items grouped by WBS breadcrumb -> location breadcrumb.
-// Buckets bill items by wbs_node_id (first-seen order), sorts each bucket by
-// location site order, and emits a green WBS-breadcrumb header row, per-location
-// lines (location breadcrumb in the description cell), and an Activity Sigma
-// subtotal when a group has more than one line. Prev/Current/Cumulative columns
-// are preserved verbatim. Null wbs/loc rows fall into a "desc:" bucket so legacy
-// bills still render. Async only to pull the memoised WBS/location trees.
-async function _wobGroupedLineRows(items, prevMap) {
-  const [wbsTreeArr, locTreeArr] = await Promise.all([_loadWbsTree(), _loadLocTree()]);
-  const wbsMap = Object.fromEntries((wbsTreeArr||[]).map(n => [String(n.id), n]));
-  const locMap = Object.fromEntries((locTreeArr||[]).map(n => [String(n.id), n]));
-  const _crumb = (path) => {
-    const parts = String(path||'').split(' \u203a ');
-    const leaf = esc(parts.pop() || '');
-    const pre  = parts.length ? '<span style="color:#64748b;font-weight:500;">'+esc(parts.join(' \u203a '))+' \u203a </span>' : '';
-    return '\ud83e\udde9 '+pre+'<b style="color:#0f766e;font-weight:700;">'+leaf+'</b>';
-  };
-  const order = [], byW = {};
-  (items||[]).forEach(it => {
-    const wk = (it['_wbs_node_id']!=null) ? String(it['_wbs_node_id']) : ('desc:'+(it['Description']||''));
-    if (!byW[wk]) { byW[wk] = { wbsPath: (wbsMap[wk] ? (wbsMap[wk].path||wbsMap[wk].name) : (it['Description']||'')), rows: [] }; order.push(wk); }
-    byW[wk].rows.push(it);
-  });
-  // Compare full location paths segment-by-segment through _siteOrder so tower
-  // then floor order correctly (_siteFloorRank only keys off a bare leaf name).
-  const _lpath = it => (locMap[String(it['_loc_node_id'])] ? (locMap[String(it['_loc_node_id'])].path||'') : '');
-  const _segCmp = (pa, pb) => {
-    const A=String(pa||'').split(' \u203a '), B=String(pb||'').split(' \u203a ');
-    for (let i=0;i<Math.min(A.length,B.length);i++){ const c=_siteOrder(A[i],B[i]); if(c) return c; }
-    return A.length-B.length;
-  };
-  let sno = 0, html = '';
-  order.forEach(wk => {
-    const grp = byW[wk];
-    grp.rows.sort((a,b)=>_segCmp(_lpath(a), _lpath(b)));
-    html += `<tr style="background:#f0fdf4;"><td colspan="12" style="padding:7px 10px;font-size:11.5px;color:#0f766e;font-weight:700;border-left:3px solid var(--accent);border-bottom:1px solid #d1fae5;">${_crumb(grp.wbsPath)}</td></tr>`;
-    let gPrevA=0,gCurrQ=0,gCurrA=0,gCumQ=0,gCumA=0;
-    grp.rows.forEach(it => {
-      const _lk=(it['_order_item_id']!=null)?it['_order_item_id']:('desc:'+it['Description']);
-      const prev=prevMap[_lk]||{qty:0,amount:0};
-      const prevQty=prev.qty, prevAmt=prev.amount;
-      const prevRate=prevQty>0?prevAmt/prevQty:num(it['Unit Rate']);
-      const currQty=num(it['This Period Qty']), currRate=num(it['Unit Rate']), currAmt=num(it['Amount']);
-      const cumQty=prevQty+currQty, cumAmt=prevAmt+currAmt, cumRate=cumQty>0?cumAmt/cumQty:currRate;
-      gPrevA+=prevAmt; gCurrQ+=currQty; gCurrA+=currAmt; gCumQ+=cumQty; gCumA+=cumAmt;
-      const lp = locMap[String(it['_loc_node_id'])] ? (locMap[String(it['_loc_node_id'])].path||'') : '';
-      html += `<tr>
-    <td style="text-align:center;">${++sno}</td>
-    <td>${esc(it['Description'])}${lp?`<div style="font-size:10.5px;color:var(--muted);margin-top:1px;">\ud83d\udccd ${esc(lp)}</div>`:''}</td>
-    <td style="text-align:center;">${esc(it['UOM']||'')}</td>
-    <td style="text-align:right;background:#eef2f7;border-left:2px solid #1e3a5f;">${fmtINR(prevQty)}</td>
-    <td style="text-align:right;background:#eef2f7;">${fmtINR(prevRate)}</td>
-    <td style="text-align:right;background:#eef2f7;">${fmtINR(prevAmt)}</td>
-    <td style="text-align:right;background:#e8f1fa;border-left:2px solid #1565a0;">${fmtINR(currQty)}</td>
-    <td style="text-align:right;background:#e8f1fa;">${fmtINR(currRate)}</td>
-    <td style="text-align:right;background:#e8f1fa;font-weight:600;">${fmtINR(currAmt)}</td>
-    <td style="text-align:right;background:#e9f5ee;border-left:2px solid #155a38;">${fmtINR(cumQty)}</td>
-    <td style="text-align:right;background:#e9f5ee;">${fmtINR(cumRate)}</td>
-    <td style="text-align:right;background:#e9f5ee;font-weight:600;">${fmtINR(cumAmt)}</td>
-  </tr>`;
-    });
-    if (grp.rows.length > 1) {
-      html += `<tr style="background:#f8fafc;font-weight:700;font-size:11px;color:#1e3a5f;">
-    <td></td><td style="padding-left:10px;">Activity \u03a3</td><td></td>
-    <td style="text-align:right;">\u2014</td><td></td><td style="text-align:right;">${fmtINR(gPrevA)}</td>
-    <td style="text-align:right;">${fmtINR(gCurrQ)}</td><td></td><td style="text-align:right;">${fmtINR(gCurrA)}</td>
-    <td style="text-align:right;">${fmtINR(gCumQ)}</td><td></td><td style="text-align:right;">${fmtINR(gCumA)}</td>
-  </tr>`;
-    }
-  });
-  return html;
-}
-
 async function viewWOBById(billNum) {
   pbShow('Loading…');
   const r = await apiGetWOBDetails(billNum);
@@ -15281,7 +15202,28 @@ async function viewWOBById(billNum) {
 
   // ── Bill Line Items table — Previous / Current / Cumulative (print parity) ─
   const hasPrev = priorBillNums.length > 0;
-  const lineRows = await _wobGroupedLineRows(items, prevMap);   // v57: grouped by WBS breadcrumb -> location breadcrumb
+  const lineRows = items.map((it,i)=>{
+    const _lk=(it['_order_item_id']!=null)?it['_order_item_id']:('desc:'+it['Description']); const prev=prevMap[_lk]||{qty:0,amount:0};   // v91.5
+    const prevQty  = prev.qty, prevAmt = prev.amount;
+    const prevRate = prevQty>0 ? prevAmt/prevQty : num(it['Unit Rate']);
+    const currQty  = num(it['This Period Qty']), currRate = num(it['Unit Rate']), currAmt = num(it['Amount']);
+    const cumQty   = prevQty + currQty;
+    const cumAmt   = prevAmt + currAmt;
+    const cumRate  = cumQty>0 ? cumAmt/cumQty : currRate;
+    return `<tr>
+    <td style="text-align:center;">${it['S.No']||i+1}</td>
+    <td>${esc(it['Description'])}</td>
+    <td style="text-align:center;">${esc(it['UOM']||'')}</td>
+    <td style="text-align:right;background:#eef2f7;border-left:2px solid #1e3a5f;">${fmtINR(prevQty)}</td>
+    <td style="text-align:right;background:#eef2f7;">${fmtINR(prevRate)}</td>
+    <td style="text-align:right;background:#eef2f7;">${fmtINR(prevAmt)}</td>
+    <td style="text-align:right;background:#e8f1fa;border-left:2px solid #1565a0;">${fmtINR(currQty)}</td>
+    <td style="text-align:right;background:#e8f1fa;">${fmtINR(currRate)}</td>
+    <td style="text-align:right;background:#e8f1fa;font-weight:600;">${fmtINR(currAmt)}</td>
+    <td style="text-align:right;background:#e9f5ee;border-left:2px solid #155a38;">${fmtINR(cumQty)}</td>
+    <td style="text-align:right;background:#e9f5ee;">${fmtINR(cumRate)}</td>
+    <td style="text-align:right;background:#e9f5ee;font-weight:600;">${fmtINR(cumAmt)}</td>
+  </tr>`;}).join('');
   const prevGrossTotal = priorItemsData.reduce((s,it)=>s+num(it.amount),0);
   const cumGrossTotal  = prevGrossTotal + num(h['Gross Amount']);
 
@@ -15530,15 +15472,10 @@ async function printWOBById(billNum) {
   const _ltArr = await _loadLocTree();
   const _lMap = Object.fromEntries(_ltArr.map(n => [String(n.id), n]));
   const _lName = id => { const nd=_lMap[String(id)]; return nd?nd.name:'\u2014'; };
-  const _wtArr = await _loadWbsTree();                                    // v57: breadcrumbs
-  const _wMap = Object.fromEntries(_wtArr.map(n => [String(n.id), n]));
-  const _wPath = id => { const nd=_wMap[String(id)]; return nd?(nd.path||nd.name):''; };
-  const _lPath = id => { const nd=_lMap[String(id)]; return nd?(nd.path||nd.name):''; };
-  const _pcrumb = p => { const parts=String(p||'').split(' \u203a '); const leaf=esc(parts.pop()||''); const pre=parts.length?('<span style="color:#888;font-weight:400;">'+esc(parts.join(' \u203a '))+' \u203a </span>'):''; return pre+'<b>'+leaf+'</b>'; };
   const _pGroups = {};
   (billItems||[]).forEach((it,i) => {
     const ak = String(it.wbs_node_id ?? it.description);
-    (_pGroups[ak] = _pGroups[ak] || { name: it.description||'', wbsPath: _wPath(it.wbs_node_id), uom: it.uom||'', rows: [] }).rows.push({ it, i });   // v57
+    (_pGroups[ak] = _pGroups[ak] || { name: it.description||'', uom: it.uom||'', rows: [] }).rows.push({ it, i });
   });
   const descRows = Object.values(_pGroups).map(grp => {
     let aPrevQ=0,aPrevA=0,aCurrQ=0,aCurrA=0;
@@ -15550,7 +15487,7 @@ async function printWOBById(billNum) {
       const currQty=n(it.this_period_qty), currRate=n(it.unit_rate), currAmt=n(it.amount);
       const cumQty=prevQty+currQty, cumAmt=prevAmt+currAmt, cumRate=cumQty>0?cumAmt/cumQty:currRate;
       aPrevQ+=prevQty; aPrevA+=prevAmt; aCurrQ+=currQty; aCurrA+=currAmt;
-      const locLabel = it.loc_node_id ? ('\ud83d\udccd '+_pcrumb(_lPath(it.loc_node_id))) : esc(it.description||'');   // v57
+      const locLabel = it.loc_node_id ? esc(_lName(it.loc_node_id)) : esc(it.description||'');
       return `<tr>
         <td class="c" style="border-left:2pt solid #555;">${it.sno||i+1}</td>
         <td style="padding-left:14pt;">${locLabel}</td>
@@ -15569,7 +15506,7 @@ async function printWOBById(billNum) {
     const aCumQ=aPrevQ+aCurrQ, aCumA=aPrevA+aCurrA;
     const headRow = `<tr style="background:#eef7f1;">
       <td class="c" style="border-left:2pt solid #555;"></td>
-      <td colspan="2" style="font-weight:700;">${grp.wbsPath?('\ud83e\udde9 '+_pcrumb(grp.wbsPath)):esc(grp.name)} <span style="color:#777;font-weight:400;">${esc(grp.uom)}</span></td>
+      <td colspan="2" style="font-weight:700;">${esc(grp.name)} <span style="color:#777;font-weight:400;">${esc(grp.uom)}</span></td>
       <td class="r prev-col" style="border-left:2.5pt solid #1e3a5f;font-weight:700;">${fmtI(aPrevQ)}</td>
       <td class="r prev-col"></td>
       <td class="r prev-col" style="font-weight:700;">${fmtI(aPrevA)}</td>
@@ -22300,7 +22237,7 @@ async function viewQuoteComparison(rfqNum) {
   const selItems  = puState.rfqQuoteItems.filter(i=>selIds.includes(String(i.rfq_quote_id)));
   // Fetch historical PO prices
   const mats = [...new Set(selItems.map(i=>i.material_name))];
-  const histMap = await fetchHistoricalPOPrices(mats);
+  const histMap = await fetchHistoricalPOPrices(selItems.map(i=>({name:i.material_name, code:i.material_code, uom:i.uom})));
   pbDone();
 
   // Build comparison table (same structure as viewQC)
@@ -22461,41 +22398,41 @@ async function viewQuoteComparison(rfqNum) {
 
 // ── FETCH HISTORICAL PO PRICES ────────────────────────────────────────────────
 // v141: optional excludePo — a PO viewing its own history must not count itself.
-async function fetchHistoricalPOPrices(matNames, excludePo) {
-  if (!matNames||!matNames.length) return {};
-  // v152: per-material .eq() — the old in-list filter breaks on names
-  // containing " , ( ) (PostgREST quoting), silently blanking rate history.
-  const _resArr = await Promise.all(matNames.map(nm => sb.from('pu_po_items')
-    .select('material_name,unit_rate,po_number')
-    .eq('material_name', nm)));
-  const poItems = _resArr.flatMap(r => r.data || []);
-  if (!poItems||!poItems.length) return {};
-  // Get corresponding PO headers for date, vendor, status
-  const poNums = [...new Set(poItems.map(i=>i.po_number))];
-  const {data:poHdrs} = await sb.from('pu_po_orders')
-    .select('po_number,po_date,vendor_name,status')
-    .in('po_number', poNums)
-    .in('status', ['Open','Closed','Short-Closed','Approved']);
-  if (!poHdrs||!poHdrs.length) return {};
-  const hdrMap = {};
-  poHdrs.forEach(h=>{ hdrMap[h.po_number]=h; });
-
-  const result = {};
-  matNames.forEach(mat=>{
-    const rows = poItems
-      .filter(i=>i.material_name===mat && hdrMap[i.po_number] && (!excludePo || i.po_number!==excludePo))
-      .map(i=>({rate:i.unit_rate, po:i.po_number, vendor:hdrMap[i.po_number].vendor_name, date:hdrMap[i.po_number].po_date}))
-      .filter(r=>r.rate>0)
-      .sort((a,b)=>new Date(b.date)-new Date(a.date));
-    if (!rows.length) return;
-    const byRate = [...rows].sort((a,b)=>a.rate-b.rate);
-    result[mat] = {
-      low:  byRate[0],
-      high: byRate[byRate.length-1],
-      last: rows[0],   // most recent by date
-    };
-  });
-  return result;
+// v153: single set-based RPC (rpc_po_rate_history) replaces the v152 per-material
+// name-matched fetch. Fixes: wrong status filter (Partial/Fully Received were
+// dropped), name-string matching (whitespace/case/UOM collisions), split-line
+// duplicates, and non-deterministic "last". One round-trip for the whole screen.
+// Contract UNCHANGED for callers: returns a map keyed by material NAME.
+// Accepts [{name, material_code?, uom?}, ...]  OR  legacy ['name', ...].
+async function fetchHistoricalPOPrices(matLines, excludePo, scope) {
+  if (!matLines || !matLines.length) return {};
+  const seen = new Set();
+  const items = [];
+  for (const m of matLines) {
+    const line = (typeof m === 'string') ? { name: m } : (m || {});
+    const name = line.name || line.material_name;
+    if (!name || seen.has(name)) continue;
+    seen.add(name);
+    items.push({
+      key:  name,
+      name: name,
+      code: line.material_code || line.code || '',
+      uom:  line.uom || '',
+    });
+  }
+  if (!items.length) return {};
+  try {
+    const { data, error } = await sb.rpc('rpc_po_rate_history', {
+      p_items:      items,
+      p_exclude_po: excludePo || null,
+      p_scope:      scope || 'org',
+    });
+    if (error) { console.warn('rpc_po_rate_history:', error.message); return {}; }
+    return data || {};
+  } catch (e) {
+    console.warn('rpc_po_rate_history:', e);
+    return {};
+  }
 }
 
 // ── SUBMIT SELECTED QUOTES AS A QC ───────────────────────────────────────────
@@ -23052,7 +22989,7 @@ async function viewQC(qcNum) {
   const mats=[...new Set((qItems||[]).map(qi=>qi.material_name))];
 
   // Fetch historical PO prices for all materials in this QC (single query)
-  const histMap = await fetchHistoricalPOPrices(mats);
+  const histMap = await fetchHistoricalPOPrices((qItems||[]).map(qi=>({name:qi.material_name, code:qi.material_code, uom:qi.uom})));
 
   // Grand totals using effective rates
   const grandTotals=(quotes||[]).map(v=>{
@@ -24616,18 +24553,21 @@ function _poHistRender(rn){
 }
 async function _poRefreshHistory(){
   const rows=[...document.querySelectorAll('#poItemsBody tr')].filter(tr=>(tr.id||'').startsWith('poItem_'));
-  const wants=new Set();
+  const wants=new Map();   // name -> {name,code,uom}
   rows.forEach(tr=>{
     const rn=(tr.id||'').split('_')[1];
-    const name=(tr.querySelector('.po_material')?.value||'').trim();
-    if(name && !(name in _poHistCache)) wants.add(name);
+    const matEl=tr.querySelector('.po_material');
+    const name=(matEl?.value||'').trim();
+    if(name && !(name in _poHistCache)){
+      wants.set(name,{name,code:(matEl?.dataset.matCode||tr.dataset.matCode||''),uom:(tr.querySelector('.po_uom')?.value||'')});
+    }
     _poHistRender(rn);   // paints cached strips + "PO history…" placeholders immediately
   });
   if(wants.size){
     try{
-      const m=await fetchHistoricalPOPrices([...wants]);
-      wants.forEach(n=>{ _poHistCache[n]=m[n]||null; });
-    }catch(e){ console.warn('PO history:',e); wants.forEach(n=>{ if(!(n in _poHistCache)) _poHistCache[n]=null; }); }
+      const m=await fetchHistoricalPOPrices([...wants.values()]);
+      wants.forEach((_o,n)=>{ _poHistCache[n]=m[n]||null; });
+    }catch(e){ console.warn('PO history:',e); wants.forEach((_o,n)=>{ if(!(n in _poHistCache)) _poHistCache[n]=null; }); }
     rows.forEach(tr=>_poHistRender((tr.id||'').split('_')[1]));
   }
 }
@@ -25317,7 +25257,7 @@ async function viewPO(poNum) {
   try{ const _vlt=await _loadLocTree(); _vLocMap=Object.fromEntries((_vlt||[]).map(n=>[String(n.id),n])); }catch(e){}
   // v141: rate history per material — same source as QC's strip, excluding this PO itself
   let _vHist={};
-  try{ _vHist=await fetchHistoricalPOPrices([...new Set((items||[]).map(i=>i.material_name).filter(Boolean))], h.po_number); }catch(e){ console.warn('PO view history:',e); }
+  try{ _vHist=await fetchHistoricalPOPrices((items||[]).filter(i=>i.material_name).map(i=>({name:i.material_name, code:i.material_code, uom:i.uom})), h.po_number); }catch(e){ console.warn('PO view history:',e); }
   const _vGroups={};
   (items||[]).forEach(it=>{ const k=(it.material_code!=null?('c'+it.material_code):('n'+it.material_name)); (_vGroups[k]=_vGroups[k]||[]).push(it); });
   // v164: line items banded by Material-Master group \u2014 groups A\u2192Z (Ungrouped
