@@ -170,7 +170,7 @@ td input, td select { padding: 5px 6px; background: var(--input-bg); color: var(
 .typeahead-item .muted { color: var(--muted); font-size: 11px; }
 
 /* Modal */
-.modal-bg { position: fixed; inset: 0; background: rgba(15,23,42,0.45); display: none; align-items: center; justify-content: center; z-index: 500; }
+.modal-bg { position: fixed; inset: 0; background: rgba(15,23,42,0.45); display: none; align-items: center; justify-content: center; z-index: 1200; } /* v63: above #pgsSelect(998) so New-project opens on the selector screen */
 .modal-bg.show { display: flex; }
 .modal { background: #fff; padding: 24px; border-radius: 10px; max-width: 800px; width: 94%; max-height: 88vh; overflow-y: auto; border: 1px solid var(--border); box-shadow: 0 20px 40px rgba(30,58,95,0.18); }
 .modal h3 { color: var(--accent); margin-bottom: 14px; font-size: 16px; }
@@ -916,13 +916,17 @@ table.pgp-roles, table.pgp-mx{ border-collapse:collapse; width:100%; }
         <div class="sub">Signed in as <b id="pgs-sel-user">—</b> · <span id="pgs-sel-role">—</span></div>
       </div>
     </div>
-    <div class="pgs-selnote">Choose a project to work in.</div>
+    <div class="pgs-selnote" id="pgs-selnote">Choose a project to work in.</div>
     <div class="pgs-projgrid" id="pgs-proj-grid"></div>
     <div class="pgs-selfoot">
       <button class="pgs-btn pgs-btn-ghost" onclick="doLogout()">&larr; Sign out</button>
+      <button class="pgs-btn pgs-btn-ghost" id="pgs-btn-backorgs" style="display:none;"
+        onclick="pgsBackToOrgs()">&larr; Organisations</button>
       <div class="pgs-spacer"></div>
+      <button class="pgs-btn pgs-btn-ghost" id="pgs-btn-neworg" style="display:none;"
+        onclick="pgsNewOrg()">+ New organisation</button>
       <button class="pgs-btn pgs-btn-primary" id="pgs-btn-newproj"
-        onclick="alert('New-project creation ships in a later increment. Until then, projects are created via SQL by the owner.')">+ New project</button>
+        onclick="pgsNewProject()">+ New project</button>
     </div>
   </div>
 </div>
@@ -1435,10 +1439,7 @@ table.pgp-roles, table.pgp-mx{ border-collapse:collapse; width:100%; }
       </div>
       <div class="field">
         <label class="req">Project</label>
-        <select id="ho_project">
-          <option value="PoE, Ph-01">PoE, Ph-01</option>
-          <option value="PoE, Ph-02">PoE, Ph-02</option>
-        </select>
+        <select id="ho_project"></select>
       </div>
     </div>
     <div class="grid-4" style="margin-top:12px;">
@@ -1958,7 +1959,7 @@ table.pgp-roles, table.pgp-mx{ border-collapse:collapse; width:100%; }
     <div class="grid-4" style="margin-top:12px;">
       <div class="field" style="grid-column:1/3;"><label class="req">Scope / Description</label><input id="wo_scope" placeholder="Brief description of work scope"></div>
       <div class="field"><label class="req">Project</label>
-        <select id="wo_project"><option value="PoE, Ph-01">PoE, Ph-01</option><option value="PoE, Ph-02">PoE, Ph-02</option></select>
+        <select id="wo_project"></select>
       </div>
     </div>
     <div class="grid-4" style="margin-top:12px;">
@@ -2826,8 +2827,59 @@ table.pgp-roles, table.pgp-mx{ border-collapse:collapse; width:100%; }
     <div class="sub-tab" data-mastertab="materials" onclick="switchMasterTab('materials')">Material Master</div>
     <div class="sub-tab" data-mastertab="contractors" onclick="switchMasterTab('contractors')">Contractor Master</div>
     <div class="sub-tab" data-mastertab="costheads" onclick="switchMasterTab('costheads')">Cost Head</div>
+    <div class="sub-tab" data-mastertab="projcompany" onclick="switchMasterTab('projcompany')">Project &amp; Company</div>
   </div>
   <div id="masterQueueBox"></div>
+
+  <!-- PROJECT & COMPANY (v66) -->
+  <div id="master-projcompany" class="hidden">
+    <div class="card">
+      <h3>Project Master — <span id="pc_projname">—</span></h3>
+      <p style="color:var(--muted);font-size:12px;margin-bottom:14px;">Per-project details used on MIR/PO/HO/WO forms and printed documents. Owner only.</p>
+      <div class="grid-3">
+        <div class="field"><label>Project name</label><input id="pc_pname"></div>
+        <div class="field"><label>Project code <span style="color:var(--muted);font-weight:400;">(identity)</span></label><input id="pc_pcode" disabled></div>
+        <div class="field"><label>Doc code <span style="color:var(--muted);font-weight:400;">(document numbering)</span></label><input id="pc_pdoc" disabled></div>
+      </div>
+      <div class="grid-3">
+        <div class="field"><label>Location acronym</label><input id="pc_ploc" disabled></div>
+        <div class="field"><label>FY start</label><input id="pc_pfy" type="number"></div>
+        <div class="field"></div>
+      </div>
+      <div class="grid-2">
+        <div class="field"><label>Site / delivery address</label>
+          <textarea id="pc_site" rows="2" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:5px;font-size:13px;font-family:inherit;resize:vertical;"></textarea></div>
+        <div class="field"><label>Contact person(s) <span style="color:var(--muted);font-weight:400;">(name &amp; phone, shown on POs)</span></label>
+          <input id="pc_contact" placeholder="e.g. Mr.Kumar (98XXXXXXXX)"></div>
+      </div>
+      <button class="btn btn-primary" id="pc_proj_save" onclick="pgsPCSaveProject()">Save project details</button>
+      <span id="pc_proj_msg" style="font-size:12px;color:var(--muted);margin-left:10px;"></span>
+    </div>
+    <div class="card">
+      <h3>Company Master — <span id="pc_orgname">—</span></h3>
+      <p style="color:var(--muted);font-size:12px;margin-bottom:14px;">Legal identity printed on every document header. Owner only.</p>
+      <div class="grid-3">
+        <div class="field"><label>Organisation name <span style="color:var(--muted);font-weight:400;">(identity)</span></label><input id="pc_oname" disabled></div>
+        <div class="field"><label>Company code <span style="color:var(--muted);font-weight:400;">(identity)</span></label><input id="pc_ocode" disabled></div>
+        <div class="field"><label>Display name <span style="color:var(--muted);font-weight:400;">(header)</span></label><input id="pc_odisp"></div>
+      </div>
+      <div class="grid-3">
+        <div class="field"><label>Legal name</label><input id="pc_legal"></div>
+        <div class="field"><label>GSTIN</label><input id="pc_gstin" maxlength="15"></div>
+        <div class="field"><label>PAN</label><input id="pc_pan" maxlength="10"></div>
+      </div>
+      <div class="field"><label>Registered address</label>
+        <textarea id="pc_regaddr" rows="2" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:5px;font-size:13px;font-family:inherit;resize:vertical;"></textarea></div>
+      <div class="grid-3">
+        <div class="field"><label>Contact name</label><input id="pc_cname"></div>
+        <div class="field"><label>Contact phone</label><input id="pc_cphone"></div>
+        <div class="field"><label>Contact email</label><input id="pc_cemail"></div>
+      </div>
+      <button class="btn btn-primary" id="pc_org_save" onclick="pgsPCSaveOrg()">Save company details</button>
+      <span id="pc_org_msg" style="font-size:12px;color:var(--muted);margin-left:10px;"></span>
+    </div>
+  </div>
+
 
   <!-- VENDORS -->
   <div id="master-vendors">
@@ -3123,7 +3175,7 @@ table.pgp-roles, table.pgp-mx{ border-collapse:collapse; width:100%; }
         <div class="field"><label>Required By</label><input type="date" id="mir_requiredBy"></div>
         <div class="field">
           <label class="req">Project</label>
-          <select id="mir_project"><option value="PoE, Ph-01">PoE, Ph-01</option><option value="PoE, Ph-02">PoE, Ph-02</option></select>
+          <select id="mir_project"></select>
         </div>
       </div>
       <div style="margin-top:12px;">
@@ -3344,7 +3396,7 @@ table.pgp-roles, table.pgp-mx{ border-collapse:collapse; width:100%; }
         <div class="field"><label>QC Reference</label><input id="po_qcRef" readonly style="opacity:.6;"></div>
         <div class="field"><label>MIR Reference</label><input id="po_mirRef" readonly style="opacity:.6;" placeholder="—"></div>
         <div class="field"><label class="req">Project</label>
-          <select id="po_project"><option value="PoE, Ph-01">PoE, Ph-01</option><option value="PoE, Ph-02">PoE, Ph-02</option></select>
+          <select id="po_project"></select>
         </div>
       </div>
       <!-- Vendor section -->
@@ -3372,7 +3424,7 @@ table.pgp-roles, table.pgp-mx{ border-collapse:collapse; width:100%; }
         <div class="field"><label class="req">Transportation</label>
           <select id="po_transport"><option value="Included">Included in rate</option><option value="Extra">Extra / As actuals</option><option value="Nil">Nil</option></select>
         </div>
-        <div class="field"><label>Delivery Address</label><input id="po_deliveryAddr" placeholder="Site: Varthur – Sarjapur Road"></div>
+        <div class="field"><label>Delivery Address</label><input id="po_deliveryAddr" placeholder="Site / delivery address"></div>
       </div>
       <!-- GST Mode -->
       <div class="card" style="margin-top:12px;background:#f8fafc;border-color:#dde6f0;">
@@ -4342,7 +4394,7 @@ async function _printOrderDoc(docType, docNumber, h, items, vmOverride) {
   const deliveryAddr = isPO
     ? (h.delivery_address
         ? esc(h.delivery_address).split('\n').join('<br>')
-        : 'Poetry of Earth, Sy.No.199, Varthur–Sarjapur Road, Opposite Vinayaka Theatre, Varthur, Bengaluru – 560087')
+        : (SITE_ADDR || '\u2014'))   // v66: dynamic
     : '';
 
   // Meta table extra rows
@@ -4895,12 +4947,8 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
 // ============================================================
 // CONSTANTS
 // ============================================================
-const COMPANY = {
-  name: 'URBAN EXCELLENCE LLP',
-  addr: '76/1, Windchimes, Muthsandra Main Road, Muthsandra, Bengaluru \u2013 560087',
-  gstin: '29AAHFU0117D1ZH',
-  projectName: 'Poetry of Earth',
-  projectAddr: 'Varthur \u2013 Sarjapur Road, Bengaluru \u2013 560087'
+let COMPANY = {   // v66: filled from organizations + projects at project entry (pgsLoadProjectMeta)
+  name: '', addr: '', gstin: '', projectName: '', projectAddr: ''
 };
 
 const ROLE_PERMS = {
@@ -8327,7 +8375,7 @@ function switchMasterTab(tab) {
     if (first && first !== tab) return switchMasterTab(first);
   }
   renderMasterQueues();
-  ['vendors','activities','materials','contractors','locations','costheads'].forEach(t => {
+  ['vendors','activities','materials','contractors','locations','costheads','projcompany'].forEach(t => {
     const el = document.getElementById('master-' + t);
     if (el) el.classList.toggle('hidden', t !== tab);
     const stab = document.querySelector(`.sub-tab[data-mastertab="${t}"]`);
@@ -8341,6 +8389,224 @@ function switchMasterTab(tab) {
   }
   if (tab === 'contractors') { renderContractorMaster(); }
   if (tab === 'costheads') { apiLoadCostHeads().then(() => renderCostHeadTree()); }
+  if (tab === 'projcompany') { pgsPCLoad(); }   // v66
+  _mcEnsureBtn(tab);   // v67: copy-from-project tool on the four master tabs
+}
+
+// ── v67 · Copy masters from another project (rpc_list/copy_masters) ────────
+const _MC_KINDS = { vendors:'vendor', activities:'activity', materials:'material', contractors:'contractor' };
+const _MC_PERM  = { vendors:'canAddVendorMaster', activities:'canAddActivityMaster',
+                    materials:'canAddMaterialMaster', contractors:'canAddContractorMaster' };
+function _mcEnsureBtn(tab){
+  const kind = _MC_KINDS[tab]; if (!kind) return;
+  const box = document.getElementById('master-' + tab); if (!box) return;
+  let bar = document.getElementById('mc_bar_' + tab);
+  const others = (pgsS.projects || []).filter(function(p){ return pgsS.project && p.id !== pgsS.project.id; });
+  const allowed = (typeof hasPerm === 'function' && hasPerm(_MC_PERM[tab])) || (typeof hasRole === 'function' && hasRole('Admin'));
+  if (!others.length || !allowed) { if (bar) bar.style.display = 'none'; return; }
+  if (!bar) {
+    bar = document.createElement('div');
+    bar.id = 'mc_bar_' + tab;
+    bar.style.cssText = 'display:flex;justify-content:flex-end;margin:0 0 10px;';
+    bar.innerHTML = '<button class="btn btn-ghost" onclick="mcOpen(\'' + tab + '\')">\u21c4 Copy from another project</button>';
+    box.insertBefore(bar, box.firstChild);
+  }
+  bar.style.display = 'flex';
+}
+let _mcState = { tab:null, kind:null, rows:[], sel:{} };
+function mcOpen(tab){
+  const kind = _MC_KINDS[tab]; if (!kind) return;
+  const others = (pgsS.projects || []).filter(function(p){ return p.id !== pgsS.project.id; });
+  if (!others.length) { toast('No other project in this organisation to copy from','info'); return; }
+  _mcState = { tab: tab, kind: kind, rows: [], sel: {} };
+  const opts = others.map(function(p){ return '<option value="' + p.id + '">' + pgsEsc(p.project_name) + '</option>'; }).join('');
+  const L = 'display:block;font-size:11px;font-weight:600;color:#6b7690;text-transform:uppercase;letter-spacing:.4px;margin:10px 0 4px;';
+  const I = 'width:100%;padding:9px 11px;border:1px solid #cbd5e1;border-radius:6px;font-size:13px;font-family:inherit;box-sizing:border-box;';
+  openModal(
+    '<h3 style="margin:0 0 4px;font-size:16px;font-weight:700;color:#1c2534;">Copy ' + kind + ' masters</h3>'
+    + '<div style="font-size:11.5px;color:#6b7690;margin:0 0 12px;">Into <b>' + pgsEsc(pgsS.project.project_name) + '</b> \u2014 duplicates are skipped, approval state carries over.</div>'
+    + '<label style="' + L + 'margin-top:0;">Source project</label>'
+    + '<select id="mc_src" style="' + I + '" onchange="mcLoad()">' + opts + '</select>'
+    + '<div style="display:flex;gap:8px;align-items:center;margin-top:10px;">'
+    +   '<input id="mc_q" style="' + I + 'flex:1;" placeholder="Filter\u2026" oninput="mcRender()">'
+    +   '<label style="display:flex;align-items:center;gap:6px;font-size:12.5px;white-space:nowrap;cursor:pointer;">'
+    +     '<input type="checkbox" id="mc_all" onchange="mcAll(this.checked)"> Select all</label>'
+    + '</div>'
+    + '<div id="mc_list" style="border:1px solid #e2e8f0;border-radius:6px;max-height:300px;overflow-y:auto;margin-top:8px;">'
+    +   '<div style="padding:18px;text-align:center;color:#94a3b8;font-size:12.5px;">Loading\u2026</div></div>'
+    + '<div id="mc_err" style="display:none;margin-top:10px;background:#fef2f2;border:1px solid #fecaca;border-radius:6px;padding:8px 11px;font-size:12px;color:#b91c1c;"></div>'
+    + '<div style="display:flex;gap:8px;justify-content:flex-end;align-items:center;margin-top:14px;">'
+    +   '<span id="mc_count" style="font-size:12px;color:#6b7690;margin-right:auto;">0 selected</span>'
+    +   '<button class="pgs-btn pgs-btn-ghost" onclick="closeModal()">Cancel</button>'
+    +   '<button class="pgs-btn pgs-btn-primary" id="mc_go" onclick="mcCopy()">Copy selected</button>'
+    + '</div>'
+  );
+  mcLoad();
+}
+function _mcErr(m){ const e = document.getElementById('mc_err'); if (!e) return; e.textContent = m || ''; e.style.display = m ? 'block' : 'none'; }
+async function mcLoad(){
+  _mcState.rows = []; _mcState.sel = {}; _mcErr('');
+  const src = (document.getElementById('mc_src') || {}).value;
+  const box = document.getElementById('mc_list');
+  if (box) box.innerHTML = '<div style="padding:18px;text-align:center;color:#94a3b8;font-size:12.5px;">Loading\u2026</div>';
+  try {
+    const res = await sb.rpc('rpc_list_project_masters', { p_kind: _mcState.kind, p_src: src });
+    if (res.error) throw new Error(res.error.message);
+    _mcState.rows = (res.data && res.data.rows) || [];
+    mcRender();
+  } catch(e) {
+    let m = e.message || 'Load failed';
+    if (m.indexOf('does not exist') !== -1) m = 'Copy RPCs not deployed \u2014 run migration mig_masters_project_scoping_v1 first.';
+    if (box) box.innerHTML = '';
+    _mcErr(m);
+  }
+}
+function mcRender(){
+  const q = ((document.getElementById('mc_q') || {}).value || '').toLowerCase();
+  const box = document.getElementById('mc_list'); if (!box) return;
+  const rows = _mcState.rows.filter(function(r){
+    return !q || (r.name || '').toLowerCase().indexOf(q) !== -1 || (r.code || '').toLowerCase().indexOf(q) !== -1;
+  });
+  if (!rows.length) { box.innerHTML = '<div style="padding:18px;text-align:center;color:#94a3b8;font-size:12.5px;">Nothing to copy.</div>'; mcCount(); return; }
+  box.innerHTML = rows.map(function(r){
+    const on = !!_mcState.sel[r.code];
+    return '<label style="display:flex;gap:9px;align-items:center;padding:7px 11px;border-bottom:1px solid #f1f5f9;font-size:12.5px;cursor:pointer;' + (on ? 'background:#f0fdfa;' : '') + '">'
+      + '<input type="checkbox" ' + (on ? 'checked' : '') + ' onchange="mcTick(\'' + pgsEsc(r.code) + '\', this.checked)">'
+      + '<span style="font-family:monospace;font-size:10.5px;font-weight:700;color:#0f766e;background:#ccfbf1;padding:1px 6px;border-radius:3px;flex-shrink:0;">' + pgsEsc(r.code) + '</span>'
+      + '<span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + pgsEsc(r.name || '') + '</span>'
+      + (r.uom ? '<span style="font-size:10.5px;color:#64748b;background:#eef2f7;padding:1px 6px;border-radius:3px;">' + pgsEsc(r.uom) + '</span>' : '')
+      + (r.extra ? '<span style="font-size:10.5px;color:#94a3b8;">' + pgsEsc(r.extra) + '</span>' : '')
+      + '</label>';
+  }).join('');
+  mcCount();
+}
+function mcTick(code, on){ if (on) _mcState.sel[code] = 1; else delete _mcState.sel[code]; mcRender(); }
+function mcAll(on){
+  const q = ((document.getElementById('mc_q') || {}).value || '').toLowerCase();
+  _mcState.rows.forEach(function(r){
+    if (q && (r.name || '').toLowerCase().indexOf(q) === -1 && (r.code || '').toLowerCase().indexOf(q) === -1) return;
+    if (on) _mcState.sel[r.code] = 1; else delete _mcState.sel[r.code];
+  });
+  mcRender();
+}
+function mcCount(){
+  const n = Object.keys(_mcState.sel).length;
+  const el = document.getElementById('mc_count'); if (el) el.textContent = n + ' selected';
+}
+async function mcCopy(){
+  const codes = Object.keys(_mcState.sel);
+  if (!codes.length) { _mcErr('Nothing selected \u2014 tick masters to copy, or Select all.'); return; }
+  const btn = document.getElementById('mc_go'); if (btn) { btn.disabled = true; btn.textContent = 'Copying\u2026'; }
+  pbShow('Copying masters\u2026');
+  try {
+    const res = await sb.rpc('rpc_copy_masters', { p: {
+      kind: _mcState.kind, source_project: (document.getElementById('mc_src') || {}).value, codes: codes
+    }});
+    if (res.error) throw new Error(res.error.message);
+    const n = (res.data && res.data.copied) || 0;
+    closeModal();
+    flashSuccess(n + ' ' + _mcState.kind + ' master(s) copied' + (n < codes.length ? ' \u2014 ' + (codes.length - n) + ' already existed' : '') + '.');
+    const t = _mcState.tab;
+    if (t === 'vendors') { await apiLoadMasters(); if (typeof renderAllMasters === 'function') renderAllMasters(); }
+    switchMasterTab(t);
+  } catch(e) { _mcErr(e.message || 'Copy failed'); }
+  finally {
+    pbDone();
+    const b = document.getElementById('mc_go'); if (b) { b.disabled = false; b.textContent = 'Copy selected'; }
+  }
+}
+
+// ── v66 · Project & Company master tab ──────────────────────────────────────
+function _pcOwner(){ return (typeof _pgsIsOrgOwner === 'function') ? _pgsIsOrgOwner() : false; }
+async function pgsPCLoad(){
+  const m = window.PGS_META || { org: {}, proj: {} };
+  const g = id => document.getElementById(id);
+  if (g('pc_projname')) g('pc_projname').textContent = (m.proj && m.proj.project_name) || (pgsS.project && pgsS.project.project_name) || '—';
+  if (g('pc_orgname'))  g('pc_orgname').textContent  = (pgsS.org && (pgsS.org.display_name || pgsS.org.name)) || '—';
+  if (g('pc_pname')) g('pc_pname').value = (m.proj && m.proj.project_name)   || '';
+  if (g('pc_pcode')) g('pc_pcode').value = (m.proj && m.proj.project_code)   || '';
+  if (g('pc_pdoc'))  g('pc_pdoc').value  = (m.proj && m.proj.doc_code)       || '';
+  if (g('pc_ploc'))  g('pc_ploc').value  = (m.proj && m.proj.loc_acronym)    || '';
+  if (g('pc_pfy'))   g('pc_pfy').value   = (m.proj && m.proj.fin_year_start) || '';
+  if (g('pc_oname')) g('pc_oname').value = (pgsS.org && pgsS.org.name)         || '';
+  if (g('pc_ocode')) g('pc_ocode').value = (pgsS.org && pgsS.org.company_code) || '';
+  if (g('pc_odisp')) g('pc_odisp').value = (pgsS.org && pgsS.org.display_name) || '';
+  if (g('pc_site'))    g('pc_site').value    = (m.proj && m.proj.site_address)   || '';
+  if (g('pc_contact')) g('pc_contact').value = (m.proj && m.proj.contact_person) || '';
+  const o = m.org || {};
+  if (g('pc_legal'))   g('pc_legal').value   = o.legal_name || '';
+  if (g('pc_gstin'))   g('pc_gstin').value   = o.gstin || '';
+  if (g('pc_pan'))     g('pc_pan').value     = o.pan || '';
+  if (g('pc_regaddr')) g('pc_regaddr').value = o.registered_address || '';
+  if (g('pc_cname'))   g('pc_cname').value   = o.contact_name || '';
+  if (g('pc_cphone'))  g('pc_cphone').value  = o.contact_phone || '';
+  if (g('pc_cemail'))  g('pc_cemail').value  = o.contact_email || '';
+  const ro = !_pcOwner();
+  ['pc_pname','pc_pfy','pc_odisp','pc_site','pc_contact','pc_legal','pc_gstin','pc_pan','pc_regaddr','pc_cname','pc_cphone','pc_cemail']
+    .forEach(function(id){ const el = g(id); if (el) el.disabled = ro; });
+  if (g('pc_proj_save')) g('pc_proj_save').style.display = ro ? 'none' : '';
+  if (g('pc_org_save'))  g('pc_org_save').style.display  = ro ? 'none' : '';
+  if (ro) {
+    if (g('pc_proj_msg')) g('pc_proj_msg').textContent = 'View only — the organisation owner edits these.';
+    if (g('pc_org_msg'))  g('pc_org_msg').textContent  = 'View only — the organisation owner edits these.';
+  } else {
+    if (g('pc_proj_msg')) g('pc_proj_msg').textContent = '';
+    if (g('pc_org_msg'))  g('pc_org_msg').textContent  = '';
+  }
+}
+async function pgsPCSaveProject(){
+  if (!_pcOwner()) { toast('Owner only','error'); return; }
+  const g = id => (document.getElementById(id) || {}).value || '';
+  pbShow('Saving project details…');
+  try {
+    const _fy = parseInt(g('pc_pfy'), 10);
+    const _nm = g('pc_pname').trim();
+    if (!_nm) throw new Error('Project name is required');
+    const { data, error } = await sb.from('projects')
+      .update({ project_name: _nm,
+                fin_year_start: (_fy >= 2000 && _fy <= 2100) ? _fy : undefined,
+                site_address: g('pc_site').trim() || null,
+                contact_person: g('pc_contact').trim() || null })
+      .eq('id', pgsS.project.id).select('id');
+    if (error) throw error;
+    if (!data || !data.length) throw new Error('Not permitted — owner only');
+    pgsS.project.project_name = _nm;                                     // v67: sync shell chrome
+    var _pl = (pgsS.projects || []).find(function(x){ return x.id === pgsS.project.id; });
+    if (_pl) _pl.project_name = _nm;
+    var _sbp = pgsEl('pgs-sb-proj'); if (_sbp) _sbp.textContent = _nm;
+    await pgsLoadProjectMeta(pgsS.project);   // refresh consts + locked selects
+    await pgsPCLoad();
+    toast('Project details saved — new documents pick them up immediately','success');
+  } catch(e) { toast('Save failed: ' + e.message, 'error'); }
+  finally { pbDone(); }
+}
+async function pgsPCSaveOrg(){
+  if (!_pcOwner()) { toast('Owner only','error'); return; }
+  const g = id => (document.getElementById(id) || {}).value || '';
+  pbShow('Saving company details…');
+  try {
+    const { data, error } = await sb.rpc('rpc_update_org_profile', { p: {
+      org_id: pgsS.org.id,
+      display_name: g('pc_odisp').trim(),   // v67
+      legal_name: g('pc_legal').trim(),  gstin: g('pc_gstin').trim(),  pan: g('pc_pan').trim(),
+      registered_address: g('pc_regaddr').trim(),
+      contact_name: g('pc_cname').trim(), contact_phone: g('pc_cphone').trim(), contact_email: g('pc_cemail').trim()
+    }});
+    if (error) {
+      let m = error.message || 'Save failed';
+      if (m.indexOf('function') !== -1 && m.indexOf('does not exist') !== -1) m = 'rpc_update_org_profile is not deployed — run migration mig_project_company_master_v1 first.';
+      throw new Error(m);
+    }
+    if (data && data.org && window.PGS_META) PGS_META.org = data.org;
+    if (data && data.org) {                                              // v67: sync shell chrome
+      pgsS.org.display_name = data.org.display_name;
+      var _sbo = pgsEl('pgs-sb-org'); if (_sbo) _sbo.textContent = pgsS.org.display_name || pgsS.org.name;
+    }
+    await pgsLoadProjectMeta(pgsS.project);
+    await pgsPCLoad();
+    toast('Company details saved — print headers update immediately','success');
+  } catch(e) { toast('Save failed: ' + e.message, 'error'); }
+  finally { pbDone(); }
 }
 
 // ============================================================
@@ -9684,7 +9950,7 @@ async function newHO() {
   document.getElementById('ho_endDate').value = '';
   document.getElementById('ho_gstPct').value = '18';
   document.getElementById('ho_remarks').value = '';
-  document.getElementById('ho_project').value = 'PoE, Ph-01';
+  _setProjSel('ho_project', null);   // v66: current project
   document.getElementById('ho_tc_editor').innerHTML = ''; tcInitEmpty('ho_tc_editor');
   document.getElementById('ho_grossAmt').textContent = '0.00';
   document.getElementById('ho_gstAmt').textContent = '0.00';
@@ -10259,7 +10525,7 @@ async function reviseHO(hoNum) {
   document.getElementById('ho_vendor').value   = h['Vendor Name'] || '';
   document.getElementById('ho_vendorCode').value = h['Vendor Code'] || '';
   if (h['Vendor Name']) { ho_vendor_locked = true; lockMasterField('ho_vendor','ho_vendor_clear'); }
-  document.getElementById('ho_project').value   = h['Project'] || 'PoE, Ph-01';
+  _setProjSel('ho_project', h['Project'] || null);   // v66
   document.getElementById('ho_startDate').value = h['Start Date'] || '';
   document.getElementById('ho_endDate').value   = h['End Date'] || '';
   const hoContactEl = document.getElementById('ho_contactPerson');
@@ -13812,7 +14078,7 @@ async function reviseWO(woNum) {
   document.getElementById('wo_vendor').value     = h['Vendor Name']||'';
   document.getElementById('wo_vendorCode').value = h['Vendor Code']||'';
   if (h['Vendor Name']) { wo_vendor_locked = true; lockMasterField('wo_vendor','wo_vendor_clear'); }
-  document.getElementById('wo_project').value   = h['Project']||'PoE, Ph-01';
+  _setProjSel('wo_project', h['Project'] || null);   // v66
   document.getElementById('wo_startDate').value = h['Start Date']||'';
   document.getElementById('wo_endDate').value   = h['End Date']||'';
   const cpEl = document.getElementById('wo_contactPerson'); if (cpEl) cpEl.value = h['Contact Person']||'';
@@ -16953,8 +17219,8 @@ function renderPrintWO(d) {
     if (vm['Address']) vendorBody += '<br>'+esc(vm['Address']);
   }
   return `<div class="pd-so-top">
-    <div class="pd-co-block"><div class="pd-co-name">Urban Excellence LLP</div>
-    <div class="pd-co-sub">Poetry of Earth — Phase 01 | Varthur-Sarjapur Road, Bengaluru</div></div>
+    <div class="pd-co-block"><div class="pd-co-name">${esc(CO_NAME||'')}</div>
+    <div class="pd-co-sub">${esc([COMPANY.projectName,COMPANY.projectAddr].filter(Boolean).join(' | '))}</div></div>
     <div class="pd-doc-block"><div class="pd-doc-type">WORK ORDER</div>
     <div class="pd-doc-meta">WO No.: <b>${esc(d['WO Number'])}</b><br>
     Date: <b>${fmtDate(d['WO Date'])}</b><br>
@@ -17086,7 +17352,7 @@ function renderPrintHO(d) {
   const hoNum  = h.hoNumber||h['HO Number']||'—';
   const hoDate = h.hoDate||h['HO Date']||'—';
   const status = h.status||h['Status']||'—';
-  const project = h.project||'PoE, Ph-01';
+  const project = h.project||COMPANY.projectName||'\u2014';   // v66
 
   const vm = (state.masters.vendors||[]).find(v => v['Vendor Name'] === vendor);
   let vendorBody = `<strong>${esc(vendor)}</strong>`;
@@ -19956,7 +20222,7 @@ function _draftRestoreMIR(pl) {
   const h = pl.header || {};
   if (h.mir_date)    document.getElementById('mir_date').value      = h.mir_date;
   if (h.required_by) document.getElementById('mir_requiredBy').value = h.required_by;
-  if (h.project)     document.getElementById('mir_project').value    = h.project;
+  if (h.project)     _setProjSel('mir_project', h.project);   // v66
   if (h.purpose)     document.getElementById('mir_purpose').value    = h.purpose;
   if (h.remarks)     document.getElementById('mir_remarks').value    = h.remarks;
   _mirGroups = []; _mirOpen = new Set(); _mirGrpClosed = new Set();
@@ -20032,7 +20298,7 @@ function _draftCapturePO() {
 function _draftRestorePO(pl) {
   const h = pl.header || {};
   const setv = (id, v) => { const e = document.getElementById(id); if (e && v != null) e.value = v; };
-  setv('po_date', h.po_date); setv('po_project', h.project);
+  setv('po_date', h.po_date); _setProjSel('po_project', h.project);   // v66
   setv('po_vendor', h.vendor); setv('po_vendorCode', h.vendor_code);
   setv('po_vendorAddress', h.vendor_address); setv('po_vendorGSTIN', h.vendor_gstin);
   setv('po_contactPerson', h.contact_person); setv('po_paymentTerms', h.payment_terms);
@@ -20123,7 +20389,7 @@ async function _draftRestoreHO(pl) {
   const setv = (id,v) => { const e=document.getElementById(id); if(e&&v!=null) e.value=v; };
   setv('ho_date', h.ho_date); setv('ho_vendor', h.vendor); setv('ho_vendorCode', h.vendorCode);
   setv('ho_scope', h.scope); setv('ho_startDate', h.startDate); setv('ho_endDate', h.endDate);
-  setv('ho_gstPct', h.gstPct); setv('ho_project', h.project); setv('ho_contactPerson', h.contactPerson);
+  setv('ho_gstPct', h.gstPct); _setProjSel('ho_project', h.project); setv('ho_contactPerson', h.contactPerson);   // v66
   if (h.remarks) tcDeserialize('ho_tc_editor', h.remarks);
   if (h.vendor) { try { ho_vendor_locked = true; lockMasterField('ho_vendor','ho_vendor_clear'); } catch(e){} }
 
@@ -20193,7 +20459,7 @@ async function _draftRestoreWO(pl) {
   const setv = (id,v) => { const e=document.getElementById(id); if(e&&v!=null) e.value=v; };
   setv('wo_date', h.wo_date); setv('wo_vendor', h.vendor); setv('wo_vendorCode', h.vendorCode);
   setv('wo_scope', h.scope); setv('wo_gstPct', h.gstPct); setv('wo_retentionPct', h.retentionPct);
-  setv('wo_mobAdvPct', h.mobAdvPct); setv('wo_mobAdvAmt', h.mobAdvAmt); setv('wo_project', h.project);
+  setv('wo_mobAdvPct', h.mobAdvPct); setv('wo_mobAdvAmt', h.mobAdvAmt); _setProjSel('wo_project', h.project);   // v66
   setv('wo_startDate', h.startDate); setv('wo_endDate', h.endDate); setv('wo_contactPerson', h.contactPerson);
   if (h.remarks) tcDeserialize('wo_tc_editor', h.remarks);
   if (h.vendor) { try { wo_vendor_locked = true; lockMasterField('wo_vendor','wo_vendor_clear'); } catch(e){} }
@@ -22906,8 +23172,8 @@ function printRFQComparison(rfqNum) {
     [style*="background:#1e3a5f"]{background:#1e3a5f !important;color:#fff !important;}
   </style></head><body>
   <div class="ph">
-    <div><div class="co-name">URBAN EXCELLENCE LLP</div>
-      <div class="co-sub">76/1 Windchimes, Muthsandra Main Road, Bengaluru – 560087<br>GSTIN: 29AAHFU0117D1ZH &nbsp;|&nbsp; Project: Poetry of Earth, Phase 1</div>
+    <div><div class="co-name">${esc(CO_NAME||'')}</div>
+      <div class="co-sub">${esc(CO_ADDR||'')}<br>${CO_GSTIN?('GSTIN: '+esc(CO_GSTIN)+' &nbsp;|&nbsp; '):''}Project: ${esc(COMPANY.projectName||'')}</div>
     </div>
     <div style="text-align:right;">
       <div class="doc-title">QUOTE COMPARISON</div>
@@ -23813,10 +24079,10 @@ async function newPO() {
   ['directMirNum','directMirSnos','directMirMats','directMirQtys','poMirNum'].forEach(k=>{ delete document.getElementById('poForm').dataset[k]; });
   // Pre-fill contact person with default site contacts (editable)
   const cpEl=document.getElementById('po_contactPerson');
-  if(cpEl) cpEl.value='Mr.Niteesh (7996631552) & Mr.Raghavendra (9901374170)';
+  if(cpEl) cpEl.value=(window.PGS_META&&PGS_META.proj&&PGS_META.proj.contact_person)||'';   // v66
   // Pre-fill delivery address with site address (editable)
   const daEl=document.getElementById('po_deliveryAddr');
-  if(daEl) daEl.value='Poetry of Earth, Sy.no.199, Varthur-Sarjapur Road, Opposite to Vinayaka Theatre, Varthur, Bengaluru-560087, Karnataka.';
+  if(daEl) daEl.value=SITE_ADDR||'';   // v66
   document.getElementById('po_cgstPct').value='9';
   document.getElementById('po_sgstPct').value='9';
   document.getElementById('po_igstPct').value='0';
@@ -31127,10 +31393,7 @@ function triggerPrint() {
   }, 80);
 }
 
-const CO_NAME = 'URBAN EXCELLENCE LLP';
-const CO_ADDR = '76/1, Windchimes, Muthsandra Main Road, Bengaluru – 560087';
-const CO_GSTIN = '29AAHFU0117D1ZH';
-const SITE_ADDR = 'Poetry of Earth, Sy.No.199, Varthur–Sarjapur Road, Varthur, Bengaluru – 560087';
+let CO_NAME = '', CO_ADDR = '', CO_GSTIN = '', SITE_ADDR = '';   // v66: filled at project entry
 
 function printStyles() {
   return `<style>
@@ -32049,10 +32312,10 @@ async function printQCPopup(qcNum) {
 <body>
   <div class="ph">
     <div class="ph-left">
-      <div class="co-name">URBAN EXCELLENCE LLP</div>
+      <div class="co-name">${esc(CO_NAME||'')}</div>
       <div class="co-sub">
-        76/1 Windchimes, Muthsandra Main Road, Bengaluru – 560087<br>
-        GSTIN: 29AAHFU0117D1ZH &nbsp;|&nbsp; Project: Poetry of Earth, Phase 1
+        ${esc(CO_ADDR||'')}<br>
+        ${CO_GSTIN?('GSTIN: '+esc(CO_GSTIN)+' &nbsp;|&nbsp; '):''}Project: ${esc(COMPANY.projectName||'')}
       </div>
     </div>
     <div class="ph-right">
@@ -33046,44 +33309,70 @@ async function pgsAfterAuth(user){
     pgsS.userName = (prof && prof.full_name) || 'User';
   } catch(e){ pgsS.userName = 'User'; }
 
-  // 3. Org (RLS returns only the caller's org)
-  const { data: orgs, error: orgErr } = await sb.from('organizations')
-    .select('id, name, display_name, company_code, logo_url').limit(1);
-  if (orgErr || !orgs || !orgs.length) { pgsAuthFail('Could not load your organisation.'); return; }
-  pgsS.org = orgs[0];
+  // 3. Workspace (v63): one DEFINER RPC lists every organisation the user
+  //    belongs to, each with the projects they can access there
+  //    (owner-of-that-org -> all; else project_users UNION role assignments).
+  //    rpc_set_active_project v3 enforces the same rule server-side.
+  pgsS.orgs = [];
+  try {
+    const ws = await sb.rpc('rpc_my_workspace');
+    if (ws.error) throw new Error(ws.error.message);
+    pgsS.orgs = (ws.data && ws.data.orgs) || [];
+  } catch(e) {
+    // Fallback (rpc_my_workspace not deployed yet): legacy single-org load.
+    const { data: orgs1 } = await sb.from('organizations')
+      .select('id, name, display_name, company_code, logo_url').limit(1);
+    if (orgs1 && orgs1.length) {
+      const [pj, pu, pra] = await Promise.all([
+        sb.from('projects')
+          .select('id, project_name, project_code, doc_code, loc_acronym, is_active, site_address')
+          .eq('org_id', orgs1[0].id).order('created_at'),
+        sb.from('project_users').select('project_id').eq('user_id', pgsS.userId).eq('is_active', true),
+        sb.from('project_role_assignments').select('project_id').eq('user_id', pgsS.userId).eq('is_active', true)
+      ]);
+      const _acc = {};
+      (pu.data  || []).forEach(function(a){ _acc[a.project_id] = 1; });
+      (pra.data || []).forEach(function(a){ _acc[a.project_id] = 1; });
+      const _all = pj.data || [];
+      orgs1[0].my_role  = pgsS.claimsRole;
+      orgs1[0].projects = pgsS.claimsRole === 'owner' ? _all : _all.filter(function(p){ return _acc[p.id] === 1; });
+      pgsS.orgs = [orgs1[0]];
+    }
+  }
+  if (!pgsS.orgs.length) { pgsAuthFail('Could not load your organisation.'); return; }
 
-  // 4. Projects + this user's project assignments
-  const [projRes, assignRes] = await Promise.all([
-    sb.from('projects')
-      .select('id, project_name, doc_code, loc_acronym, is_active, site_address')
-      .eq('org_id', pgsS.org.id).order('created_at'),
-    sb.from('project_users')
-      .select('project_id, role, is_active')
-      .eq('user_id', pgsS.userId).eq('is_active', true),
-  ]);
-  pgsS.projects = projRes.data || [];
-
-  // 5. Access rule (matches deployed Increment 1):
-  //    project_users rows present -> only those projects
-  //    none                       -> org-scoped: all org projects
-  const assignedIds = (assignRes.data || []).map(function(a){ return a.project_id; });
-  pgsS.accessible = assignedIds.length
-    ? pgsS.projects.filter(function(p){ return assignedIds.indexOf(p.id) !== -1; })
-    : pgsS.projects.slice();
-
-  if (!pgsS.accessible.length) {
+  // 4. Flat access check across all orgs
+  var _flat = [];
+  pgsS.orgs.forEach(function(o){ (o.projects || []).forEach(function(p){ _flat.push({ org: o, proj: p }); }); });
+  if (!_flat.length) {
     pgsAuthFail('Your account has no active project access. Please contact your organisation owner.');
     return;
   }
 
-  // 6. Route: 1 project -> straight in; remembered project -> straight in; else selector
+  // 5. Route: exactly 1 project anywhere -> straight in; remembered project ->
+  //    bind its org -> straight in; multiple orgs -> organisation cards;
+  //    single org -> project cards.
   pgsEl('authGate').style.display = 'none';
-  if (pgsS.accessible.length === 1) { await pgsEnterProject(pgsS.accessible[0]); return; }
+  pgsS._orgChosen = (pgsS.orgs.length === 1);
+  if (pgsS.orgs.length === 1) pgsSelectOrg(pgsS.orgs[0]);
+  if (_flat.length === 1) { pgsSelectOrg(_flat[0].org); pgsS._orgChosen = true; await pgsEnterProject(_flat[0].proj); return; }
   let lastId = null;
   try { lastId = localStorage.getItem(PGS_LAST_PROJECT_KEY); } catch(e){}
-  const last = pgsS.accessible.find(function(p){ return p.id === lastId; });
-  if (last) { await pgsEnterProject(last); return; }
+  const _lastHit = _flat.find(function(x){ return x.proj.id === lastId; });
+  if (_lastHit) { pgsSelectOrg(_lastHit.org); pgsS._orgChosen = true; await pgsEnterProject(_lastHit.proj); return; }
   pgsShowSelector();
+}
+
+// ── v63: bind the shell to one organisation's context ──────────────────────
+// pgsS.org / pgsS.projects / pgsS.accessible keep their existing meanings for
+// every downstream reader; workspace project lists are already access-filtered.
+function pgsSelectOrg(o){
+  pgsS.org        = o;
+  pgsS.projects   = (o.projects || []).slice();
+  pgsS.accessible = pgsS.projects.slice();
+}
+function _pgsIsOrgOwner(){
+  return !!(pgsS.org && (pgsS.org.my_role ? pgsS.org.my_role === 'owner' : pgsS.claimsRole === 'owner'));
 }
 
 function pgsAuthFail(msg){
@@ -33099,13 +33388,16 @@ function pgsAuthFail(msg){
 
 // ---- selector ----
 function pgsShowSelector(){
+  // v63: multi-org -> organisation cards first, then that org's project cards
+  if ((pgsS.orgs || []).length > 1 && !pgsS._orgChosen) { pgsShowOrgSelector(); return; }
   pgsEl('pgs-sel-org').textContent  = pgsS.org.display_name || pgsS.org.name;
   pgsEl('pgs-sel-user').textContent = pgsS.userName || 'User';
-  pgsEl('pgs-sel-role').textContent = pgsRoleLabel(pgsS.claimsRole);
+  pgsEl('pgs-sel-role').textContent = pgsRoleLabel(pgsS.org.my_role || pgsS.claimsRole);
 
   const logo = pgsEl('pgs-sel-logo');
   if (pgsS.org.logo_url) logo.innerHTML = '<img src="' + pgsEsc(pgsS.org.logo_url) + '" alt="logo">';
   else logo.textContent = (pgsS.org.company_code || 'PS').slice(0,2).toUpperCase();
+  var _note = pgsEl('pgs-selnote'); if (_note) _note.textContent = 'Choose a project to work in.';
 
   const grid = pgsEl('pgs-proj-grid');
   grid.innerHTML = '';
@@ -33121,13 +33413,267 @@ function pgsShowSelector(){
         (p.is_active ? 'pgs-pill-green">ACTIVE' : 'pgs-pill-amber">SETUP') + '</span></div>';
     grid.appendChild(div);
   });
+  if (!pgsS.accessible.length) {
+    grid.innerHTML = '<div style="grid-column:1/-1;padding:26px;text-align:center;color:#6b7690;font-size:13px;">'
+      + 'No projects yet in this organisation.' + (_pgsIsOrgOwner() ? ' Create the first one below.' : '') + '</div>';
+  }
 
-  pgsEl('pgs-btn-newproj').style.display = pgsS.claimsRole === 'owner' ? '' : 'none';
+  pgsEl('pgs-btn-newproj').style.display = _pgsIsOrgOwner() ? '' : 'none';
+  var _no = pgsEl('pgs-btn-neworg'); if (_no) _no.style.display = 'none';   // v65: org creation only on the Organisations screen
+  var _bk = pgsEl('pgs-btn-backorgs'); if (_bk) _bk.style.display = (pgsS.orgs || []).length > 1 ? '' : 'none';
   pgsEl('app').classList.add('hidden');
   pgsEl('pgsSelect').style.display = 'flex';
 }
 
+// v63 · organisation (client) cards
+function pgsShowOrgSelector(){
+  pgsEl('pgs-sel-org').textContent  = 'Your organisations';
+  pgsEl('pgs-sel-user').textContent = pgsS.userName || 'User';
+  pgsEl('pgs-sel-role').textContent = (pgsS.orgs || []).length + ' organisations';
+  pgsEl('pgs-sel-logo').textContent = '\ud83c\udfe2';
+  var _note = pgsEl('pgs-selnote'); if (_note) _note.textContent = 'Choose an organisation (client) to see its projects.';
+
+  const grid = pgsEl('pgs-proj-grid');
+  grid.innerHTML = '';
+  (pgsS.orgs || []).forEach(function(o){
+    var n = (o.projects || []).length;
+    const div = document.createElement('div');
+    div.className = 'pgs-projcard';
+    div.onclick = function(){ pgsPickOrg(o.id); };
+    div.innerHTML =
+      '<div class="code">' + pgsEsc(o.company_code || '') + '</div>' +
+      '<h3>' + pgsEsc(o.display_name || o.name) + '</h3>' +
+      '<div class="meta">' + n + ' project' + (n !== 1 ? 's' : '')
+        + ' \u00b7 you are ' + pgsEsc(pgsRoleLabel(o.my_role)) + '</div>';
+    grid.appendChild(div);
+  });
+
+  pgsEl('pgs-btn-newproj').style.display = 'none';
+  var _no = pgsEl('pgs-btn-neworg'); if (_no) _no.style.display = _pgsAnyOwner() ? '' : 'none';   // v64
+  var _bk = pgsEl('pgs-btn-backorgs'); if (_bk) _bk.style.display = 'none';
+  pgsEl('app').classList.add('hidden');
+  pgsEl('pgsSelect').style.display = 'flex';
+}
+function pgsPickOrg(orgId){
+  var o = (pgsS.orgs || []).find(function(x){ return x.id === orgId; });
+  if (!o) return;
+  pgsSelectOrg(o);
+  pgsS._orgChosen = true;
+  pgsShowSelector();
+}
+function pgsBackToOrgs(){ pgsS._orgChosen = false; pgsShowOrgSelector(); }
+
+// ── v64 · New-organisation creation (existing owners only, rpc_create_org) ──
+// Server side: organizations/org_users are service-role-write under RLS; the
+// DEFINER RPC gates on "already an active owner somewhere" and makes the
+// caller owner of the new org. company_code is 2-6 alnum (DB CHECK).
+function _pgsAnyOwner(){
+  return (pgsS.orgs || []).some(function(o){ return o.my_role === 'owner'; })
+      || pgsS.claimsRole === 'owner';
+}
+function pgsNewOrg(){
+  if (!_pgsAnyOwner()) { toast('Only an organisation owner can create a new organisation','error'); return; }
+  var L = 'display:block;font-size:11px;font-weight:600;color:#6b7690;text-transform:uppercase;letter-spacing:.4px;margin:10px 0 4px;', I = 'width:100%;padding:9px 11px;border:1px solid #cbd5e1;border-radius:6px;font-size:13px;font-family:inherit;box-sizing:border-box;';
+  openModal(
+    '<h3 style="margin:0 0 4px;font-size:16px;font-weight:700;color:#1c2534;">Create new organisation</h3>'
+    + '<div style="font-size:11.5px;color:#6b7690;margin:0 0 12px;">A client company \u2014 you become its owner. You can create its first project right after.</div>'
+    + '<label style="'+L+'">Organisation name</label>'
+    + '<input id="no_name" style="'+I+'" placeholder="e.g. Skyline Constructions Pvt Ltd" autocomplete="off">'
+    + '<div style="display:flex;gap:10px;">'
+    +   '<div style="flex:1;"><label style="'+L+'">Company code <span style="color:#94a3b8;font-weight:400;text-transform:none;">(2\u20136 letters/digits)</span></label>'
+    +     '<input id="no_code" style="'+I+'" placeholder="e.g. SKY" maxlength="6" autocomplete="off"></div>'
+    +   '<div style="flex:1;"><label style="'+L+'">Display name <span style="color:#94a3b8;font-weight:400;text-transform:none;">(optional)</span></label>'
+    +     '<input id="no_disp" style="'+I+'" placeholder="Shown in the header" autocomplete="off"></div>'
+    + '</div>'
+    + '<label style="'+L+'">Legal name <span style="color:#94a3b8;font-weight:400;text-transform:none;">(optional)</span></label>'
+    + '<input id="no_legal" style="'+I+'" placeholder="As registered" autocomplete="off">'
+    + '<div id="no_err" style="display:none;margin-top:10px;background:#fef2f2;border:1px solid #fecaca;border-radius:6px;padding:8px 11px;font-size:12px;color:#b91c1c;"></div>'
+    + '<div style="display:flex;gap:8px;justify-content:flex-end;margin-top:16px;">'
+    +   '<button class="pgs-btn pgs-btn-ghost" onclick="closeModal()">Cancel</button>'
+    +   '<button class="pgs-btn pgs-btn-primary" id="no_save" onclick="pgsCreateOrgSave()">Create organisation</button>'
+    + '</div>'
+  );
+  setTimeout(function(){ var f=document.getElementById('no_name'); if(f) f.focus(); }, 0);
+}
+function _noErr(m){ var e=document.getElementById('no_err'); if(!e) return; e.textContent=m||''; e.style.display=m?'block':'none'; }
+async function pgsCreateOrgSave(){
+  if (!_pgsAnyOwner()) { toast('Owner only','error'); return; }
+  var g = function(id){ return ((document.getElementById(id)||{}).value || '').trim(); };
+  var name = g('no_name'), code = g('no_code');
+  if (!name) { _noErr('Organisation name is required'); return; }
+  if (!/^[A-Za-z0-9]{2,6}$/.test(code)) { _noErr('Company code must be 2\u20136 letters or digits (no spaces or symbols)'); return; }
+  var btn=document.getElementById('no_save'); if(btn){ btn.disabled=true; btn.textContent='Creating\u2026'; }
+  pbShow('Creating organisation\u2026');
+  try {
+    var res = await sb.rpc('rpc_create_org', { p: {
+      name: name, company_code: code,
+      display_name: g('no_disp') || null, legal_name: g('no_legal') || null
+    }});
+    if (res.error) {
+      var m = res.error.message || 'Create failed';
+      if (m.indexOf('ORG_DUP') !== -1) m = 'That company code is already taken \u2014 pick another.';
+      if (m.indexOf('function') !== -1 && m.indexOf('does not exist') !== -1) m = 'rpc_create_org is not deployed yet \u2014 run migration mig_org_creation_v1 first.';
+      _noErr(m); return;
+    }
+    var o = res.data && res.data.org;
+    if (!o) { _noErr('Unexpected response \u2014 refresh and check.'); return; }
+    if (!o.projects) o.projects = [];
+    pgsS.orgs = (pgsS.orgs || []).concat([o]);
+    closeModal();
+    flashSuccess('Organisation \u201c' + name + '\u201d created \u2014 you are its owner.');
+    pgsPickOrg(o.id);   // lands on its (empty) project cards; + New project takes over
+  } catch(e) {
+    _noErr((e && e.message) || 'Create failed');
+  } finally {
+    pbDone();
+    var b=document.getElementById('no_save'); if(b){ b.disabled=false; b.textContent='Create organisation'; }
+  }
+}
+
+
 function pgsSwitchProject(){ pgsShowSelector(); }
+
+// ── v62 · New-project creation (owner only, via rpc_create_project) ─────────
+// Server side: projects writes are owner-only (RLS projects_owner_write) and
+// the clone runs inside SECURITY DEFINER rpc_create_project, which stamps
+// org_id/project_id explicitly on every copied wbs/location row. Structure
+// copy = skeleton only (no estimates, no allocation rules, no take-offs).
+function pgsNewProject(){
+  if (!_pgsIsOrgOwner()) { toast('Only the owner of this organisation can create a project','error'); return; }
+  var yr = new Date().getFullYear();
+  var L = 'display:block;font-size:11px;font-weight:600;color:#6b7690;text-transform:uppercase;letter-spacing:.4px;margin:10px 0 4px;', I = 'width:100%;padding:9px 11px;border:1px solid #cbd5e1;border-radius:6px;font-size:13px;font-family:inherit;box-sizing:border-box;';
+  var srcs = pgsS.projects || [];
+  var srcOpts = srcs.map(function(p){
+    return '<option value="' + p.id + '">' + pgsEsc(p.project_name)
+         + (p.doc_code ? ' (' + pgsEsc(p.doc_code) + ')' : '') + '</option>';
+  }).join('');
+  // No existing project -> fresh only (his rule: default fresh when none exist)
+  var structHtml = !srcs.length
+    ? '<div style="margin-top:14px;font-size:12px;color:#6b7690;background:#f8fafc;border:1px solid #e2e8f0;border-radius:6px;padding:9px 12px;">'
+      + 'First project in this organisation \u2014 it starts with a fresh WBS and location structure.</div>'
+      + '<input type="hidden" id="np_struct_fresh_only" value="1">'
+    : '<div style="margin-top:14px;border:1px solid #e2e8f0;border-radius:8px;padding:12px;">'
+      + '<div style="font-size:12px;font-weight:700;color:#1c2534;margin-bottom:8px;">Starting structure</div>'
+      + '<label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer;margin-bottom:6px;">'
+      +   '<input type="radio" name="np_struct" value="fresh" checked onchange="_npStructToggle()"> Fresh \u2014 empty WBS and location trees</label>'
+      + '<label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer;">'
+      +   '<input type="radio" name="np_struct" value="copy" onchange="_npStructToggle()"> Copy structure from an existing project</label>'
+      + '<div id="np_copywrap" style="display:none;margin-top:10px;padding-left:24px;">'
+      +   '<label style="'+L+'margin-top:0;">Source project</label>'
+      +   '<select id="np_src" style="'+I+'">' + srcOpts + '</select>'
+      +   '<div style="display:flex;gap:18px;margin-top:8px;flex-wrap:wrap;">'
+      +     '<label style="display:flex;align-items:center;gap:7px;font-size:12.5px;cursor:pointer;">'
+      +       '<input type="checkbox" id="np_cp_wbs" checked> WBS structure</label>'
+      +     '<label style="display:flex;align-items:center;gap:7px;font-size:12.5px;cursor:pointer;">'
+      +       '<input type="checkbox" id="np_cp_loc" checked> Location structure</label>'
+      +     '<label style="display:flex;align-items:center;gap:7px;font-size:12.5px;cursor:pointer;">'
+      +       '<input type="checkbox" id="np_cp_ven"> Vendor masters</label>'
+      +     '<label style="display:flex;align-items:center;gap:7px;font-size:12.5px;cursor:pointer;">'
+      +       '<input type="checkbox" id="np_cp_con"> Contractor masters</label>'
+      +     '<label style="display:flex;align-items:center;gap:7px;font-size:12.5px;cursor:pointer;">'
+      +       '<input type="checkbox" id="np_cp_mat"> Material masters</label>'
+      +   '</div>'
+      +   '<div style="font-size:11px;color:#94a3b8;margin-top:6px;">Skeleton only \u2014 estimates, allocation rules and take-offs are not copied. Activities referenced by the WBS copy automatically with it.</div>'
+      + '</div></div>';
+  openModal(
+    '<h3 style="margin:0 0 4px;font-size:16px;font-weight:700;color:#1c2534;">Create new project</h3>'
+    + '<div style="font-size:11.5px;color:#6b7690;margin:0 0 12px;">Organisation: ' + pgsEsc(pgsS.org.display_name || pgsS.org.name) + '</div>'
+    + '<label style="'+L+'">Project name</label>'
+    + '<input id="np_name" style="'+I+'" placeholder="e.g. Poetry of Earth \u2014 Phase 3" autocomplete="off">'
+    + '<div style="display:flex;gap:10px;">'
+    +   '<div style="flex:1;"><label style="'+L+'">Project code</label>'
+    +     '<input id="np_code" style="'+I+'" placeholder="e.g. POE-PH3" autocomplete="off"></div>'
+    +   '<div style="flex:1;"><label style="'+L+'">Doc code <span style="color:#94a3b8;font-weight:400;text-transform:none;">(2\u20138 letters/digits)</span></label>'
+    +     '<input id="np_doc" style="'+I+'" placeholder="e.g. POE3" maxlength="8" autocomplete="off"></div>'
+    + '</div>'
+    + '<div style="display:flex;gap:10px;">'
+    +   '<div style="flex:1;"><label style="'+L+'">Location acronym</label>'
+    +     '<input id="np_loc" style="'+I+'" placeholder="e.g. POE" autocomplete="off"></div>'
+    +   '<div style="width:130px;"><label style="'+L+'">FY start</label>'
+    +     '<input id="np_fy" type="number" style="'+I+'" value="'+yr+'"></div>'
+    + '</div>'
+    + '<label style="'+L+'">Site address <span style="color:#94a3b8;font-weight:400;text-transform:none;">(optional)</span></label>'
+    + '<input id="np_addr" style="'+I+'" placeholder="Site / delivery address" autocomplete="off">'
+    + structHtml
+    + '<div id="np_err" style="display:none;margin-top:10px;background:#fef2f2;border:1px solid #fecaca;border-radius:6px;padding:8px 11px;font-size:12px;color:#b91c1c;"></div>'
+    + '<div style="display:flex;gap:8px;justify-content:flex-end;margin-top:16px;">'
+    +   '<button class="pgs-btn pgs-btn-ghost" onclick="closeModal()">Cancel</button>'
+    +   '<button class="pgs-btn pgs-btn-primary" id="np_save" onclick="pgsCreateProjectSave()">Create project</button>'
+    + '</div>'
+  );
+  setTimeout(function(){ var f=document.getElementById('np_name'); if(f) f.focus(); }, 0);
+}
+function _npStructToggle(){
+  var r = document.querySelector('input[name="np_struct"]:checked');
+  var w = document.getElementById('np_copywrap');
+  if (w) w.style.display = (r && r.value === 'copy') ? 'block' : 'none';
+}
+function _npErr(m){ var e=document.getElementById('np_err'); if(!e) return; e.textContent=m||''; e.style.display=m?'block':'none'; }
+async function pgsCreateProjectSave(){
+  if (!_pgsIsOrgOwner()) { toast('Owner only','error'); return; }
+  var g = function(id){ return (document.getElementById(id)||{}).value; };
+  var name = (g('np_name')||'').trim();
+  var code = (g('np_code')||'').trim();
+  var doc  = (g('np_doc') ||'').trim();
+  var loc  = (g('np_loc') ||'').trim() || doc;
+  var fy   = parseInt(g('np_fy'),10);
+  var addr = (g('np_addr')||'').trim() || null;
+  if (!name) { _npErr('Project name is required'); return; }
+  if (!code) { _npErr('Project code is required'); return; }
+  if (!/^[A-Za-z0-9]{2,8}$/.test(doc)) { _npErr('Doc code must be 2\u20138 letters or digits (no spaces or symbols)'); return; }
+  if (!fy || fy < 2000 || fy > 2100) { _npErr('Enter a valid FY start year'); return; }
+  var structSel = document.querySelector('input[name="np_struct"]:checked');
+  var isCopy = !!(structSel && structSel.value === 'copy');
+  var payload = {
+    org_id: pgsS.org.id,                                            // v63: create into the org being browsed
+    project_name: name, project_code: code, doc_code: doc, loc_acronym: loc,
+    fin_year_start: fy, site_address: addr,
+    copy_from: isCopy ? (g('np_src') || null) : null,
+    copy_wbs:  isCopy && !!(document.getElementById('np_cp_wbs')||{}).checked,
+    copy_loc:  isCopy && !!(document.getElementById('np_cp_loc')||{}).checked,
+    copy_vendors:     isCopy && !!(document.getElementById('np_cp_ven')||{}).checked,   // v67
+    copy_contractors: isCopy && !!(document.getElementById('np_cp_con')||{}).checked,   // v67
+    copy_materials:   isCopy && !!(document.getElementById('np_cp_mat')||{}).checked    // v67
+  };
+  if (isCopy && !payload.copy_wbs && !payload.copy_loc) { _npErr('Copy selected but nothing ticked \u2014 tick WBS and/or Locations, or choose Fresh'); return; }
+  if (isCopy && !payload.copy_from) { _npErr('Pick a source project'); return; }
+  var btn=document.getElementById('np_save'); if(btn){ btn.disabled=true; btn.textContent='Creating\u2026'; }
+  pbShow('Creating project\u2026');
+  try {
+    var res = await sb.rpc('rpc_create_project', { p: payload });
+    if (res.error) {
+      var m = res.error.message || 'Create failed';
+      if (m.indexOf('NEWPROJ_DUP') !== -1) m = 'That project code or doc code is already used in your organisation \u2014 pick another.';
+      if (m.indexOf('function') !== -1 && m.indexOf('does not exist') !== -1) m = 'rpc_create_project is not deployed yet \u2014 run migration mig_project_isolation_clone_v1 first.';
+      _npErr(m); return;
+    }
+    var pr = res.data && res.data.project;
+    if (pr) {
+      pgsS.projects.push(pr); pgsS.accessible.push(pr);              // owner is org-wide
+      if (pgsS.org && pgsS.org.projects) pgsS.org.projects.push(pr); // v63: keep workspace list in sync
+    }
+    closeModal();
+    var extra = '';
+    if (res.data) {
+      var bits = [];
+      if (res.data.wbs_nodes_copied)      bits.push(res.data.wbs_nodes_copied + ' WBS');
+      if (res.data.location_nodes_copied) bits.push(res.data.location_nodes_copied + ' location');
+      if (res.data.activities_copied)     bits.push(res.data.activities_copied + ' activity');
+      if (res.data.vendors_copied)        bits.push(res.data.vendors_copied + ' vendor');
+      if (res.data.contractors_copied)    bits.push(res.data.contractors_copied + ' contractor');
+      if (res.data.materials_copied)      bits.push(res.data.materials_copied + ' material');
+      if (bits.length) extra = ' \u2014 copied ' + bits.join(' + ');
+    }
+    flashSuccess('Project \u201c' + name + '\u201d created' + extra + '.');
+    pgsShowSelector();
+  } catch(e) {
+    _npErr((e && e.message) || 'Create failed');
+  } finally {
+    pbDone();
+    var b=document.getElementById('np_save'); if(b){ b.disabled=false; b.textContent='Create project'; }
+  }
+}
+
 
 async function pgsOpenBridgeProject(){
   const p = pgsS.accessible.find(function(x){ return x.id === PGS_BRIDGE_PROJECT_ID; });
@@ -33135,6 +33681,55 @@ async function pgsOpenBridgeProject(){
 }
 
 // ---- enter project ----
+
+
+// ── v66 · Company + project identity, loaded per entered project ────────────
+// Replaces the hardcoded UE/PoE constants: COMPANY/CO_*/SITE_ADDR now fill
+// from organizations (legal identity for print headers) and projects
+// (site/delivery address, contact person). Project selects in MIR/PO/HO/WO
+// lock to the entered project — documents are created in the claimed project.
+async function pgsLoadProjectMeta(p){
+  try {
+    const [orgR, projR] = await Promise.all([
+      sb.from('organizations')
+        .select('name, legal_name, display_name, gstin, pan, registered_address, contact_name, contact_phone, contact_email, logo_url')
+        .eq('id', pgsS.org.id).single(),
+      sb.from('projects')
+        .select('project_name, project_code, doc_code, loc_acronym, fin_year_start, site_address, contact_person')
+        .eq('id', p.id).single()
+    ]);
+    const o = orgR.data || {}, pr = projR.data || {};
+    window.PGS_META = { org: o, proj: pr };
+    COMPANY.name        = (o.legal_name || o.display_name || o.name || '').toUpperCase();
+    COMPANY.addr        = o.registered_address || '';
+    COMPANY.gstin       = o.gstin || '';
+    COMPANY.projectName = pr.project_name || p.project_name || '';
+    COMPANY.projectAddr = pr.site_address || '';
+    CO_NAME  = COMPANY.name;  CO_ADDR = COMPANY.addr;  CO_GSTIN = COMPANY.gstin;
+    SITE_ADDR = [COMPANY.projectName, COMPANY.projectAddr].filter(Boolean).join(', ');
+    // project selects: one option = the entered project, locked
+    const lbl = COMPANY.projectName;
+    ['mir_project','po_project','ho_project','wo_project'].forEach(function(id){
+      const el = document.getElementById(id); if (!el) return;
+      el.innerHTML = '<option value="' + pgsEsc(lbl) + '">' + pgsEsc(lbl) + '</option>';
+      el.value = lbl;
+      el.disabled = true;
+      el.title = 'Documents are created in the current project. Use switch project to change.';
+    });
+  } catch(e) { console.warn('[pgs] project meta load failed', e); }
+}
+// Set a project select's value, injecting the option if a historical document
+// carries a label that is no longer in the (locked) list.
+function _setProjSel(id, val){
+  const el = document.getElementById(id); if (!el) return;
+  const v = val || (window.PGS_META && PGS_META.proj && PGS_META.proj.project_name) || '';
+  if (v && ![].some.call(el.options, function(o){ return o.value === v; })) {
+    const op = document.createElement('option'); op.value = v; op.textContent = v;
+    el.appendChild(op);
+  }
+  el.value = v;
+}
+
 async function pgsEnterProject(p){
   pgsS.project = p;
   try { localStorage.setItem(PGS_LAST_PROJECT_KEY, p.id); } catch(e){}
@@ -33142,7 +33737,8 @@ async function pgsEnterProject(p){
   pgsEl('pgsSelect').style.display = 'none';
   pgsEl('pgs-sb-org').textContent  = pgsS.org.display_name || pgsS.org.name;
   pgsEl('pgs-sb-proj').textContent = p.project_name;
-  pgsEl('pgs-sb-switch').style.display = pgsS.accessible.length > 1 ? '' : 'none';
+  pgsEl('pgs-sb-switch').style.display =
+    (pgsS.accessible.length > 1 || (pgsS.orgs || []).length > 1) ? '' : 'none';   // v63
 
   // v8 (M5 Wave 3): read-side isolation is live — the project claim
   // decides what this session can SEE, so entry requires a verified
@@ -33153,6 +33749,7 @@ async function pgsEnterProject(p){
     pgsShowSelector();
     return;
   }
+  await pgsLoadProjectMeta(p);   // v66: company + project identity for forms and prints
   pgsArmTabWall(p.id);
 
   // Hand over to the untouched v174 entry chain (profile fetch ->
@@ -33181,6 +33778,7 @@ async function pgsClaimHandshake(p){
     if (!who || who.project_id !== p.id || !who.has_project_claim) {
       throw new Error('verify: claim mismatch (' + (who && who.project_id) + ')');
     }
+    pgsS.claimsRole = who.user_role || pgsS.claimsRole;   // v63: role claim is per-organisation
     console.log('[pgs] project claim verified:', p.id);
     return true;
   } catch(e) {
