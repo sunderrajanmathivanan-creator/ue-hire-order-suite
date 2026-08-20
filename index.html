@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Penguin Suite v74</title>
+<title>Penguin Suite v74.2</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js"></script>
@@ -10867,7 +10867,7 @@ function renderHOCList() {
     const st = c['Status'] || 'Unbilled';
     let actionBtns = `<button class="btn btn-ghost btn-sm" onclick="viewHOC('${esc(c['HOC Number'])}')">View</button>
       <button class="btn btn-ghost btn-sm" onclick="printHOCById('${esc(c['HOC Number'])}')">Print</button>`;
-    if (perms.canCreateHOB && st === 'Pending Approval') {
+    if (perms.canApproveHOC && st === 'Pending Approval') {   // v74.2: was canCreateHOB — approver-side only
       actionBtns += `<button class="btn btn-primary btn-sm" onclick="approveHOC('${esc(c['HOC Number'])}','Approved')">Approve</button>
         <button class="btn btn-warn btn-sm" onclick="promptReject('HOC','${esc(c['HOC Number'])}','correction')">↩ Return</button>
         <button class="btn btn-danger btn-sm" onclick="promptReject('HOC','${esc(c['HOC Number'])}','reject')">✕ Reject</button>`;
@@ -11226,7 +11226,7 @@ async function saveHOC_direct() {
 }
 
 async function approveHOC(hocNum, decision) {
-  if (!hasPerm('canCreateHOB')) { toast('Only Planning/ QS can review certifications','error'); return; }
+  if (!hasPerm('canApproveHOC')) { toast('Only the Site Manager can approve certifications','error'); return; }   // v74.2
   const r = await apiUpdateHOCStatus(hocNum, 'Unbilled', '');
   if (r.ok) { flashSuccess('Certification ' + hocNum + ' Approved'); state.certifications = []; loadHOCList(); }
   else toast(r.error || 'Update failed','error');
@@ -14560,7 +14560,7 @@ function renderWOCList() {
     const st = c['Status']||'Unbilled';
     let ab = `<button class="btn btn-ghost btn-sm" onclick="viewWOC('${esc(c['WOC Number'])}')">View</button>
       <button class="btn btn-ghost btn-sm" onclick="printWOCById('${esc(c['WOC Number'])}')">Print</button>`;
-    if (perms.canCreateWOB && st === 'Pending Approval') {
+    if (perms.canApproveWOC && st === 'Pending Approval') {   // v74.2: was canCreateWOB — approver-side only
       ab += `<button class="btn btn-primary btn-sm" onclick="approveWOC('${esc(c['WOC Number'])}')">Approve</button>
         <button class="btn btn-warn btn-sm" onclick="promptReject('WOC','${esc(c['WOC Number'])}','correction')">↩ Return</button>
         <button class="btn btn-danger btn-sm" onclick="promptReject('WOC','${esc(c['WOC Number'])}','reject')">✕ Reject</button>`;
@@ -15152,7 +15152,7 @@ async function saveWOC_direct() {
 }
 
 async function approveWOC(wocNum) {
-  if (!hasPerm('canCreateWOB')) { toast('Not permitted','error'); return; }
+  if (!hasPerm('canApproveWOC')) { toast('Only the Site Manager can approve certifications','error'); return; }   // v74.2
   const r = await apiUpdateWOCStatus(wocNum, 'Unbilled', '');
   if (r.ok) { flashSuccess('WOC '+wocNum+' Approved'); state.woCertifications=[]; loadWOCList(); }
   else toast(r.error||'Update failed','error');
@@ -32603,12 +32603,20 @@ document.querySelectorAll('.tabs .tab').forEach(t => {
 });
 
 function applyRoleTabVisibility() {
+  // v74.1: legacy names kept for profile-fallback users; v2 names appended.
+  // Hook v3 filters retired role claims, so v2 users no longer inherit
+  // 'Procurement'/'Planning/ QS' — every gate must know the v2 vocabulary.
   const tabRules = {
-    'ho':       ['Procurement','Planning/ QS','Project Manager','Site Manager','Admin'],
-    'wo':       ['Procurement','Planning/ QS','Project Manager','Site Manager','Admin'],
-    'payments': ['Planning/ QS','Project Manager','Admin'],
-    'masters':  ['Procurement','Store Executive','Site Manager','Planning/ QS','Project Manager','Admin'],
-    'purchase': ['Procurement','Store Executive','Site Manager','Planning/ QS','Project Manager','Admin'],
+    'ho':       ['Procurement','Planning/ QS','Project Manager','Site Manager','Admin',
+                 'Contracts Executive','Contracts Manager','Site QS/Planning'],
+    'wo':       ['Procurement','Planning/ QS','Project Manager','Site Manager','Admin',
+                 'Contracts Executive','Contracts Manager','Site QS/Planning'],
+    'payments': ['Planning/ QS','Project Manager','Admin',
+                 'Site QS/Planning','Accounts Assistant','Accounts Manager'],
+    'masters':  ['Procurement','Store Executive','Site Manager','Planning/ QS','Project Manager','Admin',
+                 'Purchase Executive','Purchase Manager','Contracts Executive','Contracts Manager'],
+    'purchase': ['Procurement','Store Executive','Site Manager','Planning/ QS','Project Manager','Admin',
+                 'Purchase Executive','Purchase Manager','Site QS/Planning'],
     'users':    ['Admin'],
   };
   Object.entries(tabRules).forEach(([tab, roles]) => {
@@ -32619,14 +32627,21 @@ function applyRoleTabVisibility() {
 }
 
 function applyPurchaseSubTabVisibility() {
+  // v74.1: v2 role names appended (see tabRules note above).
   const puTabRules = {
-    'mir':   ['Site Manager','Store Executive','Procurement','Project Manager','Admin'],
-    'rfq':   ['Procurement','Project Manager','Admin'],
-    'po':    ['Procurement','Store Executive','Project Manager','Planning/ QS','Admin'],
-    'grn':   ['Store Executive','Site Manager','Project Manager','Admin'],
-    'pob':   ['Planning/ QS','Project Manager','Admin'],
+    'mir':   ['Site Manager','Store Executive','Procurement','Project Manager','Admin',
+              'Purchase Executive','Purchase Manager'],
+    'rfq':   ['Procurement','Project Manager','Admin',
+              'Purchase Executive','Purchase Manager'],
+    'po':    ['Procurement','Store Executive','Project Manager','Planning/ QS','Admin',
+              'Purchase Executive','Purchase Manager','Site QS/Planning'],
+    'grn':   ['Store Executive','Site Manager','Project Manager','Admin',
+              'Purchase Executive','Purchase Manager','Site QS/Planning'],
+    'pob':   ['Planning/ QS','Project Manager','Admin',
+              'Site QS/Planning'],
     'mis':   ['Store Executive','Site Manager','Project Manager','Admin'],
-    'stock': ['Store Executive','Site Manager','Planning/ QS','Project Manager','Admin'],
+    'stock': ['Store Executive','Site Manager','Planning/ QS','Project Manager','Admin',
+              'Site QS/Planning','Purchase Executive','Purchase Manager'],
     'openstock': ['Admin'],
   };
   Object.entries(puTabRules).forEach(([tab, roles]) => {
@@ -32793,6 +32808,24 @@ const DASH_CARD_DEFS = {
   ],
 };
 DASH_CARD_DEFS['Admin'] = DASH_CARD_DEFS['Project Manager'].slice();
+// ── v74.1: v2-role dashboard cards, derived from the legacy sets by document
+// family. Proper per-role curation lands in v75 with the function_permissions
+// splice; these keep the dashboard truthful for hook-v3 users today.
+(function(){
+  var byId = function(list, ids){ return list.filter(function(c){ return ids.indexOf(c.id) !== -1; }); };
+  var notId = function(list, ids){ return list.filter(function(c){ return ids.indexOf(c.id) === -1; }); };
+  var PR = DASH_CARD_DEFS['Procurement'], QS = DASH_CARD_DEFS['Planning/ QS'], PM = DASH_CARD_DEFS['Project Manager'];
+  var woHo = ['pr_ho','pr_wo','pr_ho_corr','pr_wo_corr'];
+  DASH_CARD_DEFS['Purchase Executive']  = notId(PR, woHo);                    // RFQ/QC/PO create side
+  DASH_CARD_DEFS['Purchase Manager']    = byId(PM, ['pm_qc','pm_po']);        // QC/PO approve side
+  DASH_CARD_DEFS['Contracts Executive'] = byId(PR, woHo);                     // WO/HO create side
+  DASH_CARD_DEFS['Contracts Manager']   = byId(PM, ['pm_ho','pm_wo']);        // WO/HO approve side
+  DASH_CARD_DEFS['Site QS/Planning']    = notId(QS, ['qs_pay']);              // certs & bills create side
+  DASH_CARD_DEFS['Accounts Assistant']  = byId(QS, ['qs_pay']);               // payment confirmations
+  DASH_CARD_DEFS['Accounts Manager']    = byId(QS, ['qs_pay']);
+  // Office QS/Planning (+ Manager): estimation queue lives inside the Plan
+  // module, not the dashboard — intentionally no cards here.
+})();
 
 // Card id → document family. Cards not listed fall into 'po' (Purchase) by default.
 const DASH_CARD_GROUP = {
@@ -34325,7 +34358,8 @@ const PGS_PLAN_SRC = "<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n<meta charset
 // v4: mirror of Planning QS's own ALLOWED_ROLES gate (exact strings).
 // The embedded app remains the authority — this only decides which
 // chrome to show, so its standalone login card never surfaces here.
-const PGS_PLAN_ALLOWED_ROLES = ['Admin','Planning/ QS','Project Manager'];
+const PGS_PLAN_ALLOWED_ROLES = ['Admin','Planning/ QS','Project Manager',
+  'Office QS/Planning','Office QS/Planning Manager'];   // v74.1: match embedded app's own gate
 
 function pgsPlanRoleAllowed(){
   return Array.isArray(state.roles)
