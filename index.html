@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Penguin Suite v74.2</title>
+<title>Penguin Suite v75.4</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js"></script>
@@ -2429,8 +2429,16 @@ table.pgp-roles, table.pgp-mx{ border-collapse:collapse; width:100%; }
 
   <!-- PRR TAB -->
   <div id="payTab-prr" style="display:none;">
-    <div class="card" id="prr_form" style="display:none;">
-      <h3>New Payment Release Request</h3>
+    <!-- v75.1: PRR creation is a modal — closes only via ✕ / Cancel, never click-outside -->
+    <div id="prr_modal" style="position:fixed;inset:0;background:rgba(16,26,46,.55);z-index:4000;display:none;align-items:center;justify-content:center;padding:20px;">
+    <div class="card" id="prr_form" style="display:flex;flex-direction:column;margin:0;width:min(1280px,96vw);height:92vh;overflow:hidden;position:relative;">
+      <div style="display:flex;align-items:center;gap:12px;position:sticky;top:0;background:#fff;z-index:2;padding:2px 0 10px;border-bottom:1px solid var(--border,#e2e8f0);margin-bottom:12px;">
+        <h3 style="margin:0;flex:1;">New Payment Release Request</h3>
+        <span style="color:var(--muted);font-size:12px;">Total Selected: <strong id="prr_selectedTotal" style="color:var(--accent);">₹ 0.00</strong></span>
+        <button class="btn btn-primary" onclick="guardedSave(savePRR, this)">Submit PRR</button>
+        <button class="btn btn-ghost" onclick="closePRRForm()">Cancel</button>
+        <button type="button" onclick="closePRRForm()" title="Close" style="background:transparent;border:none;font-size:20px;line-height:1;color:var(--muted);cursor:pointer;padding:2px 8px;">✕</button>
+      </div>
       <div class="grid-3">
         <div class="field">
           <label>PRR Number</label>
@@ -2449,37 +2457,99 @@ table.pgp-roles, table.pgp-mx{ border-collapse:collapse; width:100%; }
         <label>Remarks</label>
         <input id="prr_remarks" placeholder="Notes…">
       </div>
-      <h3 style="margin-top:16px;">Select Bills to Include</h3>
-      <div class="table-wrap">
+      <h3 style="margin-top:16px;margin-bottom:8px;">Select Bills to Include</h3>
+      <!-- v75.2: filter row — combinable; filtering hides rows without touching
+           ticked state, so already-selected bills stay in the total. -->
+      <div id="prr_filterRow" style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:8px;">
+        <input id="prr_f_bill"   placeholder="Bill #…"    oninput="prrApplyFilters()" style="width:120px;padding:5px 8px;border:1px solid var(--border);border-radius:4px;font-size:12px;">
+        <select id="prr_f_type"  onchange="prrApplyFilters()" style="padding:5px 8px;border:1px solid var(--border);border-radius:4px;font-size:12px;">
+          <option value="">All types</option><option>WOB</option><option>HOB</option><option>POB</option>
+        </select>
+        <input id="prr_f_order"  placeholder="Order #…"   oninput="prrApplyFilters()" style="width:130px;padding:5px 8px;border:1px solid var(--border);border-radius:4px;font-size:12px;">
+        <input id="prr_f_vendor" placeholder="Vendor…"    oninput="prrApplyFilters()" style="width:150px;padding:5px 8px;border:1px solid var(--border);border-radius:4px;font-size:12px;">
+        <input id="prr_f_inv"    placeholder="Invoice…"   oninput="prrApplyFilters()" style="width:110px;padding:5px 8px;border:1px solid var(--border);border-radius:4px;font-size:12px;">
+        <span style="font-size:12px;color:var(--muted);">Due before</span>
+        <input id="prr_f_due" type="date" onchange="prrApplyFilters()" style="padding:4px 6px;border:1px solid var(--border);border-radius:4px;font-size:12px;">
+        <button class="btn btn-ghost btn-sm" onclick="prrClearFilters()">✕ Clear</button>
+        <span id="prr_f_count" style="font-size:12px;color:var(--muted);margin-left:auto;"></span>
+      </div>
+      <style>
+        /* v75.3/4: fit-to-window — vertical scroll only, columns share 100% width.
+           v75.4: tokens never break mid-word — pills, dates and amounts stay
+           on one line; long ids wrap only at their / separators. */
+        #prr_tableWrap{flex:1;min-height:0;overflow-y:auto;overflow-x:hidden;}
+        #prr_tableWrap table{width:100%;table-layout:fixed;font-size:11px;}
+        #prr_tableWrap th,#prr_tableWrap td{padding:5px 5px;vertical-align:middle;}
+        #prr_tableWrap th{white-space:normal;line-height:1.25;}
+        #prr_tableWrap th.prr-sortable{white-space:normal;}
+        #prr_tableWrap td.num,#prr_tableWrap th.num{white-space:nowrap;font-size:10.5px;}
+        #prr_tableWrap td.mono{font-size:10.5px;white-space:normal !important;word-break:break-all;}
+        #prr_tableWrap td .prr-pill{white-space:nowrap;display:inline-block;font-size:10px;padding:2px 6px;border-radius:8px;}
+        #prr_tableWrap .prr_reqAmt{width:100% !important;min-width:0;box-sizing:border-box;}
+        #prr_tableWrap thead th{position:sticky;top:0;z-index:2;background:#f1f5f9;}
+        #prr_tableWrap th.prr-sortable{cursor:pointer;user-select:none;white-space:nowrap;}
+        #prr_tableWrap th.prr-sortable:hover{background:#e2e8f0;}
+        #prr_tableWrap th .prr-arrow{font-size:9px;color:var(--accent);margin-left:3px;}
+      </style>
+      <div class="table-wrap" id="prr_tableWrap">
         <table>
+          <colgroup>
+            <col style="width:30px;"><col style="width:12%;"><col style="width:52px;">
+            <col style="width:12%;"><col style="width:12.5%;"><col style="width:8%;">
+            <col style="width:76px;"><col style="width:76px;">
+            <col style="width:9%;"><col style="width:9%;"><col style="width:9.5%;">
+            <col style="width:84px;"></colgroup>
           <thead><tr>
             <th style="width:36px;"><input type="checkbox" id="prr_selectAll" onchange="toggleAllBills(this)"></th>
-            <th>Bill Number</th><th>Type</th><th>Order #</th><th>Vendor</th>
-            <th>Invoice No.</th><th>Invoice Date</th><th>Payment Due</th>
-            <th class="num">Invoice Value</th><th class="num">Net Payable</th>
-            <th class="num">Outstanding (O/S)</th>
+            <th class="prr-sortable" onclick="prrSort('bill')">Bill Number<span class="prr-arrow" id="prr_ar_bill"></span></th>
+            <th class="prr-sortable" onclick="prrSort('type')">Type<span class="prr-arrow" id="prr_ar_type"></span></th>
+            <th class="prr-sortable" onclick="prrSort('order')">Order #<span class="prr-arrow" id="prr_ar_order"></span></th>
+            <th class="prr-sortable" onclick="prrSort('vendor')">Vendor<span class="prr-arrow" id="prr_ar_vendor"></span></th>
+            <th>Invoice No.</th>
+            <th class="prr-sortable" onclick="prrSort('invdate')">Invoice Date<span class="prr-arrow" id="prr_ar_invdate"></span></th>
+            <th class="prr-sortable" onclick="prrSort('due')">Payment Due<span class="prr-arrow" id="prr_ar_due"></span></th>
+            <th class="num prr-sortable" onclick="prrSort('invval')">Invoice Value<span class="prr-arrow" id="prr_ar_invval"></span></th>
+            <th class="num prr-sortable" onclick="prrSort('netpay')">Net Payable<span class="prr-arrow" id="prr_ar_netpay"></span></th>
+            <th class="num prr-sortable" onclick="prrSort('os')">Outstanding (O/S)<span class="prr-arrow" id="prr_ar_os"></span></th>
             <th class="num">Request Amount (₹)</th>
           </tr></thead>
           <tbody id="prr_billsBody"><tr><td colspan="12" class="center muted">Loading bills…</td></tr></tbody>
         </table>
       </div>
-      <div style="margin-top:10px;color:var(--muted);font-size:12px;">Total Selected: <strong id="prr_selectedTotal" style="color:var(--accent);">₹ 0.00</strong></div>
-      <div class="actions-row">
-        <button class="btn btn-primary" onclick="guardedSave(savePRR, this)">Submit PRR</button>
-        <button class="btn btn-ghost" onclick="closePRRForm()">Cancel</button>
-      </div>
     </div>
+    </div><!-- /prr_modal -->
     <div class="card" id="prr_listCard">
       <h3>Payment Release Requests</h3>
-      <div class="actions-row" style="margin-bottom:12px;">
+      <div class="actions-row" style="margin-bottom:10px;display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
         <button class="btn btn-primary btn-sm" id="btn_newPRR" onclick="newPRR()">+ New PRR</button>
+        <input id="prl_f_num"  placeholder="PRR #…"        oninput="prlApplyFilters()" style="width:130px;padding:5px 8px;border:1px solid var(--border);border-radius:4px;font-size:12px;">
+        <input id="prl_f_by"   placeholder="Requested by…" oninput="prlApplyFilters()" style="width:130px;padding:5px 8px;border:1px solid var(--border);border-radius:4px;font-size:12px;">
+        <select id="prl_f_st"  onchange="prlApplyFilters()" style="padding:5px 8px;border:1px solid var(--border);border-radius:4px;font-size:12px;">
+          <option value="">All statuses</option><option>Unpaid</option><option>Partial</option><option>Paid</option><option>Cancelled</option>
+        </select>
+        <input id="prl_f_from" type="date" onchange="prlApplyFilters()" title="From date" style="padding:4px 6px;border:1px solid var(--border);border-radius:4px;font-size:12px;">
+        <span style="font-size:12px;color:var(--muted);">→</span>
+        <input id="prl_f_to"   type="date" onchange="prlApplyFilters()" title="To date" style="padding:4px 6px;border:1px solid var(--border);border-radius:4px;font-size:12px;">
+        <button class="btn btn-ghost btn-sm" onclick="prlClearFilters()">✕ Clear</button>
+        <span id="prl_f_count" style="font-size:12px;color:var(--muted);margin-left:auto;"></span>
       </div>
+      <style>
+        #prr_listCard th.prl-sortable{cursor:pointer;user-select:none;}
+        #prr_listCard th.prl-sortable:hover{background:#e2e8f0;}
+        #prr_listCard th .prl-arrow{font-size:9px;color:var(--accent);margin-left:3px;}
+      </style>
       <div class="table-wrap">
         <table>
           <thead><tr>
-            <th>PRR Number</th><th>Date</th><th>Requested By</th>
-            <th class="num">Requested Amt</th><th class="num">Paid Amt</th>
-            <th class="num">Balance</th><th># Bills</th><th>Status</th><th class="center">Actions</th>
+            <th class="prl-sortable" onclick="prlSort('num')">PRR Number<span class="prl-arrow" id="prl_ar_num"></span></th>
+            <th class="prl-sortable" onclick="prlSort('date')">Date<span class="prl-arrow" id="prl_ar_date"></span></th>
+            <th class="prl-sortable" onclick="prlSort('by')">Requested By<span class="prl-arrow" id="prl_ar_by"></span></th>
+            <th class="num prl-sortable" onclick="prlSort('req')">Requested Amt<span class="prl-arrow" id="prl_ar_req"></span></th>
+            <th class="num prl-sortable" onclick="prlSort('paid')">Paid Amt<span class="prl-arrow" id="prl_ar_paid"></span></th>
+            <th class="num prl-sortable" onclick="prlSort('bal')">Balance<span class="prl-arrow" id="prl_ar_bal"></span></th>
+            <th class="prl-sortable" onclick="prlSort('bills')"># Bills<span class="prl-arrow" id="prl_ar_bills"></span></th>
+            <th class="prl-sortable" onclick="prlSort('st')">Status<span class="prl-arrow" id="prl_ar_st"></span></th>
+            <th class="center">Actions</th>
           </tr></thead>
           <tbody id="prr_listBody"><tr><td colspan="9" class="center muted">Loading…</td></tr></tbody>
         </table>
@@ -4950,70 +5020,60 @@ let COMPANY = {   // v66: filled from organizations + projects at project entry 
   name: '', addr: '', gstin: '', projectName: '', projectAddr: ''
 };
 
-const ROLE_PERMS = {
-  // ── v59 role structure v2 (matches role_grants seed, migration 2026-08-13) ──
-  // Retired roles kept for legacy-profile fallback only (deactivated in DB):
-  'Procurement':     { canCreateHO: true, canCreateWO: true,
-                       canCreatePO: true, canCreateRFQ: true, canCreateQC: true },
-  'Planning/ QS':    { canCreateHOB: true, canCreateWOB: true, canConfirmPayment: true,
-                       canCreatePOB: true, canManageMasters: true },
-  // ── Active v2 roles ──
-  'Office QS/Planning':         { canCreateEstimate: true, canCreateQTO: true },
-  'Office QS/Planning Manager': { canApproveEstimate: true, canApproveQTO: true },
-  'Purchase Executive': { canCreateRFQ: true, canCreateQC: true, canCreatePO: true,
-                          canAddVendorMaster: true, canAddMaterialMaster: true,
-                          canManageMasters: true },
-  'Purchase Manager':   { canApproveQC: true, canApprovePO: true,
-                          canApproveVendorMaster: true, canApproveMaterialMaster: true,
-                          canCancelPO: true, canShortClosePO: true,
-                          canShortCloseMIR: true, canCancelMIR: true,
-                          canManageMasters: true },
-  'Contracts Executive': { canCreateWO: true, canCreateHO: true,
-                           canAddActivityMaster: true, canAddContractorMaster: true,
-                           canManageMasters: true },
-  'Contracts Manager':   { canApproveWO: true, canApproveHO: true,
-                           canApproveActivityMaster: true, canApproveContractorMaster: true,
-                           canShortCloseWO: true, canShortCloseHO: true,
-                           canTerminateWO: true, canTerminateHO: true,
-                           canManageMasters: true },
-  'Site QS/Planning': { canCreateWOC: true, canCreateHOC: true,
-                        canCreateWOB: true, canCreateHOB: true, canCreatePOB: true,
-                        canCreatePRR: true, canCreateARR: true,
-                        canCreateHRR: true, canCreateRRR: true },
-  'Site Manager':    { canCreateMIR: true,
-                       canApproveGRN: true, canApproveMIS: true,
-                       canApproveWOC: true, canApproveHOC: true },
-  'Store Executive': { canCreateGRN: true, canCreateMIS: true },
-  'Project Manager': { canApproveMIR: true, canApprovePOB: true, canApproveBill: true,
-                       canApprovePayReq: true,
-                       canAuditStock: true, canOverrideMIS: true },
-  'Accounts Assistant': { canCreatePayConfirm: true },
-  'Accounts Manager':   { canApprovePayConfirm: true },
-  'Admin':           { canCreateHO: true, canCreateWO: true, canApproveHO: true,
-                       canApproveWO: true, canCreateHOC: true, canCreateWOC: true,
-                       canApproveHOC: true, canApproveWOC: true,
-                       canCreateHOB: true, canCreateWOB: true, canCreatePRR: true,
-                       canCreateARR: true, canConfirmPayment: true,
-                       canApprovePayReq: true, canCreatePayConfirm: true, canApprovePayConfirm: true,
-                       canShortCloseHO: true, canShortCloseWO: true, canApproveBill: true,
-                       canTerminateWO: true, canTerminateHO: true,
-                       canCreateHRR: true, canCreateRRR: true, canManageUsers: true,
-                       canCreatePO: true, canCreateRFQ: true, canCreateQC: true,
-                       canCreateMIR: true, canApproveMIR: true, canApproveQC: true,
-                       canApprovePO: true, canCreateGRN: true, canApproveGRN: true,
-                       canCancelPO: true, canShortClosePO: true, canCancelMIR: true,
-                       canCreatePOB: true, canApprovePOB: true,
-                       canCreateMIS: true, canApproveMIS: true, canOverrideMIS: true,
-                       canManageMasters: true,
-                       canAddActivityMaster: true, canApproveActivityMaster: true,
-                       canAddContractorMaster: true, canApproveContractorMaster: true,
-                       canAddVendorMaster: true, canApproveVendorMaster: true,
-                       canAddMaterialMaster: true, canApproveMaterialMaster: true,
-                       canCreateEstimate: true, canApproveEstimate: true,
-                       canCreateQTO: true, canApproveQTO: true,
-                       canDeleteGRN: true, canDeletePOB: true,
-                       canAuditStock: true, canShortCloseMIR: true }
+// ============================================================
+// v75 — SINGLE SOURCE OF ROLE TRUTH
+// Permissions come from live function_permissions rows fetched at
+// sign-in (state.fnPerms). The old hardcoded role map is gone; PGS_PERM_MAP
+// translates the 107 legacy permission call sites to (code, side)
+// requirements against the same table the DB triggers enforce.
+// A key is true when ANY of its [code, side] requirements is held.
+// ============================================================
+const PGS_PERM_MAP = {
+  // Estimation
+  canCreateEstimate:[['estimate','C']], canApproveEstimate:[['estimate','A']],
+  canCreateQTO:[['qto','C']],           canApproveQTO:[['qto','A']],
+  // Purchase chain
+  canCreateMIR:[['mir','C']],   canApproveMIR:[['mir','A']],
+  canShortCloseMIR:[['sc_mir','C']],  canCancelMIR:[['mir_cancel','C']],
+  canCreateRFQ:[['rfq','C']],
+  canCreateQC:[['qc','C']],     canApproveQC:[['qc','A']],
+  canCreatePO:[['po','C']],     canApprovePO:[['po','A']],
+  canCancelPO:[['po_cancel','C']],    canShortClosePO:[['sc_po','C']],
+  canCreateGRN:[['grn','C']],   canApproveGRN:[['grn','A']],
+  canCreatePOB:[['pob','C']],   canApprovePOB:[['pob','A']],
+  canCreateMIS:[['mis','C']],   canApproveMIS:[['mis','A']],
+  canOverrideMIS:[['mis_override','A'],['mis_override','C']],
+  canAuditStock:[['stock_audit','C'],['stock_audit','A']],
+  // Contracts chain
+  canCreateWO:[['wo','C']],     canApproveWO:[['wo','A']],
+  canShortCloseWO:[['sc_wo','C']],    canTerminateWO:[['wo_terminate','C']],
+  canCreateHO:[['ho','C']],     canApproveHO:[['ho','A']],
+  canShortCloseHO:[['sc_ho','C']],    canTerminateHO:[['ho_terminate','C']],
+  canCreateWOC:[['woc','C']],   canApproveWOC:[['woc','A']],
+  canCreateHOC:[['hoc','C']],   canApproveHOC:[['hoc','A']],
+  canCreateWOB:[['wob','C']],
+  canCreateHOB:[['hob','C']],
+  canApproveBill:[['wob','A'],['hob','A']],
+  // Payments
+  canCreatePRR:[['prr','C']], canCreateARR:[['arr','C']],
+  canCreateHRR:[['hrr','C']], canCreateRRR:[['rrr','C']],
+  canApprovePayReq:[['prr','A'],['arr','A'],['hrr','A'],['rrr','A']],
+  canConfirmPayment:[['payment_confirm','C']],
+  canCreatePayConfirm:[['payment_confirm','C']],
+  canApprovePayConfirm:[['payment_confirm','A']],
+  // Masters
+  canAddActivityMaster:[['masters_activity','C']],     canApproveActivityMaster:[['masters_activity','A']],
+  canAddContractorMaster:[['masters_contractor','C']], canApproveContractorMaster:[['masters_contractor','A']],
+  canAddVendorMaster:[['masters_vendor','C']],         canApproveVendorMaster:[['masters_vendor','A']],
+  canAddMaterialMaster:[['masters_material','C']],     canApproveMaterialMaster:[['masters_material','A']],
+  canManageMasters:[['masters_activity','C'],['masters_activity','A'],
+                    ['masters_contractor','C'],['masters_contractor','A'],
+                    ['masters_vendor','C'],['masters_vendor','A'],
+                    ['masters_material','C'],['masters_material','A']],
 };
+// Owner / super-admin exclusive actions — no function code exists for these.
+const PGS_OWNER_ONLY = ['canManageUsers','canDeleteGRN','canDeletePOB'];
+
 
 // ── Purchase module state (defined early so initApp can call apiLoadMaterials) ──
 var puState = {
@@ -7270,8 +7330,12 @@ async function _pgsClaimRoles(){
     const seg = session.access_token.split('.')[1].replace(/-/g,'+').replace(/_/g,'/');
     const payload = JSON.parse(atob(seg));
     const codes = Array.isArray(payload.project_roles) ? payload.project_roles : [];
+    // v75: claims are the ONLY role source — capture owner/super/project here
+    state.isOwner        = payload.user_role === 'owner';
+    state.isSuper        = codes.indexOf('admin') !== -1;
+    state.claimProjectId = payload.project_id || null;
     return codes.map(function(c){ return _PGS_ROLE_LABELS[c]; }).filter(Boolean);
-  }catch(e){ console.warn('[v48] claim-role decode failed, using profile:', e.message); return []; }
+  }catch(e){ console.warn('[v75] claim decode failed:', e.message); return []; }
 }
 async function onSignedIn(user) {
   // Retry profile fetch up to 3 times — RLS can take a moment to recognise new session
@@ -7307,17 +7371,32 @@ async function onSignedIn(user) {
 
   state.userId   = user.id;
   state.user     = user.email;
-  const _claimRoles = await _pgsClaimRoles();                                  // v48
-  state.roles    = _claimRoles.length ? _claimRoles : _parseRoles(profile.role); // v48: per-project roles win
-  state.role     = state.roles.join(' · '); // display string only — all logic uses state.roles
+  const _claimRoles = await _pgsClaimRoles();                                  // v75
+  // v75: user_profiles.role fallback removed — JWT claims are the only role
+  // source. Owner sessions carry no project_roles; label for display only.
+  state.roles    = _claimRoles.length ? _claimRoles : (state.isOwner ? ['Owner'] : []);
+  state.role     = state.roles.join(' · ');
   state.userName = profile.full_name;
+  // v75: one fetch per session (Option A) — live permission rows for THIS
+  // user in THIS project. RLS (fp_self_read) scopes to own rows; owner and
+  // super-admin short-circuit in mergedPerms and skip the fetch.
+  state.fnPerms = [];
+  if (!state.isOwner && !state.isSuper) {
+    try {
+      let q = sb.from('function_permissions').select('function_code,can_create,can_approve');
+      if (state.claimProjectId) q = q.eq('project_id', state.claimProjectId);
+      const { data: _fp, error: _fpe } = await q;
+      if (_fpe) console.warn('[v75] fnPerms fetch failed:', _fpe.message);
+      state.fnPerms = _fp || [];
+    } catch(e) { console.warn('[v75] fnPerms fetch failed:', e); }
+  }
 
   document.getElementById('authGate').style.display = 'none';
   document.getElementById('app').classList.remove('hidden');
   document.getElementById('currentUser').textContent = profile.full_name;
   document.getElementById('currentRole').textContent = state.roles.join(' · ');
 
-  if (hasRole('Admin')) document.getElementById('tab-users').style.display = '';
+  if (state.isOwner || state.isSuper) document.getElementById('tab-users').style.display = '';   // v75
 
   applyRoleUI();
   await initApp();
@@ -7473,8 +7552,30 @@ function _roleErrMsg(msg) {
 }
 
 // Union of all permission objects across every assigned role
+let _mpCache = null, _mpSrc = null, _mpOwner = null;
 function mergedPerms() {
-  return state.roles.reduce((acc, r) => Object.assign(acc, ROLE_PERMS[r] || {}), {});
+  const ownerish = !!(state.isOwner || state.isSuper);
+  if (_mpCache && _mpSrc === state.fnPerms && _mpOwner === ownerish) return _mpCache;
+  const out = {};
+  if (ownerish) {
+    Object.keys(PGS_PERM_MAP).forEach(function(k){ out[k] = true; });
+    PGS_OWNER_ONLY.forEach(function(k){ out[k] = true; });
+  } else {
+    const fp = state.fnPerms || [];
+    const has = function(c, s){
+      for (var i = 0; i < fp.length; i++) {
+        var r = fp[i];
+        if (r.function_code === c && (s === 'C' ? r.can_create : r.can_approve)) return true;
+      }
+      return false;
+    };
+    Object.keys(PGS_PERM_MAP).forEach(function(k){
+      out[k] = PGS_PERM_MAP[k].some(function(rq){ return has(rq[0], rq[1]); });
+    });
+    PGS_OWNER_ONLY.forEach(function(k){ out[k] = false; });
+  }
+  _mpCache = out; _mpSrc = state.fnPerms; _mpOwner = ownerish;
+  return out;
 }
 
 // ============================================================
@@ -7503,7 +7604,7 @@ function applyRoleUI() {
   const puPerms = ['canCreateMIR','canApproveMIR','canCreateRFQ','canCreateQC','canApproveQC',
     'canCreatePO','canApprovePO','canCreateGRN','canApproveGRN',
     'canCreatePOB','canApprovePOB','canCreateMIS','canApproveMIS','canOverrideMIS'];
-  const hasPU = puPerms.some(p => perms[p]) || perms.canManageMasters;
+  const hasPU = puPerms.some(p => perms[p]);   // v75: masters perms no longer open Purchase
   const puTab = document.getElementById('tab-purchase');
   if (puTab) puTab.style.display = hasPU ? '' : 'none';
   // ── v59 W2: full tab gating from merged perms ──
@@ -7520,8 +7621,10 @@ function applyRoleUI() {
                        'canAddContractorMaster','canApproveContractorMaster',
                        'canAddVendorMaster','canApproveVendorMaster',
                        'canAddMaterialMaster','canApproveMaterialMaster');
+  // v75: perm-derived; PM keeps Plan access as embedded-app parity (its
+  // internal canApprove() admits Project Manager) until its gates migrate.
   const _planV = _anyP('canCreateEstimate','canApproveEstimate','canCreateQTO','canApproveQTO')
-              || hasRole('Admin') || hasRole('Project Manager') || hasRole('Planning/ QS');
+              || state.isSuper || state.roles.includes('Project Manager');
   [['wo',_woV],['ho',_hoV],['payments',_payV],['masters',_masV],['plan',_planV]]
     .forEach(([t,v]) => { const el = _tabEl(t); if (el) el.style.display = v ? '' : 'none'; });
 }
@@ -16567,7 +16670,10 @@ async function loadPRRList() {
     const st = p['Status'] || 'Unpaid';
     const paid = num(p['Paid Amount']); const req = num(p['Requested Amount']);
     const bal = Math.max(0, req - paid);
-    return `<tr>
+    return `<tr class="prl_row"
+      data-num="${esc(p['PRR Number'])}" data-date="${esc(p['PRR Date']||'')}"
+      data-by="${esc(p['Requested By']||'')}" data-req="${req}" data-paid="${paid}"
+      data-bal="${bal}" data-bills="${Number(p['Bill Count'])||0}" data-st="${esc(st)}">
       <td class="mono" style="font-weight:600;">${esc(p['PRR Number'])}</td>
       <td>${fmtDate(p['PRR Date'])}</td>
       <td>${esc(p['Requested By']||'—')}</td>
@@ -16583,16 +16689,63 @@ async function loadPRRList() {
       </td>
     </tr>`;
   }).join('');
+  prlApplyFilters();   // v75.4: re-apply active filters after any reload
+}
+
+// ── v75.4: PRR list filters + sort (hide / DOM-move, never re-render) ─────
+function prlApplyFilters() {
+  const v = id => (document.getElementById(id)?.value || '').trim().toLowerCase();
+  const fn = v('prl_f_num'), fb = v('prl_f_by'), fs = v('prl_f_st'),
+        fFrom = v('prl_f_from'), fTo = v('prl_f_to');
+  let shown = 0, total = 0;
+  document.querySelectorAll('#prr_listBody tr.prl_row').forEach(tr => {
+    const d = tr.dataset; total++;
+    let ok = true;
+    if (fn && d.num.toLowerCase().indexOf(fn) === -1) ok = false;
+    if (ok && fb && d.by.toLowerCase().indexOf(fb) === -1) ok = false;
+    if (ok && fs && d.st.toLowerCase() !== fs) ok = false;
+    if (ok && fFrom && (!d.date || d.date < fFrom)) ok = false;
+    if (ok && fTo && (!d.date || d.date > fTo)) ok = false;
+    tr.style.display = ok ? '' : 'none';
+    if (ok) shown++;
+  });
+  const c = document.getElementById('prl_f_count');
+  if (c) c.textContent = total ? (shown === total ? total + ' PRRs' : shown + ' of ' + total + ' PRRs') : '';
+}
+function prlClearFilters() {
+  ['prl_f_num','prl_f_by','prl_f_from','prl_f_to'].forEach(id => {
+    const el = document.getElementById(id); if (el) el.value = '';
+  });
+  const s = document.getElementById('prl_f_st'); if (s) s.value = '';
+  prlApplyFilters();
+}
+let _prlSortKey = null, _prlSortDir = 1;
+function prlSort(key) {
+  if (_prlSortKey === key) _prlSortDir = -_prlSortDir; else { _prlSortKey = key; _prlSortDir = 1; }
+  const numeric = { req:1, paid:1, bal:1, bills:1 };
+  const tbody = document.getElementById('prr_listBody');
+  const rows = Array.from(tbody.querySelectorAll('tr.prl_row'));
+  rows.sort((a, b) => {
+    let x = a.dataset[key] || '', y = b.dataset[key] || '';
+    if (numeric[key]) { x = Number(x) || 0; y = Number(y) || 0; }
+    return (x < y ? -1 : x > y ? 1 : 0) * _prlSortDir;
+  });
+  rows.forEach(r => tbody.appendChild(r));
+  ['num','date','by','req','paid','bal','bills','st'].forEach(k => {
+    const el = document.getElementById('prl_ar_' + k);
+    if (el) el.textContent = (k === _prlSortKey) ? (_prlSortDir === 1 ? '▲' : '▼') : '';
+  });
 }
 
 async function newPRR() {
-  if (!hasPerm('canCreatePRR')) { toast('Only Project Manager can create PRRs','error'); return; }
-  document.getElementById('prr_form').style.display = 'block';
+  if (!hasPerm('canCreatePRR')) { toast('You do not have permission to create PRRs','error'); return; }
+  document.getElementById('prr_modal').style.display = 'flex';   // v75.1: modal
   document.getElementById('prr_date').value = today();
   document.getElementById('prr_requestedBy').value = state.userName;
   document.getElementById('prr_remarks').value = '';
   document.getElementById('prr_number').value = 'PRR/' + currentFY() + '/\u2014\u2014\u2014 (auto)';
   document.getElementById('prr_selectedTotal').textContent = '\u20b9 0.00';
+  _prrSortKey = null; _prrSortDir = 1; prrClearFilters();   // v75.2
 
   const billsRes = await apiGetUnpaidBills();
   const tbody = document.getElementById('prr_billsBody');
@@ -16609,7 +16762,12 @@ async function newPRR() {
     const cashBadge = isCashPOB
       ? ' <span style="font-size:10px;background:#ad6800;color:#fff;padding:1px 5px;border-radius:3px;font-weight:600;">DIRECT</span>'
       : '';
-    return `<tr>
+    return `<tr class="prr_billRow"
+      data-bill="${esc(b['Bill Number'])}" data-type="${esc(billType)}"
+      data-order="${esc(orderNum||'')}" data-vendor="${esc(b['Vendor Name']||'')}"
+      data-inv="${esc(b['Invoice No']||'')}"
+      data-invdate="${esc(b['Invoice Date']||'')}" data-due="${esc(b['Payment Due']||'')}"
+      data-invval="${num(b['Invoice Value'])}" data-netpay="${num(b['Net Payable'])}" data-os="${os}">
       <td class="center"><input type="checkbox" class="prr_billCheck"
         data-billnum="${esc(b['Bill Number'])}"
         data-honum="${esc(b['HO Number'])}"
@@ -16618,24 +16776,71 @@ async function newPRR() {
         data-os="${os}"
         onchange="updatePRRTotal()"></td>
       <td class="mono">${esc(b['Bill Number'])}${cashBadge}</td>
-      <td><span style="font-size:11px;padding:2px 7px;border-radius:8px;background:${billType==='WOB'?'#dbeafe':'#d1fae5'};color:${billType==='WOB'?'#1e40af':'#065f46'};">${esc(billType)}</span></td>
+      <td><span class="prr-pill" style="background:${billType==='WOB'?'#dbeafe':'#d1fae5'};color:${billType==='WOB'?'#1e40af':'#065f46'};">${esc(billType)}</span></td>
       <td class="mono">${esc(orderNum||'—')}</td>
       <td>${esc(b['Vendor Name']||'—')}</td>
       <td class="mono" style="font-size:11px;">${esc(b['Invoice No']||'—')}</td>
-      <td class="mono" style="font-size:11px;white-space:nowrap;">${b['Invoice Date']?fmtDate(b['Invoice Date']):'—'}</td>
-      <td class="mono" style="font-size:11px;white-space:nowrap;">${b['Payment Due']?fmtDate(b['Payment Due']):'—'}</td>
+      <td class="mono" style="font-size:10.5px;white-space:nowrap !important;word-break:normal !important;">${b['Invoice Date']?fmtDate(b['Invoice Date']):'—'}</td>
+      <td class="mono" style="font-size:10.5px;white-space:nowrap !important;word-break:normal !important;">${b['Payment Due']?fmtDate(b['Payment Due']):'—'}</td>
       <td class="num mono">${fmtINRSym(b['Invoice Value'])}</td>
       <td class="num mono">${fmtINRSym(b['Net Payable'])}</td>
       <td class="num mono" style="color:var(--accent);font-weight:600;">${fmtINRSym(os)}</td>
       <td class="num"><input type="number" class="prr_reqAmt" step="0.01" min="0.01" max="${os}" value="${os.toFixed(2)}"
-        style="width:110px;text-align:right;padding:5px 6px;border:1px solid var(--border);border-radius:3px;font-size:12px;background:var(--input-bg);color:var(--text);"
+        style="text-align:right;padding:5px 4px;border:1px solid var(--border);border-radius:3px;font-size:11.5px;background:var(--input-bg);color:var(--text);"
         oninput="updatePRRTotal()" disabled onwheel="this.blur()" onkeydown="if(event.key==='ArrowUp'||event.key==='ArrowDown')event.preventDefault()"></td>
     </tr>`;
   }).join('');
+  prrApplyFilters();   // v75.2: initialise the bill count label
 }
 
 function closePRRForm() {
-  document.getElementById('prr_form').style.display = 'none';
+  document.getElementById('prr_modal').style.display = 'none';   // v75.1
+}
+
+// ── v75.2: PRR bill-table filters + sort ─────────────────────────────────
+function prrApplyFilters() {
+  const v  = id => (document.getElementById(id)?.value || '').trim().toLowerCase();
+  const fb = v('prr_f_bill'), ft = v('prr_f_type'), fo = v('prr_f_order'),
+        fv = v('prr_f_vendor'), fi = v('prr_f_inv'), fd = v('prr_f_due');
+  let shown = 0, total = 0;
+  document.querySelectorAll('#prr_billsBody tr.prr_billRow').forEach(tr => {
+    const d = tr.dataset; total++;
+    let ok = true;
+    if (fb && d.bill.toLowerCase().indexOf(fb) === -1) ok = false;
+    if (ok && ft && d.type.toLowerCase() !== ft) ok = false;
+    if (ok && fo && d.order.toLowerCase().indexOf(fo) === -1) ok = false;
+    if (ok && fv && d.vendor.toLowerCase().indexOf(fv) === -1) ok = false;
+    if (ok && fi && d.inv.toLowerCase().indexOf(fi) === -1) ok = false;
+    if (ok && fd && (!d.due || d.due > fd)) ok = false;
+    tr.style.display = ok ? '' : 'none';
+    if (ok) shown++;
+  });
+  const c = document.getElementById('prr_f_count');
+  if (c) c.textContent = shown === total ? total + ' bills' : shown + ' of ' + total + ' bills';
+}
+function prrClearFilters() {
+  ['prr_f_bill','prr_f_order','prr_f_vendor','prr_f_inv','prr_f_due'].forEach(id => {
+    const el = document.getElementById(id); if (el) el.value = '';
+  });
+  const t = document.getElementById('prr_f_type'); if (t) t.value = '';
+  prrApplyFilters();
+}
+let _prrSortKey = null, _prrSortDir = 1;
+function prrSort(key) {
+  if (_prrSortKey === key) _prrSortDir = -_prrSortDir; else { _prrSortKey = key; _prrSortDir = 1; }
+  const numeric = { invval:1, netpay:1, os:1 };
+  const tbody = document.getElementById('prr_billsBody');
+  const rows = Array.from(tbody.querySelectorAll('tr.prr_billRow'));
+  rows.sort((a, b) => {
+    let x = a.dataset[key] || '', y = b.dataset[key] || '';
+    if (numeric[key]) { x = Number(x) || 0; y = Number(y) || 0; }
+    return (x < y ? -1 : x > y ? 1 : 0) * _prrSortDir;
+  });
+  rows.forEach(r => tbody.appendChild(r));   // DOM move — inputs keep state
+  ['bill','type','order','vendor','invdate','due','invval','netpay','os'].forEach(k => {
+    const el = document.getElementById('prr_ar_' + k);
+    if (el) el.textContent = (k === _prrSortKey) ? (_prrSortDir === 1 ? '▲' : '▼') : '';
+  });
 }
 
 async function cancelPRR(prrNum) {
@@ -16654,6 +16859,8 @@ async function cancelPRR(prrNum) {
 
 function toggleAllBills(cb) {
   document.querySelectorAll('.prr_billCheck').forEach(c => {
+    const _tr = c.closest('tr');
+    if (_tr && _tr.style.display === 'none') return;   // v75.2: filtered-out rows untouched
     c.checked = cb.checked;
     const row = c.closest('tr');
     const inp = row?.querySelector('.prr_reqAmt');
@@ -17823,7 +18030,7 @@ function switchPUTab(tab) {
   if (tab === 'openstock') { if (hasRole('Admin')) loadOSHistory(); else toast('Admin access only','error'); }
 }
 
-// puState is defined early in the file (after ROLE_PERMS) so initApp can use it
+// puState is defined early in the file (after PGS_PERM_MAP) so initApp can use it
 
 // Purchase tab is handled by main tab click handler (see switchPUTab call in tab nav section)
 
@@ -32603,50 +32810,34 @@ document.querySelectorAll('.tabs .tab').forEach(t => {
 });
 
 function applyRoleTabVisibility() {
-  // v74.1: legacy names kept for profile-fallback users; v2 names appended.
-  // Hook v3 filters retired role claims, so v2 users no longer inherit
-  // 'Procurement'/'Planning/ QS' — every gate must know the v2 vocabulary.
-  const tabRules = {
-    'ho':       ['Procurement','Planning/ QS','Project Manager','Site Manager','Admin',
-                 'Contracts Executive','Contracts Manager','Site QS/Planning'],
-    'wo':       ['Procurement','Planning/ QS','Project Manager','Site Manager','Admin',
-                 'Contracts Executive','Contracts Manager','Site QS/Planning'],
-    'payments': ['Planning/ QS','Project Manager','Admin',
-                 'Site QS/Planning','Accounts Assistant','Accounts Manager'],
-    'masters':  ['Procurement','Store Executive','Site Manager','Planning/ QS','Project Manager','Admin',
-                 'Purchase Executive','Purchase Manager','Contracts Executive','Contracts Manager'],
-    'purchase': ['Procurement','Store Executive','Site Manager','Planning/ QS','Project Manager','Admin',
-                 'Purchase Executive','Purchase Manager','Site QS/Planning'],
-    'users':    ['Admin'],
-  };
-  Object.entries(tabRules).forEach(([tab, roles]) => {
-    const el = document.querySelector('.tabs .tab[data-tab="'+tab+'"]');
-    if (el) el.style.display = state.roles.some(r => roles.includes(r)) ? '' : 'none';
-  });
+  // v75: role-name whitelists deleted. Main-tab visibility is owned by
+  // applyRoleUI (perm-derived); this wrapper adds the owner/super tabs
+  // and the purchase sub-tabs, so late callers keep their contract.
+  applyRoleUI();
+  const usersEl = document.querySelector('.tabs .tab[data-tab="users"]');
+  if (usersEl) usersEl.style.display = (state.isOwner || state.isSuper) ? '' : 'none';
+  const puTab = document.getElementById('tab-purchase');
+  if (puTab && (state.isOwner || state.isSuper)) puTab.style.display = '';
   applyPurchaseSubTabVisibility();
 }
 
 function applyPurchaseSubTabVisibility() {
-  // v74.1: v2 role names appended (see tabRules note above).
-  const puTabRules = {
-    'mir':   ['Site Manager','Store Executive','Procurement','Project Manager','Admin',
-              'Purchase Executive','Purchase Manager'],
-    'rfq':   ['Procurement','Project Manager','Admin',
-              'Purchase Executive','Purchase Manager'],
-    'po':    ['Procurement','Store Executive','Project Manager','Planning/ QS','Admin',
-              'Purchase Executive','Purchase Manager','Site QS/Planning'],
-    'grn':   ['Store Executive','Site Manager','Project Manager','Admin',
-              'Purchase Executive','Purchase Manager','Site QS/Planning'],
-    'pob':   ['Planning/ QS','Project Manager','Admin',
-              'Site QS/Planning'],
-    'mis':   ['Store Executive','Site Manager','Project Manager','Admin'],
-    'stock': ['Store Executive','Site Manager','Planning/ QS','Project Manager','Admin',
-              'Site QS/Planning','Purchase Executive','Purchase Manager'],
-    'openstock': ['Admin'],
+  // v75: sub-tab visibility derived from live perms, not role names.
+  const p = mergedPerms();
+  const any = function(){ for (var i=0;i<arguments.length;i++) if (p[arguments[i]]) return true; return false; };
+  const rules = {
+    'mir':   any('canCreateMIR','canApproveMIR','canShortCloseMIR','canCancelMIR','canCreateRFQ'),
+    'rfq':   any('canCreateRFQ','canCreateQC','canApproveQC'),
+    'po':    any('canCreatePO','canApprovePO','canCancelPO','canShortClosePO','canCreateGRN','canCreatePOB'),
+    'grn':   any('canCreateGRN','canApproveGRN','canCreatePOB'),
+    'pob':   any('canCreatePOB','canApprovePOB'),
+    'mis':   any('canCreateMIS','canApproveMIS','canOverrideMIS'),
+    'stock': any('canCreateGRN','canApproveGRN','canCreateMIS','canApproveMIS','canCreatePOB','canAuditStock'),
+    'openstock': !!(state.isOwner || state.isSuper),
   };
-  Object.entries(puTabRules).forEach(([tab, roles]) => {
+  Object.entries(rules).forEach(([tab, vis]) => {
     const el = document.querySelector('.sub-tab[data-putab="'+tab+'"]');
-    if (el) el.style.display = state.roles.some(r => roles.includes(r)) ? '' : 'none';
+    if (el) el.style.display = vis ? '' : 'none';
   });
 }
 
@@ -32807,25 +32998,74 @@ const DASH_CARD_DEFS = {
       } },
   ],
 };
-DASH_CARD_DEFS['Admin'] = DASH_CARD_DEFS['Project Manager'].slice();
-// ── v74.1: v2-role dashboard cards, derived from the legacy sets by document
-// family. Proper per-role curation lands in v75 with the function_permissions
-// splice; these keep the dashboard truthful for hook-v3 users today.
-(function(){
-  var byId = function(list, ids){ return list.filter(function(c){ return ids.indexOf(c.id) !== -1; }); };
-  var notId = function(list, ids){ return list.filter(function(c){ return ids.indexOf(c.id) === -1; }); };
-  var PR = DASH_CARD_DEFS['Procurement'], QS = DASH_CARD_DEFS['Planning/ QS'], PM = DASH_CARD_DEFS['Project Manager'];
-  var woHo = ['pr_ho','pr_wo','pr_ho_corr','pr_wo_corr'];
-  DASH_CARD_DEFS['Purchase Executive']  = notId(PR, woHo);                    // RFQ/QC/PO create side
-  DASH_CARD_DEFS['Purchase Manager']    = byId(PM, ['pm_qc','pm_po']);        // QC/PO approve side
-  DASH_CARD_DEFS['Contracts Executive'] = byId(PR, woHo);                     // WO/HO create side
-  DASH_CARD_DEFS['Contracts Manager']   = byId(PM, ['pm_ho','pm_wo']);        // WO/HO approve side
-  DASH_CARD_DEFS['Site QS/Planning']    = notId(QS, ['qs_pay']);              // certs & bills create side
-  DASH_CARD_DEFS['Accounts Assistant']  = byId(QS, ['qs_pay']);               // payment confirmations
-  DASH_CARD_DEFS['Accounts Manager']    = byId(QS, ['qs_pay']);
-  // Office QS/Planning (+ Manager): estimation queue lives inside the Plan
-  // module, not the dashboard — intentionally no cards here.
+// ============================================================
+// v75 — requirement-keyed dashboard. DASH_CARD_DEFS above is now a
+// card LIBRARY only; selection is by (code, side) requirement against
+// state.fnPerms. D1: duplicate pm_* approval cards dropped. D2:
+// correction cards keyed to the creator side. D3/D4: new cards for
+// payment-confirm approval and masters approval. mir/C gap filled.
+// ============================================================
+const DASH_CARD_REQ = {
+  sm_mir:['mir','A'], sm_grn:['grn','A'], sm_hoc:['hoc','A'], sm_woc:['woc','A'], sm_mis:['mis','A'],
+  sm_hoc_corr:['hoc','C'], sm_woc_corr:['woc','C'],                    // D2 — creator revises
+  pr_ho:['ho','C'], pr_wo:['wo','C'], pr_ho_corr:['ho','C'], pr_wo_corr:['wo','C'],
+  pr_rfq:['rfq','C'], pr_mir_rdy:['rfq','C'], pr_po_corr:['po','C'], pr_qc_rdy:['po','C'],
+  se_grn:['grn','C'], se_grn_corr:['grn','C'], se_mis:['mis','C'],
+  qs_hob:['hob','C'], qs_wob:['wob','C'], qs_hob_corr:['hob','C'], qs_wob_corr:['wob','C'],
+  qs_hoc_unbilled:['hob','C'], qs_woc_unbilled:['wob','C'],
+  qs_pob:['pob','C'], qs_grn_unbilled:['pob','C'],
+  qs_pay:['payment_confirm','C'],
+  pm_ho:['ho','A'], pm_wo:['wo','A'], pm_hob:['hob','A'], pm_wob:['wob','A'],
+  pm_qc:['qc','A'], pm_po:['po','A'], pm_pob:['pob','A'],
+  pm_hob_prr:['prr','C'], pm_wob_prr:['prr','C'], pm_pob_prr:['prr','C'],
+};
+// D1: these duplicate the sm_* approval cards (same requirement) — excluded.
+const DASH_CARD_DROP = { pm_mir:1, pm_hoc:1, pm_woc:1, pm_mis:1 };
+// v75 new cards
+const DASH_CARDS_NEW = [
+  { id:'nx_mir_corr', req:['mir','C'], label:'MIRs Pending / Correction', sub:'Indents to submit or revise', cls:'info',
+    nav:function(){navDash('purchase','mir','');},
+    query:function(){return sb.from('pu_mir').select('mir_number',{count:'exact',head:true}).in('status',['Pending Approval','Rejected - Correction']);} },
+  { id:'nx_pay_appr', req:['payment_confirm','A'], label:'Payments to Approve', sub:'Confirmed payments pending approval', cls:'warn',
+    nav:function(){navDash('payments','confirm','');},
+    query:function(){return sb.from('ho_payments').select('id',{count:'exact',head:true}).in('approval_status',['Pending Approval','Pending']);} },
+  { id:'nx_mst_appr', req:['masters_activity','A'],
+    alt:[['masters_contractor','A'],['masters_material','A'],['masters_vendor','A']],
+    label:'Masters Pending Approval', sub:'New master entries to review', cls:'info',
+    nav:function(){navDash('masters','','');},
+    query:async function(){
+      const P=['Pending Approval','Pending'];
+      const rs=await Promise.all([
+        sb.from('ho_activities').select('activity_code',{count:'exact',head:true}).in('approval_status',P),
+        sb.from('ho_vendors').select('vendor_code',{count:'exact',head:true}).in('approval_status',P),
+        sb.from('pu_material_master').select('material_code',{count:'exact',head:true}).in('approval_status',P),
+        sb.from('wo_contractors').select('contractor_code',{count:'exact',head:true}).in('approval_status',P),
+      ]);
+      return {count:rs.reduce(function(s,r){return s+(r.count||0);},0), error:null};
+    } },
+];
+// Flat, deduplicated library: every legacy card once, requirement attached.
+const DASH_CARDS_ALL = (function(){
+  const seen = {}, out = [];
+  Object.keys(DASH_CARD_DEFS).forEach(function(role){
+    (DASH_CARD_DEFS[role]||[]).forEach(function(c){
+      if (seen[c.id] || DASH_CARD_DROP[c.id]) return;
+      seen[c.id] = 1;
+      if (DASH_CARD_REQ[c.id]) c.req = DASH_CARD_REQ[c.id];
+      out.push(c);
+    });
+  });
+  return out.concat(DASH_CARDS_NEW);
 })();
+function _dashReqOk(rq){
+  if (state.isOwner || state.isSuper) return true;
+  const fp = state.fnPerms || [];
+  for (var i = 0; i < fp.length; i++) {
+    var r = fp[i];
+    if (r.function_code === rq[0] && (rq[1] === 'C' ? r.can_create : r.can_approve)) return true;
+  }
+  return false;
+}
 
 // Card id → document family. Cards not listed fall into 'po' (Purchase) by default.
 const DASH_CARD_GROUP = {
@@ -32838,7 +33078,7 @@ const DASH_CARD_GROUP = {
   qs_wob:'wo', qs_wob_corr:'wo', qs_woc_unbilled:'wo',
   pm_wo:'wo', pm_woc:'wo', pm_wob:'wo', pm_wob_prr:'wo',
   // Payments
-  qs_pay:'pay',
+  qs_pay:'pay', nx_pay_appr:'pay', nx_mst_appr:'mst',
   // Everything else (MIR/RFQ/QC/PO/GRN/POB/MIS) defaults to 'po'
 };
 const DASH_GROUP_META = {
@@ -32846,13 +33086,16 @@ const DASH_GROUP_META = {
   wo:  { title: '🔨 Work Orders',  cls: 'grp-wo'  },
   po:  { title: '📦 Purchase',     cls: 'grp-po'  },
   pay: { title: '💰 Payments',     cls: 'grp-pay' },
+  mst: { title: '🗂 Masters',      cls: 'grp-po'  },
 };
 
 async function loadDashPendingCards() {
   // Merge dashboard cards from all assigned roles, deduplicated by card id
-  const seen = new Set();
-  const defs = state.roles.flatMap(r => (DASH_CARD_DEFS[r] || [])).filter(d => {
-    if (seen.has(d.id)) return false; seen.add(d.id); return true;
+  // v75: cards follow capability, not role names — a card shows iff the
+  // user holds its (code, side) requirement in function_permissions.
+  const defs = DASH_CARDS_ALL.filter(function(d){
+    if (!d.req) return false;
+    return _dashReqOk(d.req) || (d.alt || []).some(_dashReqOk);
   });
   const container = document.getElementById('dash-cards-container');
   if (!container) return;
@@ -32862,7 +33105,7 @@ async function loadDashPendingCards() {
   }
 
   // Group cards by document family, preserving role-merge order within each group
-  const groupOrder = ['ho','wo','po','pay'];
+  const groupOrder = ['ho','wo','po','pay','mst'];   // v75
   const grouped = {};
   defs.forEach(function(d){
     const g = DASH_CARD_GROUP[d.id] || 'po';
@@ -34171,7 +34414,30 @@ function pgpRender(){
          +(as?'<span class="pgp-tag a">'+as+' approve</span>':'')+(isSuper?'<span class="pgp-tag a">super</span>':'')+'</div></td>'
          +'<td>'+acts+'</td>'
          +'<td class="c3"><div class="pgp-hchips">'+chips+' '+addbtn+'</div></td></tr>';
-  }).join('');
+  }).join('')
+  // ── v75: orphaned assignments — role codes held by users but absent from
+  // the active catalog. Hook v3 filters them from claims (they grant
+  // nothing) but the stale rows invite confusion; surface with revoke.
+  + (function(){
+      const active = {};
+      pgpS.roles.forEach(function(r){ active[r.role_code] = 1; });
+      const rows = [];
+      pgpS.users.forEach(function(u){
+        (u.roles || []).forEach(function(rc){
+          if (!active[rc]) rows.push({ u: u, rc: rc });
+        });
+      });
+      if (!rows.length) return '';
+      const chips = rows.map(function(o){
+        return '<span class="pgp-hchip" style="background:#fef2f2;color:#b91c1c;border:1px solid #fca5a5;">'
+          + '\u26A0 ' + pgsEsc(o.u.full_name) + ' \u00B7 ' + pgsEsc(o.rc) + ' (retired)'
+          + (owner ? '<span class="x" onclick="pgpRevoke(\'' + o.u.user_id + '\',\'' + o.rc + '\')">\u2715</span>' : '')
+          + '</span>';
+      }).join(' ');
+      return '<tr><td class="c1"><span class="nm" style="color:#b91c1c;">Orphaned assignments</span>'
+        + '<span class="ds">Assignments to retired roles \u2014 grant nothing, filtered from claims. Revoke to clean up.</span></td>'
+        + '<td></td><td class="c3"><div class="pgp-hchips">' + chips + '</div></td></tr>';
+    })();
 }
 
 // ── v48 · Team members: rpc_um_team / rpc_um_set_user_active ────────
@@ -34358,12 +34624,11 @@ const PGS_PLAN_SRC = "<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n<meta charset
 // v4: mirror of Planning QS's own ALLOWED_ROLES gate (exact strings).
 // The embedded app remains the authority — this only decides which
 // chrome to show, so its standalone login card never surfaces here.
-const PGS_PLAN_ALLOWED_ROLES = ['Admin','Planning/ QS','Project Manager',
-  'Office QS/Planning','Office QS/Planning Manager'];   // v74.1: match embedded app's own gate
-
+// v75: shell Plan-tab gate is perm-derived; matches applyRoleUI's _planV.
 function pgsPlanRoleAllowed(){
-  return Array.isArray(state.roles)
-      && state.roles.some(function(r){ return PGS_PLAN_ALLOWED_ROLES.indexOf(r) !== -1; });
+  const p = mergedPerms();
+  return !!(p.canCreateEstimate || p.canApproveEstimate || p.canCreateQTO || p.canApproveQTO
+         || state.isOwner || state.isSuper || (state.roles||[]).indexOf('Project Manager') !== -1);
 }
 
 function pgsApplyPlanTabVisibility(){
