@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Penguin Suite v108.2</title>
+<title>Penguin Suite v113_1</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js"></script>
@@ -107,7 +107,11 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helve
 .table-wrap { overflow-x: auto; background: var(--panel); border: 1px solid var(--border); border-radius: 6px; box-shadow: 0 1px 3px rgba(30,58,95,0.06); }
 table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
 th { background: #dde6f0; padding: 10px 8px; text-align: left; font-weight: 600; color: #1e3a5f; border-bottom: 2px solid #c3d0e0; position: sticky; top: 0; z-index: 1; font-size: 11.5px; text-transform: uppercase; letter-spacing: 0.3px; }
-td { padding: 8px 8px; border-bottom: 1px solid #e8eef5; color: var(--text); }
+td { padding: 8px 8px; border-bottom: 1px solid #e8eef5; color: var(--text); vertical-align: top; }
+/* v113: top-aligned cells + mild vertical column rules on EVERY table (lists and popups) */
+th { vertical-align: top; }
+th, td { border-right: 1px solid #e6ebf1; }
+th:last-child, td:last-child { border-right: none; }
 tr:hover td { background: #f0f5fb; }
 .num { text-align: right; font-variant-numeric: tabular-nums; }
 .center { text-align: center; }
@@ -172,7 +176,7 @@ td input, td select { padding: 5px 6px; background: var(--input-bg); color: var(
 /* Modal */
 .modal-bg { position: fixed; inset: 0; background: rgba(15,23,42,0.45); display: none; align-items: center; justify-content: center; z-index: 1200; } /* v63: above #pgsSelect(998) so New-project opens on the selector screen */
 .modal-bg.show { display: flex; }
-.modal { background: #fff; padding: 24px; border-radius: 10px; max-width: 800px; width: 94%; max-height: 88vh; overflow-y: auto; border: 1px solid var(--border); box-shadow: 0 20px 40px rgba(30,58,95,0.18); }
+.modal { background: #fff; padding: 24px; border-radius: 10px; max-width: 920px; width: 95%; max-height: 88vh; overflow-y: auto; border: 1px solid var(--border); box-shadow: 0 20px 40px rgba(30,58,95,0.18); }
 .modal h3 { color: var(--accent); margin-bottom: 14px; font-size: 16px; }
 
 /* Toast */
@@ -1280,7 +1284,7 @@ table.pgp-roles, table.pgp-mx{ border-collapse:collapse; width:100%; }
 #mod-payments .pay-note.bad{background:#fef2f2;border-color:#fecaca;color:#991b1b;}
 .pay-ovl{position:fixed;inset:0;background:rgba(20,28,46,.6);display:none;align-items:center;justify-content:center;z-index:4500;padding:24px;}
 .pay-ovl.on{display:flex;}
-.pay-pop{background:#fff;border-radius:11px;width:720px;max-width:96vw;max-height:88vh;display:flex;flex-direction:column;overflow:hidden;}
+.pay-pop{background:#fff;border-radius:11px;width:840px;max-width:96vw;max-height:88vh;display:flex;flex-direction:column;overflow:hidden;}
 .pay-pop .ph{padding:13px 17px;border-bottom:1px solid #cbd5e1;display:flex;align-items:center;gap:10px;}
 .pay-pop .ph h3{font-size:15px;color:#1e3a5f;margin:0;}
 .pay-pop .ph .m{font-size:11.5px;color:#64748b;}
@@ -1393,7 +1397,7 @@ table.pgp-roles, table.pgp-mx{ border-collapse:collapse; width:100%; }
 #mod-reports .pyd-empty{padding:26px;text-align:center;color:var(--r-muted);font-size:12.5px;}
 .pyd-ovl{position:fixed;inset:0;background:rgba(20,28,46,.55);z-index:5000;display:none;align-items:center;justify-content:center;padding:24px;}
 .pyd-ovl.on{display:flex;}
-.pyd-pop{background:#fff;border-radius:12px;width:960px;max-width:96vw;max-height:88vh;display:flex;flex-direction:column;box-shadow:0 24px 60px rgba(0,0,0,.3);overflow:hidden;}
+.pyd-pop{background:#fff;border-radius:12px;width:1080px;max-width:96vw;max-height:88vh;display:flex;flex-direction:column;box-shadow:0 24px 60px rgba(0,0,0,.3);overflow:hidden;}
 .pyd-pop .ph{display:flex;align-items:center;gap:10px;padding:14px 18px;border-bottom:1px solid #cbd5e1;}
 .pyd-pop .ph h3{font-size:15px;color:#1B2A47;margin:0;}
 .pyd-pop .ph .m{font-size:12px;color:#64748b;}
@@ -3156,7 +3160,7 @@ table.pgp-roles, table.pgp-mx{ border-collapse:collapse; width:100%; }
   <!-- add new user (owner only) -->
   <!-- v49: invite form lives in a modal, opened from Team members → + Add user -->
   <div id="pgp_invite_ovl" style="display:none;position:fixed;inset:0;background:rgba(20,28,46,.55);z-index:4700;align-items:center;justify-content:center;">
-  <div class="card" id="pgp_addcard" style="width:760px;max-width:94vw;margin:0;max-height:90vh;overflow-y:auto;">
+  <div class="card" id="pgp_addcard" style="width:880px;max-width:94vw;margin:0;max-height:90vh;overflow-y:auto;">
     <h3>Add a user <span style="flex:1"></span>
       <button class="btn btn-ghost btn-sm" onclick="pgpToggleInvite()" title="Close">&#10005;</button></h3>
     <div class="pgp-adduser" id="pgp_invite">
@@ -3276,12 +3280,11 @@ table.pgp-roles, table.pgp-mx{ border-collapse:collapse; width:100%; }
       <div style="margin-top:16px;">
         <div class="mi-bar">
           <h3 style="font-size:13px;margin:0;color:var(--text);">Material Items Required</h3>
-          <button class="btn btn-ghost btn-sm" type="button" onclick="_miSetAll(true)">▾ Expand all</button>
-          <button class="btn btn-ghost btn-sm" type="button" onclick="_miSetAll(false)">▸ Collapse all</button>
+          <button class="btn btn-ghost btn-sm" type="button" onclick="_miSetAll(true)">⊞ Expand all</button>
+          <button class="btn btn-ghost btn-sm" type="button" onclick="_miSetAll(false)">⊟ Collapse all</button>
           <span style="margin-left:auto;"></span>
           <button class="btn btn-primary btn-sm" onclick="openMirEstimatePicker()">＋ Add from estimate</button>
         </div>
-        <div class="mi-colhdr"><div>#</div><div>Material</div><div style="text-align:center;">UOM</div><div class="r">Qty required</div><div>Specification</div><div></div></div>
         <div id="mirItemsHost"></div>
       </div>
       <div class="field" style="margin-top:12px;max-width:600px;"><label>Remarks</label><textarea id="mir_remarks" rows="2"></textarea></div>
@@ -3543,7 +3546,7 @@ table.pgp-roles, table.pgp-mx{ border-collapse:collapse; width:100%; }
           <table id="po_itemsTable">
             <thead>
               <tr id="po_itemsHeader">
-                <th>#</th><th>Material</th><th>UOM</th><th class="num">Qty</th>
+                <th>#</th><th>Material</th><th style="min-width:220px;">WBS / Location</th><th>UOM</th><th class="num">Qty</th>
                 <th class="num">Unit Rate (₹)</th><th class="num">Basic Amt</th>
                 <th class="num" id="po_cgstHdr">CGST%</th><th class="num" id="po_cgstAmtHdr">CGST(₹)</th>
                 <th class="num" id="po_sgstHdr">SGST%</th><th class="num" id="po_sgstAmtHdr">SGST(₹)</th>
@@ -4125,10 +4128,10 @@ table.pgp-roles, table.pgp-mx{ border-collapse:collapse; width:100%; }
         <h3 style="font-size:13px;margin-bottom:8px;color:var(--text);">Materials to Issue</h3>
         <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;flex-wrap:wrap;">
           <button class="btn btn-primary btn-sm" onclick="openMisEstimatePicker()">＋ Add from estimate</button>
-          <span style="font-size:11px;color:var(--muted);">Pick approved estimate cells — the same material clubs into one card; ▸ expands the per-location split.</span>
+          <span style="font-size:11px;color:var(--muted);">Pick approved estimate cells — the same material groups into one row; ▸ expands the per-location split.</span>
           <span style="margin-left:auto;"></span>
-          <button class="btn btn-ghost btn-sm" onclick="_misSetAll(true)">Expand all</button>
-          <button class="btn btn-ghost btn-sm" onclick="_misSetAll(false)">Collapse all</button>
+          <button class="btn btn-ghost btn-sm" onclick="_misSetAll(true)">⊞ Expand all</button>
+          <button class="btn btn-ghost btn-sm" onclick="_misSetAll(false)">⊟ Collapse all</button>
         </div>
         <div id="misItemsHost"></div>
       </div>
@@ -5250,6 +5253,10 @@ function openModal(html, size) {
   if (size === 'large') {
     box.style.maxWidth = '980px';
     box.style.width = '95vw';
+  } else if (size === 'wide') {
+    // v111.1: 11-column document tables (PO / GRN views) — fits without h-scroll
+    box.style.maxWidth = '1600px';
+    box.style.width = '97vw';
   } else {
     box.style.maxWidth = '';
     box.style.width = '';
@@ -22481,62 +22488,70 @@ function _mirModelUpsert(cell, qty){
 function _renderMirItems(){
   const host=document.getElementById('mirItemsHost'); if(!host) return;
   if(!_mirGroups.length){ host.innerHTML='<div class="mi-empty">No materials yet \u2014 use <b>\uff0b Add from estimate</b> to pick approved estimate cells.</div>'; return; }
-  // v165: cards banded by Material-Master group (A\u2192Z, Ungrouped last),
-  // materials A\u2192Z inside; the # badge renumbers in display order. Bands
-  // are render-only \u2014 _mirGroups (the saveMIR source of truth) untouched.
-  let _miNo=0;
-  const _miCardHTML=(g)=>{ const gi=_miNo++;
-    g.multiPkg = new Set(g.locs.map(l=>String(l.leafId))).size>1;   // v148
-    const total=_mirGroupCum(g);
-    const multi=g.locs.length>1, ex=_mirOpen.has(g.code);
-    const exp = multi ? '<span class="mi-exp" onclick="_miToggle(\''+esc(g.code)+'\')">'+(ex?'\u25be':'\u25b8')+'</span>' : '<span class="mi-exp"></span>';
-    const headQty = multi
-      ? '<div class="mi-cum"><span class="mi-q" id="micum_'+esc(g.code)+'">'+_fmtQ(total)+'</span> <span class="mi-l">'+esc(g.uom)+' \u00b7 '+g.locs.length+' loc</span></div>'
-      : '<div class="mi-cum"><input class="mi-qh num" type="number" step="0.001" value="'+_fmtQin(g.locs[0].qty)+'" onwheel="this.blur()" onkeydown="if(event.key===\'ArrowUp\'||event.key===\'ArrowDown\')event.preventDefault()" oninput="_miSetQty(\''+esc(g.code)+'\',\''+esc(_miLk(g.locs[0]))+'\',this.value,this)"><div class="mi-cap" id="mical_'+esc(_miLk(g.locs[0]))+'">'+(g.locs[0].isLS?'LS \u2014 \u20b9-gated at PO':('/ '+_fmtQ(g.locs[0].remaining)+' '+esc(g.uom)))+'</div></div>';
-    const headSpecLoc = multi
-      ? '<div class="mi-specwrap"><input class="mi-spec" placeholder="Grade / spec (applies to all locations)" value="'+esc(g.spec)+'" oninput="_miSetSpec(\''+esc(g.code)+'\',this.value)"></div>'
-      : '<div class="mi-specwrap mi-single"><input class="mi-spec" placeholder="Grade / spec" value="'+esc(g.spec)+'" oninput="_miSetSpec(\''+esc(g.code)+'\',this.value)"><span class="mi-locpill">\ud83d\udccd '+esc(_miTail(g.locs[0].locPath)||g.locs[0].locName)+' '+_miApprDot(g.locs[0])+'</span></div>';
-    let locBlock;
-    if(multi){
-      locBlock='<div class="mi-locs'+(ex?' open':'')+'">'+g.locs.map(l=>
-        '<div class="mi-locrow">'
-        + '<div class="mi-lp"><span class="mi-arr">\u21b3</span> \ud83d\udccd <span class="mi-ppath">'+esc(_miLabel3(l.locPath))+'</span>'
-        +   (g.multiPkg?' <span class="mp-mini">\ud83d\udce6 '+esc(l.pkgName||'')+'</span>':'')
-        +   (l.isLS?' <span class="wo-ls-pill">LS \u20b9</span>':'')+' '+_miApprDot(l)+'</div>'
-        + '<div class="mi-qwrap"><input class="mi-ql num" type="number" step="0.001" value="'+_fmtQin(l.qty)+'" onwheel="this.blur()" onkeydown="if(event.key===\'ArrowUp\'||event.key===\'ArrowDown\')event.preventDefault()" oninput="_miSetQty(\''+esc(g.code)+'\',\''+esc(_miLk(l))+'\',this.value,this)"><div class="mi-cap" id="mical_'+esc(_miLk(l))+'">'+(l.isLS?'LS \u2014 \u20b9-gated at PO':('/ '+_fmtQ(l.remaining)+' '+esc(g.uom)))+'</div></div>'
-        + '<input class="mi-rmk" placeholder="Remarks" value="'+esc(l.rmk)+'" oninput="_miSetRmk(\''+esc(g.code)+'\',\''+esc(_miLk(l))+'\',this.value)">'
-        + '<span class="mi-lx" title="Remove this location" onclick="_miDropLoc(\''+esc(g.code)+'\',\''+esc(_miLk(l))+'\')">\u2715</span>'
-        + '</div>').join('')+'</div>';
-    } else {
-      locBlock='<div class="mi-locs open mi-singlerow"><div class="mi-locrow"><input class="mi-rmk mi-rmk-single" placeholder="Remarks" value="'+esc(g.locs[0].rmk)+'" oninput="_miSetRmk(\''+esc(g.code)+'\',\''+esc(g.locs[0].locId)+'\',this.value)"></div></div>';
+  // v110: GROUPED flat table. Multi-location materials collapse to one
+  // summed summary row (spec input lives there, per-material); click to
+  // expand into editable per-location rows (state in _mirOpen).
+  // _mirGroups stays the saveMIR source of truth.
+  if(_pgsWbsPM==null){ _pgsEnsureNodePMs().then(()=>_renderMirItems()); }
+  let n=0; const rows=[];
+  const _wl=l=>_pgsWLCell((_pgsWbsPM?_pgsWbsPM[String(l.leafId)]:null)||l.pkgName||null, l.locPath||l.locName);
+  const _capTxt=(g,l)=>l.isLS?'LS \u2014 \u20b9-gated at PO':('/ '+_fmtQ(l.remaining)+' '+esc(g.uom));
+  const _qtyTd=(g,l,lk)=>'<td class="num" style="min-width:130px;"><input class="mi-ql num" type="number" step="0.001" style="width:100px;text-align:right;" value="'+_fmtQin(l.qty)+'" onwheel="this.blur()" onkeydown="if(event.key===\'ArrowUp\'||event.key===\'ArrowDown\')event.preventDefault()" oninput="_miSetQty(\''+esc(g.code)+'\',\''+esc(lk)+'\',this.value,this)"><div class="mi-cap" id="mical_'+esc(lk)+'" style="font-size:10px;">'+_capTxt(g,l)+'</div></td>';
+  const _rmkTd=(g,l,lk)=>'<td><input class="mi-rmk" style="width:130px;" placeholder="Remarks" value="'+esc(l.rmk)+'" oninput="_miSetRmk(\''+esc(g.code)+'\',\''+esc(lk)+'\',this.value)"></td>';
+  _mirGroups.slice().sort((x,y)=>(x.name||'').localeCompare(y.name||'')).forEach(g=>{
+    const multi=g.locs.length>1;
+    n++;
+    if(!multi){
+      const l=g.locs[0], lk=_miLk(l);
+      rows.push('<tr>'
+        +'<td></td><td>'+n+'</td>'
+        +'<td style="min-width:285px;"><div style="font-weight:600;">'+esc(g.name)+(l.isLS?' <span class="wo-ls-pill">LS \u20b9</span>':'')+'</div>'
+        +  '<div style="font-size:10px;color:var(--muted);"><span class="mi-code">'+esc(g.code)+'</span> '+_miApprDot(l)+'</div></td>'
+        +'<td style="min-width:220px;">'+_wl(l)+'</td>'
+        +'<td>'+esc(g.uom)+'</td>'
+        +_qtyTd(g,l,lk)
+        +'<td><input class="mi-spec" style="width:140px;" placeholder="Grade / spec" value="'+esc(g.spec)+'" oninput="_miSetSpec(\''+esc(g.code)+'\',this.value)"></td>'
+        +_rmkTd(g,l,lk)
+        +'<td><span class="mi-lx" title="Remove this line" onclick="_miDropLoc(\''+esc(g.code)+'\',\''+esc(lk)+'\')">\u2715</span></td>'
+        +'</tr>');
+      return;
     }
-    return '<div class="mi-mat">'
-      + '<div class="mi-head">'
-      +   '<div class="mi-gi">'+(gi+1)+'</div>'
-      +   '<div class="mi-nm">'+exp+'<span class="mi-del" title="Remove material" onclick="_miDropMat(\''+esc(g.code)+'\')">\ud83d\uddd1</span>'
-      +     '<div class="mi-nb"><div class="mi-t">'+esc(g.name)+'</div><div class="mi-s"><span class="mi-code">'+esc(g.code)+'</span></div></div></div>'
-      +   '<div class="mi-uom">'+esc(g.uom)+'</div>'
-      +   headQty
-      +   headSpecLoc
-      +   '<span></span>'
-      + '</div>'
-      + locBlock
-      + '</div>';
-  };
-  host.innerHTML=_matBandize(
-      _mirGroups.slice().sort((x,y)=>(x.name||'').localeCompare(y.name||'')),
-      g=>g.code, g=>g.name)
-    .map(B=>{
-      const closed=_mirGrpClosed.has(B.g);
-      const body=closed?'':(B.single ? B.mats.map(_miCardHTML).join('')   // numbering only advances through open bands
-        : B.subs.map(sb=>'<div class="mi-grpsub">'
-            + '<div class="mi-grpsubh'+(sb.s?'':' mi-oth')+'">'+(sb.s?esc(sb.s):'Others \u00b7 no sub-head in master')+'<span class="gc">\u00b7 '+sb.items.length+'</span></div>'
-            + sb.items.map(_miCardHTML).join('')+'</div>').join(''));
-      return '<div class="mi-grpband" onclick="_miTogGrp(\''+_mpAttr(B.g)+'\')">'
-        +   '<span class="g">'+esc(B.g)+'</span><span class="gc">'+B.mats.length+' material'+(B.mats.length===1?'':'s')+(B.g==='Ungrouped'?' \u00b7 no group in master':'')+'</span>'
-        +   '<span class="tw">'+(closed?'\u25b8':'\u25be')+'</span></div>'
-        + '<div class="mi-grpbody'+(closed?' mi-closed':'')+'">'+body+'</div>';
-    }).join('');
+    const ex=_mirOpen.has(g.code);
+    const total=_mirGroupCum(g);
+    rows.push('<tr data-open="'+(ex?'1':'0')+'" style="cursor:pointer;background:#f8fafc;" onclick="_miToggle(\''+esc(g.code)+'\')">'
+      +'<td><span style="color:#0f766e;font-weight:700;">'+(ex?'\u25be':'\u25b8')+'</span></td>'
+      +'<td style="font-weight:600;">'+n+'</td>'
+      +'<td style="min-width:285px;"><div style="font-weight:600;">'+esc(g.name)
+      +  '<span style="font-size:10px;font-weight:700;color:#0f766e;background:#ccfbf1;border-radius:99px;padding:1px 7px;margin-left:6px;vertical-align:middle;">'+g.locs.length+' rows</span></div>'
+      +  '<div style="font-size:10px;color:var(--muted);"><span class="mi-code">'+esc(g.code)+'</span></div></td>'
+      +'<td><span style="font-size:10.5px;color:#94a3b8;font-style:italic;">'+g.locs.length+' rows \u2014 expand to edit per location</span></td>'
+      +'<td>'+esc(g.uom)+'</td>'
+      +'<td class="num"><b id="micum_'+esc(g.code)+'">'+_fmtQ(total)+'</b> <span style="font-size:10px;color:var(--muted);">\u00b7 '+g.locs.length+' loc</span></td>'
+      +'<td><input class="mi-spec" style="width:140px;" placeholder="Grade / spec (all locations)" value="'+esc(g.spec)+'" onclick="event.stopPropagation()" oninput="_miSetSpec(\''+esc(g.code)+'\',this.value)"></td>'
+      +'<td><span style="font-size:10.5px;color:#94a3b8;font-style:italic;">per-row on expand</span></td>'
+      +'<td><span class="mi-lx" title="Remove material (all its rows)" onclick="event.stopPropagation();_miDropMat(\''+esc(g.code)+'\')">\u2715</span></td>'
+      +'</tr>');
+    if(ex){
+      g.locs.forEach((l,li)=>{
+        const lk=_miLk(l);
+        rows.push('<tr>'
+          +'<td></td>'
+          +'<td style="font-size:10px;color:var(--muted);font-family:monospace;">'+n+'.'+(li+1)+'</td>'
+          +'<td><span style="color:#94a3b8;">\u21b3</span>'+(l.isLS?' <span class="wo-ls-pill">LS \u20b9</span>':'')+' '+_miApprDot(l)+'</td>'
+          +'<td style="min-width:220px;background:#fcfdfe;">'+_wl(l)+'</td>'
+          +'<td>'+esc(g.uom)+'</td>'
+          +_qtyTd(g,l,lk)
+          +'<td></td>'
+          +_rmkTd(g,l,lk)
+          +'<td><span class="mi-lx" title="Remove this line" onclick="_miDropLoc(\''+esc(g.code)+'\',\''+esc(lk)+'\')">\u2715</span></td>'
+          +'</tr>');
+      });
+    }
+  });
+  host.innerHTML='<div class="table-wrap"><table><thead><tr>'
+    +'<th style="width:18px;"></th><th>#</th><th style="min-width:285px;">Material</th><th style="min-width:220px;">WBS / Location</th><th>UOM</th>'
+    +'<th class="num">Qty Required</th><th>Specification</th><th>Remarks</th><th></th>'
+    +'</tr></thead><tbody>'+rows.join('')+'</tbody></table></div>';
 }
 function _miApprDot(l){ return l.status==='approved'?'<span class="mi-appr">\u25cf approved</span>':'<span class="mi-draft">\u25cf draft</span>'; }
 
@@ -22708,13 +22723,20 @@ async function approveMIR(mirNum) {
 
 async function viewMIR(mirNum) {
   pbShow('Loading…');
-  // v73: fetch items with procurement_line_id + lock state
-  const [{data:h},{data:items}] = await Promise.all([
-    sb.from('pu_mir').select('*').eq('mir_number',mirNum).single(),
-    sb.from('pu_mir_items')
-      .select('sno,material_code,material_name,uom,qty_required,rfq_number,po_number,specification,procurement_line_id,is_balance_closed,loc_node_id')
-      .eq('mir_number',mirNum).order('sno'),
-  ]);
+  // v111: one-round-trip engine with legacy fallback.
+  // (v73: items carry procurement_line_id + lock state in both paths.)
+  let h,items;
+  const _pv=await _pgsDocView('MIR',mirNum);
+  if(_pv){ h=_pv.header; items=_pv.items||[]; }
+  else {
+    const _r=await Promise.all([
+      sb.from('pu_mir').select('*').eq('mir_number',mirNum).single(),
+      sb.from('pu_mir_items')
+        .select('sno,material_code,material_name,uom,qty_required,rfq_number,po_number,specification,procurement_line_id,is_balance_closed,loc_node_id')
+        .eq('mir_number',mirNum).order('sno'),
+    ]);
+    h=_r[0].data; items=_r[1].data;
+  }
   pbDone();
   if (!h) { toast('MIR not found','error'); return; }
 
@@ -22723,21 +22745,29 @@ async function viewMIR(mirNum) {
   const apprPoQtyMap = {}, pendPoQtyMap = {}, poStatusMap = {};   // v114
 
   if (plids.length) {
-    // v171: per-MIR plids stay small, but chunked+paginated anyway — and the
-    // pu_grn status set was unbounded (would truncate at 1000 GRNs).
-    const [poItemsData, grnItemsData, grnHdrData] = await Promise.all([
-      _puInChunks('pu_po_items',  'procurement_line_id,qty,short_closed_qty,po_number', 'procurement_line_id', plids),
-      _puInChunks('pu_grn_items', 'procurement_line_id,this_grn_qty,grn_number',        'procurement_line_id', plids),
-      _puInChunks('pu_grn',       'grn_number,status', 'status', ['Verified','Partially Billed','Billed']),
-    ]);
-    const poItemsRes = { data: poItemsData }, grnItemsRes = { data: grnItemsData };   // keep names below unchanged
-    const validGRNs = new Set((grnHdrData||[]).map(g=>g.grn_number));
-    // v114: status of every referenced PO → split approved vs pending
-    const _poNums = [...new Set((poItemsRes.data||[]).map(r=>r.po_number).filter(Boolean))];
-    if (_poNums.length) {
-      const {data:poSt} = await sb.from('pu_po_orders').select('po_number,status').in('po_number', _poNums);
-      (poSt||[]).forEach(p => { poStatusMap[p.po_number] = p.status; });
+    // v111: engine payload when available; legacy chunked+paginated fetches
+    // otherwise (v171 semantics preserved in the fallback).
+    let poItemsData, grnItemsData, validGRNs;
+    if(_pv){
+      poItemsData=_pv.po_items||[]; grnItemsData=_pv.grn_items||[];
+      validGRNs=new Set((_pv.grn_hdrs||[]).filter(g=>['Verified','Partially Billed','Billed'].includes(g.status)).map(g=>g.grn_number));
+      ((_pv.po_status)||[]).forEach(p => { poStatusMap[p.po_number] = p.status; });
+    } else {
+      const _r3=await Promise.all([
+        _puInChunks('pu_po_items',  'procurement_line_id,qty,short_closed_qty,po_number', 'procurement_line_id', plids),
+        _puInChunks('pu_grn_items', 'procurement_line_id,this_grn_qty,grn_number',        'procurement_line_id', plids),
+        _puInChunks('pu_grn',       'grn_number,status', 'status', ['Verified','Partially Billed','Billed']),
+      ]);
+      poItemsData=_r3[0]; grnItemsData=_r3[1];
+      validGRNs=new Set((_r3[2]||[]).map(g=>g.grn_number));
+      // v114: status of every referenced PO → split approved vs pending
+      const _poNums = [...new Set((poItemsData||[]).map(r=>r.po_number).filter(Boolean))];
+      if (_poNums.length) {
+        const {data:poSt} = await sb.from('pu_po_orders').select('po_number,status').in('po_number', _poNums);
+        (poSt||[]).forEach(p => { poStatusMap[p.po_number] = p.status; });
+      }
     }
+    const poItemsRes = { data: poItemsData }, grnItemsRes = { data: grnItemsData };   // keep names below unchanged
     (poItemsRes.data||[]).forEach(r => {
       if (!r.procurement_line_id) return;
       const bucket = _poStatusBucket(poStatusMap[r.po_number]);
@@ -25193,7 +25223,7 @@ async function newPO() {
   document.getElementById('po_igstPct').value='0';
   document.getElementById('po_roundOff').value='0';
   document.getElementById('poItemsBody').innerHTML='';
-  _poItemCount=0; _poVendorLocked=false; _gstMode='overall'; _poAlloc={};
+  _poItemCount=0; _poVendorLocked=false; _gstMode='overall'; _poAlloc={}; _poWLOpen=new Set();
   // Draft UI defaults: a freshly opened form is NOT editing a saved draft.
   (function(){ const f=document.getElementById('poForm'); if(f){ delete f.dataset.resumingDraft; delete f.dataset.draftId; }
     const fd=document.getElementById('btn_form_discard_PO'); if(fd) fd.style.display='none'; })();
@@ -26137,6 +26167,7 @@ function _poRowRealloc(rn){
   const total=parseFloat(tr.querySelector('.po_qty')?.value)||0;
   const over=_poAllocate(_poAlloc[rn]||[], total);
   _poRenderAllocDetail(rn);
+  _poRenderWL(rn);
   const warn=document.getElementById('poAllocWarn_'+rn);
   if(warn) warn.textContent = over>1e-6 ? ('\u26a0 '+_fmtQ(over)+' over estimate headroom — reduce qty') : '';
   recalcPORow(rn);
@@ -26151,6 +26182,38 @@ function _poRowRealloc(rn){
 // Blank-material rows sit last, un-banded. Also sweeps orphan
 // alloc-detail rows left behind by a deleted line (pre-v164 leak).
 // ============================================================
+// v110: WBS/Location column on the PO form — multi-location lines collapse
+// to a one-line summary ("N locations - sum allocated"); click expands the
+// per-location breadcrumb + allocated-qty list (state in _poWLOpen, survives
+// settle-point repaints). Single-location lines show the breadcrumb directly.
+// Quantities remain SYSTEM-ALLOCATED per v154 (MIR demand first, then
+// estimate headroom); the alloc-detail toggle stays for diagnostics.
+let _poWLOpen=new Set();
+function _poWLTog(rn){ rn=String(rn); _poWLOpen.has(rn)?_poWLOpen.delete(rn):_poWLOpen.add(rn); _poRenderWL(rn); }
+function _poRenderWL(rn){
+  const host=document.getElementById('poWL_'+rn); if(!host) return;
+  const alloc=[...(_poAlloc[rn]||[])].sort((a,b)=>(a.locPath||'').localeCompare(b.locPath||'',undefined,{numeric:true}));
+  if(!alloc.length){ host.innerHTML='<span style="color:var(--muted);">\u2014 manual line (no WBS/location tag)</span>'; return; }
+  const _cell=a=>{
+    const wbsPath=(_pgsWbsPM?_pgsWbsPM[String(a.wbs)]:null)||a.pkgName||null;
+    return _pgsWLCell(wbsPath, a.locPath||a.locName||(a.loc?('loc '+a.loc):null));
+  };
+  if(alloc.length===1){
+    host.innerHTML=_cell(alloc[0])+(alloc[0].isLS?' <span class="wo-ls-pill">LS \u20b9</span>':'');
+    return;
+  }
+  const sum=alloc.reduce((s,a)=>s+(Number(a.qty)||0),0);
+  if(!_poWLOpen.has(String(rn))){
+    host.innerHTML='<span style="cursor:pointer;color:#0f766e;font-size:11px;font-weight:600;white-space:nowrap;" onclick="_poWLTog(\''+rn+'\')">\ud83d\udccd '+alloc.length+' locations \u00b7 \u03a3 '+_fmtQ(sum)+' allocated \u25b8</span>';
+    return;
+  }
+  host.innerHTML='<span style="cursor:pointer;color:#94a3b8;font-size:11px;font-weight:600;" onclick="_poWLTog(\''+rn+'\')">\u25be collapse</span>'
+    +alloc.map((a,ai)=>'<div style="padding:2px 0;'+(ai<alloc.length-1?'border-bottom:1px dashed #eef2f7;':'')+'">'
+      + _cell(a)
+      + '<div style="font-size:10px;font-weight:600;color:'+((a.qty||0)>0?'#16a34a':'#94a3b8')+';">order '+_fmtQ(a.qty||0)+'</div>'
+      + (a.isLS?' <span class="wo-ls-pill">LS \u20b9</span>':'')
+      +'</div>').join('');
+}
 function _poRegroupRows(){
   const tb=document.getElementById('poItemsBody'); if(!tb) return;
   tb.querySelectorAll('tr.po-grp-band').forEach(tr=>tr.remove());
@@ -26209,6 +26272,9 @@ function _poRegroupRows(){
     const td=r.tr.children[0]; if(td) td.textContent=++n;
   });
   tb.appendChild(frag);
+  // v109: repaint the WBS/Location column at every settle point
+  rows.forEach(tr=>_poRenderWL((tr.id||'').split('_')[1]));
+  if(_pgsWbsPM==null){ _pgsEnsureNodePMs().then(()=>{ rows.forEach(tr=>_poRenderWL((tr.id||'').split('_')[1])); }); }
 }
 
 // ============================================================
@@ -26226,6 +26292,7 @@ function addPOItem() {
         oninput="materialTypeahead('poMat_${i}','poMatRes_${i}')" onchange="blockDupMaterial(this);_poRefreshHistory()" autocomplete="off">
       <div class="typeahead-results" id="poMatRes_${i}" style="min-width:380px;position:absolute;top:100%;left:0;z-index:9999;box-shadow:0 4px 16px rgba(0,0,0,.15);"></div>
     </div></td>
+    <td style="min-width:220px;"><div id="poWL_${i}" style="font-size:11px;color:var(--muted);">\u2014</div></td>
     <td><input class="po_uom" id="poUom_${i}" style="width:65px;"></td>
     <td><input type="number" class="po_qty num" id="poQty_${i}" style="width:80px;" step="0.001" oninput="recalcPORow(${i})" onwheel="this.blur()" onkeydown="if(event.key==='ArrowUp'||event.key==='ArrowDown')event.preventDefault()"></td>
     <td><input type="number" class="po_rate num" id="poRate_${i}" style="width:90px;" step="0.01" oninput="recalcPORow(${i})" onwheel="this.blur()" onkeydown="if(event.key==='ArrowUp'||event.key==='ArrowDown')event.preventDefault()"></td>
@@ -26265,6 +26332,20 @@ function _poHistPill(bg,fg,label,r){
   return '<span style="background:'+bg+';color:'+fg+';font-weight:700;padding:1px 5px;border-radius:3px;">'+label+'</span>'
     + '<span style="font-weight:600;color:'+fg+';margin:0 4px;">\u20b9'+fmtINR(r.rate)+'</span>'
     + '<span style="font-size:8px;color:#64748b;">'+esc(r.vendor)+' \u00b7 '+esc(r.po)+' \u00b7 '+fmtDate(r.date)+'</span>';
+}
+// v112: compact 3-line price-history cell (Low / High / Last) for view tables
+function _pgsHistCell(hh){
+  if(!hh) return '<span style="color:#94a3b8;font-style:italic;font-size:10px;">No previous POs</span>';
+  // v113 (approved mock v3): one line per entry — tag, rate, then vendor · PO · date
+  // in a single muted span. Normal weight throughout; no vertical gap between entries.
+  const line=(bg,fg,label,r)=>!r?'':'<div style="display:flex;align-items:baseline;gap:7px;white-space:nowrap;line-height:1.5;">'
+    +'<span style="display:inline-block;width:42px;font-weight:400;font-size:10px;text-transform:uppercase;letter-spacing:.4px;border-radius:3px;padding:1px 0;text-align:center;line-height:1.3;background:'+bg+';color:'+fg+';">'+label+'</span>'
+    +'<span style="font-weight:400;font-size:12px;color:#0f172a;min-width:60px;text-align:right;">\u20b9'+fmtINR(r.rate)+'</span>'
+    +'<span style="font-size:9px;color:#64748b;overflow:hidden;text-overflow:ellipsis;max-width:280px;" title="'+esc(r.vendor||'')+' \u00b7 '+esc(r.po||'')+'">'
+    +  '<span style="color:#475569;">'+esc(r.vendor||'\u2014')+'</span> \u00b7 '+esc(r.po||'')+' \u00b7 '+fmtDate(r.date)+'</span>'
+    +'</div>';
+  return '<div style="font-variant-numeric:tabular-nums;">'
+    +line('#d1fae5','#065f46','Low',hh.low)+line('#fee2e2','#991b1b','High',hh.high)+line('#e0e7ff','#3730a3','Last',hh.last)+'</div>';
 }
 function _poHistRender(rn){
   const host=_poHistEnsureHost(rn); if(!host) return;
@@ -26899,42 +26980,120 @@ async function apiRevisePO(poNum, data) {
 }
 // ──────────────────────────────────────────────────────────────
 
+// ============================================================
+// v109: FLAT-TABLE SHARED HELPERS — WBS/Location breadcrumb cell.
+// _pgsCrumb trims to the last 3 path segments, leaf bolded teal.
+// _pgsEnsureNodePMs caches id->path maps for both trees (cheap:
+// _loadWbsTree/_loadLocTree are themselves module-cached).
+// ============================================================
+function _pgsCrumb(path){
+  if(path==null||String(path)==='') return '<span style="color:#b91c1c;font-style:italic;">\u2014 no node \u2014</span>';
+  const parts=String(path).split(' \u203a ').slice(-3);
+  const leaf=esc(parts.pop());
+  return (parts.length?esc(parts.join(' \u203a '))+' \u203a ':'')+'<b style="color:#0f766e;font-weight:700;">'+leaf+'</b>';
+}
+function _pgsWLCell(wbsPath, locPath){
+  return '<div style="font-size:11px;color:var(--muted);line-height:1.55;">\ud83e\udde9 '+_pgsCrumb(wbsPath)+'</div>'
+       + '<div style="font-size:11px;color:var(--muted);line-height:1.55;margin-top:2px;">\ud83d\udccd '+_pgsCrumb(locPath)+'</div>';
+}
+let _pgsWbsPM=null, _pgsLocPM=null;
+async function _pgsEnsureNodePMs(){
+  if(_pgsWbsPM&&_pgsLocPM) return;
+  try{
+    const [wt,lt]=await Promise.all([_loadWbsTree(),_loadLocTree()]);
+    _pgsWbsPM=Object.fromEntries((wt||[]).map(n=>[String(n.id),n.path||n.name]));
+    _pgsLocPM=Object.fromEntries((lt||[]).map(n=>[String(n.id),n.path||n.name]));
+  }catch(e){ _pgsWbsPM=_pgsWbsPM||{}; _pgsLocPM=_pgsLocPM||{}; }
+}
+
+
+// v111: one-round-trip view engine. Returns the composite payload from
+// rpc_doc_view, or null on ANY failure — callers then run their legacy
+// multi-query path, so the frontend deploys safely before/after the
+// migration.
+async function _pgsDocView(t,n){
+  try{
+    const {data,error}=await sb.rpc('rpc_doc_view',{p_doc_type:t,p_doc_no:n});
+    if(error){ console.warn('rpc_doc_view('+t+') fallback:',error.message); return null; }
+    return (data&&data.header)?data:null;
+  }catch(e){ console.warn('rpc_doc_view('+t+') fallback:',e); return null; }
+}
+// v110: material-group collapse helpers for the VIEW popups (static DOM
+// toggling — no re-render). Creation screens use _misOpen/_mirOpen +
+// re-render instead.
+function _pgsGrpToggle(cls, tr){
+  const open = tr.dataset.open==='1';
+  document.querySelectorAll('.'+cls).forEach(r=>{ r.style.display = open?'none':'table-row'; });
+  tr.dataset.open = open?'0':'1';
+  const ch=tr.querySelector('.pgs-chev'); if(ch) ch.textContent = open?'\u25b8':'\u25be';
+  const hh=tr.querySelector('.pgs-ghint'); if(hh) hh.style.display = open?'':'none';
+}
+function _pgsGrpAll(open){
+  document.querySelectorAll('#modalContent tr[data-pgsgrp]').forEach(tr=>{
+    if((tr.dataset.open==='1')!==open) tr.click();
+  });
+}
+function _pgsGrpBarRow(ncols){
+  return '<tr><td colspan="'+ncols+'" style="background:#fff;border-bottom:1px solid var(--border);padding:4px 8px;">'
+    +'<a style="font-size:11px;color:#0f766e;cursor:pointer;font-weight:600;margin-right:14px;" onclick="_pgsGrpAll(true)">\u229e Expand all</a>'
+    +'<a style="font-size:11px;color:#0f766e;cursor:pointer;font-weight:600;" onclick="_pgsGrpAll(false)">\u229f Collapse all</a>'
+    +'<span style="font-size:10.5px;color:#94a3b8;margin-left:12px;">rows grouped by material \u2014 click a \u25b8 row for the WBS \u00d7 location split</span>'
+    +'</td></tr>';
+}
+
 async function viewPO(poNum) {
   pbShow('Loading…');
-  const [{data:h},{data:items},{data:grnsForPO}]=await Promise.all([
-    sb.from('pu_po_orders').select('*').eq('po_number',poNum).single(),
-    sb.from('pu_po_items').select('*').eq('po_number',poNum).order('sno'),
-    sb.from('pu_grn').select('grn_number,grn_date,status').eq('po_number',poNum),
-  ]);
+  // v111: one-round-trip engine with legacy fallback.
+  let h,items,grnsForPO,vd=null,_pvGrnItems=null,_pvRateHist=null;
+  const _pv=await _pgsDocView('PO',poNum);
+  if(_pv){
+    h=_pv.header; items=_pv.items||[]; grnsForPO=_pv.grns||[];
+    vd=_pv.vendor||null; _pvGrnItems=_pv.grn_items||[]; _pvRateHist=_pv.rate_history||null;
+  } else {
+    const _r=await Promise.all([
+      sb.from('pu_po_orders').select('*').eq('po_number',poNum).single(),
+      sb.from('pu_po_items').select('*').eq('po_number',poNum).order('sno'),
+      sb.from('pu_grn').select('grn_number,grn_date,status').eq('po_number',poNum),
+    ]);
+    h=_r[0].data; items=_r[1].data; grnsForPO=_r[2].data;
+    if (h && h.vendor_name) {
+      const {data:vdRow} = await sb.from('ho_vendors')
+        .select('address,gstin,contact_person,phone')
+        .eq('vendor_name', h.vendor_name).maybeSingle();
+      vd = vdRow;
+    }
+  }
   pbDone();
   if(!h){toast('PO not found','error');return;}
 
-  // Fetch vendor master details for address / contact
-  let vd = null;
-  if (h.vendor_name) {
-    const {data:vdRow} = await sb.from('ho_vendors')
-      .select('address,gstin,contact_person,phone')
-      .eq('vendor_name', h.vendor_name).maybeSingle();
-    vd = vdRow;
-  }
-
-  // Build received-qty map per material, summing across all non-rejected GRNs
-  // Also collect per-GRN breakdown (qty, GRN no, date) for footnote
+  // v109: per-LINE received maps. Primary key pu_grn_items.po_item_id;
+  // fallback (material_name, loc_node_id); final fallback material_name
+  // (legacy GRN items with neither stamp) attributed once to the first
+  // display row of that material.
   const activeGRNs = (grnsForPO||[]).filter(g => g.status !== 'Rejected');
   const grnDateMap = {};
   activeGRNs.forEach(g => { grnDateMap[g.grn_number] = g.grn_date; });
-  const receivedMap = {};      // material_name -> total received qty
-  const breakdownMap = {};     // material_name -> [{grn_number, grn_date, qty}, ...]
+  const recdByItem={}, brkByItem={};
+  const recdByML={},   brkByML={};
+  const recdByMat={},  brkByMat={};
   if (activeGRNs.length) {
-    const {data:grnItems} = await sb.from('pu_grn_items')
-      .select('material_name,this_grn_qty,grn_number')
-      .in('grn_number', activeGRNs.map(g => g.grn_number));
+    const grnItems = _pvGrnItems || (await sb.from('pu_grn_items')
+      .select('material_name,this_grn_qty,grn_number,po_item_id,loc_node_id')
+      .in('grn_number', activeGRNs.map(g => g.grn_number))).data;
     (grnItems||[]).forEach(it => {
-      const mat = it.material_name;
       const qty = num(it.this_grn_qty);
-      receivedMap[mat] = (receivedMap[mat]||0) + qty;
-      if (!breakdownMap[mat]) breakdownMap[mat] = [];
-      breakdownMap[mat].push({ grn_number: it.grn_number, grn_date: grnDateMap[it.grn_number], qty });
+      const rec = { grn_number: it.grn_number, grn_date: grnDateMap[it.grn_number], qty };
+      if (it.po_item_id){
+        recdByItem[it.po_item_id]=(recdByItem[it.po_item_id]||0)+qty;
+        (brkByItem[it.po_item_id]=brkByItem[it.po_item_id]||[]).push(rec);
+      } else if (it.loc_node_id){
+        const k=it.material_name+'|'+String(it.loc_node_id);
+        recdByML[k]=(recdByML[k]||0)+qty;
+        (brkByML[k]=brkByML[k]||[]).push(rec);
+      } else {
+        recdByMat[it.material_name]=(recdByMat[it.material_name]||0)+qty;
+        (brkByMat[it.material_name]=brkByMat[it.material_name]||[]).push(rec);
+      }
     });
   }
 
@@ -26983,86 +27142,130 @@ async function viewPO(poNum) {
       <div style="font-size:12px;color:#1f2937;">${h.rejection_reason?'<strong>Reason:</strong> '+esc(h.rejection_reason):''}</div>
     </div>` : '';
 
-  // v103: group per-location rows into one summed line per material, with expandable split
-  let _vLocMap={};
-  try{ const _vlt=await _loadLocTree(); _vLocMap=Object.fromEntries((_vlt||[]).map(n=>[String(n.id),n])); }catch(e){}
-  // v141: rate history per material — same source as QC's strip, excluding this PO itself
+  // v110: GROUPED items table. One summary row per material with summed
+  // qty/amount columns; click expands into per-(WBS x location) child rows
+  // with breadcrumbs. Single-line materials render flat. Per-line
+  // Received/Pending fallback chain unchanged from v109.
+  let _vLocMap={}, _vWbsMap={};
+  try{
+    const [_vlt,_vwt]=await Promise.all([_loadLocTree(),_loadWbsTree()]);
+    _vLocMap=Object.fromEntries((_vlt||[]).map(n=>[String(n.id),n]));
+    _vWbsMap=Object.fromEntries((_vwt||[]).map(n=>[String(n.id),n]));
+  }catch(e){}
   let _vHist={};
-  try{ _vHist=await fetchHistoricalPOPrices((items||[]).filter(i=>i.material_name).map(i=>({name:i.material_name, code:i.material_code, uom:i.uom})), h.po_number); }catch(e){ console.warn('PO view history:',e); }
-  const _vGroups={};
-  (items||[]).forEach(it=>{ const k=(it.material_code!=null?('c'+it.material_code):('n'+it.material_name)); (_vGroups[k]=_vGroups[k]||[]).push(it); });
-  // v164: line items banded by Material-Master group \u2014 groups A\u2192Z (Ungrouped
-  // last), materials A\u2192Z inside, continuous sno, per-group subtotal on the band.
-  if(!(puState.materials||[]).length){ try{ await apiLoadMaterials(); }catch(e){} }
-  let _vSno=0;
-  const _vRowHTML = group => {
-    _vSno++;
-    const first=group[0];
-    const ordered = group.reduce((t,x)=>t+num(x.qty),0);
-    const baseAmt = group.reduce((t,x)=>t+num(x.base_amount),0);
-    const totAmt  = group.reduce((t,x)=>t+num(x.total_amount),0);
-    const received = receivedMap[first.material_name] || 0;
-    const pending = Math.max(0, ordered - received);
-    const pendingStyle = pending === 0
-      ? 'color:#15803d;font-weight:600;'
-      : (received > 0 ? 'color:#b45309;font-weight:600;' : 'color:#64748b;');
-    const breakdown = breakdownMap[first.material_name] || [];
-    const directBadge = ((h.mir_number || h.qc_number) && group.some(x=>x.procurement_source === 'direct_po'))
-      ? ` <span style="display:inline-block;margin-left:6px;padding:1px 7px;font-size:10px;font-weight:700;color:#92400e;background:#fef3c7;border:1px solid #fde68a;border-radius:10px;vertical-align:middle;" title="Added during PO preparation; does not trace to any MIR line">Not in MIR</span>`
-      : '';
-    const footnote = breakdown.length ? `<div style="font-size:10px;color:var(--muted);margin-top:3px;line-height:1.45;">
-      ${breakdown.map(b => `${fmtINR(b.qty)} ${esc(first.uom||'')} via <span class="mono">${esc(b.grn_number)}</span>${b.grn_date?' on '+fmtDate(b.grn_date):''}`).join(' · ')}
-    </div>` : '';
-    const hasSplit = group.length>1 || group.some(x=>x.loc_node_id);
-    const splitId = 'poViewSplit_'+_vSno;
-    const splitToggle = hasSplit ? ` <span style="cursor:pointer;color:var(--accent);font-size:11px;white-space:nowrap;" onclick="var d=document.getElementById('${splitId}');d.style.display=d.style.display==='none'?'block':'none';">ⓘ split</span>` : '';
-    const splitBody = hasSplit ? `<div id="${splitId}" style="display:none;font-size:11px;color:var(--muted);margin-top:4px;line-height:1.5;">
-      ${group.map(x=>{ const ln=_vLocMap[String(x.loc_node_id)]; const lp=ln?(ln.path||ln.name):(x.loc_node_id?('loc '+x.loc_node_id):'— no location'); return `📍 ${esc(lp)} — <span class="mono">${fmtINR(num(x.qty))}</span> ${esc(first.uom||'')}`; }).join('<br>')}
-    </div>` : '';
-    const _hh=_vHist[first.material_name];
-    const histRow = `<tr><td colspan="9" style="padding:0;">
-      <div style="background:${_hh?'#f0f7ff':'#f8fafc'};border-top:1px dashed ${_hh?'#b8d4f0':'#e2e8f0'};padding:3px 8px;font-size:9px;line-height:1.5;">
-        <span style="font-weight:700;color:#1e3a5f;text-transform:uppercase;letter-spacing:.4px;margin-right:8px;">PO History</span>
-        ${_hh
-          ? _poHistPill('#d1fae5','#065f46','Lowest',_hh.low)
-            + '<span style="margin:0 8px;color:#cbd5e1;">|</span>'
-            + _poHistPill('#fee2e2','#991b1b','Highest',_hh.high)
-            + '<span style="margin:0 8px;color:#cbd5e1;">|</span>'
-            + _poHistPill('#e0e7ff','#3730a3','Last',_hh.last)
-          : '<span style="color:#94a3b8;font-style:italic;">No previous POs for this material</span>'}
-      </div></td></tr>`;
-    return `<tr>
-      <td>${_vSno}</td>
-      <td>${esc(first.material_name)}${directBadge}${splitToggle}${splitBody}${footnote}</td>
-      <td>${esc(first.uom)}</td>
-      <td class="num mono">${fmtINR(ordered)}</td>
-      <td class="num mono" style="color:#15803d;">${fmtINR(received)}</td>
-      <td class="num mono" style="${pendingStyle}">${pending===0?'✓ '+fmtINR(0):fmtINR(pending)}</td>
-      <td class="num">${fmtINR(first.unit_rate)}</td>
-      <td class="num">${fmtINR(baseAmt)}</td>
-      <td class="num">${fmtINR(totAmt)}</td>
-    </tr>${histRow}`;
+  try{ _vHist=_pvRateHist || await fetchHistoricalPOPrices((items||[]).filter(i=>i.material_name).map(i=>({name:i.material_name, code:i.material_code, uom:i.uom})), h.po_number); }catch(e){ console.warn('PO view history:',e); }
+  const _vRows=(items||[]).slice().sort((a,b)=>
+    ((a.material_name||'').localeCompare(b.material_name||''))
+    || ((( _vLocMap[String(a.loc_node_id)]||{}).path||'').localeCompare(((_vLocMap[String(b.loc_node_id)]||{}).path||''),undefined,{numeric:true}))
+    || ((a.sno||0)-(b.sno||0)));
+  // pass 1: derive per-line receipts (po_item_id -> material+loc -> material-first-row)
+  const _vSeenML=new Set(), _vSeenMat=new Set();
+  let _gid=0;
+  const _vLines=_vRows.map(it=>{
+    let received=(it.id&&recdByItem[it.id])||0;
+    let breakdown=(it.id&&brkByItem[it.id])?brkByItem[it.id].slice():[];
+    const mlk=it.material_name+'|'+String(it.loc_node_id);
+    if(recdByML[mlk] && !_vSeenML.has(mlk)){ _vSeenML.add(mlk); received+=recdByML[mlk]; breakdown=breakdown.concat(brkByML[mlk]); }
+    if(recdByMat[it.material_name] && !_vSeenMat.has(it.material_name)){ _vSeenMat.add(it.material_name); received+=recdByMat[it.material_name]; breakdown=breakdown.concat(brkByMat[it.material_name]); }
+    return { it, ordered:num(it.qty), received, pending:Math.max(0,num(it.qty)-received), breakdown };
+  });
+  // pass 2: group consecutive lines by material_name
+  const _vGrps=[];
+  _vLines.forEach(L=>{
+    const g=_vGrps[_vGrps.length-1];
+    if(g && g.name===L.it.material_name) g.lines.push(L);
+    else _vGrps.push({name:L.it.material_name, lines:[L]});
+  });
+  let _vBaseSum=0, _vTotSum=0, _vTogN=0, _vAnyGrp=_vGrps.some(g=>g.lines.length>1);
+  const _vParts=[];
+  if(_vAnyGrp) _vParts.push(_pgsGrpBarRow(12));
+  const _vGrnCell=(L,uom)=>{
+    _vTogN++;
+    const gid='poViewGrn_'+_vTogN;
+    return ' <span style="cursor:pointer;color:var(--accent);font-size:11px;white-space:nowrap;margin-left:4px;" onclick="event.stopPropagation();var d=document.getElementById(\''+gid+'\');d.style.display=d.style.display===\'none\'?\'block\':\'none\';">\ud83e\uddfe grn</span>'
+      +'<div id="'+gid+'" style="display:none;font-size:10px;color:var(--muted);margin-top:3px;line-height:1.5;background:#f0fdf4;border:1px dashed #bbf7d0;border-radius:4px;padding:3px 7px;">'
+      +(L.breakdown.length
+        ? L.breakdown.map(b=>fmtINR(b.qty)+' '+esc(uom||'')+' via <span class="mono">'+esc(b.grn_number)+'</span>'+(b.grn_date?' on '+fmtDate(b.grn_date):'')).join(' \u00b7 ')
+        : '<span style="font-style:italic;color:#94a3b8;">No receipts yet against this line</span>')
+      +'</div>';
   };
-  const _vSum=(grps,f)=>grps.reduce((s,g)=>s+g.reduce((t,x)=>t+num(x[f]),0),0);
-  const itemsHTML=_matBandize(
-      Object.values(_vGroups).sort((x,y)=>((x[0].material_name)||'').localeCompare((y[0].material_name)||'')),
-      g=>g[0].material_code, g=>g[0].material_name)
-    .map(B=>{
-      const band=`<tr><td colspan="9" style="background:linear-gradient(90deg,#e6f4f2,#f6fbfa);border-top:2px solid var(--accent);border-bottom:1px solid rgba(13,148,136,.4);padding:6px 8px;">`
-        + `<span style="font-size:10.5px;font-weight:800;text-transform:uppercase;letter-spacing:.6px;color:#0f766e;">${esc(B.g)}</span>`
-        + `<span style="font-size:10px;color:var(--muted);margin-left:8px;">${B.mats.length} material${B.mats.length===1?'':'s'}${B.g==='Ungrouped'?' \u2014 no group set in Material Master':''}</span>`
-        + `<span style="float:right;font-size:11px;color:#0f766e;font-weight:700;font-variant-numeric:tabular-nums;">base ${fmtINR(_vSum(B.mats,'base_amount'))} \u00b7 total ${fmtINR(_vSum(B.mats,'total_amount'))}</span>`
-        + `</td></tr>`;
-      if(B.single) return band + B.mats.map(_vRowHTML).join('');
-      return band + B.subs.map(sb=>{
-        const sub=`<tr><td colspan="9" style="background:#f6fafa;border-bottom:1px solid var(--border);padding:4px 8px 4px 18px;">`
-          + `<span style="font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:${sb.s?'#0f766e':'var(--muted)'};">${sb.s?esc(sb.s):'Others \u2014 no sub-head in master'}</span>`
-          + `<span style="font-size:10px;color:var(--muted);margin-left:7px;">${sb.items.length}</span>`
-          + `<span style="float:right;font-size:10px;color:#0f766e;font-variant-numeric:tabular-nums;">base ${fmtINR(_vSum(sb.items,'base_amount'))} \u00b7 total ${fmtINR(_vSum(sb.items,'total_amount'))}</span>`
-          + `</td></tr>`;
-        return sub + sb.items.map(_vRowHTML).join('');
-      }).join('');
-    }).join('');
+  const _vBadge=' <span style="display:inline-block;margin-left:6px;padding:1px 7px;font-size:10px;font-weight:700;color:#92400e;background:#fef3c7;border:1px solid #fde68a;border-radius:10px;vertical-align:middle;" title="Added during PO preparation; does not trace to any MIR line">Not in MIR</span>';
+  const _vPendTd=(L)=>{
+    const st = L.pending===0 ? 'color:#15803d;font-weight:600;' : (L.received>0 ? 'color:#b45309;font-weight:600;' : 'color:#64748b;');
+    return '<td class="num mono" style="'+st+'">'+(L.pending===0?'\u2713 '+fmtINR(0):fmtINR(L.pending))+'</td>';
+  };
+  _vGrps.forEach((G,gi)=>{
+    const gN=gi+1;
+    const wl0=(L)=>{ const wn=_vWbsMap[String(L.it.wbs_node_id)], ln=_vLocMap[String(L.it.loc_node_id)];
+      return _pgsWLCell(wn?(wn.path||wn.name):null, ln?(ln.path||ln.name):null); };
+    if(G.lines.length===1){
+      const L=G.lines[0], it=L.it;
+      const badge=((h.mir_number||h.qc_number)&&it.procurement_source==='direct_po')?_vBadge:'';
+      _vBaseSum+=num(it.base_amount); _vTotSum+=num(it.total_amount);
+      _vParts.push('<tr>'
+        +'<td></td><td>'+gN+'</td>'
+        +'<td>'+esc(it.material_name)+badge+_vGrnCell(L,it.uom)+'</td>'
+        +'<td style="min-width:220px;">'+wl0(L)+'</td>'
+        +'<td>'+esc(it.uom)+'</td>'
+        +'<td class="num mono">'+fmtINR(L.ordered)+'</td>'
+        +'<td class="num mono" style="color:#15803d;">'+fmtINR(L.received)+'</td>'
+        +_vPendTd(L)
+        +'<td class="num">'+fmtINR(it.unit_rate)+'</td>'
+        +'<td class="num">'+fmtINR(num(it.base_amount))+'</td>'
+        +'<td class="num">'+fmtINR(num(it.total_amount))+'</td>'
+        +'<td>'+_pgsHistCell(_vHist[G.name])+'</td>'
+        +'</tr>');
+    } else {
+      const cls='poG'+gi;
+      let sOrd=0,sRec=0,sPen=0,sBase=0,sTot=0,nDirect=0;
+      const rates=new Set();
+      G.lines.forEach(L=>{ sOrd+=L.ordered; sRec+=L.received; sPen+=L.pending;
+        sBase+=num(L.it.base_amount); sTot+=num(L.it.total_amount);
+        rates.add(num(L.it.unit_rate).toFixed(4));
+        if((h.mir_number||h.qc_number)&&L.it.procurement_source==='direct_po') nDirect++; });
+      _vBaseSum+=sBase; _vTotSum+=sTot;
+      const rateCell=rates.size===1?fmtINR(num(G.lines[0].it.unit_rate)):'<span style="color:#94a3b8;font-style:italic;font-size:11px;">mixed</span>';
+      const penStyle=sPen===0?'color:#15803d;font-weight:600;':(sRec>0?'color:#b45309;font-weight:600;':'color:#64748b;');
+      _vParts.push('<tr data-pgsgrp="1" data-open="0" style="cursor:pointer;background:#f8fafc;font-weight:600;" onclick="_pgsGrpToggle(\''+cls+'\',this)">'
+        +'<td><span class="pgs-chev" style="color:#0f766e;font-weight:700;">\u25b8</span></td>'
+        +'<td>'+gN+'</td>'
+        +'<td>'+esc(G.name)
+        +  '<span style="font-size:10px;font-weight:700;color:#0f766e;background:#ccfbf1;border-radius:99px;padding:1px 7px;margin-left:6px;vertical-align:middle;">'+G.lines.length+' lines</span>'
+        +  (nDirect?' <span style="display:inline-block;margin-left:6px;padding:1px 7px;font-size:10px;font-weight:700;color:#92400e;background:#fef3c7;border:1px solid #fde68a;border-radius:10px;vertical-align:middle;">'+nDirect+' not in MIR</span>':'')
+        +'</td>'
+        +'<td><span class="pgs-ghint" style="font-size:10.5px;color:#94a3b8;font-style:italic;">'+G.lines.length+' \u00d7 (WBS \u00b7 location) \u2014 click to expand</span></td>'
+        +'<td>'+esc(G.lines[0].it.uom)+'</td>'
+        +'<td class="num mono">'+fmtINR(sOrd)+'</td>'
+        +'<td class="num mono" style="color:#15803d;">'+fmtINR(sRec)+'</td>'
+        +'<td class="num mono" style="'+penStyle+'">'+(sPen===0?'\u2713 '+fmtINR(0):fmtINR(sPen))+'</td>'
+        +'<td class="num">'+rateCell+'</td>'
+        +'<td class="num">'+fmtINR(sBase)+'</td>'
+        +'<td class="num">'+fmtINR(sTot)+'</td>'
+        +'<td>'+_pgsHistCell(_vHist[G.name])+'</td>'
+        +'</tr>');
+      G.lines.forEach((L,li)=>{
+        const it=L.it;
+        const badge=((h.mir_number||h.qc_number)&&it.procurement_source==='direct_po')?_vBadge:'';
+        _vParts.push('<tr class="'+cls+'" style="display:none;">'
+          +'<td></td>'
+          +'<td style="font-size:10px;color:var(--muted);font-family:monospace;">'+gN+'.'+(li+1)+'</td>'
+          +'<td><span style="color:#94a3b8;margin-right:3px;">\u21b3</span>'+badge+_vGrnCell(L,it.uom)+'</td>'
+          +'<td style="min-width:220px;background:#fcfdfe;">'+wl0(L)+'</td>'
+          +'<td>'+esc(it.uom)+'</td>'
+          +'<td class="num mono">'+fmtINR(L.ordered)+'</td>'
+          +'<td class="num mono" style="color:#15803d;">'+fmtINR(L.received)+'</td>'
+          +_vPendTd(L)
+          +'<td class="num">'+fmtINR(it.unit_rate)+'</td>'
+          +'<td class="num">'+fmtINR(num(it.base_amount))+'</td>'
+          +'<td class="num">'+fmtINR(num(it.total_amount))+'</td>'
+          +'<td></td>'
+          +'</tr>');
+      });
+    }
+  });
+  const itemsHTML=_vParts.join('')
+    +'<tr style="background:#e6f4f1;font-weight:700;"><td colspan="9" style="text-align:right;padding:6px 8px;">Total</td>'
+    +'<td class="num">'+fmtINR(_vBaseSum)+'</td><td class="num">'+fmtINR(_vTotSum)+'</td><td></td></tr>';
 
   // Lifecycle action buttons (cancel / short-close) at the bottom
   let closeActions='';
@@ -27090,9 +27293,9 @@ async function viewPO(poNum) {
     </div>
     <div class="table-wrap"><table>
       <thead><tr>
-        <th>#</th><th>Material</th><th>UOM</th>
+        <th style="width:18px;"></th><th>#</th><th style="min-width:230px;">Material</th><th style="min-width:220px;">WBS / Location</th><th>UOM</th>
         <th class="num">Ordered</th><th class="num">Received</th><th class="num">Pending</th>
-        <th class="num">Rate</th><th class="num">Base Amt</th><th class="num">Total (incl.GST)</th>
+        <th class="num">Rate</th><th class="num">Base Amt</th><th class="num">Total (incl.GST)</th><th style="min-width:400px;">Price History</th>
       </tr></thead>
       <tbody>${itemsHTML}</tbody>
     </table></div>
@@ -27117,7 +27320,7 @@ async function viewPO(poNum) {
         <div style="font-size:12px;white-space:pre-line;">${esc(h.remarks)}</div>
       </div>` : ''}
     </div>
-    <div class="actions-row">${closeActions}<button class="btn btn-secondary" onclick="closeModal();printPO('${esc(h.po_number)}')">🖨 Print PO</button><button class="btn btn-ghost" onclick="closeModal()">Close</button></div>`);
+    <div class="actions-row">${closeActions}<button class="btn btn-secondary" onclick="closeModal();printPO('${esc(h.po_number)}')">🖨 Print PO</button><button class="btn btn-ghost" onclick="closeModal()">Close</button></div>`, 'wide');
 }
 
 async function printPOById(poNum) { await printPO(poNum); }
@@ -27960,7 +28163,10 @@ async function saveGRN() {
       fin_year: currentFY(),
       mode: revisingGRN ? 'revise' : 'create',
       header: revisingGRN ? {
-        grn_date: date, vendor_name: vendor,
+        // v113_1: po_number MUST travel with the revise header. reviseGRN() lets the
+        // Store Exec change the PO; omitting it here left pu_grn.po_number on the old PO
+        // while pu_grn_items pointed at the new one (GRN-0651 / GRN-0675 corruption).
+        grn_date: date, po_number: poNum, vendor_name: vendor,
         vehicle_challan: challan, invoice_no: invNo, invoice_date: invDate||null,
         remarks: document.getElementById('grn_remarks').value||null,
         status: 'Pending Verification', rejection_reason: null,
@@ -28632,10 +28838,17 @@ function _v173LocPill(path){
 
 async function viewGRN(grnNum) {
   pbShow('Loading…');
-  const [{data:h},{data:items}]=await Promise.all([
-    sb.from('pu_grn').select('*').eq('grn_number',grnNum).single(),
-    sb.from('pu_grn_items').select('*').eq('grn_number',grnNum).order('sno'),
-  ]);
+  // v111: one-round-trip engine with legacy fallback.
+  let h,items;
+  const _pv=await _pgsDocView('GRN',grnNum);
+  if(_pv){ h=_pv.header; items=_pv.items||[]; }
+  else {
+    const _r=await Promise.all([
+      sb.from('pu_grn').select('*').eq('grn_number',grnNum).single(),
+      sb.from('pu_grn_items').select('*').eq('grn_number',grnNum).order('sno'),
+    ]);
+    h=_r[0].data; items=_r[1].data;
+  }
   pbDone();
   const total=(items||[]).reduce((s,r)=>s+num(r.base_amount),0);
   const isCash = !!h?.is_cash_purchase;
@@ -28645,44 +28858,88 @@ async function viewGRN(grnNum) {
   const refField = isCash
     ? `<div><label class="muted" style="font-size:11px;">DIRECT PURCHASE REF</label><div style="font-style:italic;">${esc(h?.cash_purchase_ref||'Direct Purchase')}</div></div>`
     : `<div><label class="muted" style="font-size:11px;">PO</label><div class="mono">${esc(h?.po_number||'')}</div></div>`;
-  // v173: club per-location leaf lines into one row per (material, uom, rate).
-  // Display-only — per-leaf rows remain the stored truth.
-  let _gLocMap={};
-  try{ const _glt=await _loadLocTree(); _gLocMap=Object.fromEntries((_glt||[]).map(n=>[String(n.id),n])); }catch(e){}
-  let _gSno=0;
-  const _gRowHTML = gl => {
-    _gSno++;
-    const f=gl[0];
-    const sThis=_v173Sum(gl,'this_grn_qty'), sAmt=_v173Sum(gl,'base_amount');
-    const withLoc=gl.filter(x=>x.loc_node_id);
-    let locHtml='';
-    if(gl.length===1 && withLoc.length===1){
-      const _ln=_gLocMap[String(f.loc_node_id)];
-      locHtml=_v173LocPill(_ln?_grnLabel3(_ln.path||_ln.name):'');
-    } else if(withLoc.length){
-      const sid='grnVSplit_'+_gSno;
-      locHtml=_v173SplitToggle(sid, gl.length+' location'+(gl.length>1?'s':''))
-        + '<div id="'+sid+'" style="display:none;font-size:11px;color:var(--muted);margin-top:4px;line-height:1.6;">'
-        + _v173UnitSplit(gl,_gLocMap,f.uom,'this_grn_qty') + '</div>';
+  // v110: GROUPED item rows. One summary row per material with sums;
+  // click expands into per-(WBS x location) child rows with breadcrumbs.
+  // Single-line materials render flat.
+  let _gLocMap={}, _gWbsMap={};
+  try{
+    const [_glt,_gwt]=await Promise.all([_loadLocTree(),_loadWbsTree()]);
+    _gLocMap=Object.fromEntries((_glt||[]).map(n=>[String(n.id),n]));
+    _gWbsMap=Object.fromEntries((_gwt||[]).map(n=>[String(n.id),n]));
+  }catch(e){}
+  const _gWL=f=>{ const wn=_gWbsMap[String(f.wbs_node_id)], ln=_gLocMap[String(f.loc_node_id)];
+    return _pgsWLCell(wn?(wn.path||wn.name):null, ln?(ln.path||ln.name):null); };
+  const _gSorted=(items||[]).slice().sort((a,b)=>((a.material_name||'').localeCompare(b.material_name||''))||((a.sno||0)-(b.sno||0)));
+  const _gGrps=[];
+  _gSorted.forEach(f=>{ const g=_gGrps[_gGrps.length-1];
+    if(g && g.name===f.material_name) g.lines.push(f); else _gGrps.push({name:f.material_name,lines:[f]}); });
+  const _gAnyGrp=_gGrps.some(g=>g.lines.length>1);
+  const _gMixed='<span style="color:#94a3b8;font-style:italic;font-size:11px;">mixed</span>';
+  const _gParts=[];
+  if(_gAnyGrp) _gParts.push(_pgsGrpBarRow(isCash?9:11));
+  _gGrps.forEach((G,gi)=>{
+    const gN=gi+1, cls='gG'+gi, multi=G.lines.length>1;
+    if(!multi){
+      const f=G.lines[0];
+      if(isCash){
+        _gParts.push('<tr><td></td><td>'+gN+'</td><td>'+esc(f.material_name)+'</td><td style="min-width:220px;">'+_gWL(f)+'</td><td>'+esc(f.uom)+'</td><td class="num">'+fmtINR(num(f.this_grn_qty))+'</td><td class="num">'+fmtINR(f.unit_rate)+'</td><td class="num">'+fmtINR(num(f.base_amount))+'</td><td>'+esc(f.remarks||'\u2014')+'</td></tr>');
+      } else {
+        _gParts.push('<tr><td></td><td>'+gN+'</td><td>'+esc(f.material_name)+'</td><td style="min-width:220px;">'+_gWL(f)+'</td><td>'+esc(f.uom)+'</td><td class="num">'+fmtINR(num(f.po_qty))+'</td><td class="num">'+fmtINR(num(f.prev_received_qty))+'</td><td class="num">'+fmtINR(num(f.this_grn_qty))+'</td><td class="num">'+fmtINR(num(f.balance_qty))+'</td><td class="num">'+fmtINR(f.unit_rate)+'</td><td class="num">'+fmtINR(num(f.base_amount))+'</td></tr>');
+      }
+      return;
     }
+    const rates=new Set(); G.lines.forEach(f=>rates.add(num(f.unit_rate).toFixed(4)));
+    const rateCell=rates.size===1?fmtINR(num(G.lines[0].unit_rate)):_gMixed;
+    const S=k=>G.lines.reduce((s,f)=>s+num(f[k]),0);
+    const head='<tr data-pgsgrp="1" data-open="0" style="cursor:pointer;background:#f8fafc;font-weight:600;" onclick="_pgsGrpToggle(\''+cls+'\',this)">'
+      +'<td><span class="pgs-chev" style="color:#0f766e;font-weight:700;">\u25b8</span></td>'
+      +'<td>'+gN+'</td>'
+      +'<td>'+esc(G.name)+'<span style="font-size:10px;font-weight:700;color:#0f766e;background:#ccfbf1;border-radius:99px;padding:1px 7px;margin-left:6px;vertical-align:middle;">'+G.lines.length+' lines</span></td>'
+      +'<td><span class="pgs-ghint" style="font-size:10.5px;color:#94a3b8;font-style:italic;">'+G.lines.length+' \u00d7 (WBS \u00b7 location) \u2014 click to expand</span></td>'
+      +'<td>'+esc(G.lines[0].uom)+'</td>';
     if(isCash){
-      const remarks=[...new Set(gl.map(x=>x.remarks).filter(Boolean))].join(' · ')||'—';
-      return `<tr><td>${_gSno}</td><td>${esc(f.material_name)}${locHtml}</td><td>${esc(f.uom)}</td><td class="num">${fmtINR(sThis)}</td><td class="num">${fmtINR(f.unit_rate)}</td><td class="num">${fmtINR(sAmt)}</td><td>${esc(remarks)}</td></tr>`;
+      _gParts.push(head
+        +'<td class="num">'+fmtINR(S('this_grn_qty'))+'</td>'
+        +'<td class="num">'+rateCell+'</td>'
+        +'<td class="num">'+fmtINR(S('base_amount'))+'</td>'
+        +'<td><span style="font-size:10.5px;color:#94a3b8;font-style:italic;">per-row on expand</span></td></tr>');
+      G.lines.forEach((f,li)=>{
+        _gParts.push('<tr class="'+cls+'" style="display:none;"><td></td>'
+          +'<td style="font-size:10px;color:var(--muted);font-family:monospace;">'+gN+'.'+(li+1)+'</td>'
+          +'<td><span style="color:#94a3b8;">\u21b3</span></td>'
+          +'<td style="min-width:220px;background:#fcfdfe;">'+_gWL(f)+'</td>'
+          +'<td>'+esc(f.uom)+'</td>'
+          +'<td class="num">'+fmtINR(num(f.this_grn_qty))+'</td><td class="num">'+fmtINR(f.unit_rate)+'</td><td class="num">'+fmtINR(num(f.base_amount))+'</td><td>'+esc(f.remarks||'\u2014')+'</td></tr>');
+      });
+    } else {
+      _gParts.push(head
+        +'<td class="num">'+fmtINR(S('po_qty'))+'</td>'
+        +'<td class="num">'+fmtINR(S('prev_received_qty'))+'</td>'
+        +'<td class="num">'+fmtINR(S('this_grn_qty'))+'</td>'
+        +'<td class="num">'+fmtINR(S('balance_qty'))+'</td>'
+        +'<td class="num">'+rateCell+'</td>'
+        +'<td class="num">'+fmtINR(S('base_amount'))+'</td></tr>');
+      G.lines.forEach((f,li)=>{
+        _gParts.push('<tr class="'+cls+'" style="display:none;"><td></td>'
+          +'<td style="font-size:10px;color:var(--muted);font-family:monospace;">'+gN+'.'+(li+1)+'</td>'
+          +'<td><span style="color:#94a3b8;">\u21b3</span></td>'
+          +'<td style="min-width:220px;background:#fcfdfe;">'+_gWL(f)+'</td>'
+          +'<td>'+esc(f.uom)+'</td>'
+          +'<td class="num">'+fmtINR(num(f.po_qty))+'</td><td class="num">'+fmtINR(num(f.prev_received_qty))+'</td><td class="num">'+fmtINR(num(f.this_grn_qty))+'</td><td class="num">'+fmtINR(num(f.balance_qty))+'</td><td class="num">'+fmtINR(f.unit_rate)+'</td><td class="num">'+fmtINR(num(f.base_amount))+'</td></tr>');
+      });
     }
-    const sPo=_v173Sum(gl,'po_qty'), sPrev=_v173Sum(gl,'prev_received_qty'), sBal=_v173Sum(gl,'balance_qty');
-    return `<tr><td>${_gSno}</td><td>${esc(f.material_name)}${locHtml}</td><td>${esc(f.uom)}</td><td class="num">${fmtINR(sPo)}</td><td class="num">${fmtINR(sPrev)}</td><td class="num">${fmtINR(sThis)}</td><td class="num">${fmtINR(sBal)}</td><td class="num">${fmtINR(f.unit_rate)}</td><td class="num">${fmtINR(sAmt)}</td></tr>`;
-  };
-  const _gRowsHtml=_v173Club(items,_v173MatKey).map(_gRowHTML).join('');
+  });
+  const _gRowsHtml=_gParts.join('');
   const itemTable = isCash
     ? `<div class="table-wrap"><table>
-        <thead><tr><th>#</th><th>Material</th><th>UOM</th><th class="num">Qty</th><th class="num">Rate</th><th class="num">Amount</th><th>Remarks</th></tr></thead>
+        <thead><tr><th style="width:18px;"></th><th>#</th><th style="min-width:230px;">Material</th><th style="min-width:220px;">WBS / Location</th><th>UOM</th><th class="num">Qty</th><th class="num">Rate</th><th class="num">Amount</th><th>Remarks</th></tr></thead>
         <tbody>${_gRowsHtml}
-        <tr style="background:#fff7e6;font-weight:700;"><td colspan="5" style="text-align:right;padding:6px 8px;">Total</td><td class="num">${fmtINRSym(total)}</td><td></td></tr>
+        <tr style="background:#fff7e6;font-weight:700;"><td colspan="7" style="text-align:right;padding:6px 8px;">Total</td><td class="num">${fmtINRSym(total)}</td><td></td></tr>
         </tbody></table></div>`
     : `<div class="table-wrap"><table>
-        <thead><tr><th>#</th><th>Material</th><th>UOM</th><th class="num">PO Qty</th><th class="num">Prev Recd</th><th class="num">This GRN</th><th class="num">Balance</th><th class="num">Rate</th><th class="num">Amount</th></tr></thead>
+        <thead><tr><th style="width:18px;"></th><th>#</th><th style="min-width:230px;">Material</th><th style="min-width:220px;">WBS / Location</th><th>UOM</th><th class="num">PO Qty</th><th class="num">Prev Recd</th><th class="num">This GRN</th><th class="num">Balance</th><th class="num">Rate</th><th class="num">Amount</th></tr></thead>
         <tbody>${_gRowsHtml}
-        <tr style="background:#e6f4f1;font-weight:700;"><td colspan="8" style="text-align:right;padding:6px 8px;">Total</td><td class="num">${fmtINRSym(total)}</td></tr>
+        <tr style="background:#e6f4f1;font-weight:700;"><td colspan="10" style="text-align:right;padding:6px 8px;">Total</td><td class="num">${fmtINRSym(total)}</td></tr>
         </tbody></table></div>`;
   // Show "Create POB" only for Verified non-cash GRNs and users with POB permission
   const canCreatePOBFromGRN = hasPerm('canCreatePOB') && h?.status === 'Verified' && !isCash;
@@ -28720,7 +28977,7 @@ async function viewGRN(grnNum) {
         ? `<button class="btn btn-danger" onclick="closeModal();promptAdminDelete('GRN','${esc(grnNum)}')">🗑 Delete GRN</button>`
         : ''}
       <button class="btn btn-ghost" onclick="closeModal()">Close</button>
-    </div>`);
+    </div>`, 'wide');
 }
 
 // ============================================================
@@ -29347,28 +29604,43 @@ function closePOBForm() {
 
 async function viewPOB(billNum) {
   pbShow('Loading bill…');
-  const [{data:h},{data:items},{data:extraLines}] = await Promise.all([
-    sb.from('pu_po_bills').select('*').eq('bill_number',billNum).single(),
-    sb.from('pu_po_bill_items').select('*').eq('bill_number',billNum).eq('row_type','material').order('sno'),
-    sb.from('pu_po_bill_items').select('*').eq('bill_number',billNum).eq('row_type','extra').order('sno'),
-  ]);
-  pbDone();
-  if(!h){toast('Bill not found','error');return;}
+  // v111: one-round-trip engine with legacy fallback. Prior-bill temporal
+  // semantics (status in Unpaid/Partial/Paid, strictly before this bill)
+  // replicated server-side.
+  let h,items,extraLines,allVendorBills,prevItemsData=[],_pvGrnTrace=null;
+  const _pv=await _pgsDocView('POB',billNum);
+  if(_pv){
+    h=_pv.header; items=_pv.items||[]; extraLines=_pv.extra||[];
+    allVendorBills=_pv.prev_bills||[]; prevItemsData=_pv.prev_items||[];
+    _pvGrnTrace=_pv.grn_trace||[];
+    pbDone();
+    if(!h){toast('Bill not found','error');return;}
+  } else {
+    const _r=await Promise.all([
+      sb.from('pu_po_bills').select('*').eq('bill_number',billNum).single(),
+      sb.from('pu_po_bill_items').select('*').eq('bill_number',billNum).eq('row_type','material').order('sno'),
+      sb.from('pu_po_bill_items').select('*').eq('bill_number',billNum).eq('row_type','extra').order('sno'),
+    ]);
+    h=_r[0].data; items=_r[1].data; extraLines=_r[2].data;
+    pbDone();
+    if(!h){toast('Bill not found','error');return;}
 
-  // ── Previous bills for same vendor — approved & strictly before this bill ─
-  const {data:allVendorBills} = await _priorBillsTemporal(
-    sb.from('pu_po_bills')
-      .select('bill_number,po_number,status')
-      .eq('vendor_name', h.vendor_name)
-      .neq('bill_number', billNum),
-    h.bill_date, h.created_at);
+    // ── Previous bills for same vendor — approved & strictly before this bill ─
+    const _avb = await _priorBillsTemporal(
+      sb.from('pu_po_bills')
+        .select('bill_number,po_number,status')
+        .eq('vendor_name', h.vendor_name)
+        .neq('bill_number', billNum),
+      h.bill_date, h.created_at);
+    allVendorBills=_avb.data;
+    const _pbn = (allVendorBills||[]).map(b=>b.bill_number);
+    if(_pbn.length){
+      const {data:pi} = await sb.from('pu_po_bill_items').select('*').in('bill_number',_pbn);
+      prevItemsData = pi||[];
+    }
+  }
   const prevBillNums = (allVendorBills||[]).map(b=>b.bill_number);
   const prevPONums   = [...new Set((allVendorBills||[]).map(b=>b.po_number).filter(Boolean))];
-  let prevItemsData = [];
-  if(prevBillNums.length){
-    const {data:pi} = await sb.from('pu_po_bill_items').select('*').in('bill_number',prevBillNums);
-    prevItemsData = pi||[];
-  }
 
   // Build prev totals map: material_name → {qty, amount}
   const prevMap = {};
@@ -29407,9 +29679,9 @@ async function viewPOB(billNum) {
     const _blt=await _loadLocTree(); _bLocMap=Object.fromEntries((_blt||[]).map(n=>[String(n.id),n]));
     const _bgn=[...new Set((items||[]).map(it=>it.grn_number).filter(Boolean))];
     if(_bgn.length){
-      const {data:_bgi}=await sb.from('pu_grn_items')
+      const _bgi=_pvGrnTrace || (await sb.from('pu_grn_items')
         .select('grn_number,material_code,material_name,uom,unit_rate,loc_node_id,this_grn_qty')
-        .in('grn_number',_bgn);
+        .in('grn_number',_bgn)).data;
       (_bgi||[]).forEach(x=>{
         const k=(x.grn_number||'')+'|'+_v173MatKey(x);
         (_bGrnLoc[k]=_bGrnLoc[k]||[]).push(x);
@@ -30829,6 +31101,7 @@ async function _misCommitFromCart(){
         if(l.pkgId==null){ const _pk=_misClimbPkg(_wm, v.leafId);
           if(_pk) l.pkgId=Number(_pk.id); }
         if(v.pkgName) l.pkgName=v.pkgName;   // v76: display the material package (leaf), not the climbed work package
+        { const _wn=_wm[String(v.leafId)]; if(_wn) l.wbsPath=_wn.path||_wn.name; }   // v109: breadcrumb column
         l.qty=Number(v.qty)||0;
         cartKeys.delete(k); return true; }
       return false;
@@ -30841,6 +31114,7 @@ async function _misCommitFromCart(){
     const _pk=_misClimbPkg(_wm, v.leafId);   // v159: package ancestor for the MIS tag
     g.locs.push({locId:String(v.locId),leafId:(v.leafId!=null?v.leafId:null),
       pkgId:(_pk?Number(_pk.id):null),locName:v.locName||'',locPath:v.locPath||'',
+      wbsPath:((_wm[String(v.leafId)]||{}).path||(_wm[String(v.leafId)]||{}).name||v.pkgName||''),
       pkgName:(v.pkgName||(_pk?_pk.name:'')),qty:Number(v.qty)||0,rem:(v.remaining!=null?v.remaining:null),isLS:!!v.isLS});   // v76: leaf name first
     g.locs.sort((a,b)=>(a.locPath||'').localeCompare(b.locPath||'',undefined,{numeric:true}));
   }
@@ -30884,56 +31158,93 @@ function _msStockHtml(g){
     +(bad?'<div style="color:#dc2626;font-weight:600;">⚠ issue exceeds stock</div>':'')+'</div>';
 }
 function _renderMisItems(){
-  _misInjectCss();
   const host=document.getElementById('misItemsHost'); if(!host) return;
   if(!_misGroups.length){
-    host.innerHTML='<div class="mi-empty">No materials yet — use <b>＋ Add from estimate</b> to pick approved estimate cells to issue against.</div>';
+    host.innerHTML='<div class="mi-empty">No materials yet \u2014 use <b>\uff0b Add from estimate</b> to pick approved estimate cells to issue against.</div>';
     _misRefreshOverrideUI(); return;
   }
-  host.innerHTML=_misGroups.map((g,gi)=>{
-    g.multiPkg=new Set(g.locs.map(l=>String(l.leafId))).size>1;
-    const total=_misGroupCum(g);
-    const multi=g.locs.length>1, ex=_misOpen.has(g.code);
-    const exp=multi?'<span class="mi-exp" onclick="_msToggle(\''+esc(g.code)+'\')">'+(ex?'▾':'▸')+'</span>':'<span class="mi-exp"></span>';
-    const l0=g.locs[0], lk0=_msLk(g,l0);
-    const headQty=multi
-      ? '<div class="mi-cum"><span class="mi-q" id="msCum_'+esc(g.code)+'">'+_fmtQ(total)+'</span> <span class="mi-l">'+esc(g.uom)+' · '+g.locs.length+' loc</span></div>'
-      : '<div class="mi-cum"><input class="mi-qh num" type="number" step="0.001" value="'+_fmtQin(l0.qty)+'" onwheel="this.blur()" onkeydown="if(event.key===\'ArrowUp\'||event.key===\'ArrowDown\')event.preventDefault()" oninput="_msSetQty(\''+esc(g.code)+'\',\''+esc(lk0)+'\',this.value,this)"><div class="'+_msCapCls(g,l0)+'" id="msCal_'+esc(lk0)+'">'+_msCapText(g,l0)+'</div></div>';
-    const headAmt='<div class="ms-amt"><div class="ms-rate">@ ₹'+fmtINR(num(g.rate))+' (FIFO)</div><b id="msGAmt_'+esc(g.code)+'">₹'+fmtINR(total*num(g.rate))+'</b></div>';
-    const singleLocPill=!multi
-      ? '<span class="mi-locpill" style="margin-left:6px;">📍 '+esc(_miTail(l0.locPath)||l0.locName)+(l0.isLS?' <span class="wo-ls-pill">LS</span>':'')+'</span>'
-      : '';
-    let locBlock='';
-    if(multi){
-      locBlock='<div class="mi-locs'+(ex?' open':'')+'">'+g.locs.map(l=>{
-        const lk=_msLk(g,l);
-        return '<div class="ms-locrow">'
-        + '<span></span>'
-        + '<div class="mi-lp" style="grid-column:2;"><span class="mi-arr">↳</span> 📍 <span class="mi-ppath">'+esc(_miLabel3(l.locPath))+'</span>'
-        +   (g.multiPkg?' <span class="mp-mini">🧱 '+esc(l.pkgName||'')+'</span>':'')
-        +   (l.isLS?' <span class="wo-ls-pill">LS</span>':'')+'</div>'
-        + '<span></span><span></span>'
-        + '<div class="mi-qwrap" style="grid-column:5;"><input class="mi-ql num" type="number" step="0.001" value="'+_fmtQin(l.qty)+'" onwheel="this.blur()" onkeydown="if(event.key===\'ArrowUp\'||event.key===\'ArrowDown\')event.preventDefault()" oninput="_msSetQty(\''+esc(g.code)+'\',\''+esc(lk)+'\',this.value,this)"><div class="'+_msCapCls(g,l)+'" id="msCal_'+esc(lk)+'">'+_msCapText(g,l)+'</div></div>'
-        + '<div class="ms-amt" id="msLAmt_'+esc(lk)+'">₹'+fmtINR((Number(l.qty)||0)*num(g.rate))+'</div>'
-        + '<span class="mi-lx" title="Remove this location" onclick="_msDropLoc(\''+esc(g.code)+'\',\''+esc(lk)+'\')">✕</span>'
-        + '</div>';
-      }).join('')+'</div>';
+  // v110: GROUPED flat table. Multi-location materials collapse to one
+  // summed summary row (click to expand and edit per location, state in
+  // _misOpen); single-location materials render flat + editable.
+  // _misGroups stays the saveMIS source of truth.
+  if(_pgsWbsPM==null){ _pgsEnsureNodePMs().then(()=>_renderMisItems()); }
+  let n=0; const rows=[];
+  const _wl=(g,l)=>_pgsWLCell(l.wbsPath||(_pgsWbsPM?_pgsWbsPM[String(l.leafId)]:null)||l.pkgName||null, l.locPath||l.locName);
+  const _qtyTd=(g,l,lk)=>'<td class="num" style="min-width:130px;"><input class="mi-ql num" type="number" step="0.001" style="width:100px;text-align:right;" value="'+_fmtQin(l.qty)+'" onwheel="this.blur()" onkeydown="if(event.key===\'ArrowUp\'||event.key===\'ArrowDown\')event.preventDefault()" oninput="_msSetQty(\''+esc(g.code)+'\',\''+esc(lk)+'\',this.value,this)"><div class="'+_msCapCls(g,l)+'" id="msCal_'+esc(lk)+'" style="font-size:10px;">'+_msCapText(g,l)+'</div></td>';
+  _misGroups.forEach(g=>{
+    const multi=g.locs.length>1;
+    n++;
+    if(!multi){
+      const l=g.locs[0], lk=_msLk(g,l);
+      rows.push('<tr>'
+        +'<td></td><td>'+n+'</td>'
+        +'<td style="min-width:285px;"><div style="font-weight:600;">'+esc(g.name)+(l.isLS?' <span class="wo-ls-pill">LS</span>':'')+'</div>'
+        +  '<div style="font-size:10px;color:var(--muted);"><span class="mi-code">'+esc(g.code)+'</span></div></td>'
+        +'<td style="min-width:220px;">'+_wl(g,l)+'</td>'
+        +'<td>'+esc(g.uom)+'</td>'
+        +'<td class="num msStkC" data-mscode="'+esc(g.code)+'" style="font-size:11px;white-space:nowrap;"></td>'
+        +_qtyTd(g,l,lk)
+        +'<td class="num" style="font-size:11px;color:var(--muted);white-space:nowrap;">\u20b9'+fmtINR(num(g.rate))+'<div style="font-size:9px;">(FIFO)</div></td>'
+        +'<td class="num" id="msLAmt_'+esc(lk)+'">\u20b9'+fmtINR((Number(l.qty)||0)*num(g.rate))+'</td>'
+        +'<td><span class="mi-lx" title="Remove this line" onclick="_msDropLoc(\''+esc(g.code)+'\',\''+esc(lk)+'\')">\u2715</span></td>'
+        +'</tr>');
+      return;
     }
-    return '<div class="mi-mat">'
-      + '<div class="ms-head">'
-      +   '<div class="mi-gi">'+(gi+1)+'</div>'
-      +   '<div class="mi-nm">'+exp+'<span class="mi-del" title="Remove material" onclick="_msDropMat(\''+esc(g.code)+'\')">🗑</span>'
-      +     '<div class="mi-nb"><div class="mi-t">'+esc(g.name)+singleLocPill+'</div><div class="mi-s"><span class="mi-code">'+esc(g.code)+'</span>'+(multi?' · '+g.locs.length+' locations':'')+'</div></div></div>'
-      +   '<div class="mi-uom">'+esc(g.uom)+'</div>'
-      +   _msStockHtml(g)
-      +   headQty
-      +   headAmt
-      +   '<span></span>'
-      + '</div>'
-      + locBlock
-      + '</div>';
-  }).join('');
+    const ex=_misOpen.has(g.code);
+    const total=_misGroupCum(g);
+    rows.push('<tr data-open="'+(ex?'1':'0')+'" style="cursor:pointer;background:#f8fafc;" onclick="_msToggle(\''+esc(g.code)+'\')">'
+      +'<td><span style="color:#0f766e;font-weight:700;">'+(ex?'\u25be':'\u25b8')+'</span></td>'
+      +'<td style="font-weight:600;">'+n+'</td>'
+      +'<td style="min-width:285px;"><div style="font-weight:600;">'+esc(g.name)
+      +  '<span style="font-size:10px;font-weight:700;color:#0f766e;background:#ccfbf1;border-radius:99px;padding:1px 7px;margin-left:6px;vertical-align:middle;">'+g.locs.length+' rows</span></div>'
+      +  '<div style="font-size:10px;color:var(--muted);"><span class="mi-code">'+esc(g.code)+'</span></div></td>'
+      +'<td><span style="font-size:10.5px;color:#94a3b8;font-style:italic;">'+g.locs.length+' rows \u2014 expand to edit per location</span></td>'
+      +'<td>'+esc(g.uom)+'</td>'
+      +'<td class="num msStkC" data-mscode="'+esc(g.code)+'" style="font-size:11px;white-space:nowrap;"></td>'
+      +'<td class="num"><b id="msCum_'+esc(g.code)+'">'+_fmtQ(total)+'</b> <span style="font-size:10px;color:var(--muted);">\u00b7 '+g.locs.length+' loc</span></td>'
+      +'<td class="num" style="font-size:11px;color:var(--muted);white-space:nowrap;">\u20b9'+fmtINR(num(g.rate))+'<div style="font-size:9px;">(FIFO)</div></td>'
+      +'<td class="num" style="font-weight:600;" id="msGAmt_'+esc(g.code)+'">\u20b9'+fmtINR(total*num(g.rate))+'</td>'
+      +'<td><span class="mi-lx" title="Remove material (all its rows)" onclick="event.stopPropagation();_msDropMat(\''+esc(g.code)+'\')">\u2715</span></td>'
+      +'</tr>');
+    if(ex){
+      g.locs.forEach((l,li)=>{
+        const lk=_msLk(g,l);
+        rows.push('<tr>'
+          +'<td></td>'
+          +'<td style="font-size:10px;color:var(--muted);font-family:monospace;">'+n+'.'+(li+1)+'</td>'
+          +'<td><span style="color:#94a3b8;">\u21b3</span>'+(l.isLS?' <span class="wo-ls-pill">LS</span>':'')+'</td>'
+          +'<td style="min-width:220px;background:#fcfdfe;">'+_wl(g,l)+'</td>'
+          +'<td>'+esc(g.uom)+'</td>'
+          +'<td></td>'
+          +_qtyTd(g,l,lk)
+          +'<td></td>'
+          +'<td class="num" id="msLAmt_'+esc(lk)+'">\u20b9'+fmtINR((Number(l.qty)||0)*num(g.rate))+'</td>'
+          +'<td><span class="mi-lx" title="Remove this line" onclick="_msDropLoc(\''+esc(g.code)+'\',\''+esc(lk)+'\')">\u2715</span></td>'
+          +'</tr>');
+      });
+    }
+  });
+  host.innerHTML='<div class="table-wrap"><table><thead><tr>'
+    +'<th style="width:18px;"></th><th>#</th><th style="min-width:285px;">Material</th><th style="min-width:220px;">WBS / Location</th><th>UOM</th>'
+    +'<th class="num">Stock</th><th class="num">Qty to Issue</th><th class="num">Rate</th><th class="num">Amount</th><th></th>'
+    +'</tr></thead><tbody>'+rows.join('')
+    +'<tr style="background:#e6f4f1;font-weight:700;"><td colspan="8" style="text-align:right;padding:6px 8px;">Total</td><td class="num" id="msFlatTotal"></td><td></td></tr>'
+    +'</tbody></table></div>';
+  _misFlatPaintStock(); _misFlatPaintTotal();
   _misRefreshOverrideUI();
+}
+// v109: stock cells repeat per row of a material — repaint them all by data-mscode.
+function _misFlatPaintStock(){
+  document.querySelectorAll('#misItemsHost .msStkC').forEach(td=>{
+    const code=td.dataset.mscode; const g=_misFindGroup(code); if(!g) return;
+    const stock=_misStockFor(g.name), total=_misGroupCum(g), bad=total>stock+1e-6;
+    td.innerHTML='stock <b style="font-variant-numeric:tabular-nums;color:'+(bad?'#dc2626':'var(--accent)')+';">'+_fmtQ(stock)+'</b>'
+      +(bad?'<div style="color:#dc2626;font-weight:600;font-size:9px;">\u26a0 exceeds stock</div>':'');
+  });
+}
+function _misFlatPaintTotal(){
+  const t=document.getElementById('msFlatTotal'); if(!t) return;
+  t.textContent='\u20b9'+fmtINR(_misGroups.reduce((s,g)=>s+_misGroupCum(g)*num(g.rate),0));
 }
 function _msToggle(code){ _misOpen.has(code)?_misOpen.delete(code):_misOpen.add(code); _renderMisItems(); }
 function _misSetAll(open){ _misGroups.forEach(g=>{ if(g.locs.length>1){ open?_misOpen.add(g.code):_misOpen.delete(g.code); } }); _renderMisItems(); }
@@ -30946,13 +31257,10 @@ function _msSetQty(code,lk,val,el){
   l.qty=Math.max(0,Number(val)||0);
   const cap=document.getElementById('msCal_'+lk);
   if(cap){ cap.textContent=_msCapText(g,l); cap.className=_msCapCls(g,l); }
-  const la=document.getElementById('msLAmt_'+lk); if(la) la.textContent='₹'+fmtINR(l.qty*num(g.rate));
+  const la=document.getElementById('msLAmt_'+lk); if(la) la.textContent='\u20b9'+fmtINR(l.qty*num(g.rate));
   const cum=document.getElementById('msCum_'+code); if(cum) cum.textContent=_fmtQ(_misGroupCum(g));
-  const ga=document.getElementById('msGAmt_'+code); if(ga) ga.textContent='₹'+fmtINR(_misGroupCum(g)*num(g.rate));
-  const stk=document.getElementById('msStk_'+code);
-  if(stk){ const stock=_misStockFor(g.name), bad=_misGroupCum(g)>stock+1e-6;
-    stk.className='ms-stk'+(bad?' bad':'');
-    stk.innerHTML='stock <b>'+_fmtQ(stock)+'</b> '+esc(g.uom)+(bad?'<div style="color:#dc2626;font-weight:600;">⚠ issue exceeds stock</div>':''); }
+  const ga=document.getElementById('msGAmt_'+code); if(ga) ga.textContent='\u20b9'+fmtINR(_misGroupCum(g)*num(g.rate));
+  _misFlatPaintStock(); _misFlatPaintTotal();
   _misRefreshOverrideUI();
 }
 
@@ -31197,12 +31505,18 @@ async function confirmApproveMIS(misNum) {
 
 async function viewMIS(misNum) {
   pbShow('Loading…');
-  const [{data:h},{data:items},_wbsTree,_locTree]=await Promise.all([
-    sb.from('pu_mis').select('*').eq('mis_number',misNum).single(),
-    sb.from('pu_mis_items').select('*').eq('mis_number',misNum).order('sno'),
-    _loadWbsTree(),
-    _loadLocTree(),
-  ]);
+  // v111: one-round-trip engine (in parallel with the cached trees), legacy fallback.
+  let h,items,_wbsTree,_locTree;
+  const [_pv,_wt0,_lt0]=await Promise.all([_pgsDocView('MIS',misNum),_loadWbsTree(),_loadLocTree()]);
+  _wbsTree=_wt0; _locTree=_lt0;
+  if(_pv){ h=_pv.header; items=_pv.items||[]; }
+  else {
+    const _r=await Promise.all([
+      sb.from('pu_mis').select('*').eq('mis_number',misNum).single(),
+      sb.from('pu_mis_items').select('*').eq('mis_number',misNum).order('sno'),
+    ]);
+    h=_r[0].data; items=_r[1].data;
+  }
   pbDone();
   // v39: WBS + Location breadcrumbs (trees are cached module-level; paths are ' › '-joined).
   const _misWbsPathById = Object.fromEntries((_wbsTree||[]).map(n=>[String(n.id), n.path||n.name]));
@@ -31253,22 +31567,66 @@ async function viewMIS(misNum) {
        </div>`
     : '';
 
-  // Item rows
-  const itemRows = (items||[]).map((it,idx) => {
-    const ovBadge = num(it.over_issue_qty)>0 ? ` <span style="font-size:9px;background:#dc2626;color:#fff;padding:1px 5px;border-radius:3px;font-weight:700;" title="Issued over estimate">OVER +${_qf(it.over_issue_qty)}</span>` : '';
-    return `<tr>
-      <td>${it.sno}</td>
-      <td>${esc(it.material_name)}${lineBadge(it)}${ovBadge}
-        <div style="font-size:10.5px;color:var(--muted);line-height:1.5;margin-top:3px;">\ud83e\udde9 ${_misCrumb(_misWbsPath(it))}</div>
-        <div style="font-size:10.5px;color:var(--muted);line-height:1.5;margin-top:2px;">\ud83d\udccd ${_misCrumb(_misLocPath(it))}</div>
-      </td>
+  // Item rows — v110: grouped by material; Stock Before stays blank on the
+  // summary row (per-line sequential, a sum is meaningless).
+  const _mGrpsArr=[];
+  (items||[]).slice().sort((a,b)=>((a.material_name||'').localeCompare(b.material_name||''))||((a.sno||0)-(b.sno||0)))
+    .forEach(it=>{ const g=_mGrpsArr[_mGrpsArr.length-1];
+      if(g && g.name===it.material_name) g.lines.push(it); else _mGrpsArr.push({name:it.material_name,lines:[it]}); });
+  const _mAnyGrp=_mGrpsArr.some(g=>g.lines.length>1);
+  const _mParts=[];
+  if(_mAnyGrp) _mParts.push(_pgsGrpBarRow(9));
+  const _mOv=it=>num(it.over_issue_qty)>0 ? ` <span style="font-size:9px;background:#dc2626;color:#fff;padding:1px 5px;border-radius:3px;font-weight:700;" title="Issued over estimate">OVER +${_qf(it.over_issue_qty)}</span>` : '';
+  _mGrpsArr.forEach((G,gi)=>{
+    const gN=gi+1, cls='mG'+gi, multi=G.lines.length>1;
+    if(!multi){
+      const it=G.lines[0];
+      _mParts.push(`<tr>
+      <td></td><td>${gN}</td>
+      <td>${esc(it.material_name)}${lineBadge(it)}${_mOv(it)}</td>
+      <td style="min-width:220px;">${_pgsWLCell(_misWbsPath(it), _misLocPath(it))}</td>
       <td>${esc(it.uom)}</td>
       <td class="num">${fmtINR(it.stock_before)}</td>
       <td class="num">${fmtINR(it.qty_issued)}</td>
       <td class="num">${fmtINR(it.unit_rate)}</td>
       <td class="num">${fmtINR(it.amount)}</td>
-    </tr>`;
-  }).join('');
+    </tr>`);
+      return;
+    }
+    const sQty=G.lines.reduce((s,it)=>s+num(it.qty_issued),0);
+    const sAmt=G.lines.reduce((s,it)=>s+num(it.amount),0);
+    const rates=new Set(); G.lines.forEach(it=>rates.add(num(it.unit_rate).toFixed(4)));
+    const rateCell=rates.size===1?fmtINR(num(G.lines[0].unit_rate)):'<span style="color:#94a3b8;font-style:italic;font-size:11px;">mixed</span>';
+    const nOver=G.lines.filter(it=>num(it.over_issue_qty)>0).length;
+    _mParts.push('<tr data-pgsgrp="1" data-open="0" style="cursor:pointer;background:#f8fafc;font-weight:600;" onclick="_pgsGrpToggle(\''+cls+'\',this)">'
+      +'<td><span class="pgs-chev" style="color:#0f766e;font-weight:700;">\u25b8</span></td>'
+      +'<td>'+gN+'</td>'
+      +'<td>'+esc(G.name)+lineBadge(G.lines[0])
+      +  '<span style="font-size:10px;font-weight:700;color:#0f766e;background:#ccfbf1;border-radius:99px;padding:1px 7px;margin-left:6px;vertical-align:middle;">'+G.lines.length+' lines</span>'
+      +  (nOver?' <span style="font-size:9px;background:#dc2626;color:#fff;padding:1px 5px;border-radius:3px;font-weight:700;">'+nOver+' OVER</span>':'')
+      +'</td>'
+      +'<td><span class="pgs-ghint" style="font-size:10.5px;color:#94a3b8;font-style:italic;">'+G.lines.length+' \u00d7 (WBS \u00b7 location) \u2014 click to expand</span></td>'
+      +'<td>'+esc(G.lines[0].uom)+'</td>'
+      +'<td class="num"></td>'
+      +'<td class="num">'+fmtINR(sQty)+'</td>'
+      +'<td class="num">'+rateCell+'</td>'
+      +'<td class="num">'+fmtINR(sAmt)+'</td>'
+      +'</tr>');
+    G.lines.forEach((it,li)=>{
+      _mParts.push('<tr class="'+cls+'" style="display:none;">'
+        +'<td></td>'
+        +'<td style="font-size:10px;color:var(--muted);font-family:monospace;">'+gN+'.'+(li+1)+'</td>'
+        +'<td><span style="color:#94a3b8;">\u21b3</span>'+_mOv(it)+'</td>'
+        +'<td style="min-width:220px;background:#fcfdfe;">'+_pgsWLCell(_misWbsPath(it), _misLocPath(it))+'</td>'
+        +'<td>'+esc(it.uom)+'</td>'
+        +'<td class="num">'+fmtINR(it.stock_before)+'</td>'
+        +'<td class="num">'+fmtINR(it.qty_issued)+'</td>'
+        +'<td class="num">'+fmtINR(it.unit_rate)+'</td>'
+        +'<td class="num">'+fmtINR(it.amount)+'</td>'
+        +'</tr>');
+    });
+  });
+  const itemRows=_mParts.join('');
 
 
   // Action buttons
@@ -31326,14 +31684,14 @@ async function viewMIS(misNum) {
     <div class="table-wrap">
       <table>
         <thead><tr>
-          <th>#</th><th>Material</th><th>UOM</th>
+          <th style="width:18px;"></th><th>#</th><th style="min-width:230px;">Material</th><th style="min-width:220px;">WBS / Location</th><th>UOM</th>
           <th class="num">Stock Before</th><th class="num">${isAuditEntry ? 'Qty Adjustment (±)' : 'Qty Issued'}</th>
           <th class="num">Rate</th><th class="num">Amount</th>
         </tr></thead>
         <tbody>
           ${itemRows}
           <tr style="background:#e6f4f1;font-weight:700;">
-            <td colspan="6" style="text-align:right;padding:6px 8px;">Total</td>
+            <td colspan="8" style="text-align:right;padding:6px 8px;">Total</td>
             <td class="num">${fmtINRSym(total)}</td>
           </tr>
         </tbody>
@@ -32302,6 +32660,7 @@ async function reviseMIS(misNum) {
     catch(e){ _wlByCode[code]=[]; }
   }
   pbDone();
+  await _pgsEnsureNodePMs();   // v109: breadcrumb paths for the flat rows
   for(const it of (items||[])){
     const code=it.material_code||'';
     const gKey=code||it.material_name;
@@ -32315,9 +32674,10 @@ async function reviseMIS(misNum) {
       pkgId:(it.wbs_node_id!=null?it.wbs_node_id:null),   // v159: saved MIS lines carry the package id
       locName:wl?(wl.loc_name||''):'', locPath:wl?(wl.loc_path||''):('loc #'+it.loc_node_id),
       pkgName:it.wbs_activity||(wl?(wl.package_name||''):''),
+      wbsPath:((_pgsWbsPM&&_pgsWbsPM[String(it.wbs_node_id)])||it.wbs_activity||''),
       qty:num(it.qty_issued), rem:(ir?ir.rem:(wl?num(wl.remaining):0)), isLS:!!(wl&&wl.is_ls===true)});
   }
-  _misGroups.forEach(g=>{ if(g.locs.length>1) _misOpen.add(g.code); });
+  // v110: groups start collapsed on resume too (summary rows show sums)
   _renderMisItems();
 }
 
