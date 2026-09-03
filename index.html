@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Penguin Suite v113_1</title>
+<title>Penguin Suite v115</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js"></script>
@@ -104,6 +104,17 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helve
 .actions-row { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 16px; }
 
 /* Tables */
+/* v115: POB list — fixed-layout table (colgroup pins widths, never h-scrolls) + compact GRN cell */
+table.pob-fixed { table-layout: fixed; }
+table.pob-fixed th, table.pob-fixed td { overflow-wrap: anywhere; word-break: break-word; }
+.grn-cell { font-size: 11px; line-height: 1.35; }
+.grn-cell .g { display: block; font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 10.5px; color: #334155; }
+.grn-cell .gap { display: inline-block; margin: 2px 0; padding: 1px 7px; border-radius: 99px; font-size: 10px; font-weight: 600; background: #e0e7ff; color: #3730a3; cursor: pointer; border: 1px solid #c7d2fe; }
+.grn-cell .gap:hover { background: #c7d2fe; }
+.grn-cell .lbl { font-size: 9px; color: #94a3b8; text-transform: uppercase; letter-spacing: .4px; margin-right: 4px; }
+.grn-list { display: grid; grid-template-columns: repeat(2, 1fr); gap: 4px 14px; }
+.grn-list div { font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 11.5px; padding: 4px 8px; border: 1px solid #e8eef5; border-radius: 4px; background: #f8fafc; }
+.grn-list div span { color: #94a3b8; font-size: 9.5px; margin-right: 6px; }
 .table-wrap { overflow-x: auto; background: var(--panel); border: 1px solid var(--border); border-radius: 6px; box-shadow: 0 1px 3px rgba(30,58,95,0.06); }
 table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
 th { background: #dde6f0; padding: 10px 8px; text-align: left; font-weight: 600; color: #1e3a5f; border-bottom: 2px solid #c3d0e0; position: sticky; top: 0; z-index: 1; font-size: 11.5px; text-transform: uppercase; letter-spacing: 0.3px; }
@@ -4061,7 +4072,11 @@ table.pgp-roles, table.pgp-mx{ border-collapse:collapse; width:100%; }
         </select>
       </div>
       <div class="table-wrap">
-        <table>
+        <table class="pob-fixed">
+          <colgroup>
+            <col style="width:11%"><col style="width:9%"><col style="width:9%"><col style="width:12%"><col style="width:14%">
+            <col style="width:8%"><col style="width:8%"><col style="width:7%"><col style="width:8%"><col style="width:7%"><col style="width:7%">
+          </colgroup>
           <thead>
             <tr>
               <th>Bill Number</th><th>Date</th><th>PO Number</th><th>Vendor</th>
@@ -4071,7 +4086,7 @@ table.pgp-roles, table.pgp-mx{ border-collapse:collapse; width:100%; }
             </tr>
             <tr style="background:var(--input-bg);">
               <td style="padding:4px 6px;"><input id="pobF_number" placeholder="Filter&#8230;" oninput="renderPOBList()" style="width:100%;padding:4px 6px;font-size:11px;background:var(--bg);color:var(--text);border:1px solid var(--border);border-radius:4px;"></td>
-              <td style="padding:4px 6px;"><div style="display:flex;gap:4px;align-items:center;"><input type="date" id="pobF_dateFrom" oninput="renderPOBList()" style="flex:1;padding:4px 5px;font-size:11px;background:var(--bg);color:var(--text);border:1px solid var(--border);border-radius:4px;"><span style="font-size:10px;color:var(--text-muted);">&#8594;</span><input type="date" id="pobF_dateTo" oninput="renderPOBList()" style="flex:1;padding:4px 5px;font-size:11px;background:var(--bg);color:var(--text);border:1px solid var(--border);border-radius:4px;"></div></td>
+              <td style="padding:4px 6px;"><div style="display:flex;flex-direction:column;gap:3px;"><input type="date" id="pobF_dateFrom" oninput="renderPOBList()" style="padding:4px 5px;font-size:11px;background:var(--bg);color:var(--text);border:1px solid var(--border);border-radius:4px;" title="From"><input type="date" id="pobF_dateTo" oninput="renderPOBList()" title="To" style="padding:4px 5px;font-size:11px;background:var(--bg);color:var(--text);border:1px solid var(--border);border-radius:4px;"></div></td>
               <td style="padding:4px 6px;"><input id="pobF_po" placeholder="Filter&#8230;" oninput="renderPOBList()" style="width:100%;padding:4px 6px;font-size:11px;background:var(--bg);color:var(--text);border:1px solid var(--border);border-radius:4px;"></td>
               <td style="padding:4px 6px;"><input id="pobF_vendor" placeholder="Filter&#8230;" oninput="renderPOBList()" style="width:100%;padding:4px 6px;font-size:11px;background:var(--bg);color:var(--text);border:1px solid var(--border);border-radius:4px;"></td>
               <td style="padding:4px 6px;"></td><td style="padding:4px 6px;"></td><td style="padding:4px 6px;"></td><td style="padding:4px 6px;"></td><td style="padding:4px 6px;"></td>
@@ -26336,14 +26351,15 @@ function _poHistPill(bg,fg,label,r){
 // v112: compact 3-line price-history cell (Low / High / Last) for view tables
 function _pgsHistCell(hh){
   if(!hh) return '<span style="color:#94a3b8;font-style:italic;font-size:10px;">No previous POs</span>';
-  // v113 (approved mock v3): one line per entry — tag, rate, then vendor · PO · date
-  // in a single muted span. Normal weight throughout; no vertical gap between entries.
-  const line=(bg,fg,label,r)=>!r?'':'<div style="display:flex;align-items:baseline;gap:7px;white-space:nowrap;line-height:1.5;">'
+  // v114 (approved mock option B): tag + rate unchanged; meta stacked as two lines
+  // (vendor / PO · date) in a flex column, pill and rate vertically centred against it.
+  const line=(bg,fg,label,r)=>!r?'':'<div style="display:flex;align-items:center;gap:7px;white-space:nowrap;padding:1px 0;">'
     +'<span style="display:inline-block;width:42px;font-weight:400;font-size:10px;text-transform:uppercase;letter-spacing:.4px;border-radius:3px;padding:1px 0;text-align:center;line-height:1.3;background:'+bg+';color:'+fg+';">'+label+'</span>'
     +'<span style="font-weight:400;font-size:12px;color:#0f172a;min-width:60px;text-align:right;">\u20b9'+fmtINR(r.rate)+'</span>'
-    +'<span style="font-size:9px;color:#64748b;overflow:hidden;text-overflow:ellipsis;max-width:280px;" title="'+esc(r.vendor||'')+' \u00b7 '+esc(r.po||'')+'">'
-    +  '<span style="color:#475569;">'+esc(r.vendor||'\u2014')+'</span> \u00b7 '+esc(r.po||'')+' \u00b7 '+fmtDate(r.date)+'</span>'
-    +'</div>';
+    +'<span style="display:flex;flex-direction:column;font-size:9px;line-height:1.2;color:#64748b;overflow:hidden;max-width:280px;">'
+    +  '<span style="color:#475569;overflow:hidden;text-overflow:ellipsis;" title="'+esc(r.vendor||'')+'">'+esc(r.vendor||'\u2014')+'</span>'
+    +  '<span style="overflow:hidden;text-overflow:ellipsis;" title="'+esc(r.po||'')+'">'+esc(r.po||'')+' \u00b7 '+fmtDate(r.date)+'</span>'
+    +'</span></div>';
   return '<div style="font-variant-numeric:tabular-nums;">'
     +line('#d1fae5','#065f46','Low',hh.low)+line('#fee2e2','#991b1b','High',hh.high)+line('#e0e7ff','#3730a3','Last',hh.last)+'</div>';
 }
@@ -27295,7 +27311,7 @@ async function viewPO(poNum) {
       <thead><tr>
         <th style="width:18px;"></th><th>#</th><th style="min-width:230px;">Material</th><th style="min-width:220px;">WBS / Location</th><th>UOM</th>
         <th class="num">Ordered</th><th class="num">Received</th><th class="num">Pending</th>
-        <th class="num">Rate</th><th class="num">Base Amt</th><th class="num">Total (incl.GST)</th><th style="min-width:400px;">Price History</th>
+        <th class="num">Rate</th><th class="num">Base Amt</th><th class="num">Total (incl.GST)</th><th style="min-width:300px;">Price History</th>
       </tr></thead>
       <tbody>${itemsHTML}</tbody>
     </table></div>
@@ -29220,6 +29236,27 @@ async function loadPOBList() {
   renderPOBList();
 }
 
+// v115: compact GRN cell for the POB list — first + last shown, "+N more" opens the full list.
+function _pobGrnCell(bill){
+  const list=String(bill.grn_numbers||'').split(',').map(s=>s.trim()).filter(Boolean);
+  if(!list.length) return '<span class="muted">\u2014</span>';
+  const g=x=>'<span class="g">'+esc(x)+'</span>';
+  if(list.length<=2) return '<div class="grn-cell">'+list.map(g).join('')+'</div>';
+  return '<div class="grn-cell">'
+    +'<span class="lbl">first</span>'+g(list[0])
+    +'<span class="gap" title="Show all '+list.length+' GRNs" onclick="showPobGrns(this.dataset.b)" data-b="'+esc(bill.bill_number)+'">+'+(list.length-2)+' more</span>'
+    +'<span class="lbl">last</span>'+g(list[list.length-1])
+    +'</div>';
+}
+function showPobGrns(billNumber){
+  const b=(puState.pobList||[]).find(x=>x.bill_number===billNumber);
+  if(!b) return;
+  const list=String(b.grn_numbers||'').split(',').map(s=>s.trim()).filter(Boolean);
+  openModal('<h3 style="margin:0 0 4px;font-size:14px;color:#1e3a5f;">GRNs on '+esc(billNumber)+'</h3>'
+    +'<div class="muted" style="font-size:11px;margin-bottom:12px;">'+list.length+' GRN(s) \u00b7 '+esc(b.vendor_name||'')+'</div>'
+    +'<div class="grn-list">'+list.map((x,i)=>'<div><span>'+(i+1)+'</span>'+esc(x)+'</div>').join('')+'</div>'
+    +'<div style="text-align:right;margin-top:14px;"><button class="btn btn-ghost btn-sm" onclick="closeModal()">Close</button></div>');
+}
 function renderPOBList() {
   const fNum=gvl('pobF_number'), fVen=gvl('pobF_vendor'), fPO=gvl('pobF_po');
   const fSt=gv('pobF_status'), fFrom=gv('pobF_dateFrom'), fTo=gv('pobF_dateTo');
@@ -29253,7 +29290,7 @@ function renderPOBList() {
     return `<tr>
       <td class="mono">${esc(b.bill_number)}${cashBadge}</td><td>${fmtDate(b.bill_date)}</td>
       <td>${poDisplay}</td><td>${esc(b.vendor_name)}</td>
-      <td style="font-size:11px;">${esc(b.grn_numbers||'—')}</td>
+      <td>${_pobGrnCell(b)}</td>
       <td class="num">${fmtINR(b.invoice_value)}</td>
       <td class="num" style="font-weight:600;">${fmtINR(b.net_payable)}</td>
       <td class="num">${fmtINR(b.total_paid||0)}</td>
