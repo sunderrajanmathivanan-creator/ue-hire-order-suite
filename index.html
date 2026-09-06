@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Penguin Suite v117</title>
+<title>Penguin Suite v119</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js"></script>
@@ -227,6 +227,7 @@ tr.amd-addedln td { background:#f0fdf4; }
 .scan-cand.best { border-color:var(--accent); background:#f0fdfa; } .scan-cand .t { font-weight:600; } .scan-cand .m { font-size:12px; color:var(--muted); margin-top:2px; }
 .scan-cand .score { font-weight:700; font-size:16px; color:var(--navy); text-align:right; } .scan-cand .score small { display:block; font-weight:400; font-size:11px; color:var(--muted); }
 .amber { color:#b45309; font-weight:600; }
+.scan-map { font-size:11px; padding:2px 4px; border:1px solid var(--border); border-radius:4px; background:var(--input-bg); max-width:220px; margin-left:4px; vertical-align:middle; }
 @media (max-width:1180px) { .scan-split { grid-template-columns:1fr !important; height:auto; } .scan-divider { display:none; } .scan-left { max-height:60vh; } .scan-doc { height:520px; } }
 .status.unbilled { background: #fef3c7; color: #92400e; border: 1px solid #fcd34d; }
 .status.paid { background: #ccfbf1; color: #065f46; border: 1px solid #5eead4; }
@@ -27471,7 +27472,8 @@ async function viewPO(poNum) {
 // until the Store Executive presses Save GRN (rpc_save_grn, unchanged).
 // ═══════════════════════════════════════════════════════════════════════
 const SCAN_PDFJS_VER='3.11.174';
-const _scan={file:null,pdf:null,pages:0,parse:null,route:null,model:null,confidence:null,zoom:1,poCands:null,match:null,uploaded:null,busy:false};
+const SCAN_TESS_VER='5.1.1';   // v118: in-system OCR (tesseract.js, runs in the browser; nothing leaves the machine)
+const _scan={file:null,pdf:null,pages:0,parse:null,route:null,model:null,confidence:null,zoom:1,poCands:null,match:null,uploaded:null,busy:false,profile:null,assign:null};
 function _scanMode(){ return (window.PGS_META&&PGS_META.proj&&PGS_META.proj.doc_parse_mode)||'auto'; }
 function _scanLoadPdfJs(){
   if(window.pdfjsLib&&window.pdfjsLib.getDocument) return Promise.resolve();
@@ -27484,8 +27486,66 @@ function _scanLoadPdfJs(){
   });
   return window._scanPdfJsP;
 }
+function _scanLoadTess(){
+  if(window.Tesseract&&window.Tesseract.createWorker) return Promise.resolve();
+  if(window._scanTessP) return window._scanTessP;
+  window._scanTessP=new Promise((res,rej)=>{ const s=document.createElement('script'); s.src='https://cdnjs.cloudflare.com/ajax/libs/tesseract.js/'+SCAN_TESS_VER+'/tesseract.min.js'; s.onload=()=>res(); s.onerror=()=>rej(new Error('Could not load the OCR engine (tesseract.js) — check network')); document.head.appendChild(s); });
+  return window._scanTessP;
+}
+// OCR: render each page at ~2x (or use the image), recognise, return text lines. Progress → overlay.
+async function _scanOcr(file){
+  await _scanLoadTess();
+  const worker=await window.Tesseract.createWorker('eng',1,{ logger:m=>{ if(m.status==='recognizing text'&&m.progress!=null){ _scanOverlay('Reading with in-system OCR… '+Math.round(m.progress*100)+'%<br><span class="muted" style="font-weight:400;">page '+(_scan._ocrPage||1)+' of '+(_scan.pages||1)+' · this can take 15–40 s per page</span>',1); } } });
+  try{
+    await worker.setParameters({ preserve_interword_spaces:'1', tessedit_pageseg_mode:'6' });   // 6 = assume a uniform block of text (invoice tables)
+    const lines=[]; let chars=0;
+    const srcs=[];
+    if(_scan.pdf){
+      for(let i=1;i<=Math.min(_scan.pdf.numPages,4);i++){
+        const page=await _scan.pdf.getPage(i); const v1=page.getViewport({scale:1});
+        // v118.1: OCR accuracy is best at the scan's NATIVE resolution (measured: 200 dpi scan → 15/15 numbers at native,
+        // 8/15 when down- or up-sampled). Read the embedded image width; fall back to 300 dpi.
+        let scale=300/72;
+        try{ const w=await _scanPageImageWidth(page); if(w&&w>600) scale=Math.min(6,Math.max(1.5,w/v1.width)); }catch(e){}
+        if(v1.width*scale>4200) scale=4200/v1.width;
+        const vp=page.getViewport({scale}); const c=document.createElement('canvas'); c.width=Math.round(vp.width); c.height=Math.round(vp.height);
+        await page.render({canvasContext:c.getContext('2d'),viewport:vp}).promise; srcs.push(c);
+      }
+    } else { srcs.push(file); }
+    for(let i=0;i<srcs.length;i++){
+      _scan._ocrPage=i+1;
+      const {data}=await worker.recognize(srcs[i]);
+      String(data.text||'').split('\n').map(l=>l.replace(/\s+/g,' ').trim()).filter(Boolean).forEach(l=>{ lines.push(l); chars+=l.length; });
+    }
+    return {lines,chars};
+  } finally { try{ await worker.terminate(); }catch(_){ } }
+}
+// Width in pixels of the largest image XObject drawn on the page (scanned PDFs = one full-page image).
+async function _scanPageImageWidth(page){
+  const ops=await page.getOperatorList(); const P=window.pdfjsLib.OPS; let best=0;
+  for(let i=0;i<ops.fnArray.length;i++){
+    if(ops.fnArray[i]!==P.paintImageXObject&&ops.fnArray[i]!==P.paintJpegXObject) continue;
+    const name=ops.argsArray[i][0];
+    const img=await new Promise(res=>{ try{ page.objs.get(name,o=>res(o)); }catch(e){ res(null); } });
+    if(img&&img.width>best) best=img.width;
+  }
+  return best;
+}
+// OCR confusions in GSTINs: fix by position (DD LLLLL DDDD L A Z A) then checksum.
+function _scanFixGstin(g){
+  g=String(g).toUpperCase().replace(/[^0-9A-Z]/g,''); if(g.length!==15) return null;
+  const toD={O:'0',D:'0',Q:'0',I:'1',L:'1',Z:'2',S:'5',B:'8',G:'6',T:'7'}, toL={0:'O',1:'I',5:'S',8:'B',2:'Z',6:'G'};
+  const out=g.split('');
+  [0,1,7,8,9,10].forEach(i=>{ if(/[A-Z]/.test(out[i])&&toD[out[i]]) out[i]=toD[out[i]]; });
+  [2,3,4,5,6,11].forEach(i=>{ if(/[0-9]/.test(out[i])&&toL[out[i]]) out[i]=toL[out[i]]; });
+  out[13]='Z';
+  // positions 12 and 14 are alphanumeric: try the as-read form, then digit/letter alternates, first that passes the checksum wins
+  const alt=ch=>[ch].concat(toD[ch]?[toD[ch]]:[],toL[ch]?[toL[ch]]:[]);
+  for(const c12 of alt(out[12])) for(const c14 of alt(out[14])){ const f=out.slice(0,12).join('')+c12+'Z'+c14; if(_scanGstinValid(f)) return f; }
+  return null;
+}
 function grnScanReset(){
-  Object.assign(_scan,{file:null,pdf:null,pages:0,parse:null,route:null,model:null,confidence:null,zoom:1,poCands:null,match:null,uploaded:null,busy:false});
+  Object.assign(_scan,{file:null,pdf:null,pages:0,parse:null,route:null,model:null,confidence:null,zoom:1,poCands:null,match:null,uploaded:null,busy:false,profile:null,assign:null});
   const pane=document.getElementById('grnDocPages'); if(pane) pane.innerHTML=_scanEmptyPane();
   const bar=document.getElementById('grnDocBar'); if(bar) bar.innerHTML='<b>Document</b> · none attached<span class="sp"></span><button class="btn btn-ghost btn-sm" onclick="grnScanPick(false)">📎 Attach</button>';
   const strip=document.getElementById('grnScanStrip'); if(strip) strip.innerHTML='<div class="muted" style="font-size:12px;padding:8px 0;">Scan result appears here after <b>Scan invoice / challan</b>. For manual entry, pick the PO above.</div>';
@@ -27538,11 +27598,15 @@ async function grnScanHandle(file,parse){
     }
     if(!parsed){
       if(mode==='in_system_only'){
-        _scanStripMsg('warn','<b>Could not read this document in-system.</b> This project is set to in-system parsing only (scans need OCR, which arrives in a later release). The document is attached — pick the PO and enter the GRN manually.');
-        _scan.route='none'; return;
-      }
+        _scanOverlay('Loading in-system OCR…',1);
+        const txt=await _scanOcr(file);
+        const r=txt.chars>=120?_scanParseText(txt.lines):null;
+        if(r&&(r.vendor.gstin||r.lines.length)){ parsed=r; route='ocr'; parsed.confidence={overall:r.lines.length&&r.vendor.gstin?0.55:0.35,notes:['Read by in-system OCR — check every value against the document.']}; }
+        else { _scanStripMsg('warn','<b>In-system OCR could not read this document reliably</b> (no GSTIN or line items found). This project never sends documents to the vision model. The document is attached — pick the PO and enter the GRN manually.'+(txt.chars?' <span class="muted">('+txt.chars+' characters read)</span>':'')); _scan.route='none'; return; }
+      } else {
       _scanOverlay('Reading with the vision model… <span class="muted">this takes 10–25 seconds</span>',1);
       const r=await _scanCallModel(file); parsed=r.data; route='model'; _scan.model=r.model;
+      }
     }
     _scan.parse=parsed; _scan.route=route; _scan.confidence=parsed&&parsed.confidence?parsed.confidence.overall:null;
     // 3. match + prefill
@@ -27608,6 +27672,7 @@ function _scanNormPo(raw){ if(!raw) return null; const s=String(raw).toUpperCase
 function _scanParseText(lines){
   const all=lines.join('\n');
   const gst=[...new Set((all.toUpperCase().match(_GSTIN_RE)||[]).filter(_scanGstinValid))];
+  if(!gst.length){ (all.toUpperCase().match(/\b[0-9A-Z]{15}\b/g)||[]).forEach(c=>{ const f=_scanFixGstin(c); if(f&&!gst.includes(f)) gst.push(f); }); }   // v118: OCR confusions
   const org=(typeof COMPANY!=='undefined'&&COMPANY.gstin)?String(COMPANY.gstin).toUpperCase().replace(/[^0-9A-Z]/g,''):'';
   const buyer=gst.find(g=>g===org)||null; const vendor=gst.find(g=>g!==org)||null;
   const find=(re)=>{ for(const l of lines){ const m=l.match(re); if(m) return m; } return null; };
@@ -27658,6 +27723,38 @@ async function _scanCallModel(file){
   if(!data||!data.ok) throw new Error((data&&data.error)||'parse-doc returned no data');
   return data;
 }
+// ── vendor document profiles (v119 · mig #28) ─────────────────────────
+function _scanDescKey(d){ return String(d||'').toLowerCase().replace(/[^a-z0-9]+/g,' ').replace(/\s+/g,' ').trim(); }
+async function _scanLoadProfile(gstin){
+  _scan.profile=null; if(!gstin) return null;
+  try{ const {data}=await sb.from('vendor_doc_profiles').select('gstin,vendor_name,aliases,uom_map,samples').eq('gstin',gstin).maybeSingle(); _scan.profile=data||null; }catch(e){ console.warn('profile',e); }
+  return _scan.profile;
+}
+function _scanAliasFor(desc){ const p=_scan.profile; if(!p||!p.aliases) return null; return p.aliases[_scanDescKey(desc)]||null; }
+function _scanUomEq(invUom, appUom){
+  if(_scanUom(invUom)===_scanUom(appUom)) return true;
+  const p=_scan.profile; const m=p&&p.uom_map&&p.uom_map[String(invUom||'').toLowerCase().trim()];
+  return !!(m && _scanUom(m)===_scanUom(appUom));
+}
+// Manual correction from the review table: map an invoice line to a PO line (teaches the profile on save).
+function _scanMapLine(li, i){
+  if(!_scan.parse) return; i=(i===''||i==null)?null:+i;
+  _scan.assign=_scan.assign||{}; if(i==null) delete _scan.assign[li]; else { Object.keys(_scan.assign).forEach(k=>{ if(_scan.assign[k]===i&&+k!==li) delete _scan.assign[k]; }); _scan.assign[li]=i; }
+  _scanClearPrefill(true); _scanFillLines(_scan.parse, true);
+}
+// Learn on save: (invoice description → material) for every line the user kept mapped with a quantity.
+async function _scanLearnAfterSave(){
+  try{
+    const p=_scan.parse; if(!p||!p.vendor||!p.vendor.gstin_norm||!_scan.assign) return;
+    const pairs=[], uoms=[];
+    Object.entries(_scan.assign).forEach(([li,i])=>{ const l=p.lines[+li], mt=_grnMeta&&_grnMeta[i]; const inp=document.getElementById('grnRecv_'+i); if(!l||!mt||!inp||!(num(inp.value)>0)) return;
+      pairs.push({desc_norm:_scanDescKey(l.description),material_code:mt.matCode||null,material_name:mt.matName,uom:mt.uom,inv_uom:l.uom||null});
+      if(l.uom&&_scanUom(l.uom)!==_scanUom(mt.uom)) uoms.push({inv_uom:l.uom,uom:mt.uom}); });
+    if(!pairs.length) return;
+    const {data,error}=await sb.rpc('rpc_vendor_profile_learn',{p_gstin:p.vendor.gstin_norm,p_vendor_name:p.vendor.name||null,p_pairs:pairs,p_uoms:uoms,p_parser:_scan.route||null,p_user:state.userName});
+    if(error) console.warn('profile learn',error.message); else if(data&&data.ok) console.info('vendor profile learned:',data);
+  }catch(e){ console.warn('profile learn',e); }
+}
 // ── PO match ladder ───────────────────────────────────────────────────
 function _scanNormGst(g){ return g?String(g).toUpperCase().replace(/[^0-9A-Z]/g,''):''; }
 function _scanUom(u){ u=String(u||'').toLowerCase().replace(/[^a-z]/g,''); if(/^(mt|mts?on|ton|tonne|tons|tonnes)$/.test(u)) return 'MT'; if(/^(mts|mtr|mtrs|metre|metres|meter|meters|m|rmt|rm)$/.test(u)) return 'M'; if(/^(nos?|number|pcs?|piece|pieces|each|ea|unit|units)$/.test(u)) return 'NOS'; if(/^(kgs?|kilo)$/.test(u)) return 'KG'; if(/^(bags?)$/.test(u)) return 'BAG'; if(/^(ltrs?|litre|liter|l)$/.test(u)) return 'L'; if(/^(sqm|sqmt|m2|sqmtr)$/.test(u)) return 'SQM'; if(/^(cum|m3|cft|cuft)$/.test(u)) return u.toUpperCase(); return u.toUpperCase(); }
@@ -27666,7 +27763,8 @@ function _scanInvRate(l){ return (num(l.discount_pct)>0&&l.effective_rate!=null)
 function _scanRateEq(a,b){ return Math.abs(Math.round(a*100)-Math.round(b*100))<=0; }
 async function _scanMatch(p){
   const strip=document.getElementById('grnScanStrip');
-  const route=_scan.route==='pdf_text'?'read from the PDF text layer (in-system)':'read by the vision model'+(_scan.model?' ('+esc(_scan.model)+')':'');
+  await _scanLoadProfile(p&&p.vendor&&p.vendor.gstin_norm);
+  const route=_scanRouteLabel();
   const {data:openPOs}=await sb.from('pu_po_orders').select('po_number,vendor_name,vendor_gstin,status,amendment_state,rev_no,po_date').in('status',['Open','Partial Receipt']).order('po_date',{ascending:false});
   const open=(openPOs||[]).filter(x=>!x.amendment_state);
   // Tier 1: printed PO number
@@ -27713,6 +27811,7 @@ async function _scanMatch(p){
     +'<div class="muted" style="font-size:12px;margin-top:6px;">Nothing has been filled yet. '+_scanRouteNote(route)+'</div>';
   _scanFillHeader(p);
 }
+function _scanRouteLabel(){ return _scan.route==='pdf_text'?'read from the PDF text layer (in-system)':_scan.route==='ocr'?'<span class="amber">read by in-system OCR — check every value carefully</span>':'read by the vision model'+(_scan.model?' ('+esc(_scan.model)+')':''); }
 function _scanRouteNote(route){ return ' <span class="muted">Document '+route+'.</span>'; }
 async function _scanPickCand(poNum){ const c=(_scan.poCands||[]).find(x=>x.po_number===poNum); _scan.match={tier:2,how:'PO chosen by you from '+(_scan.poCands||[]).length+' candidates (line fit '+(c?c._score.toFixed(1):'?')+')'}; await _scanApplyPO(poNum); }
 async function _scanApplyPO(poNum){
@@ -27730,14 +27829,20 @@ function _scanFillHeader(p){
   set('grn_invoiceNo',p.invoice&&p.invoice.number); set('grn_invoiceDate',p.invoice&&p.invoice.date);
   set('grn_challan',(p.invoice&&(p.invoice.vehicle_no||p.invoice.challan_no))||null);
 }
-function _scanFillLines(p){
+function _scanFillLines(p, keepAssign){
   const strip=document.getElementById('grnScanStrip'); if(!strip||!p) return;
   const rows=[]; const used=new Set(); const metas=Object.keys(_grnMeta||{}).map(i=>({i:+i,...(_grnMeta[i])}));
-  // greedy best-match per invoice line
+  const assign={}; const via={};
+  // 0. manual mappings (from the review table) always win
+  if(keepAssign&&_scan.assign){ Object.entries(_scan.assign).forEach(([li,i])=>{ if(metas.some(m=>m.i===i)){ assign[+li]=i; used.add(i); via[+li]='manual'; } }); }
+  // 1. learned aliases (vendor profile) — exact, no guessing
+  (p.lines||[]).forEach((l,li)=>{ if(assign[li]!=null) return; const a=_scanAliasFor(l.description); if(!a) return; const mt=metas.find(m=>!used.has(m.i)&&((a.material_code&&m.matCode===a.material_code)||(!a.material_code&&m.matName===a.material_name))); if(mt){ assign[li]=mt.i; used.add(mt.i); via[li]='alias'; } });
+  // 2. greedy best similarity for the rest
   const pairs=[];
-  (p.lines||[]).forEach((l,li)=>{ metas.forEach(mt=>{ const s=_scanSim(l.description,mt.matName); if(s>=0.35) pairs.push({li,i:mt.i,s}); }); });
-  pairs.sort((a,b)=>b.s-a.s); const assign={};
-  pairs.forEach(pr=>{ if(assign[pr.li]!=null||used.has(pr.i)) return; assign[pr.li]=pr.i; used.add(pr.i); });
+  (p.lines||[]).forEach((l,li)=>{ if(assign[li]!=null) return; metas.forEach(mt=>{ if(used.has(mt.i)) return; const s=_scanSim(l.description,mt.matName); if(s>=0.35) pairs.push({li,i:mt.i,s}); }); });
+  pairs.sort((a,b)=>b.s-a.s);
+  pairs.forEach(pr=>{ if(assign[pr.li]!=null||used.has(pr.i)) return; assign[pr.li]=pr.i; used.add(pr.i); via[pr.li]='similar'; });
+  _scan.assign=Object.assign({},assign);
   let filled=0;
   (p.lines||[]).forEach((l,li)=>{
     const i=assign[li]; const invRate=_scanInvRate(l);
@@ -27745,19 +27850,21 @@ function _scanFillLines(p){
     if(i!=null){
       const mt=_grnMeta[i]; const inp=document.getElementById('grnRecv_'+i); const bal=inp?num(inp.dataset.balance):0; const rmk=document.getElementById('grnRmk_'+i);
       row.poLine=(i+1)+' · '+mt.matName; row.poRate=mt.rate; row.bal=bal; row.balUom=mt.uom;
-      if(_scanUom(l.uom)!==_scanUom(mt.uom)&&l.uom){ row.res='uom'; row.note='UOM differs '+esc(l.uom)+' ≠ '+esc(mt.uom)+' — convert and type'; if(rmk&&!rmk.value){ rmk.value='Inv '+fmtINR(l.qty)+' '+(l.uom||'')+' @ '+fmtINR(invRate)+'/'+(l.uom||'')+' — convert to '+mt.uom; _scanMark(rmk); } }
+      if(l.uom&&!_scanUomEq(l.uom,mt.uom)){ row.res='uom'; row.note='UOM differs '+esc(l.uom)+' ≠ '+esc(mt.uom)+' — convert and type'; if(rmk&&!rmk.value){ rmk.value='Inv '+fmtINR(l.qty)+' '+(l.uom||'')+' @ '+fmtINR(invRate)+'/'+(l.uom||'')+' — convert to '+mt.uom; _scanMark(rmk); } }
       else if(!_scanRateEq(invRate,mt.rate)){ row.res='rate'; row.note='rate differs '+fmtINR(invRate)+' ≠ '+fmtINR(mt.rate)+' — not filled'; if(rmk&&!rmk.value){ rmk.value='Inv rate '+fmtINR(invRate)+(num(l.discount_pct)>0?' (net of '+num(l.discount_pct)+'%)':'')+' vs PO '+fmtINR(mt.rate); _scanMark(rmk); } if(inp) inp.classList.add('scan-bad'); }
       else if(!inp||inp.disabled||bal<=0){ row.res='nopo'; row.note='PO balance is zero — nothing to receive'; }
       else { const q=Math.min(num(l.qty),bal); inp.value=Math.round(q*1000)/1000; _scanMark(inp); recalcGRNRow(i); filled++;
         if(num(l.qty)>bal+0.0005){ row.res='capped'; row.note='qty capped to balance '+fmtINR(bal); if(rmk&&!rmk.value){ rmk.value='Inv qty '+fmtINR(l.qty)+' '+(l.uom||'')+'; '+fmtINR(num(l.qty)-bal)+' excess vs balance'; _scanMark(rmk); } }
         else { row.res='ok'; row.note='matched · filled '+fmtINR(q); } }
     } else { row.note='not on PO'; }
+    row.li=li; row.i=i; row.via=via[li]||null;
     rows.push(row);
   });
-  const chip=r=>({ok:'<span class="scan-chip ok">'+r.note+'</span>',capped:'<span class="scan-chip qty">'+r.note+'</span>',rate:'<span class="scan-chip rate">'+r.note+'</span>',uom:'<span class="scan-chip uom">'+r.note+'</span>',nopo:'<span class="scan-chip nopo">'+r.note+'</span>'+((state.isOwner||state.isSuper)?' <button class="btn btn-ghost btn-sm" onclick="amdOpen(\''+esc(document.getElementById('grn_poSelect').value)+'\')">Raise amendment</button>':' <span class="muted" style="font-size:11px;">ask an Admin to amend the PO</span>')}[r.res]);
-  const route=_scan.route==='pdf_text'?'read from the PDF text layer (in-system)':'read by the vision model'+(_scan.model?' ('+esc(_scan.model)+')':'');
+  const mapSel=r=>'<select class="scan-map" title="Map this invoice line to a PO line (the system remembers it for this vendor)" onchange="_scanMapLine('+r.li+',this.value)"><option value="">map to…</option>'+metas.map(m=>'<option value="'+m.i+'"'+(r.i===m.i?' selected':'')+'>'+(m.i+1)+' · '+esc(m.matName)+'</option>').join('')+'</select>'+(r.via==='alias'?' <span class="scan-chip file" title="Learned from earlier GRNs of this vendor">learned</span>':r.via==='manual'?' <span class="scan-chip file">manual</span>':'');
+  const chip=r=>({ok:'<span class="scan-chip ok">'+r.note+'</span>',capped:'<span class="scan-chip qty">'+r.note+'</span>',rate:'<span class="scan-chip rate">'+r.note+'</span>',uom:'<span class="scan-chip uom">'+r.note+'</span>',nopo:'<span class="scan-chip nopo">'+r.note+'</span>'+((state.isOwner||state.isSuper)?' <button class="btn btn-ghost btn-sm" onclick="amdOpen(\''+esc(document.getElementById('grn_poSelect').value)+'\')">Raise amendment</button>':' <span class="muted" style="font-size:11px;">ask an Admin to amend the PO</span>')}[r.res]+' '+mapSel(r));
+  const route=_scanRouteLabel();
   const conf=_scan.confidence!=null?' · confidence '+_scan.confidence.toFixed(2):'';
-  strip.innerHTML='<div class="scan-strip"><div class="top"><b>Scan result</b><span class="scan-chip file">📎 '+esc(_scan.file?_scan.file.name:'')+' · attached on save</span><span class="src red">'+((_scan.match&&_scan.match.how)||'')+conf+'</span><span style="margin-left:auto;"><button class="btn btn-ghost btn-sm" onclick="grnScanHandle(_scan.file)">Re-run</button><button class="btn btn-ghost btn-sm" onclick="_scanClearPrefill()">Clear prefill</button></span></div>'
+  strip.innerHTML='<div class="scan-strip"><div class="top"><b>Scan result</b><span class="scan-chip file">📎 '+esc(_scan.file?_scan.file.name:'')+' · attached on save</span><span class="src red">'+((_scan.match&&_scan.match.how)||'')+conf+'</span>'+(_scan.profile?'<span class="scan-chip file" title="Vendor profile: learned from '+num(_scan.profile.samples)+' earlier GRN(s)">vendor known · '+Object.keys(_scan.profile.aliases||{}).length+' aliases</span>':'<span class="muted" style="font-size:11px;">new vendor — mappings you confirm here are remembered</span>')+'<span style="margin-left:auto;"><button class="btn btn-ghost btn-sm" onclick="grnScanHandle(_scan.file)">Re-run</button><button class="btn btn-ghost btn-sm" onclick="_scanClearPrefill()">Clear prefill</button></span></div>'
     +'<div class="table-wrap"><table class="scan-tbl"><thead><tr><th>Invoice line</th><th class="num">Inv qty</th><th class="num">Inv rate'+((p.lines||[]).some(l=>num(l.discount_pct)>0)?' (net)':'')+'</th><th>PO line</th><th class="num">PO rate</th><th class="num">Balance</th><th>Result</th></tr></thead><tbody>'
     +rows.map(r=>'<tr><td>'+esc(r.desc)+'</td><td class="num mono">'+fmtINR(r.invQty)+' '+esc(r.invUom||'')+'</td><td class="num mono">'+(r.invRate!=null?fmtINR(r.invRate):'—')+'</td><td>'+(r.poLine?esc(r.poLine):'<span class="muted">no receivable line</span>')+'</td><td class="num mono">'+(r.poRate!=null?fmtINR(r.poRate):'—')+'</td><td class="num mono">'+(r.bal!=null?fmtINR(r.bal)+' '+esc(r.balUom||''):'—')+'</td><td>'+chip(r)+'</td></tr>').join('')
     +'</tbody></table></div>'
@@ -27765,7 +27872,7 @@ function _scanFillLines(p){
   if(!filled&&rows.length) toast('Scan read '+rows.length+' line(s) but none could be filled — see the review table below','warn',5000);
   else toast('Prefilled '+filled+' of '+rows.length+' invoice line(s) — verify against the document, then Save','success',4000);
 }
-function _scanClearPrefill(){ document.querySelectorAll('#grnForm .scan-fill').forEach(el=>{ el.value=''; el.classList.remove('scan-fill','scan-bad'); const m=el.id&&el.id.match(/^grnRecv_(\d+)$/); if(m) recalcGRNRow(+m[1]); }); const strip=document.getElementById('grnScanStrip'); if(strip) strip.innerHTML='<div class="muted" style="font-size:12px;">Prefill cleared. Document still attached.</div>'; }
+function _scanClearPrefill(keepStrip){ document.querySelectorAll('#grnForm .scan-fill, #grnForm .scan-bad').forEach(el=>{ if(el.tagName==='INPUT'||el.tagName==='TEXTAREA') el.value=''; el.classList.remove('scan-fill','scan-bad'); const m=el.id&&el.id.match(/^grnRecv_(\d+)$/); if(m) recalcGRNRow(+m[1]); }); if(keepStrip) return; _scan.assign=null; const strip=document.getElementById('grnScanStrip'); if(strip) strip.innerHTML='<div class="muted" style="font-size:12px;">Prefill cleared. Document still attached.</div>'; }
 function _scanStripMsg(kind,html){ const strip=document.getElementById('grnScanStrip'); if(strip) strip.innerHTML='<div class="amd-banner '+kind+'"><span class="i"></span><div>'+html+'</div></div>'; }
 // ── upload on save ────────────────────────────────────────────────────
 async function _scanUploadForGRN(){
@@ -27778,7 +27885,7 @@ async function _scanUploadForGRN(){
   const up=await sb.storage.from('pgs-attachments').upload(path,f,{contentType:f.type||'application/octet-stream',upsert:false});
   if(up.error) throw new Error('Attachment upload failed: '+up.error.message);
   _scan.uploaded={bucket:'pgs-attachments',path,mime:f.type||null,size:f.size,name:f.name,
-    parser:_scan.route||'none',parser_version:_scan.route==='pdf_text'?'v117':(_scan.route==='model'?'parse-doc v2':null),model:_scan.model||null,
+    parser:_scan.route||'none',parser_version:_scan.route==='pdf_text'?'v117':_scan.route==='ocr'?'tesseract '+SCAN_TESS_VER:(_scan.route==='model'?'parse-doc v2':null),model:_scan.model||null,
     parsed_at:_scan.parse?new Date().toISOString():null,confidence:_scan.confidence,
     match:_scan.match?{tier:_scan.match.tier,po_number_raw:(_scan.parse&&_scan.parse.invoice&&_scan.parse.invoice.po_number_raw)||null}:null};
   return _scan.uploaded;
@@ -29139,6 +29246,7 @@ async function saveGRN() {
     if (window._scan && _scan.file) { payload.header.scan_attachment = await _scanUploadForGRN(); }   // v117 (mig #27)
 
     const res = await puRPC('rpc_save_grn', payload);
+    await _scanLearnAfterSave();   // v119 (mig #28): remember this vendor's descriptions → materials
     if (revisingGRN) {
       delete document.getElementById('grnForm').dataset.revisingGRN;
       flashSuccess('GRN '+revisingGRN+' revised — pending Site Manager verification');
@@ -29924,7 +30032,7 @@ async function viewGRN(grnNum) {
       <div><label class="muted" style="font-size:11px;">DATE</label><div>${fmtDate(h?.grn_date)}</div></div>
       <div><label class="muted" style="font-size:11px;">CHALLAN</label><div>${esc(h?.vehicle_challan||'—')}</div></div>
       <div><label class="muted" style="font-size:11px;">INVOICE</label><div>${esc(h?.invoice_no||'—')} / ${h?.invoice_date?fmtDate(h.invoice_date):'—'}</div></div>
-      <div><label class="muted" style="font-size:11px;">ATTACHMENT</label><div>${_scanAtt&&_scanAtt.path?`<button class="btn btn-ghost btn-sm" onclick="grnScanView('${esc(_scanAtt.path)}')" title="${esc(_scanAtt.name||'')}${_scanAtt.parser&&_scanAtt.parser!=='none'?' · read by '+esc(_scanAtt.parser==='model'?('vision model'+(_scanAtt.model?' ('+_scanAtt.model+')':'')):_scanAtt.parser==='pdf_text'?'in-system PDF parser':_scanAtt.parser):' · attached, not scanned'}">📎 View ${esc((_scanAtt.name||'document').length>28?(_scanAtt.name||'').slice(0,26)+'…':(_scanAtt.name||'document'))}</button>${_scanAtt.parser&&_scanAtt.parser!=='none'?` <span class="muted" style="font-size:11px;">read by ${esc(_scanAtt.parser==='model'?'vision model':_scanAtt.parser==='pdf_text'?'in-system parser':_scanAtt.parser)}${_scanAtt.confidence!=null?' · conf '+Number(_scanAtt.confidence).toFixed(2):''}</span>`:''}`:'<span class="muted">— none</span>'}</div></div>
+      <div><label class="muted" style="font-size:11px;">ATTACHMENT</label><div>${_scanAtt&&_scanAtt.path?`<button class="btn btn-ghost btn-sm" onclick="grnScanView('${esc(_scanAtt.path)}')" title="${esc(_scanAtt.name||'')}${_scanAtt.parser&&_scanAtt.parser!=='none'?' · read by '+esc(_scanAtt.parser==='model'?('vision model'+(_scanAtt.model?' ('+_scanAtt.model+')':'')):_scanAtt.parser==='pdf_text'?'in-system PDF parser':_scanAtt.parser):' · attached, not scanned'}">📎 View ${esc((_scanAtt.name||'document').length>28?(_scanAtt.name||'').slice(0,26)+'…':(_scanAtt.name||'document'))}</button>${_scanAtt.parser&&_scanAtt.parser!=='none'?` <span class="muted" style="font-size:11px;">read by ${esc(_scanAtt.parser==='model'?'vision model':_scanAtt.parser==='pdf_text'?'in-system parser':_scanAtt.parser==='ocr'?'in-system OCR':_scanAtt.parser)}${_scanAtt.confidence!=null?' · conf '+Number(_scanAtt.confidence).toFixed(2):''}</span>`:''}`:'<span class="muted">— none</span>'}</div></div>
       <div><label class="muted" style="font-size:11px;">STATUS</label><div>${esc(h?.status||'')}</div></div>
     </div>
     ${corrBanner}
