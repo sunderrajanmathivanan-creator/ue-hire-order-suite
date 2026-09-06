@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Penguin Suite v115</title>
+<title>Penguin Suite v117</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js"></script>
@@ -139,6 +139,95 @@ td input, td select { padding: 5px 6px; background: var(--input-bg); color: var(
 .status.rejected-correction { background: #fff7ed; color: #92400e; border: 1px solid #fcd34d; }
 .status.pending-billing { background: #e0f2fe; color: #075985; border: 1px solid #7dd3fc; }
 .status.billed { background: #dbeafe; color: #1e40af; border: 1px solid #93c5fd; }
+/* v116: PO amendment states (amendment_state column, never status) */
+.status.under-amendment { background: #fef3c7; color: #92400e; border: 1px solid #fcd34d; }
+.status.amendment-pending-approval { background: #fef9c3; color: #854d0e; border: 1px solid #fde047; }
+.status.amendment---correction { background: #fff7ed; color: #92400e; border: 1px solid #fcd34d; }
+.amd-rev { display:inline-block; padding:1px 6px; border-radius:99px; background:#1e3a5f; color:#fff; font-size:10px; font-weight:700; vertical-align:middle; }
+.amd-pillwrap { display:flex; flex-direction:column; align-items:flex-end; gap:2px; margin-top:3px; }
+.amd-pill { display:inline-flex; align-items:center; gap:5px; padding:1px 7px 1px 5px; border-radius:99px; font-size:10.5px; font-weight:600; cursor:pointer; line-height:16px; white-space:nowrap; border:1px solid transparent; font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif; }
+.amd-pill .rev { background:#1e3a5f; color:#fff; border-radius:99px; padding:0 5px; font-size:9.5px; }
+.amd-pill.mod { background:#e0f2fe; color:#075985; border-color:#bae6fd; }
+.amd-pill.add { background:#dcfce7; color:#166534; border-color:#bbf7d0; }
+.amd-pill.rem { background:#f1f5f9; color:#64748b; border-color:#e2e8f0; }
+.amd-pill.close { background:#fef3c7; color:#92400e; border-color:#fcd34d; }
+.amd-pill.pend { background:#fff; color:#92400e; border:1px dashed #d97706; cursor:default; }
+.amd-pill.pend .rev { background:#d97706; }
+.amd-pill .more { opacity:.7; font-weight:500; }
+tr.amd-closedln td { color:#64748b; }
+tr.amd-removedln td { color:#94a3b8; text-decoration:line-through; }
+tr.amd-removedln td .amd-pill, tr.amd-removedln td .amd-hint { text-decoration:none; }
+tr.amd-addedln td { background:#f0fdf4; }
+.amd-banner { display:flex; gap:12px; align-items:flex-start; padding:10px 14px; border-radius:6px; font-size:13px; margin-bottom:12px; }
+.amd-banner .i { width:20px; height:20px; border-radius:50%; flex:none; display:grid; place-items:center; font-weight:700; font-size:12px; color:#fff; }
+.amd-banner .i::after { content:"i"; }
+.amd-banner.freeze { background:#fffbeb; border:1px solid #fcd34d; color:#78350f; } .amd-banner.freeze .i { background:#d97706; }
+.amd-banner.info { background:#eff6ff; border:1px solid #93c5fd; color:#1e3a8a; } .amd-banner.info .i { background:#2563eb; }
+.amd-banner.block { background:#fef2f2; border:1px solid #fca5a5; color:#991b1b; } .amd-banner.block .i { background:#dc2626; }
+.amd-hint { display:block; font-size:10.5px; color:var(--muted); margin-top:3px; white-space:nowrap; text-align:right; }
+.amd-hint.bad { color:var(--danger); } .amd-hint.ok { color:#047857; } .amd-hint.warn { color:#b45309; }
+.amd-src { display:inline-block; margin-left:6px; padding:0 6px; border-radius:99px; background:#fef3c7; color:#92400e; font-size:9.5px; font-weight:700; vertical-align:middle; }
+#amdTbl input.amd-changed { border-color:var(--accent-2); background:#eff6ff; }
+#amdTbl input.amd-bad { border-color:var(--danger); background:#fef2f2; }
+.amd-sum { display:flex; gap:26px; font-size:12.5px; color:var(--muted); } .amd-sum b { color:var(--text); display:block; font-size:14px; font-variant-numeric:tabular-nums; }
+.amd-hdr { display:grid; grid-template-columns:1fr 1fr 1fr 1fr; gap:12px; margin-top:14px; }
+.amd-hdr input, .amd-hdr textarea { width:100%; padding:7px 9px; border:1px solid var(--border); border-radius:4px; background:var(--input-bg); font:inherit; font-size:13px; }
+.amd-rule { display:inline-block; padding:2px 8px; border-radius:4px; background:#f1f5f9; color:#475569; font-size:11px; margin-right:6px; margin-bottom:2px; }
+.amd-rule.blocked { background:#fee2e2; color:#991b1b; }
+.amd-arrow { color:#94a3b8; text-align:center; } .amd-new { font-weight:600; color:#1d4ed8; }
+.amd-pop { position:absolute; z-index:6000; width:460px; background:#fff; border:1px solid var(--border); border-radius:8px; box-shadow:0 14px 34px rgba(30,41,59,.18); display:none; font-size:12.5px; }
+.amd-pop.on { display:block; }
+.amd-pop h4 { font-size:13px; font-weight:600; padding:10px 14px; border-bottom:1px solid #e8eef5; display:flex; justify-content:space-between; margin:0; }
+.amd-pop .x { cursor:pointer; color:var(--muted); font-size:16px; line-height:1; }
+.amd-pop .hrow { display:grid; grid-template-columns:58px 1fr; gap:10px; padding:10px 14px; border-bottom:1px solid #f1f5f9; }
+.amd-pop .hrow:last-child { border-bottom:none; }
+.amd-pop .hrow .r { font-weight:700; color:#1e3a5f; } .amd-pop .hrow .r small { display:block; font-weight:400; color:var(--muted); font-size:11px; margin-top:2px; }
+.amd-pop .hrow.pend .r { color:#b45309; }
+.amd-pop .hrow ul { list-style:none; margin:0; padding:0; } .amd-pop .hrow li { margin:2px 0; } .amd-pop .hrow li em { font-style:normal; color:var(--muted); display:inline-block; min-width:96px; }
+.amd-pop .who { font-size:11px; color:var(--muted); margin-top:4px; }
+/* v117: scan-to-GRN — two full-height panes (form | document), review strip full width below */
+.scan-split { display:grid; grid-template-columns:minmax(280px,60fr) 10px minmax(280px,40fr); gap:6px; height:calc(100vh - 300px); min-height:480px; margin-top:12px; }
+.scan-divider { cursor:col-resize; border-radius:4px; background:linear-gradient(to right,transparent 3px,#cbd5e1 3px,#cbd5e1 7px,transparent 7px); }
+.scan-divider:hover, .scan-split.dragging .scan-divider { background:linear-gradient(to right,transparent 3px,var(--accent-2) 3px,var(--accent-2) 7px,transparent 7px); }
+.scan-split.dragging { user-select:none; } .scan-split.dragging .scan-doc, .scan-split.dragging .scan-left { pointer-events:none; }
+.scan-bottom { margin-top:14px; }
+.scan-overlay { position:fixed; inset:0; background:rgba(15,23,42,.55); backdrop-filter:blur(2px); z-index:9000; display:grid; place-items:center; }
+.scan-overlay .box { background:#fff; border-radius:10px; padding:22px 28px; min-width:360px; max-width:520px; text-align:center; box-shadow:0 20px 50px rgba(0,0,0,.35); }
+.scan-overlay .spin { width:34px; height:34px; border:4px solid #e2e8f0; border-top-color:var(--accent-2); border-radius:50%; margin:0 auto 12px; animation:scanspin .9s linear infinite; }
+@keyframes scanspin { to { transform:rotate(360deg); } }
+.scan-overlay .msg { font-size:14px; font-weight:600; color:var(--text); }
+.scan-overlay .steps { display:flex; justify-content:center; gap:14px; margin-top:12px; font-size:12px; color:#94a3b8; flex-wrap:wrap; }
+.scan-overlay .steps .done { color:#047857; } .scan-overlay .steps .now { color:var(--accent-2); font-weight:600; }
+.scan-strip .src.red { color:#b91c1c; font-weight:600; }
+.scan-left { min-width:0; overflow:auto; padding-right:4px; }
+.scan-strip { margin-top:10px; }
+.scan-doc { min-width:0; height:100%; background:#fff; border:1px solid var(--border); border-radius:8px; display:flex; flex-direction:column; overflow:hidden; }
+.scan-doc .bar { display:flex; align-items:center; gap:8px; padding:8px 10px; border-bottom:1px solid var(--border); font-size:12px; color:var(--muted); background:#f8fafc; flex-wrap:wrap; }
+.scan-doc .bar b { color:var(--text); font-size:12.5px; } .scan-doc .bar .sp { margin-left:auto; }
+.scan-doc .pages { flex:1; overflow:auto; padding:12px; background:#e2e8f0; }
+.scan-page { background:#fff; box-shadow:0 2px 8px rgba(30,41,59,.18); margin:0 auto 12px; position:relative; }
+.scan-page canvas, .scan-page img { display:block; width:100%; height:auto; }
+.scan-page .pn { position:absolute; top:6px; right:8px; background:rgba(30,58,95,.85); color:#fff; font-size:10.5px; padding:2px 7px; border-radius:99px; }
+.scan-empty { height:100%; display:grid; place-items:center; text-align:center; color:var(--muted); font-size:13px; padding:24px; border:2px dashed #94a3b8; border-radius:8px; background:#fff; }
+.scan-empty.over { border-color:var(--accent-2); background:#eff6ff; } .scan-empty b { color:var(--text); }
+.scan-loading { padding:24px; text-align:center; color:var(--muted); font-size:13px; }
+.zb { border:1px solid var(--border); background:#fff; border-radius:4px; padding:2px 8px; cursor:pointer; font-size:12px; }
+#grnForm input.scan-fill, #grnForm textarea.scan-fill { border-color:#f59e0b !important; background:#fffbeb !important; }
+#grnForm input.scan-bad { border-color:var(--danger) !important; background:#fef2f2 !important; }
+.scan-strip { border:1px solid #fcd34d; background:#fffbeb; border-radius:6px; padding:10px 14px; margin-top:14px; }
+.scan-strip .top { display:flex; align-items:center; gap:12px; flex-wrap:wrap; margin-bottom:8px; }
+.scan-strip .top b { font-size:13px; } .scan-strip .src { font-size:12px; color:#78350f; }
+.scan-strip .table-wrap { background:#fff; } .scan-tbl { font-size:12px; } .scan-tbl th, .scan-tbl td { padding:7px 8px; }
+.scan-strip .legend { display:flex; gap:14px; font-size:11px; color:#78350f; margin-top:8px; flex-wrap:wrap; align-items:center; }
+.scan-chip { display:inline-flex; align-items:center; gap:6px; padding:2px 8px; border-radius:99px; font-size:11px; font-weight:600; border:1px solid transparent; white-space:nowrap; }
+.scan-chip.ok { background:#dcfce7; color:#166534; border-color:#bbf7d0; } .scan-chip.rate { background:#fee2e2; color:#991b1b; border-color:#fca5a5; }
+.scan-chip.uom { background:#ffedd5; color:#9a3412; border-color:#fdba74; } .scan-chip.nopo { background:#f1f5f9; color:#475569; border-color:#e2e8f0; }
+.scan-chip.qty { background:#fef9c3; color:#854d0e; border-color:#fde047; } .scan-chip.file { background:#e0f2fe; color:#075985; border-color:#bae6fd; }
+.scan-cand { display:grid; grid-template-columns:1fr auto; gap:8px; padding:10px 12px; border:1px solid var(--border); border-radius:6px; margin-top:8px; background:#fff; cursor:pointer; }
+.scan-cand.best { border-color:var(--accent); background:#f0fdfa; } .scan-cand .t { font-weight:600; } .scan-cand .m { font-size:12px; color:var(--muted); margin-top:2px; }
+.scan-cand .score { font-weight:700; font-size:16px; color:var(--navy); text-align:right; } .scan-cand .score small { display:block; font-weight:400; font-size:11px; color:var(--muted); }
+.amber { color:#b45309; font-weight:600; }
+@media (max-width:1180px) { .scan-split { grid-template-columns:1fr !important; height:auto; } .scan-divider { display:none; } .scan-left { max-height:60vh; } .scan-doc { height:520px; } }
 .status.unbilled { background: #fef3c7; color: #92400e; border: 1px solid #fcd34d; }
 .status.paid { background: #ccfbf1; color: #065f46; border: 1px solid #5eead4; }
 .status.unpaid { background: #fef3c7; color: #92400e; border: 1px solid #fcd34d; }
@@ -2942,7 +3031,12 @@ table.pgp-roles, table.pgp-mx{ border-collapse:collapse; width:100%; }
       <div class="grid-3">
         <div class="field"><label>Location acronym</label><input id="pc_ploc" disabled></div>
         <div class="field"><label>FY start</label><input id="pc_pfy" type="number"></div>
-        <div class="field"></div>
+        <div class="field"><label>Document parsing <span style="color:var(--muted);font-weight:400;">(scan-to-GRN)</span></label>
+          <select id="pc_parsemode">
+            <option value="auto">Auto — digital PDFs in-system, scans to vision model</option>
+            <option value="in_system_only">In-system only — nothing leaves Supabase</option>
+            <option value="model_only">Vision model for every document</option>
+          </select></div>
       </div>
       <div class="grid-2">
         <div class="field"><label>Site / delivery address</label>
@@ -3667,7 +3761,12 @@ table.pgp-roles, table.pgp-mx{ border-collapse:collapse; width:100%; }
     </div>
     <!-- GRN Form -->
     <div id="grnForm" class="card" style="display:none;">
-      <h3 id="grn_formTitle">New Goods Receipt Note</h3>
+      <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+        <h3 id="grn_formTitle" style="margin:0;">New Goods Receipt Note</h3>
+        <button class="btn btn-ghost btn-sm" onclick="grnScanPick(false)" title="Attach the vendor invoice / delivery challan to this GRN (no reading)">📎 Attach invoice / challan</button>
+        <button class="btn btn-secondary btn-sm" onclick="grnScanPick(true)" title="Read the attached document, find the PO and prefill the GRN for your verification">⇪ Scan invoice / challan</button>
+        <span class="muted" style="font-size:12px;">Attach only stores the document with the GRN · Scan finds the PO and prefills · manual entry works either way</span>
+      </div>
       <div class="grid-4">
         <div class="field"><label>GRN Number</label><input id="grn_number" readonly style="opacity:.6;"></div>
         <div class="field"><label class="req">GRN Date</label><input type="date" id="grn_date"></div>
@@ -3682,8 +3781,18 @@ table.pgp-roles, table.pgp-mx{ border-collapse:collapse; width:100%; }
         <div class="field"><label class="req">Invoice Date</label><input type="date" id="grn_invoiceDate"></div>
         <div class="field"><label>Received By</label><input id="grn_receivedBy" readonly style="opacity:.6;"></div>
       </div>
-      <!-- GRN Items (loaded from PO) -->
-      <div style="margin-top:16px;">
+      <div class="scan-split" id="grnScanSplit">
+      <div class="scan-left">
+      <div id="grnScanStrip"><div class="muted" style="font-size:12px;padding:8px 0;">Scan result appears here after <b>Scan invoice / challan</b>. For manual entry, pick the PO above.</div></div>
+      </div><!-- /scan-left -->
+      <div class="scan-divider" id="grnScanDivider" title="Drag to resize" onmousedown="_scanDragStart(event)"></div>
+      <div class="scan-doc" id="grnDocPane">
+        <div class="bar" id="grnDocBar"><b>Document</b> · none attached<span class="sp"></span><button class="btn btn-ghost btn-sm" onclick="grnScanPick(false)">📎 Attach</button></div>
+        <div class="pages" id="grnDocPages"></div>
+      </div>
+      </div><!-- /scan-split -->
+      <!-- GRN Items (loaded from PO) — full width below the split (v117) -->
+      <div class="scan-bottom">
         <h3 style="font-size:13px;margin-bottom:8px;color:var(--text);">Materials Received</h3>
         <!-- Over-receipt warning card — shown dynamically by recalcGRNRow() -->
         <div id="grnOverReceiptWarn" style="display:none;background:#fffbeb;border:1px solid #f59e0b;border-radius:6px;padding:10px 14px;margin-bottom:10px;">
@@ -5082,6 +5191,7 @@ const PGS_PERM_MAP = {
   canCreateQC:[['qc','C']],     canApproveQC:[['qc','A']],
   canCreatePO:[['po','C']],     canApprovePO:[['po','A']],
   canCancelPO:[['po_cancel','C']],    canShortClosePO:[['sc_po','C']],
+  canAmendPO:[['po_amend','C']],      canApproveAmendPO:[['po_amend','A']],   // v116 · mig #25
   canCreateGRN:[['grn','C']],   canApproveGRN:[['grn','A']],
   canCreatePOB:[['pob','C']],   canApprovePOB:[['pob','A']],
   canCreateMIS:[['mis','C']],   canApproveMIS:[['mis','A']],
@@ -9848,6 +9958,7 @@ async function pgsPCLoad(){
   if (g('pc_odisp')) g('pc_odisp').value = (pgsS.org && pgsS.org.display_name) || '';
   if (g('pc_site'))    g('pc_site').value    = (m.proj && m.proj.site_address)   || '';
   if (g('pc_contact')) g('pc_contact').value = (m.proj && m.proj.contact_person) || '';
+  if (g('pc_parsemode')) g('pc_parsemode').value = (m.proj && m.proj.doc_parse_mode) || 'auto';   // v117
   const o = m.org || {};
   if (g('pc_legal'))   g('pc_legal').value   = o.legal_name || '';
   if (g('pc_gstin'))   g('pc_gstin').value   = o.gstin || '';
@@ -9881,7 +9992,8 @@ async function pgsPCSaveProject(){
       .update({ project_name: _nm,
                 fin_year_start: (_fy >= 2000 && _fy <= 2100) ? _fy : undefined,
                 site_address: g('pc_site').trim() || null,
-                contact_person: g('pc_contact').trim() || null })
+                contact_person: g('pc_contact').trim() || null,
+                doc_parse_mode: ['auto','in_system_only','model_only'].includes(g('pc_parsemode')) ? g('pc_parsemode') : 'auto' })
       .eq('id', pgsS.project.id).select('id');
     if (error) throw error;
     if (!data || !data.length) throw new Error('Not permitted — owner only');
@@ -25208,7 +25320,7 @@ function renderPOList() {
       <td class="mono">${esc(p.mir_number||'—')}</td>
       <td class="num">${fmtINR(p.basic_value)}</td>
       <td class="num" style="font-weight:600;">${fmtINR(p.grand_total)}</td>
-      <td><span class="status ${stCls}">${p.status}</span></td><td>${acts}</td></tr>`;
+      <td><span class="status ${stCls}">${p.status}</span>${_amdListBadge(p)}</td><td>${acts}</td></tr>`;
   }).join('')||'<tr><td colspan="9" class="center muted">No POs.</td></tr>';
   setTimeout(() => { const t=document.getElementById('po_listBody')?.closest('table'); if(t) makeSortable(t); }, 50);
 }
@@ -25450,8 +25562,8 @@ async function openPoEstimatePicker(){ return _ppOpenPicker('po'); }
 async function openMirEstimatePicker(){ return _ppOpenPicker('mir'); }
 
 async function _ppOpenPicker(mode){
-  _mpMode=mode;
-  if(mode==='po') await _loadMirEstimateTree(true);
+  _mpMode=(mode==='amd')?'po':mode;   // v116: amendment add-line uses the PO remaining basis
+  if(mode==='po'||mode==='amd') await _loadMirEstimateTree(true);
   else if(mode==='mis') await Promise.all([_loadMirEstimateTree(true), _refreshMISStockMap()]);   // v153: stock shown alongside issue meters
   else await _loadMirEstimateTree(true);
   if(!(puState.materials||[]).length){ try{ await apiLoadMaterials(); }catch(e){} }
@@ -25463,9 +25575,14 @@ async function _ppOpenPicker(mode){
   _ppExp=new Set(); _ppGrp=new Set(); _mpExp=new Set();
   _mpActiveMat=null; _mpActiveScrolledFor=null; _mpCartGrpClosed=new Set();   // v164
   _ppTwOpen=new Set(); _ppTwCells={};
-  if(mode==='po') _poSeedCartFromRows(); else if(mode==='mis') _misSeedCartFromGroups(); else _mirSeedCartFromGroups();
+  if(mode==='po') _poSeedCartFromRows(); else if(mode==='mis') _misSeedCartFromGroups(); else if(mode==='amd') _mpCart=new Map(); else _mirSeedCartFromGroups();
   window._ppActive=true;
-  const T = mode==='po'
+  const T = mode==='amd'
+    ? {title:'Add line to amendment from estimate', cart:'Selected for this amendment',
+       basis:'remaining = package estimate \u2212 consumed (MIR + direct PO + cash GRN)',
+       commit:'_amdCommitFromCart()', commitLbl:'Add to amendment',
+       ls:'<span class="wo-ls-pill" style="cursor:default;">LS \u20b9</span> = rupee pool, gated in \u20b9 at approval'}
+    : mode==='po'
     ? {title:'Add to PO from estimate', cart:'Selected for this PO',
        basis:'remaining = package estimate \u2212 consumed (MIR + direct PO + cash GRN)',
        commit:'_poCommitFromCart()', commitLbl:'Add to PO',
@@ -27081,6 +27198,9 @@ async function viewPO(poNum) {
   }
   pbDone();
   if(!h){toast('PO not found','error');return;}
+  // v116: amendment history + line_status top-up (rpc_doc_view predates mig #25)
+  const _amdH=await _amdLoadHistory(h.po_number, items||[]);
+  window._amdPopCtx={h, items:items||[], hist:_amdH};
 
   // v109: per-LINE received maps. Primary key pu_grn_items.po_item_id;
   // fallback (material_name, loc_node_id); final fallback material_name
@@ -27116,8 +27236,8 @@ async function viewPO(poNum) {
   // Eligibility for Cancel / Short Close / Approve / Reject
   const grnCount = activeGRNs.length;
   const perms = mergedPerms();
-  const isCancelable    = perms.canCancelPO     && h.status==='Open'             && grnCount===0;
-  const isShortClosable = perms.canShortClosePO && h.status==='Partial Receipt'  && grnCount>=1;
+  const isCancelable    = perms.canCancelPO     && h.status==='Open'             && grnCount===0 && !h.amendment_state;
+  const isShortClosable = perms.canShortClosePO && h.status==='Partial Receipt'  && grnCount>=1  && !h.amendment_state;
   const isApprovable    = perms.canApprovePO    && h.status==='Pending Approval';
 
   // Approval banner (top of modal) for Pending Approval POs
@@ -27178,12 +27298,13 @@ async function viewPO(poNum) {
   const _vSeenML=new Set(), _vSeenMat=new Set();
   let _gid=0;
   const _vLines=_vRows.map(it=>{
+    const _vRemoved=(it.line_status==='Removed');   // v116: removed lines show but never count
     let received=(it.id&&recdByItem[it.id])||0;
     let breakdown=(it.id&&brkByItem[it.id])?brkByItem[it.id].slice():[];
     const mlk=it.material_name+'|'+String(it.loc_node_id);
     if(recdByML[mlk] && !_vSeenML.has(mlk)){ _vSeenML.add(mlk); received+=recdByML[mlk]; breakdown=breakdown.concat(brkByML[mlk]); }
     if(recdByMat[it.material_name] && !_vSeenMat.has(it.material_name)){ _vSeenMat.add(it.material_name); received+=recdByMat[it.material_name]; breakdown=breakdown.concat(brkByMat[it.material_name]); }
-    return { it, ordered:num(it.qty), received, pending:Math.max(0,num(it.qty)-received), breakdown };
+    return { it, ordered:num(it.qty), received, pending:_vRemoved?0:Math.max(0,num(it.qty)-received), breakdown, removed:_vRemoved };
   });
   // pass 2: group consecutive lines by material_name
   const _vGrps=[];
@@ -27217,13 +27338,13 @@ async function viewPO(poNum) {
     if(G.lines.length===1){
       const L=G.lines[0], it=L.it;
       const badge=((h.mir_number||h.qc_number)&&it.procurement_source==='direct_po')?_vBadge:'';
-      _vBaseSum+=num(it.base_amount); _vTotSum+=num(it.total_amount);
-      _vParts.push('<tr>'
+      if(!L.removed){ _vBaseSum+=num(it.base_amount); _vTotSum+=num(it.total_amount); }
+      _vParts.push('<tr'+_amdRowAttr(it)+'>'
         +'<td></td><td>'+gN+'</td>'
         +'<td>'+esc(it.material_name)+badge+_vGrnCell(L,it.uom)+'</td>'
         +'<td style="min-width:220px;">'+wl0(L)+'</td>'
         +'<td>'+esc(it.uom)+'</td>'
-        +'<td class="num mono">'+fmtINR(L.ordered)+'</td>'
+        +'<td class="num mono">'+fmtINR(L.ordered)+_amdPill(it,_amdH)+'</td>'
         +'<td class="num mono" style="color:#15803d;">'+fmtINR(L.received)+'</td>'
         +_vPendTd(L)
         +'<td class="num">'+fmtINR(it.unit_rate)+'</td>'
@@ -27235,7 +27356,7 @@ async function viewPO(poNum) {
       const cls='poG'+gi;
       let sOrd=0,sRec=0,sPen=0,sBase=0,sTot=0,nDirect=0;
       const rates=new Set();
-      G.lines.forEach(L=>{ sOrd+=L.ordered; sRec+=L.received; sPen+=L.pending;
+      G.lines.forEach(L=>{ if(L.removed) return; sOrd+=L.ordered; sRec+=L.received; sPen+=L.pending;
         sBase+=num(L.it.base_amount); sTot+=num(L.it.total_amount);
         rates.add(num(L.it.unit_rate).toFixed(4));
         if((h.mir_number||h.qc_number)&&L.it.procurement_source==='direct_po') nDirect++; });
@@ -27262,13 +27383,13 @@ async function viewPO(poNum) {
       G.lines.forEach((L,li)=>{
         const it=L.it;
         const badge=((h.mir_number||h.qc_number)&&it.procurement_source==='direct_po')?_vBadge:'';
-        _vParts.push('<tr class="'+cls+'" style="display:none;">'
+        _vParts.push('<tr class="'+cls+(it.line_status==='Closed'?' amd-closedln':it.line_status==='Removed'?' amd-removedln':'')+'" style="display:none;">'
           +'<td></td>'
           +'<td style="font-size:10px;color:var(--muted);font-family:monospace;">'+gN+'.'+(li+1)+'</td>'
           +'<td><span style="color:#94a3b8;margin-right:3px;">\u21b3</span>'+badge+_vGrnCell(L,it.uom)+'</td>'
           +'<td style="min-width:220px;background:#fcfdfe;">'+wl0(L)+'</td>'
           +'<td>'+esc(it.uom)+'</td>'
-          +'<td class="num mono">'+fmtINR(L.ordered)+'</td>'
+          +'<td class="num mono">'+fmtINR(L.ordered)+_amdPill(it,_amdH)+'</td>'
           +'<td class="num mono" style="color:#15803d;">'+fmtINR(L.received)+'</td>'
           +_vPendTd(L)
           +'<td class="num">'+fmtINR(it.unit_rate)+'</td>'
@@ -27287,8 +27408,10 @@ async function viewPO(poNum) {
   let closeActions='';
   if(isCancelable)    closeActions+=`<button class="btn btn-danger" onclick="cancelPO('${esc(h.po_number)}')">Cancel PO</button> `;
   if(isShortClosable) closeActions+=`<button class="btn btn-danger" onclick="shortClosePO('${esc(h.po_number)}')">Short Close</button> `;
+  closeActions+=_amdActions(h,_amdH);   // v116
 
-  openModal(`<h3>PO — ${esc(h.po_number)}</h3>
+  openModal(`<h3>PO — ${esc(_amdDocLabel(h))}${num(h.rev_no)>0?` <span class="amd-rev" style="font-size:11px;">Amendment ${num(h.rev_no)}</span>`:''}</h3>
+    ${_amdBanner(h,_amdH)}
     ${approvalBanner}
     ${closureBanner}
     <div style="margin-bottom:10px;display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;">
@@ -27339,6 +27462,797 @@ async function viewPO(poNum) {
     <div class="actions-row">${closeActions}<button class="btn btn-secondary" onclick="closeModal();printPO('${esc(h.po_number)}')">🖨 Print PO</button><button class="btn btn-ghost" onclick="closeModal()">Close</button></div>`, 'wide');
 }
 
+// ═══════════════════════════════════════════════════════════════════════
+// v117 · SCAN-TO-GRN — Migration #27 (projects.doc_parse_mode, pu_grn.scan_attachment)
+//        + Edge Function parse-doc v2.
+// Router: digital PDF → in-system text parser; scans/photos → vision model
+// unless project is in_system_only. Every route emits the same JSON contract;
+// matching + prefill below never know which parser ran. Nothing is written
+// until the Store Executive presses Save GRN (rpc_save_grn, unchanged).
+// ═══════════════════════════════════════════════════════════════════════
+const SCAN_PDFJS_VER='3.11.174';
+const _scan={file:null,pdf:null,pages:0,parse:null,route:null,model:null,confidence:null,zoom:1,poCands:null,match:null,uploaded:null,busy:false};
+function _scanMode(){ return (window.PGS_META&&PGS_META.proj&&PGS_META.proj.doc_parse_mode)||'auto'; }
+function _scanLoadPdfJs(){
+  if(window.pdfjsLib&&window.pdfjsLib.getDocument) return Promise.resolve();
+  if(window._scanPdfJsP) return window._scanPdfJsP;
+  window._scanPdfJsP=new Promise((res,rej)=>{
+    const s=document.createElement('script'); s.src='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/'+SCAN_PDFJS_VER+'/pdf.min.js';
+    s.onload=()=>{ try{ window.pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/'+SCAN_PDFJS_VER+'/pdf.worker.min.js'; res(); }catch(e){ rej(e); } };
+    s.onerror=()=>rej(new Error('Could not load the PDF viewer (pdf.js) — check network'));
+    document.head.appendChild(s);
+  });
+  return window._scanPdfJsP;
+}
+function grnScanReset(){
+  Object.assign(_scan,{file:null,pdf:null,pages:0,parse:null,route:null,model:null,confidence:null,zoom:1,poCands:null,match:null,uploaded:null,busy:false});
+  const pane=document.getElementById('grnDocPages'); if(pane) pane.innerHTML=_scanEmptyPane();
+  const bar=document.getElementById('grnDocBar'); if(bar) bar.innerHTML='<b>Document</b> · none attached<span class="sp"></span><button class="btn btn-ghost btn-sm" onclick="grnScanPick(false)">📎 Attach</button>';
+  const strip=document.getElementById('grnScanStrip'); if(strip) strip.innerHTML='<div class="muted" style="font-size:12px;padding:8px 0;">Scan result appears here after <b>Scan invoice / challan</b>. For manual entry, pick the PO above.</div>';
+  _scanApplySplit();
+}
+function _scanEmptyPane(){
+  return '<div class="scan-empty" ondragover="event.preventDefault();this.classList.add(\'over\')" ondragleave="this.classList.remove(\'over\')" ondrop="event.preventDefault();this.classList.remove(\'over\');grnScanHandle(event.dataTransfer.files[0],false)">'
+   +'<div style="font-size:34px;margin-bottom:8px;">📄</div><b>No document yet</b><br>Drop the invoice / delivery challan here, or <a href="#" onclick="grnScanPick(false);return false;">attach</a>.<br>'
+   +'<span style="font-size:12px;">Attaching only stores it with the GRN. Press <b>Scan</b> to have the system find the PO and prefill.</span></div>';
+}
+function grnScanPick(parse){   // parse=false: attach only. parse=true: attach (if needed) then read.
+  if(parse&&_scan.file){ grnScanParse(); return; }
+  const inp=document.createElement('input'); inp.type='file'; inp.accept='.pdf,image/jpeg,image/png,image/webp,image/heic';
+  inp.onchange=()=>{ if(inp.files[0]) grnScanHandle(inp.files[0],!!parse); };
+  inp.click();
+}
+async function grnScanParse(){ if(!_scan.file){ toast('Attach a document first','warn'); return; } await grnScanHandle(_scan.file,true); }
+function _scanOverlay(msg,step){
+  let o=document.getElementById('scanOverlay');
+  if(msg===null){ if(o) o.remove(); return; }
+  if(!o){ o=document.createElement('div'); o.id='scanOverlay'; o.className='scan-overlay'; o.innerHTML='<div class="box"><div class="spin"></div><div class="msg"></div><div class="steps"></div></div>'; document.body.appendChild(o); }
+  o.querySelector('.msg').innerHTML=msg;
+  const steps=['Rendering document','Reading','Finding the PO','Filling the GRN'];
+  o.querySelector('.steps').innerHTML=steps.map((t,i)=>'<span class="'+(i<step?'done':i===step?'now':'')+'">'+(i<step?'✓ ':'')+t+'</span>').join('');
+}
+function _scanIsPdf(f){ return f.type==='application/pdf'||/\.pdf$/i.test(f.name); }
+function _scanIsHeic(f){ return /heic|heif/i.test(f.type)||/\.hei[cf]$/i.test(f.name); }
+async function grnScanHandle(file,parse){
+  if(!file) return;
+  if(_scan.busy){ toast('Still reading the previous document…','warn'); return; }
+  if(file.size>15*1024*1024){ toast('File is over 15 MB — the attachment bucket limit','error'); return; }
+  const sameFile=(_scan.file===file);
+  if(!sameFile){ grnScanReset(); _scan.file=file; }
+  _scan.busy=true;
+  const bar=document.getElementById('grnDocBar');
+  try{
+    if(parse) _scanOverlay('Rendering document…',0);
+    // 1. show the document (attach)
+    if(!sameFile||!_scan.pages) await _scanRenderDoc(file);
+    if(bar) bar.innerHTML='<b>'+esc(file.name)+'</b> · '+(_scan.pages||1)+' page'+((_scan.pages||1)>1?'s':'')+' · '+(file.size/1024).toFixed(0)+' KB<span class="sp"></span>'
+      +'<button class="zb" onclick="_scanZoom(-1)">−</button><span id="grnDocZoom">100%</span><button class="zb" onclick="_scanZoom(1)">+</button>'
+      +'<button class="zb" onclick="_scanOpenTab()">Open ↗</button><button class="zb" onclick="grnScanReset()" title="Remove document">✕</button>';
+    if(!parse){ _scanStripMsg('info','<b>'+esc(file.name)+' attached.</b> It will be saved with the GRN. Enter the GRN manually, or press <b>Scan invoice / challan</b> to have the system find the PO and prefill.'); return; }
+    if(_scanIsHeic(file)){ _scanStripMsg('warn','<b>HEIC photo attached.</b> Browsers cannot display or read HEIC — it will be attached to the GRN, but for auto-fill save the photo as JPG or PDF and attach it again.'); return; }
+    // 2. route
+    const mode=_scanMode(); let parsed=null, route=null;
+    _scanOverlay('Reading document… <span class="muted">('+(mode==='model_only'?'vision model':'checking for a text layer first')+')</span>',1);
+    if(_scanIsPdf(file)&&mode!=='model_only'&&_scan.pdf){
+      try{ const txt=await _scanPdfText(_scan.pdf); if(txt.chars>=200){ const r=_scanParseText(txt.lines); if(_scanSane(r)){ parsed=r; route='pdf_text'; } } }catch(e){ console.warn('pdf text parse',e); }
+    }
+    if(!parsed){
+      if(mode==='in_system_only'){
+        _scanStripMsg('warn','<b>Could not read this document in-system.</b> This project is set to in-system parsing only (scans need OCR, which arrives in a later release). The document is attached — pick the PO and enter the GRN manually.');
+        _scan.route='none'; return;
+      }
+      _scanOverlay('Reading with the vision model… <span class="muted">this takes 10–25 seconds</span>',1);
+      const r=await _scanCallModel(file); parsed=r.data; route='model'; _scan.model=r.model;
+    }
+    _scan.parse=parsed; _scan.route=route; _scan.confidence=parsed&&parsed.confidence?parsed.confidence.overall:null;
+    // 3. match + prefill
+    _scanOverlay('Finding the PO…',2);
+    await _scanMatch(parsed);
+  }catch(e){ console.error(e); _scanStripMsg('block','<b>Could not read the document.</b> '+esc(e.message||String(e))+' — pick the PO and enter the GRN manually; the document is still attached.'); }
+  finally{ _scan.busy=false; _scanOverlay(null); }
+}
+// ── document pane ─────────────────────────────────────────────────────
+async function _scanRenderDoc(file){
+  const pane=document.getElementById('grnDocPages'); if(!pane) return;
+  pane.innerHTML='<div class="scan-loading">Rendering…</div>';
+  if(_scanIsPdf(file)){
+    await _scanLoadPdfJs();
+    const buf=await file.arrayBuffer();
+    const pdf=await window.pdfjsLib.getDocument({data:buf}).promise;
+    _scan.pdf=pdf; _scan.pages=pdf.numPages;
+    pane.innerHTML='';
+    const W=Math.max(300,pane.clientWidth-24);
+    for(let i=1;i<=pdf.numPages;i++){
+      const page=await pdf.getPage(i); const v0=page.getViewport({scale:1}); const scale=Math.min(2,(W*1.5)/v0.width);
+      const vp=page.getViewport({scale}); const c=document.createElement('canvas'); c.width=vp.width; c.height=vp.height;
+      const wrap=document.createElement('div'); wrap.className='scan-page'; wrap.style.width='100%'; wrap.appendChild(c);
+      const pn=document.createElement('span'); pn.className='pn'; pn.textContent=i+' / '+pdf.numPages; wrap.appendChild(pn);
+      pane.appendChild(wrap);
+      await page.render({canvasContext:c.getContext('2d'),viewport:vp}).promise;
+    }
+  } else if(_scanIsHeic(file)){
+    _scan.pages=1; pane.innerHTML='<div class="scan-loading">HEIC preview not supported by this browser. File is attached.</div>';
+  } else {
+    _scan.pages=1; const url=URL.createObjectURL(file);
+    pane.innerHTML='<div class="scan-page" style="width:100%"><img src="'+url+'" style="display:block;width:100%;height:auto;" alt="document"><span class="pn">1 / 1</span></div>';
+  }
+}
+function _scanZoom(d){ _scan.zoom=Math.min(2.5,Math.max(.6,_scan.zoom+d*.2)); document.querySelectorAll('#grnDocPages .scan-page').forEach(p=>p.style.width=(_scan.zoom*100)+'%'); const z=document.getElementById('grnDocZoom'); if(z) z.textContent=Math.round(_scan.zoom*100)+'%'; }
+function _scanOpenTab(){ if(_scan.file) window.open(URL.createObjectURL(_scan.file),'_blank'); }
+// ── in-system parser (digital PDFs) ───────────────────────────────────
+async function _scanPdfText(pdf){
+  const lines=[]; let chars=0;
+  for(let i=1;i<=Math.min(pdf.numPages,4);i++){
+    const page=await pdf.getPage(i); const tc=await page.getTextContent();
+    const rows={};
+    tc.items.forEach(it=>{ const t=(it.str||'').trim(); if(!t) return; chars+=t.length; const y=Math.round(it.transform[5]/3)*3; (rows[y]=rows[y]||[]).push({x:it.transform[4],t}); });
+    Object.keys(rows).map(Number).sort((a,b)=>b-a).forEach(y=>{ lines.push(rows[y].sort((a,b)=>a.x-b.x).map(r=>r.t).join(' ')); });
+  }
+  return {lines,chars};
+}
+const _GSTIN_RE=/\b\d{2}[A-Z]{5}\d{4}[A-Z][1-9A-Z]Z[0-9A-Z]\b/g;
+function _scanGstinValid(g){ // GSTIN checksum (base-36 Luhn-ish)
+  if(!/^\d{2}[A-Z]{5}\d{4}[A-Z][1-9A-Z]Z[0-9A-Z]$/.test(g)) return false;
+  const cs='0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ'; let sum=0;
+  for(let i=0;i<14;i++){ let v=cs.indexOf(g[i])*((i%2)?2:1); v=Math.floor(v/36)+v%36; sum+=v; }
+  return cs[(36-sum%36)%36]===g[14];
+}
+function _scanNum(t){ const n=parseFloat(String(t).replace(/[,₹\s]/g,'')); return isFinite(n)?n:null; }
+function _scanDate(t){ // DD-MM-YYYY / DD.MM.YYYY / DD-Mon-YY / DD/MM/YY → YYYY-MM-DD
+  const m=String(t).match(/\b(\d{1,2})[-\/.]([A-Za-z]{3}|\d{1,2})[-\/.](\d{2,4})\b/); if(!m) return null;
+  const mons={jan:1,feb:2,mar:3,apr:4,may:5,jun:6,jul:7,aug:8,sep:9,oct:10,nov:11,dec:12};
+  let d=+m[1], mo=isNaN(+m[2])?mons[m[2].toLowerCase()]:+m[2], y=+m[3]; if(!mo) return null; if(y<100) y+=2000;
+  if(d<1||d>31||mo<1||mo>12) return null; return y+'-'+String(mo).padStart(2,'0')+'-'+String(d).padStart(2,'0');
+}
+function _scanNormPo(raw){ if(!raw) return null; const s=String(raw).toUpperCase().replace(/\s+/g,''); const m=s.match(/PO[\/\-_.]*(\d{2,4})[\-\/]?(\d{2})[\/\-_.]*(\d{1,5})(?:[\-\/]?A\d+)?$/); if(!m) return null; let y1=m[1]; if(y1.length===2) y1='20'+y1; return 'PO/'+y1+'-'+m[2]+'/'+m[3].padStart(3,'0'); }
+function _scanParseText(lines){
+  const all=lines.join('\n');
+  const gst=[...new Set((all.toUpperCase().match(_GSTIN_RE)||[]).filter(_scanGstinValid))];
+  const org=(typeof COMPANY!=='undefined'&&COMPANY.gstin)?String(COMPANY.gstin).toUpperCase().replace(/[^0-9A-Z]/g,''):'';
+  const buyer=gst.find(g=>g===org)||null; const vendor=gst.find(g=>g!==org)||null;
+  const find=(re)=>{ for(const l of lines){ const m=l.match(re); if(m) return m; } return null; };
+  const invM=find(/invoice\s*(?:no|number|#)?\.?\s*[:\-]?\s*([A-Z0-9][A-Z0-9\/\-.]{2,30})/i);
+  const poM=all.match(/(?:UE|[A-Z]{2,4})[\/\-][A-Za-z0-9]{2,8}[\/\-]PO[\/\-][0-9\-\/]{5,12}|\bPO[\/\-]\d{2,4}-?\d{2}[\/\-]\d{1,5}\b/i);
+  const dateM=find(/(?:dated|date|dt\.?)\s*[:\-]?\s*(\d{1,2}[-\/.](?:[A-Za-z]{3}|\d{1,2})[-\/.]\d{2,4})/i);
+  const vehM=all.match(/\b([A-Z]{2}\s?\d{1,2}\s?[A-Z]{1,3}\s?\d{4})\b/);
+  const vendorName=(()=>{ for(let i=0;i<Math.min(lines.length,12);i++){ const l=lines[i]; if(/tax\s*invoice|original|duplicate|e-?invoice|irn|ack/i.test(l)) continue; if(l.length>4&&/[A-Za-z]{3}/.test(l)&&!/gstin|state|code/i.test(l)) return l.trim(); } return null; })();
+  // line items: description + qty uom rate [disc%] amount, where qty*rate*(1-d)≈amount
+  const items=[];
+  for(const l of lines){
+    const toks=l.split(/\s+/); const nums=[]; toks.forEach((t,i)=>{ const n=_scanNum(t); if(n!=null&&/^[\d,]+(\.\d+)?%?$/.test(t)) nums.push({i,n,pct:/%$/.test(t)||toks[i+1]==='%'}); });
+    if(nums.length<3) continue;
+    let best=null;
+    outer: for(let a=0;a<nums.length;a++) for(let b=a+1;b<nums.length;b++) for(let c=b+1;c<nums.length;c++){
+      const q=nums[a].n,r=nums[b].n,amt=nums[c].n; if(q<=0||r<=0||amt<=0) continue;
+      const mids=nums.filter(x=>x.i>nums[b].i&&x.i<nums[c].i&&x.n>0&&x.n<100); const ds=[0].concat(mids.map(x=>x.n));
+      for(const d of ds){ const exp=q*r*(1-d/100); if(Math.abs(exp-amt)<=Math.max(0.02,amt*0.002)){ best={q:nums[a],r:nums[b],a:nums[c],d}; break outer; } }
+    }
+    if(!best) continue;
+    const descToks=toks.slice(0,best.q.i).filter(t=>!/^\d{6,8}$/.test(t)&&!/^\d+$/.test(t)&&!/^[A-Z]{1,2}\d{6,}$/.test(t)); // drop HSN / sno
+    const desc=descToks.join(' ').replace(/^\d{1,2}[.)]\s+/,'').trim();   // sno token already dropped; only strip '1.' / '1)' forms if(desc.length<3) continue;
+    const uomTok=toks[best.q.i+1]||''; const uom=/^[A-Za-z.]{1,6}$/.test(uomTok)?uomTok.replace(/\.$/,''):null;
+    const amount=best.a.n; const qty=best.q.n;
+    items.push({sno:items.length+1,description:desc,hsn:(toks.find(t=>/^\d{6,8}$/.test(t))||null),qty,uom,rate:best.r.n,discount_pct:best.d||null,amount,effective_rate:qty>0?Math.round(amount/qty*10000)/10000:null});
+  }
+  const totM=find(/(?:grand\s*total|total\s*invoice\s*value|invoice\s*total|total)\s*[:\-]?\s*(?:₹|rs\.?|inr)?\s*([\d,]+\.\d{2})/i);
+  const taxM=find(/taxable\s*(?:value|amount)\s*[:\-]?\s*([\d,]+\.\d{2})/i);
+  return { doc_kind:'tax_invoice',
+    vendor:{name:vendorName,gstin:vendor,gstin_norm:vendor,pan:vendor?vendor.slice(2,12):null,state_code:vendor?vendor.slice(0,2):null},
+    buyer:{name:null,gstin:buyer,gstin_norm:buyer},
+    invoice:{number:invM?invM[1]:null,date:dateM?_scanDate(dateM[1]):null,po_number_raw:poM?poM[0]:null,po_number_norm:_scanNormPo(poM?poM[0]:null),po_date:null,irn:null,eway_bill:null,vehicle_no:vehM?vehM[1].replace(/\s+/g,''):null,challan_no:null,place_of_supply:null},
+    lines:items,
+    totals:{taxable_value:taxM?_scanNum(taxM[1]):null,cgst:null,sgst:null,igst:null,tax_pct:null,round_off:null,grand_total:totM?_scanNum(totM[1]):null},
+    confidence:{overall:items.length?0.75:0.3,notes:['Read from the PDF text layer (in-system parser). Verify quantities and rates against the document.']} };
+}
+function _scanSane(r){
+  if(!r||!r.vendor.gstin) return false;
+  if(!r.lines||!r.lines.length) return false;
+  if(r.totals.taxable_value!=null){ const sum=r.lines.reduce((s,l)=>s+num(l.amount),0); if(Math.abs(sum-r.totals.taxable_value)>Math.max(1,r.totals.taxable_value*0.01)) return false; }
+  return true;
+}
+// ── vision model via Edge Function ────────────────────────────────────
+async function _scanCallModel(file){
+  const b64=await new Promise((res,rej)=>{ const fr=new FileReader(); fr.onload=()=>res(String(fr.result).split(',')[1]); fr.onerror=()=>rej(new Error('Could not read file')); fr.readAsDataURL(file); });
+  const {data,error}=await sb.functions.invoke('parse-doc',{body:{doc_type:'invoice',project_id:pgsS.project.id,filename:file.name,mime:file.type,file_base64:b64}});
+  if(error){ let msg=error.message||'parse-doc failed'; try{ const j=await error.context.json(); if(j&&j.error) msg=(j.error==='PARSE_MODE_IN_SYSTEM_ONLY')?(j.message||j.error):j.error; }catch(e){} throw new Error(msg); }
+  if(!data||!data.ok) throw new Error((data&&data.error)||'parse-doc returned no data');
+  return data;
+}
+// ── PO match ladder ───────────────────────────────────────────────────
+function _scanNormGst(g){ return g?String(g).toUpperCase().replace(/[^0-9A-Z]/g,''):''; }
+function _scanUom(u){ u=String(u||'').toLowerCase().replace(/[^a-z]/g,''); if(/^(mt|mts?on|ton|tonne|tons|tonnes)$/.test(u)) return 'MT'; if(/^(mts|mtr|mtrs|metre|metres|meter|meters|m|rmt|rm)$/.test(u)) return 'M'; if(/^(nos?|number|pcs?|piece|pieces|each|ea|unit|units)$/.test(u)) return 'NOS'; if(/^(kgs?|kilo)$/.test(u)) return 'KG'; if(/^(bags?)$/.test(u)) return 'BAG'; if(/^(ltrs?|litre|liter|l)$/.test(u)) return 'L'; if(/^(sqm|sqmt|m2|sqmtr)$/.test(u)) return 'SQM'; if(/^(cum|m3|cft|cuft)$/.test(u)) return u.toUpperCase(); return u.toUpperCase(); }
+function _scanSim(a,b){ const T=s=>new Set(String(s||'').toLowerCase().replace(/[^a-z0-9. ]/g,' ').split(/\s+/).filter(t=>t.length>1)); const A=T(a),B=T(b); if(!A.size||!B.size) return 0; let n=0; A.forEach(t=>{ if(B.has(t)) n++; }); const j=n/(A.size+B.size-n); const sub=(String(a).toLowerCase().includes(String(b).toLowerCase().slice(0,12))||String(b).toLowerCase().includes(String(a).toLowerCase().slice(0,12)))?0.25:0; return Math.min(1,j+sub); }
+function _scanInvRate(l){ return (num(l.discount_pct)>0&&l.effective_rate!=null)?num(l.effective_rate):(l.rate!=null?num(l.rate):num(l.effective_rate)); }
+function _scanRateEq(a,b){ return Math.abs(Math.round(a*100)-Math.round(b*100))<=0; }
+async function _scanMatch(p){
+  const strip=document.getElementById('grnScanStrip');
+  const route=_scan.route==='pdf_text'?'read from the PDF text layer (in-system)':'read by the vision model'+(_scan.model?' ('+esc(_scan.model)+')':'');
+  const {data:openPOs}=await sb.from('pu_po_orders').select('po_number,vendor_name,vendor_gstin,status,amendment_state,rev_no,po_date').in('status',['Open','Partial Receipt']).order('po_date',{ascending:false});
+  const open=(openPOs||[]).filter(x=>!x.amendment_state);
+  // Tier 1: printed PO number
+  if(p.invoice&&p.invoice.po_number_norm){
+    const n=p.invoice.po_number_norm;
+    const tail=n.replace(/^PO\//,'');   // "2026-27/140" — po_number is either PO/2026-27/140 or UE/PoE1/PO/2026-27/140
+    const {data:anyPOs}=await sb.from('pu_po_orders').select('po_number,vendor_name,vendor_gstin,status,amendment_state,rev_no').ilike('po_number','%PO/'+tail);
+    const anyPO=(anyPOs||[]).find(x=>/(^|\/)PO\/[^/]+\/\d+$/i.test(x.po_number)&&x.po_number.toUpperCase().endsWith('PO/'+tail.toUpperCase()))||null;
+    if(anyPO){
+      const gOk=p.vendor&&p.vendor.gstin_norm&&_scanNormGst(anyPO.vendor_gstin)===p.vendor.gstin_norm;
+      const how='PO matched by <b>printed PO number</b> "'+esc(p.invoice.po_number_raw)+'" → '+esc(_amdDocLabel(anyPO))+(p.vendor&&p.vendor.gstin_norm?' · vendor GSTIN '+esc(p.vendor.gstin_norm)+(anyPO.vendor_gstin?(gOk?' ✓ matches PO':' <span class="amber">≠ PO vendor GSTIN '+esc(anyPO.vendor_gstin)+' — check</span>'):' (PO has no GSTIN on record)'):'');
+      if(anyPO.amendment_state){ _scanStripMsg('block','<b>'+esc(_amdDocLabel(anyPO))+' is '+esc(anyPO.amendment_state)+' (A'+(num(anyPO.rev_no)+1)+').</b> Invoice matched it by PO number, but no GRN can be raised until the amendment is approved or cancelled. Nothing has been filled. <button class="btn btn-ghost btn-sm" onclick="viewPO(\''+esc(anyPO.po_number)+'\')">View PO</button>'); return; }
+      if(!['Open','Partial Receipt'].includes(anyPO.status)){ _scanStripMsg('block','<b>'+esc(_amdDocLabel(anyPO))+' is '+esc(anyPO.status)+'.</b> Invoice matched it by PO number; there is no balance to receive. If goods really arrived, the PO needs an amendment for the extra quantity. <button class="btn btn-ghost btn-sm" onclick="viewPO(\''+esc(anyPO.po_number)+'\')">View PO</button>'+((state.isOwner||state.isSuper)?' <button class="btn btn-ghost btn-sm" onclick="amdOpen(\''+esc(anyPO.po_number)+'\')">Raise amendment</button>':'')); return; }
+      _scan.match={tier:1,how}; await _scanApplyPO(anyPO.po_number); return;
+    }
+    // number printed but unknown here: fall through to vendor tiers with a note
+    _scan.match={tier:0,how:'Printed PO number "'+esc(p.invoice.po_number_raw)+'" ('+esc(n)+') is not in this project — matched by vendor instead'};
+  }
+  // Tier 2: GSTIN → Tier 3: vendor name
+  let cands=[]; let how='';
+  const g=p.vendor&&p.vendor.gstin_norm;
+  if(g){ cands=open.filter(x=>_scanNormGst(x.vendor_gstin)===g); how='vendor GSTIN '+esc(g); }
+  if(!cands.length&&p.vendor&&p.vendor.name){ const nm=p.vendor.name; cands=open.filter(x=>_scanSim(x.vendor_name,nm)>=0.4); how='vendor name "'+esc(nm)+'"'; }
+  if(!cands.length){
+    _scanStripMsg('warn','<b>Could not place this invoice on a PO.</b> '+((_scan.match&&_scan.match.how)?_scan.match.how+'. ':'')+(g?'Vendor GSTIN '+esc(g)+' matches no vendor with an Open / Partial Receipt PO in this project — either the vendor master needs the GSTIN, or this invoice has no PO.':'No vendor GSTIN could be read (confidence '+(_scan.confidence!=null?_scan.confidence.toFixed(2):'?')+').')+' Pick the PO manually; readable header fields have been filled.'+_scanRouteNote(route));
+    _scanFillHeader(p); return;
+  }
+  // rank by line fit
+  const nums=cands.map(c=>c.po_number);
+  const {data:items}=await sb.from('pu_po_items').select('po_number,material_name,material_code,uom,qty,unit_rate,line_status').in('po_number',nums);
+  const byPO={}; (items||[]).forEach(it=>{ if((it.line_status||'Active')!=='Active') return; (byPO[it.po_number]=byPO[it.po_number]||[]).push(it); });
+  cands.forEach(c=>{ const its=byPO[c.po_number]||[]; let sc=0, det=[]; (p.lines||[]).forEach(l=>{ let best=0,bi=null; its.forEach(it=>{ const s=_scanSim(l.description,it.material_name); if(s>best){best=s;bi=it;} }); if(bi&&best>=0.35){ sc+=1; det.push('name ✓'); const r=_scanInvRate(l); if(_scanRateEq(r,num(bi.unit_rate))){ sc+=1; det.push('rate ✓'); } else det.push('rate ✗'); if(_scanUom(l.uom)===_scanUom(bi.uom)) sc+=0.5; } else det.push('name ✗'); }); c._score=sc; c._max=(p.lines||[]).length*2.5; c._det=det; });
+  cands.sort((a,b)=>b._score-a._score);
+  _scan.poCands=cands;
+  const fitOk=c=>c._max>0&&c._score>=c._max*0.5;   // at least half the lines must agree on name+rate
+  if(fitOk(cands[0])&&(cands.length===1||(cands[0]._score>=cands[0]._max*0.8&&cands[0]._score>cands[1]._score*1.5))){
+    _scan.match={tier:g?2:3,how:'PO chosen by '+how+' + line fit ('+cands[0]._score.toFixed(1)+' / '+cands[0]._max.toFixed(1)+') — <b>verify</b>'+((_scan.match&&_scan.match.tier===0)?' · '+_scan.match.how:'')};
+    await _scanApplyPO(cands[0].po_number); return;
+  }
+  // several plausible → picker
+  const lead=(_scan.match&&_scan.match.tier===0)?'<b>'+_scan.match.how+'.</b> Is this invoice for another project? The vendor has '+cands.length+' open PO'+(cands.length>1?'s':'')+' here, but the line fit is '+(fitOk(cands[0])?'partial':'poor')+' — pick only if you are sure.':'<b>No usable PO number on the invoice.</b> Matched the vendor by '+how+' → '+cands.length+' open PO'+(cands.length>1?'s':'')+'. Pick the one this invoice belongs to; line fit is shown for each.';
+  strip.innerHTML='<div class="amd-banner warn"><span class="i"></span><div>'+lead+'</div></div>'
+    +cands.map((c,i)=>'<div class="scan-cand'+(i===0?' best':'')+'" onclick="_scanPickCand(\''+esc(c.po_number)+'\')"><div><div class="t">'+esc(_amdDocLabel(c))+' · '+esc(c.status)+(c.po_date?' · '+fmtDate(c.po_date):'')+'</div><div class="m">'+(byPO[c.po_number]||[]).length+' line(s) · '+esc((byPO[c.po_number]||[]).slice(0,2).map(it=>it.material_name+' @ '+fmtINR(it.unit_rate)).join(' · '))+' &nbsp;·&nbsp; invoice: '+c._det.slice(0,6).join(' ')+'</div></div><div class="score">'+c._score.toFixed(1)+' / '+c._max.toFixed(1)+'<small>line fit</small></div></div>').join('')
+    +'<div class="muted" style="font-size:12px;margin-top:6px;">Nothing has been filled yet. '+_scanRouteNote(route)+'</div>';
+  _scanFillHeader(p);
+}
+function _scanRouteNote(route){ return ' <span class="muted">Document '+route+'.</span>'; }
+async function _scanPickCand(poNum){ const c=(_scan.poCands||[]).find(x=>x.po_number===poNum); _scan.match={tier:2,how:'PO chosen by you from '+(_scan.poCands||[]).length+' candidates (line fit '+(c?c._score.toFixed(1):'?')+')'}; await _scanApplyPO(poNum); }
+async function _scanApplyPO(poNum){
+  const sel=document.getElementById('grn_poSelect');
+  if(!sel||![...sel.options].some(o=>o.value===poNum)){ _scanStripMsg('block','<b>'+esc(poNum)+' is not selectable</b> (frozen, closed, or not in this project).'); return; }
+  _scanOverlay('Filling the GRN…',3);
+  sel.value=poNum; await onGRNPOChange();
+  _scanFillHeader(_scan.parse);
+  _scanFillLines(_scan.parse);
+}
+function _scanMark(el){ if(!el) return; el.classList.add('scan-fill'); const clear=()=>{ el.classList.remove('scan-fill'); el.removeEventListener('input',clear); }; el.addEventListener('input',clear); }
+function _scanFillHeader(p){
+  if(!p) return;
+  const set=(id,v)=>{ const el=document.getElementById(id); if(!el||v==null||v==='') return; if(el.value&&el.value!==v&&!el.classList.contains('scan-fill')) return; el.value=v; _scanMark(el); };
+  set('grn_invoiceNo',p.invoice&&p.invoice.number); set('grn_invoiceDate',p.invoice&&p.invoice.date);
+  set('grn_challan',(p.invoice&&(p.invoice.vehicle_no||p.invoice.challan_no))||null);
+}
+function _scanFillLines(p){
+  const strip=document.getElementById('grnScanStrip'); if(!strip||!p) return;
+  const rows=[]; const used=new Set(); const metas=Object.keys(_grnMeta||{}).map(i=>({i:+i,...(_grnMeta[i])}));
+  // greedy best-match per invoice line
+  const pairs=[];
+  (p.lines||[]).forEach((l,li)=>{ metas.forEach(mt=>{ const s=_scanSim(l.description,mt.matName); if(s>=0.35) pairs.push({li,i:mt.i,s}); }); });
+  pairs.sort((a,b)=>b.s-a.s); const assign={};
+  pairs.forEach(pr=>{ if(assign[pr.li]!=null||used.has(pr.i)) return; assign[pr.li]=pr.i; used.add(pr.i); });
+  let filled=0;
+  (p.lines||[]).forEach((l,li)=>{
+    const i=assign[li]; const invRate=_scanInvRate(l);
+    const row={desc:l.description,invQty:l.qty,invUom:l.uom,invRate,poLine:null,poRate:null,bal:null,res:'nopo',note:''};
+    if(i!=null){
+      const mt=_grnMeta[i]; const inp=document.getElementById('grnRecv_'+i); const bal=inp?num(inp.dataset.balance):0; const rmk=document.getElementById('grnRmk_'+i);
+      row.poLine=(i+1)+' · '+mt.matName; row.poRate=mt.rate; row.bal=bal; row.balUom=mt.uom;
+      if(_scanUom(l.uom)!==_scanUom(mt.uom)&&l.uom){ row.res='uom'; row.note='UOM differs '+esc(l.uom)+' ≠ '+esc(mt.uom)+' — convert and type'; if(rmk&&!rmk.value){ rmk.value='Inv '+fmtINR(l.qty)+' '+(l.uom||'')+' @ '+fmtINR(invRate)+'/'+(l.uom||'')+' — convert to '+mt.uom; _scanMark(rmk); } }
+      else if(!_scanRateEq(invRate,mt.rate)){ row.res='rate'; row.note='rate differs '+fmtINR(invRate)+' ≠ '+fmtINR(mt.rate)+' — not filled'; if(rmk&&!rmk.value){ rmk.value='Inv rate '+fmtINR(invRate)+(num(l.discount_pct)>0?' (net of '+num(l.discount_pct)+'%)':'')+' vs PO '+fmtINR(mt.rate); _scanMark(rmk); } if(inp) inp.classList.add('scan-bad'); }
+      else if(!inp||inp.disabled||bal<=0){ row.res='nopo'; row.note='PO balance is zero — nothing to receive'; }
+      else { const q=Math.min(num(l.qty),bal); inp.value=Math.round(q*1000)/1000; _scanMark(inp); recalcGRNRow(i); filled++;
+        if(num(l.qty)>bal+0.0005){ row.res='capped'; row.note='qty capped to balance '+fmtINR(bal); if(rmk&&!rmk.value){ rmk.value='Inv qty '+fmtINR(l.qty)+' '+(l.uom||'')+'; '+fmtINR(num(l.qty)-bal)+' excess vs balance'; _scanMark(rmk); } }
+        else { row.res='ok'; row.note='matched · filled '+fmtINR(q); } }
+    } else { row.note='not on PO'; }
+    rows.push(row);
+  });
+  const chip=r=>({ok:'<span class="scan-chip ok">'+r.note+'</span>',capped:'<span class="scan-chip qty">'+r.note+'</span>',rate:'<span class="scan-chip rate">'+r.note+'</span>',uom:'<span class="scan-chip uom">'+r.note+'</span>',nopo:'<span class="scan-chip nopo">'+r.note+'</span>'+((state.isOwner||state.isSuper)?' <button class="btn btn-ghost btn-sm" onclick="amdOpen(\''+esc(document.getElementById('grn_poSelect').value)+'\')">Raise amendment</button>':' <span class="muted" style="font-size:11px;">ask an Admin to amend the PO</span>')}[r.res]);
+  const route=_scan.route==='pdf_text'?'read from the PDF text layer (in-system)':'read by the vision model'+(_scan.model?' ('+esc(_scan.model)+')':'');
+  const conf=_scan.confidence!=null?' · confidence '+_scan.confidence.toFixed(2):'';
+  strip.innerHTML='<div class="scan-strip"><div class="top"><b>Scan result</b><span class="scan-chip file">📎 '+esc(_scan.file?_scan.file.name:'')+' · attached on save</span><span class="src red">'+((_scan.match&&_scan.match.how)||'')+conf+'</span><span style="margin-left:auto;"><button class="btn btn-ghost btn-sm" onclick="grnScanHandle(_scan.file)">Re-run</button><button class="btn btn-ghost btn-sm" onclick="_scanClearPrefill()">Clear prefill</button></span></div>'
+    +'<div class="table-wrap"><table class="scan-tbl"><thead><tr><th>Invoice line</th><th class="num">Inv qty</th><th class="num">Inv rate'+((p.lines||[]).some(l=>num(l.discount_pct)>0)?' (net)':'')+'</th><th>PO line</th><th class="num">PO rate</th><th class="num">Balance</th><th>Result</th></tr></thead><tbody>'
+    +rows.map(r=>'<tr><td>'+esc(r.desc)+'</td><td class="num mono">'+fmtINR(r.invQty)+' '+esc(r.invUom||'')+'</td><td class="num mono">'+(r.invRate!=null?fmtINR(r.invRate):'—')+'</td><td>'+(r.poLine?esc(r.poLine):'<span class="muted">no receivable line</span>')+'</td><td class="num mono">'+(r.poRate!=null?fmtINR(r.poRate):'—')+'</td><td class="num mono">'+(r.bal!=null?fmtINR(r.bal)+' '+esc(r.balUom||''):'—')+'</td><td>'+chip(r)+'</td></tr>').join('')
+    +'</tbody></table></div>'
+    +'<div class="legend"><span class="scan-chip ok">matched</span> qty filled &nbsp;<span class="scan-chip qty">capped</span> invoice qty &gt; balance — filled with balance, excess noted in remarks &nbsp;<span class="scan-chip rate">rate differs</span> exact-rate rule — left blank, you decide &nbsp;<span class="scan-chip uom">UOM differs</span> convert and type &nbsp;<span class="scan-chip nopo">not on PO</span> raise amendment, re-run after approval &nbsp;<span class="muted">· Document '+route+'. Amber cells came from the scan and clear on first touch.</span></div></div>';
+  if(!filled&&rows.length) toast('Scan read '+rows.length+' line(s) but none could be filled — see the review table below','warn',5000);
+  else toast('Prefilled '+filled+' of '+rows.length+' invoice line(s) — verify against the document, then Save','success',4000);
+}
+function _scanClearPrefill(){ document.querySelectorAll('#grnForm .scan-fill').forEach(el=>{ el.value=''; el.classList.remove('scan-fill','scan-bad'); const m=el.id&&el.id.match(/^grnRecv_(\d+)$/); if(m) recalcGRNRow(+m[1]); }); const strip=document.getElementById('grnScanStrip'); if(strip) strip.innerHTML='<div class="muted" style="font-size:12px;">Prefill cleared. Document still attached.</div>'; }
+function _scanStripMsg(kind,html){ const strip=document.getElementById('grnScanStrip'); if(strip) strip.innerHTML='<div class="amd-banner '+kind+'"><span class="i"></span><div>'+html+'</div></div>'; }
+// ── upload on save ────────────────────────────────────────────────────
+async function _scanUploadForGRN(){
+  if(!_scan.file) return null;
+  if(_scan.uploaded) return _scan.uploaded;
+  const org=pgsS.org&&pgsS.org.id, proj=pgsS.project&&pgsS.project.id;
+  if(!org||!proj) throw new Error('No project context for attachment');
+  const f=_scan.file; const safe=String(f.name).replace(/[^A-Za-z0-9._-]+/g,'_').slice(-80);
+  const path=org+'/'+proj+'/grn/'+((crypto&&crypto.randomUUID)?crypto.randomUUID():Date.now().toString(36))+'-'+safe;
+  const up=await sb.storage.from('pgs-attachments').upload(path,f,{contentType:f.type||'application/octet-stream',upsert:false});
+  if(up.error) throw new Error('Attachment upload failed: '+up.error.message);
+  _scan.uploaded={bucket:'pgs-attachments',path,mime:f.type||null,size:f.size,name:f.name,
+    parser:_scan.route||'none',parser_version:_scan.route==='pdf_text'?'v117':(_scan.route==='model'?'parse-doc v2':null),model:_scan.model||null,
+    parsed_at:_scan.parse?new Date().toISOString():null,confidence:_scan.confidence,
+    match:_scan.match?{tier:_scan.match.tier,po_number_raw:(_scan.parse&&_scan.parse.invoice&&_scan.parse.invoice.po_number_raw)||null}:null};
+  return _scan.uploaded;
+}
+// ── draggable divider (60/40 default; remembered per browser) ─────────
+function _scanDragStart(ev){
+  const sp=document.getElementById('grnScanSplit'); if(!sp) return; ev.preventDefault();
+  const rect=sp.getBoundingClientRect(); sp.classList.add('dragging');
+  const move=e=>{ const x=Math.min(Math.max(e.clientX-rect.left,280),rect.width-280); const l=Math.round(x/rect.width*100); sp.style.gridTemplateColumns='minmax(280px,'+l+'fr) 10px minmax(280px,'+(100-l)+'fr)'; try{ localStorage.setItem('pgs_scan_split',String(l)); }catch(_){ } };
+  const up=()=>{ sp.classList.remove('dragging'); window.removeEventListener('mousemove',move); window.removeEventListener('mouseup',up); };
+  window.addEventListener('mousemove',move); window.addEventListener('mouseup',up);
+}
+function _scanApplySplit(){ const sp=document.getElementById('grnScanSplit'); if(!sp) return; let l=60; try{ l=parseInt(localStorage.getItem('pgs_scan_split')||'60',10)||60; }catch(_){ } l=Math.min(80,Math.max(20,l)); sp.style.gridTemplateColumns='minmax(280px,'+l+'fr) 10px minmax(280px,'+(100-l)+'fr)'; }
+// ── view scan on saved GRN ────────────────────────────────────────────
+async function grnScanView(path){
+  try{ const {data,error}=await sb.storage.from('pgs-attachments').createSignedUrl(path,300); if(error) throw error; window.open(data.signedUrl,'_blank'); }
+  catch(e){ toast('Could not open attachment: '+e.message,'error'); }
+}
+// ── end v117 scan block ───────────────────────────────────────────────
+
+// ═══════════════════════════════════════════════════════════════════════
+// v116 · PO AMENDMENT — Migrations #25/#26 (order_amendments, rpc_amd_*).
+// Revision-in-place: po_number never changes; rev_no + amendment_state on
+// the header, line_status / split_from_item_id on items. All writes go
+// through rpc_amd_* (SECURITY INVOKER); this file never touches pu_po_*.
+// ═══════════════════════════════════════════════════════════════════════
+const _amdCache = {};   // po_number -> {hist, ts}
+function _amdDocLabel(h){ return (h&&h.po_number?h.po_number:'') + ((h&&num(h.rev_no)>0)?('-A'+num(h.rev_no)):''); }
+function _amdStateCls(st){ return String(st||'').toLowerCase().replace(/[\s/]+/g,'-'); }
+function _amdListBadge(p){
+  if(!p) return '';
+  let out='';
+  if(num(p.rev_no)>0) out+=' <span class="amd-rev" title="Amended '+num(p.rev_no)+' time(s)">A'+num(p.rev_no)+'</span>';
+  if(p.amendment_state) out+=' <span class="status '+_amdStateCls(p.amendment_state)+'" title="Order is frozen while the amendment is in progress">'+esc(p.amendment_state)+'</span>';
+  return out;
+}
+// Loads history + tops up line_status on legacy item rows (rpc_doc_view predates #25).
+async function _amdLoadHistory(poNum, items){
+  try{
+    if(items && items.length && items[0].line_status===undefined){
+      const {data:tu}=await sb.from('pu_po_items').select('id,line_status,split_from_item_id,added_in_rev,closed_in_rev').eq('po_number',poNum);
+      const m=Object.fromEntries((tu||[]).map(r=>[r.id,r]));
+      items.forEach(it=>{ const r=m[it.id]; if(r){ it.line_status=r.line_status; it.split_from_item_id=r.split_from_item_id; it.added_in_rev=r.added_in_rev; it.closed_in_rev=r.closed_in_rev; } });
+    }
+    (items||[]).forEach(it=>{ if(!it.line_status) it.line_status='Active'; });
+    const c=_amdCache[poNum];
+    if(c && (Date.now()-c.ts)<15000) return c.hist;
+    const {data,error}=await sb.rpc('rpc_amd_history',{p_doc_type:'PO',p_doc_number:poNum});
+    if(error){ console.warn('rpc_amd_history:',error.message); return {amendments:[],lines:[]}; }
+    const hist=data||{amendments:[],lines:[]};
+    hist.byItem={};
+    (hist.lines||[]).forEach(l=>{ if(l.item_id) (hist.byItem[l.item_id]=hist.byItem[l.item_id]||[]).push(l); });
+    hist.live=(hist.amendments||[]).find(a=>['Draft','Pending Approval','Rejected - Correction'].includes(a.status))||null;
+    _amdCache[poNum]={hist,ts:Date.now()};
+    return hist;
+  }catch(e){ console.warn('amd history',e); return {amendments:[],lines:[],byItem:{},live:null}; }
+}
+function _amdInvalidate(poNum){ delete _amdCache[poNum]; }
+function _amdFmtVal(f,v){
+  if(v==null||v==='') return '\u2014';
+  if(f==='qty'||f==='unit_rate') return fmtINR(v);
+  return esc(String(v));
+}
+// Pill under the qty cell: latest approved change on this line (+count of earlier).
+function _amdPill(it, hist){
+  if(!it||!hist) return '';
+  const rows=(hist.byItem&&hist.byItem[it.id])||[];
+  const live=hist.live;
+  let pill='';
+  if(rows.length){
+    const revs=[...new Set(rows.map(r=>r.rev_no))].sort((a,b)=>b-a);
+    const top=revs[0];
+    const mine=rows.filter(r=>r.rev_no===top);
+    let cls='mod', txt='';
+    const kind=mine[0].change_kind;
+    if(kind==='added'){ cls='add'; txt='added'; }
+    else if(kind==='split'){ cls='add'; const sp=rows.find(r=>r.field==='line'); txt=sp?esc(String(sp.new)):'split'; const rt=mine.find(r=>r.field==='unit_rate'); if(rt) txt+=' @ '+fmtINR(rt.new); }
+    else if(kind==='removed'){ cls='rem'; txt='removed'; }
+    else if(kind==='closed'){ cls='close'; const q=mine.find(r=>r.field==='qty'); txt=(q?fmtINR(q.old)+' \u2192 '+fmtINR(q.new)+' \u00b7 ':'')+'closed'; }
+    else { const q=mine.find(r=>r.field==='qty'); const r=mine.find(r=>r.field==='unit_rate');
+      txt = q ? (fmtINR(q.old)+' \u2192 '+fmtINR(q.new)) : (r ? 'rate changed' : (mine[0].field||'changed')); }
+    const more=revs.length>1?'<span class="more">+'+(revs.length-1)+'</span>':'';
+    pill='<span class="amd-pill '+cls+'" onclick="event.stopPropagation();_amdPopover(event,\''+esc(it.id)+'\')"><span class="rev">A'+top+'</span>'+txt+more+'</span>';
+  }
+  if(live && live.status!=='Draft'){
+    pill+='<span class="amd-pill pend" title="Amendment A'+live.rev_no+' '+esc(live.status)+'"><span class="rev">A'+live.rev_no+'</span>pending</span>';
+  }
+  return pill?'<div class="amd-pillwrap">'+pill+'</div>':'';
+}
+function _amdRowAttr(it){
+  const ls=it&&it.line_status;
+  if(ls==='Closed') return ' class="amd-closedln" title="Closed at received quantity in amendment A'+num(it.closed_in_rev)+'"';
+  if(ls==='Removed') return ' class="amd-removedln" title="Removed in amendment A'+num(it.closed_in_rev)+'"';
+  return '';
+}
+let _amdPopItems=null;
+function _amdPopover(ev, itemId){
+  const po=window._amdPopCtx; if(!po) return;
+  const hist=po.hist, rows=((hist.byItem||{})[itemId]||[]).slice();
+  const it=(po.items||[]).find(x=>x.id===itemId)||{};
+  let pop=document.getElementById('amdPop');
+  if(!pop){ pop=document.createElement('div'); pop.id='amdPop'; pop.className='amd-pop'; document.body.appendChild(pop);
+    document.addEventListener('click',e=>{ if(!e.target.closest('#amdPop')) pop.classList.remove('on'); }); }
+  const byRev={};
+  rows.forEach(r=>{ (byRev[r.rev_no]=byRev[r.rev_no]||[]).push(r); });
+  const revs=Object.keys(byRev).map(Number).sort((a,b)=>b-a);
+  const amd=Object.fromEntries((hist.amendments||[]).map(a=>[a.rev_no,a]));
+  let html='<h4><span>Line '+esc(String(it.sno||''))+' \u00b7 '+esc(it.material_name||'')+'</span><span class="x" onclick="document.getElementById(\'amdPop\').classList.remove(\'on\')">\u00d7</span></h4>';
+  if(hist.live && hist.live.status!=='Draft'){
+    html+='<div class="hrow pend"><div class="r">A'+hist.live.rev_no+'<small>'+esc(hist.live.status)+'</small></div><div>Awaiting approval \u2014 order frozen'+(hist.live.reason?'<div class="who">'+esc(hist.live.reason)+'</div>':'')+'</div></div>';
+  }
+  revs.forEach(rv=>{
+    const a=amd[rv]||{};
+    const kindLbl=byRev[rv][0].change_kind;
+    html+='<div class="hrow"><div class="r">A'+rv+'<small>'+(a.approved_at?fmtDateShort(a.approved_at):'')+'</small></div><div><ul>'
+      + byRev[rv].map(c=>'<li><em>'+esc(c.field==='unit_rate'?'Rate':c.field==='qty'?'Qty':c.field==='line'?'Line':c.field)+'</em>'
+          +(c.field==='line'?esc(String(c.new||c.old||'')):(_amdFmtVal(c.field,c.old)+' \u2192 '+_amdFmtVal(c.field,c.new)))+'</li>').join('')
+      + (byRev[rv][0].consumed!=null && kindLbl!=='added' && kindLbl!=='split' ? '<li><em>Received then</em>'+fmtINR(byRev[rv][0].consumed)+'</li>':'')
+      + (a.reason?'<li><em>Reason</em>'+esc(a.reason)+'</li>':'')
+      +'</ul><div class="who">'+[a.opened_by?'Opened by '+esc(a.opened_by):'',a.amended_by?'amended by '+esc(a.amended_by):'',a.approved_by?'approved by '+esc(a.approved_by):''].filter(Boolean).join(' \u00b7 ')+'</div></div></div>';
+  });
+  html+='<div class="hrow"><div class="r">Rev 0<small>'+(po.h&&po.h.po_date?fmtDate(po.h.po_date):'')+'</small></div><div><ul><li><em>Qty</em>'+fmtINR(_amdOrigQty(it,rows))+'</li><li><em>Rate</em>'+fmtINR(_amdOrigRate(it,rows))+'</li></ul>'
+      +'<div class="who">'+(po.h&&po.h.prepared_by?'Created by '+esc(po.h.prepared_by):'')+(po.h&&po.h.approved_by?' \u00b7 approved by '+esc(po.h.approved_by):'')+'</div></div></div>';
+  if(num(it.added_in_rev)>0){ html=html.replace(/<div class="hrow"><div class="r">Rev 0[\s\S]*$/,''); }   // added lines have no Rev 0
+  pop.innerHTML=html;
+  const b=ev.currentTarget.getBoundingClientRect();
+  let left=b.left+window.scrollX; if(left+470>window.innerWidth) left=Math.max(8,window.innerWidth-480);
+  pop.style.left=left+'px'; pop.style.top=(b.bottom+window.scrollY+6)+'px'; pop.classList.add('on');
+}
+function _amdOrigQty(it,rows){ const q=rows.filter(r=>r.field==='qty'&&r.old!=null).sort((a,b)=>a.rev_no-b.rev_no)[0]; return q?q.old:it.qty; }
+function _amdOrigRate(it,rows){ const r=rows.filter(r=>r.field==='unit_rate'&&r.old!=null).sort((a,b)=>a.rev_no-b.rev_no)[0]; return r?r.old:it.unit_rate; }
+function _amdBanner(h, hist){
+  if(!h||!h.amendment_state) return '';
+  const live=(hist&&hist.live)||{};
+  const rv=num(h.rev_no)+1;
+  const st=h.amendment_state;
+  const who=[live.opened_by?'opened by '+esc(live.opened_by):'', live.opened_at?fmtDateShort(live.opened_at):''].filter(Boolean).join(', ');
+  let body='No GRN, bill or payment can be raised against this PO until the amendment is approved or cancelled.';
+  if(st==='Under Amendment') body+=' Purchase Executive can edit it now.';
+  else if(st==='Amendment Pending Approval') body+=' Awaiting Purchase Manager approval.';
+  else if(st==='Amendment - Correction') body+=' Returned for correction'+(live.rejection_reason?': '+esc(live.rejection_reason):'')+'.';
+  return '<div class="amd-banner freeze"><span class="i"></span><div><b>'+esc(st)+' (A'+rv+')'+(who?' \u2014 '+who:'')+'.</b><br>'+body+'</div></div>';
+}
+function _amdActions(h, hist){
+  if(!h) return '';
+  const perms=mergedPerms(); const admin=!!(state.isOwner||state.isSuper);
+  const live=hist&&hist.live; let out='';
+  const n=esc(h.po_number);
+  if(!h.amendment_state){
+    if(admin && ['Open','Partial Receipt','Fully Received'].includes(h.status))
+      out+='<button class="btn btn-secondary" onclick="amdOpen(\''+n+'\')">\u270e Open for amendment</button> ';
+  } else {
+    const id=h.amendment_id;
+    if(perms.canAmendPO && live && ['Draft','Rejected - Correction'].includes(live.status))
+      out+='<button class="btn btn-primary" onclick="closeModal();amdEdit(\''+esc(id)+'\')">\u270e Amend PO</button> ';
+    if(perms.canApproveAmendPO && live && live.status==='Pending Approval')
+      out+='<button class="btn btn-primary" onclick="closeModal();amdReview(\''+esc(id)+'\')">\u2713 Review amendment</button> ';
+    if(!perms.canApproveAmendPO && !perms.canAmendPO && live)
+      out+='<button class="btn btn-ghost" onclick="closeModal();amdReview(\''+esc(id)+'\')">View amendment</button> ';
+    if(admin) out+='<button class="btn btn-danger" onclick="amdCancel(\''+esc(id)+'\',\''+n+'\')">Cancel amendment</button> ';
+  }
+  return out;
+}
+async function amdOpen(poNum){
+  if(!(state.isOwner||state.isSuper)){ toast('Only an Admin can open a PO for amendment','error'); return; }
+  if(!confirm('Open '+poNum+' for amendment?\n\nThe PO is frozen (no GRN / bill / payment) until the amendment is approved or cancelled.')) return;
+  pbShow('Opening amendment\u2026');
+  try{
+    const {data,error}=await sb.rpc('rpc_amd_open',{p_doc_number:poNum,p_user:state.userName});
+    if(error) throw new Error(error.message.replace(/^.*PERM_DENIED:\s*/,''));
+    _amdInvalidate(poNum);
+    toast('Opened for amendment A'+data.rev_no,'success');
+    closeModal(); await loadPOList(); await viewPO(poNum);
+  }catch(e){ toast(e.message,'error',6000); }
+  finally{ pbDone(); }
+}
+async function amdCancel(id, poNum){
+  const reason=prompt('Cancel this amendment? The PO returns to its previous state unchanged.\n\nReason (optional):');
+  if(reason===null) return;
+  pbShow('Cancelling\u2026');
+  try{
+    const {error}=await sb.rpc('rpc_amd_cancel',{p_amendment_id:id,p_reason:reason||null,p_user:state.userName});
+    if(error) throw new Error(error.message.replace(/^.*PERM_DENIED:\s*/,''));
+    _amdInvalidate(poNum);
+    toast('Amendment cancelled','success');
+    closeModal(); await loadPOList(); await viewPO(poNum);
+  }catch(e){ toast(e.message,'error',6000); }
+  finally{ pbDone(); }
+}
+// ── Amend screen (Purchase Executive) ────────────────────────────────
+let _amd=null;   // {id, po, items, draft:{header,reason,lines[]}, plan, wbsMap, locMap, saveT}
+async function amdEdit(id){
+  if(!hasPerm('canAmendPO')){ toast('Not permitted \u2014 needs the amend-PO role','error'); return; }
+  pbShow('Loading amendment\u2026');
+  try{
+    const {data:a,error}=await sb.from('order_amendments').select('*').eq('id',id).single();
+    if(error||!a) throw new Error(error?error.message:'Amendment not found');
+    if(!['Draft','Rejected - Correction'].includes(a.status)){ toast('This amendment is '+a.status+' \u2014 not editable','warn'); return; }
+    const [{data:po},{data:items}]=await Promise.all([
+      sb.from('pu_po_orders').select('*').eq('po_number',a.doc_number).single(),
+      sb.from('pu_po_items').select('*').eq('po_number',a.doc_number).order('sno'),
+    ]);
+    let wbsMap={},locMap={};
+    try{ const [lt,wt]=await Promise.all([_loadLocTree(),_loadWbsTree()]); locMap=Object.fromEntries((lt||[]).map(n=>[String(n.id),n])); wbsMap=Object.fromEntries((wt||[]).map(n=>[String(n.id),n])); }catch(e){}
+    const draft=a.draft&&a.draft.lines?a.draft:{header:{},reason:a.reason||'',lines:(items||[]).filter(i=>(i.line_status||'Active')==='Active').map(i=>({item_id:i.id,action:'keep'}))};
+    draft.header=draft.header||{}; draft.reason=draft.reason||a.reason||'';
+    // every active line must be present; add any missing as keep
+    const seen=new Set(draft.lines.filter(l=>l.item_id).map(l=>l.item_id));
+    (items||[]).filter(i=>(i.line_status||'Active')==='Active' && !seen.has(i.id)).forEach(i=>draft.lines.push({item_id:i.id,action:'keep'}));
+    draft.lines.forEach((l,i)=>{ l._k=l.item_id||('new'+i); });
+    _amd={id,a,po,items:items||[],draft,plan:null,wbsMap,locMap,saveT:null,dirty:false};
+    window._modalNoBackdropClose=true;
+    openModal(_amdEditHtml(),'wide');
+    _amdRenderLines();
+    await _amdSaveDraft(true);
+  }catch(e){ toast(e.message,'error',6000); }
+  finally{ pbDone(); }
+}
+function _amdEditHtml(){
+  const po=_amd.po, a=_amd.a, hd=_amd.draft.header;
+  const f=(k)=>hd[k]!==undefined?hd[k]:(po[k]||'');
+  return '<h3>Amend '+esc(po.po_number)+' \u2192 A'+a.rev_no+' <span class="status '+_amdStateCls(a.status==='Draft'?'Under Amendment':'Amendment - Correction')+'" style="margin-left:8px;vertical-align:middle;">'+esc(a.status==='Draft'?'Draft':'Returned for correction')+'</span></h3>'
+   +(a.status==='Rejected - Correction'&&a.rejection_reason?'<div class="amd-banner block"><span class="i"></span><div><b>Purchase Manager note:</b> '+esc(a.rejection_reason)+'</div></div>':'')
+   +'<div class="amd-banner info"><span class="i"></span><div>Received quantities are the floor on each line. A rate or WBS/location change on a line with receipts closes that line at the received qty and creates a new line for the balance \u2014 the system does the split.</div></div>'
+   +'<div style="font-size:12px;color:var(--muted);margin-bottom:8px;"><b>'+esc(po.vendor_name||'')+'</b> \u00b7 Revision '+num(po.rev_no)+' \u00b7 '+esc(po.status)+'</div>'
+   +'<div class="table-wrap"><table id="amdTbl"><thead><tr><th>#</th><th style="min-width:230px;">Material</th><th style="min-width:200px;">WBS / Location</th><th>UOM</th><th class="num">Received</th><th class="num" style="min-width:130px;">Qty</th><th class="num" style="min-width:130px;">Budget left</th><th class="num" style="min-width:120px;">Rate</th><th class="num">Amount</th><th></th></tr></thead><tbody id="amdBody"></tbody></table></div>'
+   +'<div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px;"><button class="btn btn-ghost btn-sm" onclick="_amdAddLine()">+ Add line from estimate</button><div id="amdTotals" class="amd-sum"></div></div>'
+   +'<div class="amd-hdr"><div><label class="muted" style="font-size:11px;">DELIVERY DATE</label><input type="date" id="amdH_delivery_date" value="'+esc(f('delivery_date'))+'" oninput="_amdHdr(\'delivery_date\',this.value)"></div>'
+   +'<div><label class="muted" style="font-size:11px;">PAYMENT TERMS</label><input id="amdH_payment_terms" value="'+esc(f('payment_terms'))+'" oninput="_amdHdr(\'payment_terms\',this.value)"></div>'
+   +'<div><label class="muted" style="font-size:11px;">TRANSPORT</label><input id="amdH_transport" value="'+esc(f('transport'))+'" oninput="_amdHdr(\'transport\',this.value)"></div>'
+   +'<div><label class="muted" style="font-size:11px;">CONTACT PERSON</label><input id="amdH_contact_person" value="'+esc(f('contact_person'))+'" oninput="_amdHdr(\'contact_person\',this.value)"></div>'
+   +'<div style="grid-column:1/3;"><label class="muted" style="font-size:11px;">COMMENTS / SPECIAL INSTRUCTIONS</label><textarea id="amdH_remarks" rows="2" oninput="_amdHdr(\'remarks\',this.value)">'+esc(f('remarks'))+'</textarea></div>'
+   +'<div style="grid-column:3/5;"><label class="muted" style="font-size:11px;">REASON FOR AMENDMENT <span style="color:#b91c1c;">*</span> (printed on A'+a.rev_no+', kept in history)</label><textarea id="amdReason" rows="2" oninput="_amd.draft.reason=this.value;_amdDirty()">'+esc(_amd.draft.reason||'')+'</textarea></div></div>'
+   +'<div id="amdIssues" style="margin-top:8px;"></div>'
+   +'<div class="actions-row"><span id="amdSaveState" style="margin-right:auto;font-size:12px;color:var(--muted);"></span>'
+   +'<button class="btn btn-ghost" onclick="_amdClose()">Close</button>'
+   +'<button class="btn btn-secondary" onclick="_amdSaveDraft(false)">Save draft</button>'
+   +'<button class="btn btn-primary" id="amdSubmitBtn" onclick="_amdSubmit()">Submit A'+a.rev_no+' for approval</button></div>';
+}
+function _amdHdr(k,v){ _amd.draft.header[k]=v; _amdDirty(); }
+function _amdDirty(){ _amd.dirty=true; const el=document.getElementById('amdSaveState'); if(el) el.textContent='Unsaved changes\u2026'; clearTimeout(_amd.saveT); _amd.saveT=setTimeout(()=>_amdSaveDraft(true),700); }
+function _amdLineByKey(k){ return _amd.draft.lines.find(l=>l._k===k); }
+function _amdSet(k,field,v){
+  const l=_amdLineByKey(k); if(!l) return;
+  const it=l.item_id?_amd.items.find(i=>i.id===l.item_id):null;
+  if(field==='qty'||field==='unit_rate'){ v=(v===''?null:num(v)); }
+  l[field]=v;
+  if(it){
+    const changed=['qty','unit_rate','wbs_node_id','loc_node_id','material_name','uom','specification','remarks'].some(f=>l[f]!==undefined && l[f]!==null && String(l[f])!==String(it[f]==null?'':it[f]));
+    if(l.action!=='remove') l.action=changed?'modify':'keep';
+  }
+  _amdDirty();
+}
+function _amdRemove(k){ const l=_amdLineByKey(k); if(!l) return; if(l.item_id){ l.action=(l.action==='remove')?'keep':'remove'; } else { _amd.draft.lines=_amd.draft.lines.filter(x=>x._k!==k); } _amdRenderLines(); _amdDirty(); }
+function _amdPlanFor(k){
+  const p=_amd.plan; if(!p) return null;
+  const l=_amdLineByKey(k); if(!l) return null;
+  if(l.item_id) return (p.lines||[]).filter(x=>x.item_id===l.item_id);
+  // added lines: match by order among adds
+  const addIdx=_amd.draft.lines.filter(x=>!x.item_id).findIndex(x=>x._k===k);
+  const adds=(p.lines||[]).filter(x=>x.kind==='add');
+  return adds[addIdx]?[adds[addIdx]]:[];
+}
+function _amdBudgetFor(after){
+  const p=_amd.plan; if(!p||!after) return null;
+  return (p.budget||[]).find(b=>String(b.wbs)===String(after.wbs_node_id)&&b.material===after.material_code&&String(b.loc)===String(after.loc_node_id))||null;
+}
+function _amdRenderLines(){
+  const tb=document.getElementById('amdBody'); if(!tb) return;
+  const wl=(w,l)=>{ const wn=_amd.wbsMap[String(w)], ln=_amd.locMap[String(l)]; return _pgsWLCell(wn?(wn.path||wn.name):null, ln?(ln.path||ln.name):null); };
+  let html='', n=0;
+  _amd.draft.lines.forEach(l=>{
+    const it=l.item_id?_amd.items.find(i=>i.id===l.item_id):null;
+    const pl=_amdPlanFor(l._k)||[];
+    const main=pl.find(x=>x.kind!=='split_new')||pl[0]||null;
+    const splitNew=pl.find(x=>x.kind==='split_new')||null;
+    const consumed=main?num(main.consumed):0;
+    const errs=main?(main.errors||[]):[], warns=main?(main.warnings||[]):[];
+    const qty=l.qty!=null?l.qty:(it?num(it.qty):'');
+    const rate=l.unit_rate!=null?l.unit_rate:(it?num(it.unit_rate):'');
+    const uom=l.uom||(it?it.uom:'');
+    const name=l.material_name||(it?it.material_name:'');
+    const w=l.wbs_node_id!=null?l.wbs_node_id:(it?it.wbs_node_id:null), lo=l.loc_node_id||(it?it.loc_node_id:null);
+    const after=main&&main.after?main.after:null;
+    const b=_amdBudgetFor(after||{wbs_node_id:w,material_code:(l.material_code||(it?it.material_code:'')),loc_node_id:lo});
+    const removed=l.action==='remove';
+    const isSplit=!!(main&&main.kind==='close');
+    const amt=after?num(after.total_amount):(num(qty)*num(rate));
+    n++;
+    const qtyChanged=it&&l.qty!=null&&num(l.qty)!==num(it.qty);
+    const rateChanged=it&&l.unit_rate!=null&&num(l.unit_rate)!==num(it.unit_rate);
+    let hint='';
+    if(it) hint+='floor '+fmtINR(consumed)+(qtyChanged?' \u00b7 was '+fmtINR(it.qty):'');
+    else hint+=esc(uom)+' \u00b7 new line';
+    const errHtml=errs.map(e=>'<span class="amd-hint bad">'+esc(String(e))+'</span>').join('')+warns.map(e=>'<span class="amd-hint warn">'+esc(String(e))+'</span>').join('');
+    let budgetCell='\u2014';
+    if(b){ budgetCell=(b.mode==='ls'?'\u20b9 '+fmtINR(b.remaining)+' LS':fmtINR(b.remaining)+' '+esc(uom))+'<span class="amd-hint '+(b.ok?'ok':'bad')+'">'+(b.mode==='ls'?'requested \u20b9'+fmtINR(b.requested):'after change '+fmtINR(num(b.remaining)-num(b.requested)))+'</span>'; }
+    html+='<tr id="amdRow_'+esc(l._k)+'"'+(removed?' class="amd-removedln"':'')+(isSplit?' class="amd-closedln"':'')+'>'
+      +'<td>'+(it?esc(String(it.sno)):'<span style="color:#15803d;font-weight:700;">new</span>')+'</td>'
+      +'<td>'+(it?esc(name):'<input value="'+esc(name)+'" oninput="_amdSet(\''+esc(l._k)+'\',\'material_name\',this.value)" style="width:100%;">')+(it&&it.procurement_source==='mir'?' <span class="amd-src">MIR</span>':'')+'</td>'
+      +'<td>'+wl(w,lo)+'</td>'
+      +'<td>'+esc(uom)+'</td>'
+      +'<td class="num mono">'+(it?fmtINR(consumed):'\u2014')+'</td>'
+      +'<td class="num">'+(removed||isSplit
+          ? '<span class="mono">'+fmtINR(isSplit?consumed:qty)+'</span>'+(isSplit?'<span class="amd-pill close" style="margin-top:3px;"><span class="rev">A'+_amd.a.rev_no+'</span>closes at received</span><span class="amd-hint">balance moves to line '+esc(String(main.split_to_sno||''))+'</span>':'')
+          : '<input type="number" step="0.001" min="0" class="num'+(qtyChanged?' amd-changed':'')+(errs.length?' amd-bad':'')+'" value="'+esc(String(qty))+'" oninput="_amdSet(\''+esc(l._k)+'\',\'qty\',this.value)" onwheel="this.blur()" style="width:110px;">')
+          +'<span class="amd-hint">'+hint+'</span>'+errHtml+'</td>'
+      +'<td class="num">'+budgetCell+'</td>'
+      +'<td class="num">'+(removed?fmtINR(rate):'<input type="number" step="0.0001" min="0" class="num'+(rateChanged?' amd-changed':'')+'" value="'+esc(String(rate))+'" oninput="_amdSet(\''+esc(l._k)+'\',\'unit_rate\',this.value)" onwheel="this.blur()" style="width:100px;">'+(rateChanged?'<span class="amd-hint">was '+fmtINR(it.unit_rate)+'</span>':''))+'</td>'
+      +'<td class="num">'+fmtINR(removed?0:amt)+'</td>'
+      +'<td>'+(it
+          ? (consumed>0
+              ? '<button class="btn btn-ghost btn-sm" disabled title="Line has receipts \u2014 reduce to received instead">Remove</button>'
+              : '<button class="btn btn-ghost btn-sm" onclick="_amdRemove(\''+esc(l._k)+'\')">'+(removed?'Restore':'Remove')+'</button>')
+          : '<button class="btn btn-ghost btn-sm" onclick="_amdRemove(\''+esc(l._k)+'\')">Remove</button>')+'</td>'
+      +'</tr>';
+    if(splitNew){
+      const a2=splitNew.after||{};
+      html+='<tr class="amd-addedln"><td>'+esc(String(a2.sno||''))+'</td><td>'+esc(a2.material_name||name)+' <span class="amd-src">split from '+esc(String(it?it.sno:''))+'</span></td><td>'+wl(a2.wbs_node_id,a2.loc_node_id)+'</td><td>'+esc(a2.uom||uom)+'</td>'
+        +'<td class="num mono">\u2014</td><td class="num"><span class="mono">'+fmtINR(a2.qty)+'</span><span class="amd-hint">balance of line '+esc(String(it?it.sno:''))+'</span></td>'
+        +'<td class="num">'+(function(){const bb=_amdBudgetFor(a2); return bb?(bb.mode==='ls'?'\u20b9 '+fmtINR(bb.remaining)+' LS':fmtINR(bb.remaining)+' '+esc(a2.uom||uom))+'<span class="amd-hint ok">unchanged \u2014 split is qty-neutral</span>':'\u2014';})()+'</td>'
+        +'<td class="num"><span class="mono">'+fmtINR(a2.unit_rate)+'</span><span class="amd-hint">was '+fmtINR(it?it.unit_rate:0)+' on line '+esc(String(it?it.sno:''))+'</span></td>'
+        +'<td class="num">'+fmtINR(a2.total_amount)+'</td><td></td></tr>';
+    }
+  });
+  tb.innerHTML=html||'<tr><td colspan="10" class="center muted">No lines</td></tr>';
+  const p=_amd.plan; const tot=document.getElementById('amdTotals');
+  if(tot) tot.innerHTML=p?('<div>Revision '+num(_amd.po.rev_no)+' value<b>'+fmtINRSym(p.total_before)+'</b></div><div>A'+_amd.a.rev_no+' value<b>'+fmtINRSym(p.total_after)+'</b></div><div>Change<b style="color:'+((num(p.total_after)-num(p.total_before))>=0?'#1d4ed8':'#b91c1c')+';">'+((num(p.total_after)-num(p.total_before))>=0?'+':'')+fmtINRSym(num(p.total_after)-num(p.total_before))+'</b></div>'):'';
+  const iss=document.getElementById('amdIssues');
+  if(iss&&p){ const bad=(p.budget||[]).filter(b=>!b.ok); iss.innerHTML=bad.length?'<div class="amd-banner block"><span class="i"></span><div>'+bad.map(b=>(b.mode==='ls'?'LS budget exceeded at package '+esc(String(b.wbs))+': requested \u20b9'+fmtINR(b.requested)+' of \u20b9'+fmtINR(b.remaining)+' remaining':'Material '+esc(b.material||'')+' exceeds package estimate: '+fmtINR(b.requested)+' requested, '+fmtINR(b.remaining)+' remaining')).join('<br>')+'</div></div>':''; }
+  const sb2=document.getElementById('amdSubmitBtn'); if(sb2&&p) sb2.disabled=!p.ok;
+}
+function _amdDraftPayload(){
+  return { header:_amd.draft.header, reason:_amd.draft.reason||'',
+    lines:_amd.draft.lines.map(l=>{ const o={item_id:l.item_id||null,action:l.item_id?(l.action||'keep'):'add'};
+      ['qty','unit_rate','uom','material_code','material_name','specification','wbs_node_id','loc_node_id','remarks','cgst_pct','sgst_pct','igst_pct'].forEach(f=>{ if(l[f]!==undefined&&l[f]!==null&&l[f]!=='') o[f]=l[f]; });
+      return o; }) };
+}
+async function _amdSaveDraft(silent){
+  if(!_amd) return;
+  clearTimeout(_amd.saveT);
+  const st=document.getElementById('amdSaveState'); if(st) st.textContent='Saving\u2026';
+  try{
+    const {data,error}=await sb.rpc('rpc_amd_save_draft',{p_amendment_id:_amd.id,p_draft:_amdDraftPayload(),p_user:state.userName});
+    if(error) throw new Error(error.message.replace(/^.*PERM_DENIED:\s*/,''));
+    _amd.plan=data; _amd.dirty=false;
+    if(st) st.textContent='Saved '+new Date().toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'})+(data.ok?'':' \u00b7 '+data.error_count+' issue(s)');
+    _amdRenderLines();
+    if(!silent) toast('Draft saved','success',2000);
+  }catch(e){ if(st) st.textContent='Save failed: '+e.message; if(!silent) toast(e.message,'error',6000); }
+}
+async function _amdSubmit(){
+  if(!_amd) return;
+  if(!(_amd.draft.reason||'').trim()){ toast('Reason for amendment is required','error'); document.getElementById('amdReason')?.focus(); return; }
+  if(!confirm('Submit amendment A'+_amd.a.rev_no+' of '+_amd.po.po_number+' for Purchase Manager approval?')) return;
+  pbShow('Submitting\u2026');
+  try{
+    const {data,error}=await sb.rpc('rpc_amd_submit',{p_amendment_id:_amd.id,p_draft:_amdDraftPayload(),p_user:state.userName});
+    if(error) throw new Error(error.message.replace(/^.*PERM_DENIED:\s*/,''));
+    const poNum=_amd.po.po_number; _amdInvalidate(poNum);
+    toast('A'+_amd.a.rev_no+' submitted for approval','success');
+    _amd=null; window._modalNoBackdropClose=false; closeModal();
+    await loadPOList(); await viewPO(poNum);
+  }catch(e){ toast(e.message,'error',7000); }
+  finally{ pbDone(); }
+}
+function _amdClose(){
+  if(_amd&&_amd.dirty&&!confirm('Discard unsaved changes? (Saved drafts are kept.)')) return;
+  const poNum=_amd?_amd.po.po_number:null; _amd=null; window._modalNoBackdropClose=false; closeModal();
+  if(poNum){ _amdInvalidate(poNum); loadPOList(); }
+}
+// Add line: reuse the PO estimate picker in 'amd' mode.
+async function _amdAddLine(){
+  if(!_amd) return;
+  await _ppOpenPicker('amd');
+}
+function _amdCommitFromCart(){
+  if(!_amd){ closeModal(); return; }
+  let added=0;
+  _mpCart.forEach(v=>{
+    if((Number(v.qty)||0)<=0) return;
+    const k='new'+Date.now()+'_'+(added++);
+    _amd.draft.lines.push({_k:k,item_id:null,action:'add',material_code:v.code,material_name:v.name,uom:v.uom,qty:Number(v.qty)||0,unit_rate:0,
+      wbs_node_id:v.leafId!=null?Number(v.leafId):null,loc_node_id:v.locId||null});
+  });
+  _mpMode='mir'; window._ppActive=false;
+  // reopen the amend modal (picker replaced modal content)
+  window._modalNoBackdropClose=true;
+  openModal(_amdEditHtml(),'wide');
+  _amdRenderLines(); _amdDirty();
+  toast(added+' line(s) added \u2014 enter the rate','success',2500);
+}
+// ── Review screen (Purchase Manager) ─────────────────────────────────
+async function amdReview(id){
+  pbShow('Loading amendment\u2026');
+  try{
+    const {data,error}=await sb.rpc('rpc_amd_preview',{p_amendment_id:id});
+    if(error) throw new Error(error.message);
+    const a=data.amendment, p=data.plan;
+    const {data:po}=await sb.from('pu_po_orders').select('po_number,vendor_name,rev_no,status,amendment_state').eq('po_number',a.doc_number).single();
+    let wbsMap={},locMap={};
+    try{ const [lt,wt]=await Promise.all([_loadLocTree(),_loadWbsTree()]); locMap=Object.fromEntries((lt||[]).map(n=>[String(n.id),n])); wbsMap=Object.fromEntries((wt||[]).map(n=>[String(n.id),n])); }catch(e){}
+    const wname=(w)=>{const n=wbsMap[String(w)];return n?(n.name||''):String(w||'');}, lname=(l)=>{const n=locMap[String(l)];return n?(n.name||''):String(l||'');};
+    const canA=hasPerm('canApproveAmendPO'), mine=(state.userId&&(state.userId===a.opened_by_id||state.userId===a.amended_by_id));
+    const pending=a.status==='Pending Approval';
+    const fld=(f)=>({qty:'Qty',unit_rate:'Rate',line:'Line',wbs_node_id:'WBS',loc_node_id:'Location',material_name:'Material',uom:'UOM',specification:'Spec',remarks:'Remarks'}[f]||f);
+    const val=(f,v)=>{ if(v==null||v==='') return '\u2014'; if(f==='qty'||f==='unit_rate') return fmtINR(v); if(f==='wbs_node_id') return esc(wname(v)); if(f==='loc_node_id') return esc(lname(v)); return esc(String(v)); };
+    let rows='';
+    (p.lines||[]).forEach(l=>{
+      if(l.kind==='keep') return;
+      const label=(l.sno?l.sno+' \u00b7 ':'')+esc((l.after&&l.after.material_name)||(l.before&&l.before.material_name)||'');
+      const checks=[];
+      if(l.kind==='modify'||l.kind==='close'){ checks.push('<span class="amd-rule">floor '+fmtINR(l.consumed)+' \u2713</span>'); }
+      if(l.kind==='remove'){ checks.push('<span class="amd-rule">received '+fmtINR(l.consumed)+' \u2713</span>'); }
+      if(l.kind==='close'){ checks.push('<span class="amd-rule">split \u2192 line '+esc(String(l.split_to_sno||''))+'</span>'); }
+      if(l.kind==='split_new'){ checks.push('<span class="amd-rule">split from line '+esc(String(l.split_from_sno||''))+'</span><span class="amd-rule">budget neutral \u2713</span>'); }
+      if(l.kind==='add'){ const b=(p.budget||[]).find(x=>String(x.wbs)===String(l.after.wbs_node_id)&&x.material===l.after.material_code&&String(x.loc)===String(l.after.loc_node_id)); if(b) checks.push('<span class="amd-rule'+(b.ok?'':' blocked')+'">budget '+fmtINR(b.remaining)+(b.ok?' \u2713':' \u2717')+'</span>'); checks.push('<span class="amd-rule">'+esc(wname(l.after.wbs_node_id))+' \u00b7 '+esc(lname(l.after.loc_node_id))+'</span>'); }
+      if(l.kind==='modify'){ const b=(p.budget||[]).find(x=>String(x.wbs)===String(l.after.wbs_node_id)&&x.material===l.after.material_code&&String(x.loc)===String(l.after.loc_node_id)); if(b) checks.push('<span class="amd-rule'+(b.ok?'':' blocked')+'">budget '+fmtINR(b.remaining)+(b.ok?' \u2713':' \u2717')+'</span>'); }
+      (l.errors||[]).forEach(e=>checks.push('<span class="amd-rule blocked">'+esc(String(e))+'</span>'));
+      if(l.kind==='add'){ rows+='<tr><td>'+label+'</td><td>Line</td><td>\u2014</td><td class="amd-arrow">\u2192</td><td class="amd-new">'+fmtINR(l.after.qty)+' '+esc(l.after.uom||'')+' @ '+fmtINR(l.after.unit_rate)+'</td><td>'+checks.join('')+'</td></tr>'; return; }
+      if(l.kind==='split_new'){ rows+='<tr><td>'+label+'</td><td>Line</td><td>\u2014</td><td class="amd-arrow">\u2192</td><td class="amd-new">'+fmtINR(l.after.qty)+' '+esc(l.after.uom||'')+' @ '+fmtINR(l.after.unit_rate)+'</td><td>'+checks.join('')+'</td></tr>'; return; }
+      if(l.kind==='remove'){ rows+='<tr><td>'+label+'</td><td>Line</td><td>'+fmtINR(l.before.qty)+' '+esc(l.before.uom||'')+' @ '+fmtINR(l.before.unit_rate)+'</td><td class="amd-arrow">\u2192</td><td class="amd-new">removed</td><td>'+checks.join('')+'</td></tr>'; return; }
+      if(l.kind==='close'){ rows+='<tr><td>'+label+'</td><td>Qty</td><td>'+fmtINR(l.before.qty)+' '+esc(l.before.uom||'')+' @ '+fmtINR(l.before.unit_rate)+'</td><td class="amd-arrow">\u2192</td><td class="amd-new">'+fmtINR(l.after.qty)+' '+esc(l.before.uom||'')+' @ '+fmtINR(l.before.unit_rate)+' \u00b7 closed</td><td>'+checks.join('')+'</td></tr>'; return; }
+      (l.changes||[]).forEach((c,ci)=>{ rows+='<tr><td>'+(ci===0?label:'')+'</td><td>'+fld(c.field)+'</td><td>'+val(c.field,c.old)+'</td><td class="amd-arrow">\u2192</td><td class="amd-new">'+val(c.field,c.new)+'</td><td>'+(ci===0?checks.join(''):'')+'</td></tr>'; });
+    });
+    (p.header_changes||[]).forEach(c=>{ rows+='<tr><td>Header</td><td>'+esc(c.field.replace(/_/g,' '))+'</td><td>'+esc(String(c.old||'\u2014'))+'</td><td class="amd-arrow">\u2192</td><td class="amd-new">'+esc(String(c.new||'\u2014'))+'</td><td></td></tr>'; });
+    const d=num(p.total_after)-num(p.total_before);
+    rows+='<tr><td>Header</td><td>Value</td><td class="num">'+fmtINRSym(p.total_before)+'</td><td class="amd-arrow">\u2192</td><td class="num amd-new">'+fmtINRSym(p.total_after)+'</td><td><span class="amd-rule">'+(d>=0?'+':'')+fmtINRSym(d)+'</span></td></tr>';
+    let mk='';
+    if(pending){ mk=mine?'<span style="color:#b91c1c;font-weight:600;">You opened or amended this \u2014 another Admin or Purchase Manager must approve it.</span>':'<span style="color:#047857;font-weight:600;">approver \u2260 opener \u2260 amender \u2713</span>'; }
+    const stBadge='<span class="status '+_amdStateCls(a.status==='Pending Approval'?'Amendment Pending Approval':a.status)+'" style="margin-left:8px;vertical-align:middle;">'+esc(a.status==='Pending Approval'?'Amendment pending approval':a.status)+'</span>';
+    openModal('<h3>'+esc(po.po_number)+'-A'+a.rev_no+' '+stBadge+'</h3>'
+      +'<div style="font-size:12px;color:var(--muted);margin-bottom:10px;">'+esc(po.vendor_name||'')+' \u00b7 opened by '+esc(a.opened_by||'')+(a.opened_at?' '+fmtDateShort(a.opened_at):'')+' \u00b7 amended by '+esc(a.amended_by||'')+(a.amended_at?' '+fmtDateShort(a.amended_at):'')+(a.approved_by?' \u00b7 approved by '+esc(a.approved_by)+(a.approved_at?' '+fmtDateShort(a.approved_at):''):'')+'</div>'
+      +(a.status==='Rejected - Correction'&&a.rejection_reason?'<div class="amd-banner block"><span class="i"></span><div><b>Returned for correction:</b> '+esc(a.rejection_reason)+'</div></div>':'')
+      +(!p.ok?'<div class="amd-banner block"><span class="i"></span><div><b>'+p.error_count+' issue(s)</b> \u2014 the plan is no longer clean (receipts or budget changed since submission). Return it for correction.</div></div>':'')
+      +'<div class="table-wrap"><table><thead><tr><th>Line</th><th>Field</th><th>Revision '+num(po.rev_no)+'</th><th></th><th>A'+a.rev_no+'</th><th>Checks</th></tr></thead><tbody>'+(rows||'<tr><td colspan="6" class="center muted">No changes</td></tr>')+'</tbody></table></div>'
+      +(a.reason?'<div style="font-size:12px;margin-top:10px;"><b>Reason:</b> '+esc(a.reason)+'</div>':'')
+      +(pending?'<div style="font-size:12px;margin-top:4px;">Maker-checker: '+mk+'</div>':'')
+      +'<div class="actions-row"><span style="margin-right:auto;font-size:12px;color:var(--muted);">'+(pending?'On approve: revision \u2192 A'+a.rev_no+', lines updated, freeze lifted.':'')+'</span>'
+      +'<button class="btn btn-ghost" onclick="closeModal();viewPO(\''+esc(po.po_number)+'\')">Back to PO</button>'
+      +(pending&&canA&&!mine?'<button class="btn btn-danger" onclick="amdReject(\''+esc(id)+'\',\''+esc(po.po_number)+'\')">Reject for correction</button><button class="btn btn-primary" '+(p.ok?'':'disabled')+' onclick="amdApprove(\''+esc(id)+'\',\''+esc(po.po_number)+'\')">Approve A'+a.rev_no+'</button>':'')
+      +'</div>','wide');
+  }catch(e){ toast(e.message,'error',6000); }
+  finally{ pbDone(); }
+}
+async function amdApprove(id, poNum){
+  if(!hasPerm('canApproveAmendPO')){ toast('Not permitted','error'); return; }
+  if(!confirm('Approve this amendment? Lines are updated, history is written and the PO is unfrozen.')) return;
+  pbShow('Approving\u2026');
+  try{
+    const {data,error}=await sb.rpc('rpc_amd_approve',{p_amendment_id:id,p_client_request_id:crypto.randomUUID(),p_user:state.userName});
+    if(error) throw new Error(error.message.replace(/^.*PERM_DENIED:\s*/,''));
+    _amdInvalidate(poNum);
+    toast('Amendment A'+data.rev_no+' approved \u2014 '+poNum+' is now '+data.status,'success',5000);
+    closeModal(); await loadPOList(); await viewPO(poNum);
+  }catch(e){ toast(e.message,'error',8000); }
+  finally{ pbDone(); }
+}
+async function amdReject(id, poNum){
+  if(!hasPerm('canApproveAmendPO')){ toast('Not permitted','error'); return; }
+  const reason=prompt('Return this amendment for correction. Note to the Purchase Executive:');
+  if(!reason||!reason.trim()){ if(reason!==null) toast('A reason is required','error'); return; }
+  pbShow('Returning\u2026');
+  try{
+    const {error}=await sb.rpc('rpc_amd_reject',{p_amendment_id:id,p_reason:reason.trim(),p_user:state.userName});
+    if(error) throw new Error(error.message.replace(/^.*PERM_DENIED:\s*/,''));
+    _amdInvalidate(poNum);
+    toast('Returned for correction','success');
+    closeModal(); await loadPOList(); await viewPO(poNum);
+  }catch(e){ toast(e.message,'error',6000); }
+  finally{ pbDone(); }
+}
+// ── end v116 amendment block ──────────────────────────────────────────
+
 async function printPOById(poNum) { await printPO(poNum); }
 
 async function printPO(poNum) {
@@ -27354,9 +28268,18 @@ async function printPO(poNum) {
   // so summing qty + base_amount + total_amount per material is display-only and
   // does not change tax math. Rate shown is the first allocation's rate (the
   // allocation model uses one rate per material, same assumption as the view).
+  // v116: removed lines never print; closed/split lines print at their own rate
+  // (club key includes rate so a split does not merge back into one line).
+  let _amdNote='';
+  if(num(h.rev_no)>0){
+    try{ const {data:_la}=await sb.from('order_amendments').select('rev_no,reason,approved_at,approved_by').eq('doc_type','PO').eq('doc_number',poNum).eq('status','Approved').order('rev_no',{ascending:false}).limit(1);
+      if(_la&&_la[0]) _amdNote='Amendment A'+_la[0].rev_no+(_la[0].approved_at?' dated '+fmtDate(String(_la[0].approved_at).slice(0,10)):'')+(_la[0].reason?': '+_la[0].reason:'');
+    }catch(e){}
+  }
   const _pGroups = {};
-  (items||[]).forEach(it => {
-    const k = (it.material_code != null ? ('c'+it.material_code) : ('n'+it.material_name));
+  (items||[]).filter(it=>(it.line_status||'Active')!=='Removed').forEach(it => {
+    const k = (it.material_code != null ? ('c'+it.material_code) : ('n'+it.material_name)) + '|' + num(it.unit_rate).toFixed(4);
+    if(it.line_status==='Closed') it=Object.assign({},it,{remarks:[it.remarks,'Closed at received qty (A'+num(it.closed_in_rev)+')'].filter(Boolean).join(' \u00b7 ')});
     (_pGroups[k] = _pGroups[k] || []).push(it);
   });
   let _pSno = 0;
@@ -27373,7 +28296,8 @@ async function printPO(poNum) {
   // v170: material-group / sub-head bands removed from PO print (per user ruling
   // 10-Jul-2026). v113 clubbing retained; lines print in natural sno order.
   // Band renderer in _printOrderDoc left intact but inert (no _grpBand/_subBand tags).
-  await _printOrderDoc('PO', poNum, h, clubbed, null);
+  const _hPrint=_amdNote?Object.assign({},h,{remarks:[_amdNote,h.remarks].filter(Boolean).join('\n')}):h;
+  await _printOrderDoc('PO', _amdDocLabel(h), _hPrint, clubbed, null);
 }
 
 
@@ -27941,11 +28865,12 @@ async function newGRN() {
   document.getElementById('grn_number').value='GRN/'+currentFY()+'/—— (auto)';
   ['grn_challan','grn_invoiceNo','grn_vendor','grn_remarks'].forEach(id=>{const e=document.getElementById(id);if(e)e.value='';});
   document.getElementById('grnItemsBody').innerHTML='<tr><td colspan="11" class="center muted">Select a PO to load items</td></tr>';
-  const {data:pos}=await sb.from('pu_po_orders').select('po_number,vendor_name')
-    .in('status',['Open','Partial Receipt']).order('po_number');
+  grnScanReset();   // v117
+  const {data:pos}=await sb.from('pu_po_orders').select('po_number,vendor_name,amendment_state,rev_no,status')
+    .in('status',['Open','Partial Receipt']).is('amendment_state',null).order('po_number');   // v117: frozen POs are not listed
   const sel=document.getElementById('grn_poSelect');
-  sel.innerHTML='<option value="">— Select Open PO —</option>'+
-    (pos||[]).map(p=>`<option value="${esc(p.po_number)}" data-vendor="${esc(p.vendor_name)}">${esc(p.po_number)} — ${esc(p.vendor_name)}</option>`).join('');
+  sel.innerHTML='<option value="">— Select PO (Open · Partial Receipt) —</option>'+
+    (pos||[]).map(p=>`<option value="${esc(p.po_number)}" data-vendor="${esc(p.vendor_name)}">${esc(_amdDocLabel(p))} — ${esc(p.vendor_name)} · ${esc(p.status)}</option>`).join('');
   sel.value='';
   window.scrollTo(0,0);
 }
@@ -28000,7 +28925,13 @@ async function onGRNPOChange() {
   _grnLocs={}; _grnMeta={};
   if(!poNum){document.getElementById('grnItemsBody').innerHTML='<tr><td colspan="11" class="center muted">Select a PO</td></tr>';return;}
   pbShow('Loading PO items…');
-  const {data:poItems}=await sb.from('pu_po_items').select('*').eq('po_number',poNum).order('sno');
+  const {data:poItemsAll}=await sb.from('pu_po_items').select('*').eq('po_number',poNum).order('sno');
+  // v116: amendment — history for pills, freeze state, only Active lines receivable
+  const _amdH=await _amdLoadHistory(poNum, poItemsAll||[]);
+  const {data:_amdPo}=await sb.from('pu_po_orders').select('amendment_state,rev_no').eq('po_number',poNum).single();
+  window._grnFrozen=!!(_amdPo&&_amdPo.amendment_state);
+  window._amdPopCtx={h:Object.assign({po_number:poNum},_amdPo||{}), items:poItemsAll||[], hist:_amdH};
+  const poItems=(poItemsAll||[]).filter(it=>(it.line_status||'Active')==='Active');
   // location breadcrumbs
   let locMap={};
   try{ const lt=await _loadLocTree(); locMap=Object.fromEntries((lt||[]).map(n=>[String(n.id),n])); }catch(e){}
@@ -28027,6 +28958,7 @@ async function onGRNPOChange() {
     _grnGroups[key].locs.push({
       po_item_id:it.id, loc_node_id:it.loc_node_id||null, wbs_node_id:it.wbs_node_id!=null?Number(it.wbs_node_id):null,
       procurement_line_id:it.procurement_line_id||null, procurement_source:it.procurement_source||null,
+      rate:num(it.unit_rate), item:it,   // v116: per-line rate (split lines carry their own)
       ordered:num(it.qty), prev:(prevByMatLoc[key]&&prevByMatLoc[key][lk])||0,
       path:node?node.path:'', label:node?node.name:'', sno:num(it.sno),
     });
@@ -28050,7 +28982,7 @@ async function onGRNPOChange() {
       : '<span class="muted">—</span>';
     return `<tr id="grnRow_${i}">
       <td>${i+1}</td><td>${esc(it.material_name)}</td><td>${esc(it.uom)}</td>
-      <td class="num">${fmtINR(poQty)}</td>
+      <td class="num">${fmtINR(poQty)}${g.locs.map(l=>_amdPill(l.item,_amdH)).join('')}</td>
       <td class="num">${fmtINR(prevTotal)}</td>
       <td class="num" style="color:${exhausted?'var(--danger)':'inherit'};font-weight:600;">${fmtINR(balance)}</td>
       <td>
@@ -28067,6 +28999,11 @@ async function onGRNPOChange() {
       <td><input id="grnRmk_${i}" style="width:100px;" placeholder="Remarks"></td>
     </tr>`;
   }).join('')||'<tr><td colspan="11" class="center muted">No items on this PO.</td></tr>';
+  if(window._grnFrozen){   // v116: PO frozen while an amendment is in progress
+    document.getElementById('grnItemsBody').insertAdjacentHTML('afterbegin',
+      '<tr><td colspan="11" style="padding:0;"><div class="amd-banner freeze" style="margin:6px;"><span class="i"></span><div><b>'+esc(_amdPo.amendment_state)+' (A'+(num(_amdPo.rev_no)+1)+')</b> \u2014 no GRN can be raised against this PO until the amendment is approved or cancelled.</div></div></td></tr>');
+    document.querySelectorAll('#grnItemsBody input').forEach(inp=>{ inp.disabled=true; });
+  }
 }
 
 function recalcGRNRow(i) {
@@ -28096,6 +29033,7 @@ async function saveGRN() {
   const invNo=document.getElementById('grn_invoiceNo').value.trim();
   const invDate=document.getElementById('grn_invoiceDate')?.value||'';
   if(!poNum){toast('Select a PO','error');return;}
+  if(window._grnFrozen){toast('This PO is under amendment \u2014 GRN blocked until it is approved or cancelled','error',6000);return;}
   if(!date){toast('GRN Date required','error');return;}
   if(!challan){toast('Vehicle / Challan No. required','error');return;}
   if(!invNo){toast('Invoice No. required','error');return;}
@@ -28134,7 +29072,7 @@ async function saveGRN() {
         sno:entries.length+1, material_code:inp.dataset.matcode||null, material_name:inp.dataset.mat, uom,
         po_qty:num(d.ordered), prev_received_qty:num(d.prev), this_grn_qty:num(d.put),
         total_received_qty:num(d.prev)+num(d.put), balance_qty:num(d.ordered)-(num(d.prev)+num(d.put)),
-        unit_rate:rate, base_amount:num(d.put)*rate, remarks: di===0?remarks:null,
+        unit_rate:(d.rate!=null?d.rate:rate), base_amount:num(d.put)*(d.rate!=null?d.rate:rate), remarks: di===0?remarks:null,   // v116: line rate wins
         loc_node_id:d.loc_node_id||null, wbs_node_id:d.wbs_node_id!=null?Number(d.wbs_node_id):null,
         po_item_id:d.po_item_id||null,
         procurement_line_id:d.procurement_line_id||crypto.randomUUID(),
@@ -28198,6 +29136,7 @@ async function saveGRN() {
       po_status: { po_number: poNum, status: newStatus },
     };
     if (revisingGRN) payload.doc_number = revisingGRN;
+    if (window._scan && _scan.file) { payload.header.scan_attachment = await _scanUploadForGRN(); }   // v117 (mig #27)
 
     const res = await puRPC('rpc_save_grn', payload);
     if (revisingGRN) {
@@ -28207,11 +29146,12 @@ async function saveGRN() {
       flashSuccess('GRN '+res.doc_number+' saved — pending Site Manager verification');
     }
     closeGRNForm(); loadGRNList(); loadPOList();
-  } catch(e){toast('Error: '+e.message,'error');}
+  } catch(e){toast((/PO_UNDER_AMENDMENT/.test(e.message)?'PO is under amendment \u2014 GRN blocked until it is approved or cancelled':'Error: '+e.message),'error',6000);}
   finally{pbDone();}
 }
 
 function closeGRNForm() {
+  grnScanReset();   // v117
   document.getElementById('grnForm').style.display='none';
   document.getElementById('grnListCard').style.display='block';
   const wc=document.getElementById('grnOverReceiptWarn'); if(wc) wc.style.display='none';
@@ -28858,6 +29798,8 @@ async function viewGRN(grnNum) {
   let h,items;
   const _pv=await _pgsDocView('GRN',grnNum);
   if(_pv){ h=_pv.header; items=_pv.items||[]; }
+  let _scanAtt=(h&&h.scan_attachment)||null;   // v117: rpc_doc_view may not return the column
+  if(h&&h.scan_attachment===undefined){ try{ const {data:_sa}=await sb.from('pu_grn').select('scan_attachment').eq('grn_number',grnNum).maybeSingle(); _scanAtt=(_sa&&_sa.scan_attachment)||null; }catch(e){} }
   else {
     const _r=await Promise.all([
       sb.from('pu_grn').select('*').eq('grn_number',grnNum).single(),
@@ -28982,6 +29924,7 @@ async function viewGRN(grnNum) {
       <div><label class="muted" style="font-size:11px;">DATE</label><div>${fmtDate(h?.grn_date)}</div></div>
       <div><label class="muted" style="font-size:11px;">CHALLAN</label><div>${esc(h?.vehicle_challan||'—')}</div></div>
       <div><label class="muted" style="font-size:11px;">INVOICE</label><div>${esc(h?.invoice_no||'—')} / ${h?.invoice_date?fmtDate(h.invoice_date):'—'}</div></div>
+      <div><label class="muted" style="font-size:11px;">ATTACHMENT</label><div>${_scanAtt&&_scanAtt.path?`<button class="btn btn-ghost btn-sm" onclick="grnScanView('${esc(_scanAtt.path)}')" title="${esc(_scanAtt.name||'')}${_scanAtt.parser&&_scanAtt.parser!=='none'?' · read by '+esc(_scanAtt.parser==='model'?('vision model'+(_scanAtt.model?' ('+_scanAtt.model+')':'')):_scanAtt.parser==='pdf_text'?'in-system PDF parser':_scanAtt.parser):' · attached, not scanned'}">📎 View ${esc((_scanAtt.name||'document').length>28?(_scanAtt.name||'').slice(0,26)+'…':(_scanAtt.name||'document'))}</button>${_scanAtt.parser&&_scanAtt.parser!=='none'?` <span class="muted" style="font-size:11px;">read by ${esc(_scanAtt.parser==='model'?'vision model':_scanAtt.parser==='pdf_text'?'in-system parser':_scanAtt.parser)}${_scanAtt.confidence!=null?' · conf '+Number(_scanAtt.confidence).toFixed(2):''}</span>`:''}`:'<span class="muted">— none</span>'}</div></div>
       <div><label class="muted" style="font-size:11px;">STATUS</label><div>${esc(h?.status||'')}</div></div>
     </div>
     ${corrBanner}
@@ -35369,7 +36312,7 @@ async function pgsLoadProjectMeta(p){
         .select('name, legal_name, display_name, gstin, pan, registered_address, contact_name, contact_phone, contact_email, logo_url')
         .eq('id', pgsS.org.id).single(),
       sb.from('projects')
-        .select('project_name, project_code, doc_code, loc_acronym, fin_year_start, site_address, contact_person')
+        .select('project_name, project_code, doc_code, loc_acronym, fin_year_start, site_address, contact_person, doc_parse_mode')
         .eq('id', p.id).single()
     ]);
     const o = orgR.data || {}, pr = projR.data || {};
