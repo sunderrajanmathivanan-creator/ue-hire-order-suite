@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Penguin Suite v119</title>
+<title>Penguin Suite v122</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js"></script>
@@ -27854,17 +27854,19 @@ function _scanFillLines(p, keepAssign){
       else if(!_scanRateEq(invRate,mt.rate)){ row.res='rate'; row.note='rate differs '+fmtINR(invRate)+' ≠ '+fmtINR(mt.rate)+' — not filled'; if(rmk&&!rmk.value){ rmk.value='Inv rate '+fmtINR(invRate)+(num(l.discount_pct)>0?' (net of '+num(l.discount_pct)+'%)':'')+' vs PO '+fmtINR(mt.rate); _scanMark(rmk); } if(inp) inp.classList.add('scan-bad'); }
       else if(!inp||inp.disabled||bal<=0){ row.res='nopo'; row.note='PO balance is zero — nothing to receive'; }
       else { const q=Math.min(num(l.qty),bal); inp.value=Math.round(q*1000)/1000; _scanMark(inp); recalcGRNRow(i); filled++;
-        if(num(l.qty)>bal+0.0005){ row.res='capped'; row.note='qty capped to balance '+fmtINR(bal); if(rmk&&!rmk.value){ rmk.value='Inv qty '+fmtINR(l.qty)+' '+(l.uom||'')+'; '+fmtINR(num(l.qty)-bal)+' excess vs balance'; _scanMark(rmk); } }
+        if(num(l.qty)>bal+0.0005){ row.res='capped'; row.capped=true; row.note='qty capped to balance '+fmtINR(bal); if(rmk&&!rmk.value){ rmk.value='Inv qty '+fmtINR(l.qty)+' '+(l.uom||'')+'; '+fmtINR(num(l.qty)-bal)+' excess vs balance'; _scanMark(rmk); } }
         else { row.res='ok'; row.note='matched · filled '+fmtINR(q); } }
     } else { row.note='not on PO'; }
     row.li=li; row.i=i; row.via=via[li]||null;
     rows.push(row);
   });
   const mapSel=r=>'<select class="scan-map" title="Map this invoice line to a PO line (the system remembers it for this vendor)" onchange="_scanMapLine('+r.li+',this.value)"><option value="">map to…</option>'+metas.map(m=>'<option value="'+m.i+'"'+(r.i===m.i?' selected':'')+'>'+(m.i+1)+' · '+esc(m.matName)+'</option>').join('')+'</select>'+(r.via==='alias'?' <span class="scan-chip file" title="Learned from earlier GRNs of this vendor">learned</span>':r.via==='manual'?' <span class="scan-chip file">manual</span>':'');
-  const chip=r=>({ok:'<span class="scan-chip ok">'+r.note+'</span>',capped:'<span class="scan-chip qty">'+r.note+'</span>',rate:'<span class="scan-chip rate">'+r.note+'</span>',uom:'<span class="scan-chip uom">'+r.note+'</span>',nopo:'<span class="scan-chip nopo">'+r.note+'</span>'+((state.isOwner||state.isSuper)?' <button class="btn btn-ghost btn-sm" onclick="amdOpen(\''+esc(document.getElementById('grn_poSelect').value)+'\')">Raise amendment</button>':' <span class="muted" style="font-size:11px;">ask an Admin to amend the PO</span>')}[r.res]+' '+mapSel(r));
+  const poSel=esc(document.getElementById('grn_poSelect').value);
+  const chip=r=>({ok:'<span class="scan-chip ok">'+r.note+'</span>',capped:'<span class="scan-chip qty">'+r.note+'</span>',rate:'<span class="scan-chip rate">'+r.note+'</span>',uom:'<span class="scan-chip uom">'+r.note+'</span>',nopo:'<span class="scan-chip nopo">'+r.note+'</span>'}[r.res]+' '+mapSel(r));
   const route=_scanRouteLabel();
   const conf=_scan.confidence!=null?' · confidence '+_scan.confidence.toFixed(2):'';
-  strip.innerHTML='<div class="scan-strip"><div class="top"><b>Scan result</b><span class="scan-chip file">📎 '+esc(_scan.file?_scan.file.name:'')+' · attached on save</span><span class="src red">'+((_scan.match&&_scan.match.how)||'')+conf+'</span>'+(_scan.profile?'<span class="scan-chip file" title="Vendor profile: learned from '+num(_scan.profile.samples)+' earlier GRN(s)">vendor known · '+Object.keys(_scan.profile.aliases||{}).length+' aliases</span>':'<span class="muted" style="font-size:11px;">new vendor — mappings you confirm here are remembered</span>')+'<span style="margin-left:auto;"><button class="btn btn-ghost btn-sm" onclick="grnScanHandle(_scan.file)">Re-run</button><button class="btn btn-ghost btn-sm" onclick="_scanClearPrefill()">Clear prefill</button></span></div>'
+  _scan.rows=rows;
+  strip.innerHTML='<div class="scan-strip"><div class="top"><b>Scan result</b><span class="scan-chip file">📎 '+esc(_scan.file?_scan.file.name:'')+' · attached on save</span><span class="src red">'+((_scan.match&&_scan.match.how)||'')+conf+'</span>'+(_scan.profile?'<span class="scan-chip file" title="Vendor profile: learned from '+num(_scan.profile.samples)+' earlier GRN(s)">vendor known · '+Object.keys(_scan.profile.aliases||{}).length+' aliases</span>':'<span class="muted" style="font-size:11px;">new vendor — mappings you confirm here are remembered</span>')+'<span style="margin-left:auto;"><button class="btn btn-ghost btn-sm" onclick="viewPO(\''+poSel+'\')">View PO</button>'+(_scanProposalRows(rows).length?'<button class="btn btn-primary btn-sm" onclick="_scanProposalPreview()">\u26a1 Propose amendment ('+_scanProposalRows(rows).length+' line'+(_scanProposalRows(rows).length>1?'s':'')+')</button>':'')+'<button class="btn btn-ghost btn-sm" onclick="grnScanHandle(_scan.file,true)">Re-run</button><button class="btn btn-ghost btn-sm" onclick="_scanClearPrefill()">Clear prefill</button></span></div>'
     +'<div class="table-wrap"><table class="scan-tbl"><thead><tr><th>Invoice line</th><th class="num">Inv qty</th><th class="num">Inv rate'+((p.lines||[]).some(l=>num(l.discount_pct)>0)?' (net)':'')+'</th><th>PO line</th><th class="num">PO rate</th><th class="num">Balance</th><th>Result</th></tr></thead><tbody>'
     +rows.map(r=>'<tr><td>'+esc(r.desc)+'</td><td class="num mono">'+fmtINR(r.invQty)+' '+esc(r.invUom||'')+'</td><td class="num mono">'+(r.invRate!=null?fmtINR(r.invRate):'—')+'</td><td>'+(r.poLine?esc(r.poLine):'<span class="muted">no receivable line</span>')+'</td><td class="num mono">'+(r.poRate!=null?fmtINR(r.poRate):'—')+'</td><td class="num mono">'+(r.bal!=null?fmtINR(r.bal)+' '+esc(r.balUom||''):'—')+'</td><td>'+chip(r)+'</td></tr>').join('')
     +'</tbody></table></div>'
@@ -27874,6 +27876,96 @@ function _scanFillLines(p, keepAssign){
 }
 function _scanClearPrefill(keepStrip){ document.querySelectorAll('#grnForm .scan-fill, #grnForm .scan-bad').forEach(el=>{ if(el.tagName==='INPUT'||el.tagName==='TEXTAREA') el.value=''; el.classList.remove('scan-fill','scan-bad'); const m=el.id&&el.id.match(/^grnRecv_(\d+)$/); if(m) recalcGRNRow(+m[1]); }); if(keepStrip) return; _scan.assign=null; const strip=document.getElementById('grnScanStrip'); if(strip) strip.innerHTML='<div class="muted" style="font-size:12px;">Prefill cleared. Document still attached.</div>'; }
 function _scanStripMsg(kind,html){ const strip=document.getElementById('grnScanStrip'); if(strip) strip.innerHTML='<div class="amd-banner '+kind+'"><span class="i"></span><div>'+html+'</div></div>'; }
+// ── amendment proposal from the scan (v122 · mig #30) ──────────────────
+function _scanProposalRows(rows){ return (rows||[]).filter(r=>r.res==='nopo'||r.capped||r.res==='rate'); }
+// One proposal line per invoice line: modify (qty and/or rate) or add. Applied to the first PO item of the group; PE can rebalance.
+function _scanBuildProposal(){
+  const rows=_scanProposalRows(_scan.rows); const out=[];
+  rows.forEach(r=>{
+    const l=(_scan.parse.lines||[])[r.li]; if(!l) return;
+    if(r.i==null){ out.push({item_id:null,action:'add',material_code:null,material_name:l.description,uom:l.uom||null,qty:num(l.qty),unit_rate:num(_scanInvRate(l)),note:'not on PO \u00b7 invoice '+((_scan.parse.invoice&&_scan.parse.invoice.number)||''),source:'store',_desc:l.description,_inv_qty:num(l.qty),_bal:null,_po_qty:null,_po_rate:null}); return; }
+    const mt=_grnMeta[r.i]; const g=(window._grnLocs&&_grnLocs[r.i])||[]; const first=g[0]&&g[0].item; if(!first) return;
+    const bal=num(r.bal||0); const invQty=num(l.qty); const invRate=num(_scanInvRate(l));
+    const rateDiff=!_scanRateEq(invRate,mt.rate);
+    const addQty=Math.max(0,invQty-bal);
+    const line={item_id:first.id,action:'modify',qty:num(first.qty)+addQty,note:'',source:'store',_desc:mt.matName,_inv_qty:invQty,_bal:bal,_po_qty:num(first.qty),_po_rate:mt.rate,_sno:first.sno,_uom:mt.uom};
+    if(addQty>0) line.note='+'+fmtINR(addQty)+' = invoice '+fmtINR(invQty)+(bal>0?' \u2212 balance '+fmtINR(bal):'');
+    if(rateDiff){ line.unit_rate=invRate; line.note=(line.note?line.note+' \u00b7 ':'')+'rate '+fmtINR(mt.rate)+' \u2192 '+fmtINR(invRate)+' (invoice)'; }
+    if(g.length>1) line.note+=' \u00b7 applied to line '+first.sno+' of '+g.length+' locations \u2014 PE may rebalance';
+    out.push(line);
+  });
+  return out;
+}
+let _prop=null;
+function _scanProposalPreview(existing, opts){
+  _prop={lines:existing||_scanBuildProposal(),opts:opts||{mode:'store'}};
+  const po=(opts&&opts.poNum)||document.getElementById('grn_poSelect').value; const inv=(_scan.parse&&_scan.parse.invoice)||{};
+  const mode=_prop.opts.mode; _prop.opts.poNum=po;
+  const h='<h3>'+(mode==='admin'?'Proposal for ':'Proposed amendment \u2014 ')+esc(_amdDocLabel({po_number:po,rev_no:_prop.opts.rev_no||0}))+' <small class="muted">'+(inv.number?'from invoice '+esc(inv.number)+(inv.date?' dated '+fmtDate(inv.date):''):'')+'</small></h3>'
+   +'<div class="amd-banner info"><span class="i"></span><div>Rules: exhausted line \u2192 qty = PO qty + invoice qty \u00b7 partly open \u2192 + (invoice \u2212 balance) \u00b7 rate differs \u2192 invoice rate (received qty keeps the old rate via split) \u00b7 not on PO \u2192 new line, Purchase Executive picks the material/WBS. Edit anything below; budget is checked at the later steps.</div></div>'
+   +'<div class="table-wrap"><table id="propTbl"><thead><tr><th>#</th><th>Material</th><th class="num">PO qty</th><th class="num">Invoice qty</th><th class="num">Proposed qty</th><th class="num">PO rate</th><th class="num">Proposed rate</th><th>Change</th><th></th></tr></thead><tbody id="propBody"></tbody></table></div>'
+   +'<div class="actions-row"><span style="margin-right:auto;font-size:12px;color:var(--muted);" id="propSum"></span>'
+   +(mode==='admin'?'<button class="btn btn-ghost" onclick="closeModal()">Back</button><button class="btn btn-primary" onclick="_scanProposalOpen()">\u270e Open for amendment \u2014 with this proposal</button>'
+    :mode==='view'?'<button class="btn btn-ghost" onclick="closeModal();viewPO(\''+esc(po)+'\')">Back to PO</button>'
+    :'<button class="btn btn-ghost" onclick="closeModal()">Back</button><button class="btn btn-primary" onclick="_scanProposalSend()">Send proposal to Admin</button>')+'</div>';
+  window._modalNoBackdropClose=true; openModal(h,'wide'); _propRender();
+  if(mode==='view') document.querySelectorAll('#propTbl input,#propTbl button').forEach(x=>x.disabled=true);
+}
+function _propRender(){
+  const tb=document.getElementById('propBody'); if(!tb) return;
+  tb.innerHTML=_prop.lines.map((p,k)=>{
+    const isAdd=p.action==='add';
+    const chg=isAdd?'<span class="scan-chip ok">added'+(p.material_code?'':' \u00b7 PE picks material')+'</span>':((p.qty!=null&&num(p.qty)!==num(p._po_qty))?'<span class="scan-chip qty">qty '+fmtINR(p._po_qty)+' \u2192 '+fmtINR(p.qty)+'</span> ':'')+((p.unit_rate!=null&&!_scanRateEq(num(p.unit_rate),num(p._po_rate)))?'<span class="scan-chip rate">rate '+fmtINR(p._po_rate)+' \u2192 '+fmtINR(p.unit_rate)+' \u00b7 split</span>':'');
+    return '<tr'+(isAdd?' style="background:#f0fdf4"':'')+'><td>'+(isAdd?'<b style="color:#15803d">new</b>':esc(String(p._sno||'')))+'</td><td>'+esc(p._desc||p.material_name||'')+(p.note?'<span class="amd-hint" style="text-align:left;white-space:normal;">'+esc(p.note)+'</span>':'')+'</td>'
+      +'<td class="num mono">'+(p._po_qty!=null?fmtINR(p._po_qty):'\u2014')+'</td><td class="num mono">'+(p._inv_qty!=null?fmtINR(p._inv_qty):'\u2014')+'</td>'
+      +'<td class="num"><input type="number" step="0.001" class="num amd-changed" style="width:110px" value="'+esc(String(p.qty!=null?p.qty:''))+'" oninput="_prop.lines['+k+'].qty=(this.value===\'\'?null:Number(this.value));_propSum()"></td>'
+      +'<td class="num mono">'+(p._po_rate!=null?fmtINR(p._po_rate):'\u2014')+'</td>'
+      +'<td class="num"><input type="number" step="0.0001" class="num'+(p.unit_rate!=null&&p._po_rate!=null&&!_scanRateEq(num(p.unit_rate),num(p._po_rate))?' amd-changed':'')+'" style="width:100px" value="'+esc(String(p.unit_rate!=null?p.unit_rate:(p._po_rate!=null?p._po_rate:'')))+'" oninput="_prop.lines['+k+'].unit_rate=(this.value===\'\'?null:Number(this.value));_propSum()"></td>'
+      +'<td>'+chg+'</td><td><button class="btn btn-ghost btn-sm" onclick="_prop.lines.splice('+k+',1);_propRender()">Remove</button></td></tr>';
+  }).join('')||'<tr><td colspan="9" class="center muted">Nothing left in the proposal</td></tr>';
+  _propSum();
+}
+function _propSum(){ const el=document.getElementById('propSum'); if(!el) return; const n=_prop.lines.length; const d=_prop.lines.reduce((s,p)=>{ const q=num(p.qty), r=num(p.unit_rate!=null?p.unit_rate:p._po_rate); const before=num(p._po_qty)*num(p._po_rate); return s+(q*r-before); },0); el.textContent=n+' line change'+(n===1?'':'s')+' \u00b7 value change '+(d>=0?'+':'')+fmtINRSym(d)+' (before tax, approximate)'; }
+function _propClean(){ const keep=['_desc','_sno','_po_qty','_po_rate','_inv_qty','_bal','_uom']; return _prop.lines.map(p=>{ const o={}; Object.keys(p).forEach(k=>{ if(k[0]!=='_'||keep.includes(k)) o[k]=p[k]; }); return o; }); }
+async function _scanProposalSend(){
+  const poNum=_prop.opts.poNum; if(!poNum) return;
+  const lines=_propClean(); if(!lines.length){ toast('Nothing to propose','warn'); return; }
+  const inv=(_scan.parse&&_scan.parse.invoice)||{};
+  const reason='Amendment proposed from invoice '+(inv.number||'?')+(inv.date?' dated '+fmtDate(inv.date):'')+': '+lines.length+' line change'+(lines.length>1?'s':'')+' (see proposal).';
+  pbShow('Sending proposal\u2026');
+  try{
+    let att=null; try{ att=await _scanUploadForGRN(); }catch(e){ console.warn('attach',e); }
+    const ctx={invoice:{number:inv.number||null,date:inv.date||null,vendor:(_scan.parse.vendor&&_scan.parse.vendor.name)||null,gstin:(_scan.parse.vendor&&_scan.parse.vendor.gstin_norm)||null},proposal:lines,attachment:att,requested_from:'GRN entry scan'};
+    const {data,error}=await sb.rpc('rpc_amd_request',{p_doc_number:poNum,p_reason:reason,p_context:ctx,p_user:state.userName});
+    if(error) throw new Error(error.message.replace(/^.*?:\s*/,''));
+    _amdInvalidate(poNum); window._modalNoBackdropClose=false; closeModal();
+    toast(data&&data.appended?'Proposal added to the existing request on '+poNum:'Proposal sent \u2014 the Admin will see it on '+poNum,'success',6000);
+  }catch(e){ toast(e.message,'error',7000); }
+  finally{ pbDone(); }
+}
+// Admin: open the PO for amendment with the (possibly edited) proposal.
+async function _scanProposalOpen(){
+  const poNum=_prop.opts.poNum; const lines=_propClean();
+  if(!confirm('Open '+poNum+' for amendment with '+lines.length+' proposed line change(s)? The PO is frozen until approved or cancelled.')) return;
+  pbShow('Opening amendment\u2026');
+  try{
+    const {data,error}=await sb.rpc('rpc_amd_open_v2',{p_doc_number:poNum,p_user:state.userName,p_proposal:lines});
+    if(error) throw new Error(error.message.replace(/^.*PERM_DENIED:\s*/,''));
+    _amdInvalidate(poNum); window._modalNoBackdropClose=false;
+    toast('Opened A'+data.rev_no+' with '+data.proposal_applied+' proposed change(s) \u2014 Purchase Executive can review','success',6000);
+    closeModal(); await loadPOList(); await viewPO(poNum);
+  }catch(e){ toast(e.message,'error',7000); }
+  finally{ pbDone(); }
+}
+// From View PO: show the store's proposal (Admin edits and opens; others read).
+function amdViewProposal(poNum, rev){
+  const live=(window._amdPopCtx&&window._amdPopCtx.hist&&window._amdPopCtx.hist.live)||null;
+  const prop=live&&live.request_context&&live.request_context.proposal; if(!prop||!prop.length){ toast('No proposal attached to this request','warn'); return; }
+  _scan.parse=_scan.parse||{}; _scan.parse.invoice=Object.assign({},(live.request_context.invoice)||{});
+  const admin=!!(state.isOwner||state.isSuper);
+  closeModal();
+  _scanProposalPreview(prop.map(p=>Object.assign({},p)),{mode:admin?'admin':'view',poNum,rev_no:rev});
+}
 // ── upload on save ────────────────────────────────────────────────────
 async function _scanUploadForGRN(){
   if(!_scan.file) return null;
@@ -27936,9 +28028,10 @@ async function _amdLoadHistory(poNum, items){
     const {data,error}=await sb.rpc('rpc_amd_history',{p_doc_type:'PO',p_doc_number:poNum});
     if(error){ console.warn('rpc_amd_history:',error.message); return {amendments:[],lines:[]}; }
     const hist=data||{amendments:[],lines:[]};
+    try{ const rq=(hist.amendments||[]).find(a=>a.status==='Requested'); if(rq){ const {data:r2}=await sb.from('order_amendments').select('requested_by,requested_at,request_context').eq('id',rq.id).maybeSingle(); if(r2) Object.assign(rq,r2); } }catch(e){}
     hist.byItem={};
     (hist.lines||[]).forEach(l=>{ if(l.item_id) (hist.byItem[l.item_id]=hist.byItem[l.item_id]||[]).push(l); });
-    hist.live=(hist.amendments||[]).find(a=>['Draft','Pending Approval','Rejected - Correction'].includes(a.status))||null;
+    hist.live=(hist.amendments||[]).find(a=>['Requested','Draft','Pending Approval','Rejected - Correction'].includes(a.status))||null;
     _amdCache[poNum]={hist,ts:Date.now()};
     return hist;
   }catch(e){ console.warn('amd history',e); return {amendments:[],lines:[],byItem:{},live:null}; }
@@ -27971,7 +28064,7 @@ function _amdPill(it, hist){
     pill='<span class="amd-pill '+cls+'" onclick="event.stopPropagation();_amdPopover(event,\''+esc(it.id)+'\')"><span class="rev">A'+top+'</span>'+txt+more+'</span>';
   }
   if(live && live.status!=='Draft'){
-    pill+='<span class="amd-pill pend" title="Amendment A'+live.rev_no+' '+esc(live.status)+'"><span class="rev">A'+live.rev_no+'</span>pending</span>';
+    pill+='<span class="amd-pill pend" title="Amendment A'+live.rev_no+' '+esc(live.status)+'"><span class="rev">A'+live.rev_no+'</span>'+(live.status==='Requested'?'requested':'pending')+'</span>';
   }
   return pill?'<div class="amd-pillwrap">'+pill+'</div>':'';
 }
@@ -28018,6 +28111,14 @@ function _amdPopover(ev, itemId){
 function _amdOrigQty(it,rows){ const q=rows.filter(r=>r.field==='qty'&&r.old!=null).sort((a,b)=>a.rev_no-b.rev_no)[0]; return q?q.old:it.qty; }
 function _amdOrigRate(it,rows){ const r=rows.filter(r=>r.field==='unit_rate'&&r.old!=null).sort((a,b)=>a.rev_no-b.rev_no)[0]; return r?r.old:it.unit_rate; }
 function _amdBanner(h, hist){
+  const req=hist&&hist.live&&hist.live.status==='Requested'?hist.live:null;
+  if(req&&!h.amendment_state){
+    const prop=req.request_context&&req.request_context.proposal; const att=req.request_context&&req.request_context.attachment;
+    return '<div class="amd-banner warn"><span class="i"></span><div><b>Amendment '+(prop&&prop.length?'proposed':'requested')+'</b> by '+esc(req.requested_by||'store')+(req.requested_at?' on '+fmtDateShort(req.requested_at):'')
+      +(prop&&prop.length?' — '+prop.length+' line change'+(prop.length>1?'s':'')+(att&&att.path?' · <a href="#" onclick="grnScanView(\''+esc(att.path)+'\');return false;" style="color:var(--accent-2);">📎 invoice</a>':''):'')+'.<br><span style="white-space:pre-line;">'+esc(req.reason||'')+'</span>'
+      +(prop&&prop.length?' <button class="btn btn-ghost btn-sm" onclick="amdViewProposal(\''+esc(h.po_number)+'\','+(num(h.rev_no)+1)+')">'+((state.isOwner||state.isSuper)?'View / edit proposal':'View proposal')+'</button>':'')
+      +((state.isOwner||state.isSuper)?'<br><span class="muted" style="font-size:12px;">'+(prop&&prop.length?'Open for amendment — with proposal creates the draft pre-filled from these lines.':'Open for amendment adopts this request — the reason carries into the draft.')+'</span>':'')+'</div></div>';
+  }
   if(!h||!h.amendment_state) return '';
   const live=(hist&&hist.live)||{};
   const rv=num(h.rev_no)+1;
@@ -28035,8 +28136,13 @@ function _amdActions(h, hist){
   const live=hist&&hist.live; let out='';
   const n=esc(h.po_number);
   if(!h.amendment_state){
+    const _prop=live&&live.status==='Requested'&&live.request_context&&live.request_context.proposal&&live.request_context.proposal.length;
     if(admin && ['Open','Partial Receipt','Fully Received'].includes(h.status))
-      out+='<button class="btn btn-secondary" onclick="amdOpen(\''+n+'\')">\u270e Open for amendment</button> ';
+      out+=(_prop?'<button class="btn btn-primary" onclick="amdViewProposal(\''+n+'\','+(num(h.rev_no)+1)+')">\u270e Open for amendment \u2014 with proposal</button> ':'<button class="btn btn-secondary" onclick="amdOpen(\''+n+'\')">\u270e Open for amendment'+(live&&live.status==='Requested'?' (requested)':'')+'</button> ');
+    if(admin && live && live.status==='Requested')
+      out+='<button class="btn btn-ghost" onclick="amdCancel(\''+esc(live.id)+'\',\''+n+'\')">Dismiss request</button> ';
+    if(!admin && live && live.status==='Requested')
+      out+='<span class="status under-amendment" style="vertical-align:middle;margin-left:6px;">Amendment requested</span> ';
   } else {
     const id=h.amendment_id;
     if(perms.canAmendPO && live && ['Draft','Rejected - Correction'].includes(live.status))
@@ -28185,7 +28291,7 @@ function _amdRenderLines(){
     if(b){ budgetCell=(b.mode==='ls'?'\u20b9 '+fmtINR(b.remaining)+' LS':fmtINR(b.remaining)+' '+esc(uom))+'<span class="amd-hint '+(b.ok?'ok':'bad')+'">'+(b.mode==='ls'?'requested \u20b9'+fmtINR(b.requested):'after change '+fmtINR(num(b.remaining)-num(b.requested)))+'</span>'; }
     html+='<tr id="amdRow_'+esc(l._k)+'"'+(removed?' class="amd-removedln"':'')+(isSplit?' class="amd-closedln"':'')+'>'
       +'<td>'+(it?esc(String(it.sno)):'<span style="color:#15803d;font-weight:700;">new</span>')+'</td>'
-      +'<td>'+(it?esc(name):'<input value="'+esc(name)+'" oninput="_amdSet(\''+esc(l._k)+'\',\'material_name\',this.value)" style="width:100%;">')+(it&&it.procurement_source==='mir'?' <span class="amd-src">MIR</span>':'')+'</td>'
+      +'<td>'+(it?esc(name):'<input value="'+esc(name)+'" oninput="_amdSet(\''+esc(l._k)+'\',\'material_name\',this.value)" style="width:100%;">'+(l.material_code?'':' <button class="btn btn-ghost btn-sm" onclick="_amdPickFor(\''+esc(l._k)+'\')" title="Pick the material, WBS package and location from the estimate">pick from estimate</button>'))+(it&&it.procurement_source==='mir'?' <span class="amd-src">MIR</span>':'')+(l.source==='store'?' <span class="scan-chip file" title="From the store proposal">store proposal</span>':'')+'</td>'
       +'<td>'+wl(w,lo)+'</td>'
       +'<td>'+esc(uom)+'</td>'
       +'<td class="num mono">'+(it?fmtINR(consumed):'\u2014')+'</td>'
@@ -28221,7 +28327,7 @@ function _amdRenderLines(){
 function _amdDraftPayload(){
   return { header:_amd.draft.header, reason:_amd.draft.reason||'',
     lines:_amd.draft.lines.map(l=>{ const o={item_id:l.item_id||null,action:l.item_id?(l.action||'keep'):'add'};
-      ['qty','unit_rate','uom','material_code','material_name','specification','wbs_node_id','loc_node_id','remarks','cgst_pct','sgst_pct','igst_pct'].forEach(f=>{ if(l[f]!==undefined&&l[f]!==null&&l[f]!=='') o[f]=l[f]; });
+      ['qty','unit_rate','uom','material_code','material_name','specification','wbs_node_id','loc_node_id','remarks','cgst_pct','sgst_pct','igst_pct','source','note'].forEach(f=>{ if(l[f]!==undefined&&l[f]!==null&&l[f]!=='') o[f]=l[f]; });
       return o; }) };
 }
 async function _amdSaveDraft(silent){
@@ -28262,9 +28368,17 @@ async function _amdAddLine(){
   if(!_amd) return;
   await _ppOpenPicker('amd');
 }
+function _amdPickFor(k){ window._amdPickTarget=k; _ppOpenPicker('amd'); }
 function _amdCommitFromCart(){
   if(!_amd){ closeModal(); return; }
   let added=0;
+  if(window._amdPickTarget){   // v122: fill a proposal 'add' line from the first cart item, keep its qty/rate
+    const tgt=_amd.draft.lines.find(x=>x._k===window._amdPickTarget); window._amdPickTarget=null;
+    const v=[..._mpCart.values()][0];
+    if(tgt&&v){ Object.assign(tgt,{material_code:v.code,material_name:v.name,uom:v.uom,wbs_node_id:v.leafId!=null?Number(v.leafId):null,loc_node_id:v.locId||null}); added=1; }
+    _mpMode='mir'; window._ppActive=false; window._modalNoBackdropClose=true; openModal(_amdEditHtml(),'wide'); _amdRenderLines(); _amdDirty();
+    toast(added?'Material set from estimate':'Nothing picked','success',2500); return;
+  }
   _mpCart.forEach(v=>{
     if((Number(v.qty)||0)<=0) return;
     const k='new'+Date.now()+'_'+(added++);
@@ -28285,6 +28399,9 @@ async function amdReview(id){
     const {data,error}=await sb.rpc('rpc_amd_preview',{p_amendment_id:id});
     if(error) throw new Error(error.message);
     const a=data.amendment, p=data.plan;
+    let _srcByItem={}, _srcAdds=[];
+    try{ const {data:dr}=await sb.from('order_amendments').select('draft,requested_by').eq('id',id).maybeSingle(); ((dr&&dr.draft&&dr.draft.lines)||[]).forEach(l=>{ if(l.item_id) _srcByItem[l.item_id]=l.source||null; else _srcAdds.push(l.source||null); }); a._requested_by=dr&&dr.requested_by; }catch(e){}
+    let _addIdx=0; const srcOf=l=>{ const s=l.item_id?_srcByItem[l.item_id]:(l.kind==='add'?_srcAdds[_addIdx++]:null); return s==='store'?'<span class="scan-chip file">store'+(a._requested_by?' · '+esc(a._requested_by):'')+'</span>':'<span class="muted" style="font-size:11px;">purchase exec</span>'; };
     const {data:po}=await sb.from('pu_po_orders').select('po_number,vendor_name,rev_no,status,amendment_state').eq('po_number',a.doc_number).single();
     let wbsMap={},locMap={};
     try{ const [lt,wt]=await Promise.all([_loadLocTree(),_loadWbsTree()]); locMap=Object.fromEntries((lt||[]).map(n=>[String(n.id),n])); wbsMap=Object.fromEntries((wt||[]).map(n=>[String(n.id),n])); }catch(e){}
@@ -28305,15 +28422,15 @@ async function amdReview(id){
       if(l.kind==='add'){ const b=(p.budget||[]).find(x=>String(x.wbs)===String(l.after.wbs_node_id)&&x.material===l.after.material_code&&String(x.loc)===String(l.after.loc_node_id)); if(b) checks.push('<span class="amd-rule'+(b.ok?'':' blocked')+'">budget '+fmtINR(b.remaining)+(b.ok?' \u2713':' \u2717')+'</span>'); checks.push('<span class="amd-rule">'+esc(wname(l.after.wbs_node_id))+' \u00b7 '+esc(lname(l.after.loc_node_id))+'</span>'); }
       if(l.kind==='modify'){ const b=(p.budget||[]).find(x=>String(x.wbs)===String(l.after.wbs_node_id)&&x.material===l.after.material_code&&String(x.loc)===String(l.after.loc_node_id)); if(b) checks.push('<span class="amd-rule'+(b.ok?'':' blocked')+'">budget '+fmtINR(b.remaining)+(b.ok?' \u2713':' \u2717')+'</span>'); }
       (l.errors||[]).forEach(e=>checks.push('<span class="amd-rule blocked">'+esc(String(e))+'</span>'));
-      if(l.kind==='add'){ rows+='<tr><td>'+label+'</td><td>Line</td><td>\u2014</td><td class="amd-arrow">\u2192</td><td class="amd-new">'+fmtINR(l.after.qty)+' '+esc(l.after.uom||'')+' @ '+fmtINR(l.after.unit_rate)+'</td><td>'+checks.join('')+'</td></tr>'; return; }
-      if(l.kind==='split_new'){ rows+='<tr><td>'+label+'</td><td>Line</td><td>\u2014</td><td class="amd-arrow">\u2192</td><td class="amd-new">'+fmtINR(l.after.qty)+' '+esc(l.after.uom||'')+' @ '+fmtINR(l.after.unit_rate)+'</td><td>'+checks.join('')+'</td></tr>'; return; }
-      if(l.kind==='remove'){ rows+='<tr><td>'+label+'</td><td>Line</td><td>'+fmtINR(l.before.qty)+' '+esc(l.before.uom||'')+' @ '+fmtINR(l.before.unit_rate)+'</td><td class="amd-arrow">\u2192</td><td class="amd-new">removed</td><td>'+checks.join('')+'</td></tr>'; return; }
-      if(l.kind==='close'){ rows+='<tr><td>'+label+'</td><td>Qty</td><td>'+fmtINR(l.before.qty)+' '+esc(l.before.uom||'')+' @ '+fmtINR(l.before.unit_rate)+'</td><td class="amd-arrow">\u2192</td><td class="amd-new">'+fmtINR(l.after.qty)+' '+esc(l.before.uom||'')+' @ '+fmtINR(l.before.unit_rate)+' \u00b7 closed</td><td>'+checks.join('')+'</td></tr>'; return; }
-      (l.changes||[]).forEach((c,ci)=>{ rows+='<tr><td>'+(ci===0?label:'')+'</td><td>'+fld(c.field)+'</td><td>'+val(c.field,c.old)+'</td><td class="amd-arrow">\u2192</td><td class="amd-new">'+val(c.field,c.new)+'</td><td>'+(ci===0?checks.join(''):'')+'</td></tr>'; });
+      if(l.kind==='add'){ rows+='<tr><td>'+label+'</td><td>Line</td><td>\u2014</td><td class="amd-arrow">\u2192</td><td class="amd-new">'+fmtINR(l.after.qty)+' '+esc(l.after.uom||'')+' @ '+fmtINR(l.after.unit_rate)+'</td><td>'+checks.join('')+'</td><td>'+srcOf(l)+'</td></tr>'; return; }
+      if(l.kind==='split_new'){ rows+='<tr><td>'+label+'</td><td>Line</td><td>\u2014</td><td class="amd-arrow">\u2192</td><td class="amd-new">'+fmtINR(l.after.qty)+' '+esc(l.after.uom||'')+' @ '+fmtINR(l.after.unit_rate)+'</td><td>'+checks.join('')+'</td><td>'+(_srcByItem[l.after&&l.after.split_from_item_id]==='store'?'<span class="scan-chip file">store</span>':'')+'</td></tr>'; return; }
+      if(l.kind==='remove'){ rows+='<tr><td>'+label+'</td><td>Line</td><td>'+fmtINR(l.before.qty)+' '+esc(l.before.uom||'')+' @ '+fmtINR(l.before.unit_rate)+'</td><td class="amd-arrow">\u2192</td><td class="amd-new">removed</td><td>'+checks.join('')+'</td><td>'+srcOf(l)+'</td></tr>'; return; }
+      if(l.kind==='close'){ rows+='<tr><td>'+label+'</td><td>Qty</td><td>'+fmtINR(l.before.qty)+' '+esc(l.before.uom||'')+' @ '+fmtINR(l.before.unit_rate)+'</td><td class="amd-arrow">\u2192</td><td class="amd-new">'+fmtINR(l.after.qty)+' '+esc(l.before.uom||'')+' @ '+fmtINR(l.before.unit_rate)+' \u00b7 closed</td><td>'+checks.join('')+'</td><td>'+srcOf(l)+'</td></tr>'; return; }
+      (l.changes||[]).forEach((c,ci)=>{ rows+='<tr><td>'+(ci===0?label:'')+'</td><td>'+fld(c.field)+'</td><td>'+val(c.field,c.old)+'</td><td class="amd-arrow">\u2192</td><td class="amd-new">'+val(c.field,c.new)+'</td><td>'+(ci===0?checks.join(''):'')+'</td><td>'+(ci===0?srcOf(l):'')+'</td></tr>'; });
     });
-    (p.header_changes||[]).forEach(c=>{ rows+='<tr><td>Header</td><td>'+esc(c.field.replace(/_/g,' '))+'</td><td>'+esc(String(c.old||'\u2014'))+'</td><td class="amd-arrow">\u2192</td><td class="amd-new">'+esc(String(c.new||'\u2014'))+'</td><td></td></tr>'; });
+    (p.header_changes||[]).forEach(c=>{ rows+='<tr><td>Header</td><td>'+esc(c.field.replace(/_/g,' '))+'</td><td>'+esc(String(c.old||'\u2014'))+'</td><td class="amd-arrow">\u2192</td><td class="amd-new">'+esc(String(c.new||'\u2014'))+'</td><td></td><td></td></tr>'; });
     const d=num(p.total_after)-num(p.total_before);
-    rows+='<tr><td>Header</td><td>Value</td><td class="num">'+fmtINRSym(p.total_before)+'</td><td class="amd-arrow">\u2192</td><td class="num amd-new">'+fmtINRSym(p.total_after)+'</td><td><span class="amd-rule">'+(d>=0?'+':'')+fmtINRSym(d)+'</span></td></tr>';
+    rows+='<tr><td>Header</td><td>Value</td><td class="num">'+fmtINRSym(p.total_before)+'</td><td class="amd-arrow">\u2192</td><td class="num amd-new">'+fmtINRSym(p.total_after)+'</td><td><span class="amd-rule">'+(d>=0?'+':'')+fmtINRSym(d)+'</span></td><td></td></tr>';
     let mk='';
     if(pending){ mk=mine?'<span style="color:#b91c1c;font-weight:600;">You opened or amended this \u2014 another Admin or Purchase Manager must approve it.</span>':'<span style="color:#047857;font-weight:600;">approver \u2260 opener \u2260 amender \u2713</span>'; }
     const stBadge='<span class="status '+_amdStateCls(a.status==='Pending Approval'?'Amendment Pending Approval':a.status)+'" style="margin-left:8px;vertical-align:middle;">'+esc(a.status==='Pending Approval'?'Amendment pending approval':a.status)+'</span>';
@@ -28321,7 +28438,7 @@ async function amdReview(id){
       +'<div style="font-size:12px;color:var(--muted);margin-bottom:10px;">'+esc(po.vendor_name||'')+' \u00b7 opened by '+esc(a.opened_by||'')+(a.opened_at?' '+fmtDateShort(a.opened_at):'')+' \u00b7 amended by '+esc(a.amended_by||'')+(a.amended_at?' '+fmtDateShort(a.amended_at):'')+(a.approved_by?' \u00b7 approved by '+esc(a.approved_by)+(a.approved_at?' '+fmtDateShort(a.approved_at):''):'')+'</div>'
       +(a.status==='Rejected - Correction'&&a.rejection_reason?'<div class="amd-banner block"><span class="i"></span><div><b>Returned for correction:</b> '+esc(a.rejection_reason)+'</div></div>':'')
       +(!p.ok?'<div class="amd-banner block"><span class="i"></span><div><b>'+p.error_count+' issue(s)</b> \u2014 the plan is no longer clean (receipts or budget changed since submission). Return it for correction.</div></div>':'')
-      +'<div class="table-wrap"><table><thead><tr><th>Line</th><th>Field</th><th>Revision '+num(po.rev_no)+'</th><th></th><th>A'+a.rev_no+'</th><th>Checks</th></tr></thead><tbody>'+(rows||'<tr><td colspan="6" class="center muted">No changes</td></tr>')+'</tbody></table></div>'
+      +'<div class="table-wrap"><table><thead><tr><th>Line</th><th>Field</th><th>Revision '+num(po.rev_no)+'</th><th></th><th>A'+a.rev_no+'</th><th>Checks</th><th>Source</th></tr></thead><tbody>'+(rows||'<tr><td colspan="7" class="center muted">No changes</td></tr>')+'</tbody></table></div>'
       +(a.reason?'<div style="font-size:12px;margin-top:10px;"><b>Reason:</b> '+esc(a.reason)+'</div>':'')
       +(pending?'<div style="font-size:12px;margin-top:4px;">Maker-checker: '+mk+'</div>':'')
       +'<div class="actions-row"><span style="margin-right:auto;font-size:12px;color:var(--muted);">'+(pending?'On approve: revision \u2192 A'+a.rev_no+', lines updated, freeze lifted.':'')+'</span>'
@@ -28615,12 +28732,7 @@ function renderGRNList() {
   document.getElementById('grn_listBody').innerHTML=rows.map(g=>{
     const st=g.status||'Pending Verification';
     const stCls=st.toLowerCase().replace(/\s/g,'-');
-    let acts=`<button class="btn btn-ghost btn-sm" onclick="viewGRN('${esc(g.grn_number)}')">View</button>`;
-    if(perms.canApproveGRN && st==='Pending Verification')
-      acts+=` <button class="btn btn-primary btn-sm" onclick="verifyGRN('${esc(g.grn_number)}')">Verify</button>
-              <button class="btn btn-warn btn-sm" onclick="promptRejectGRN('${esc(g.grn_number)}')">↩ Return</button>`;
-    if(perms.canCreateGRN && st==='Rejected - Correction')
-      acts+=` <button class="btn btn-warn btn-sm" onclick="reviseGRN('${esc(g.grn_number)}')">✎ Revise</button>`;
+    let acts=`<button class="btn btn-ghost btn-sm" onclick="viewGRN('${esc(g.grn_number)}')">View</button>`;   // v121: Verify / Return / Revise live in the View modal
     const cashBadge = g.is_cash_purchase
       ? ' <span style="font-size:10px;background:#ad6800;color:#fff;padding:1px 6px;border-radius:3px;font-weight:600;vertical-align:middle;">DIRECT</span>'
       : '';
@@ -30038,6 +30150,11 @@ async function viewGRN(grnNum) {
     ${corrBanner}
     ${itemTable}
     <div class="actions-row">
+      ${(hasPerm('canApproveGRN') && (h?.status||'Pending Verification')==='Pending Verification')
+        ? `<button class="btn btn-primary" onclick="closeModal();verifyGRN('${esc(grnNum)}')">✓ Verify</button>
+           <button class="btn btn-warn" onclick="closeModal();promptRejectGRN('${esc(grnNum)}')">↩ Return for correction</button>` : ''}
+      ${(hasPerm('canCreateGRN') && h?.status==='Rejected - Correction')
+        ? `<button class="btn btn-warn" onclick="closeModal();reviseGRN('${esc(grnNum)}')">✎ Revise</button>` : ''}
       ${createPOBBtn}
       ${createCashBillBtn}
       ${hasRole('Admin')
